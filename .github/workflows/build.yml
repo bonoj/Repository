@@ -1,9 +1,8 @@
-name: build
+name: Build
 
 on:
   push:
-    branches: [main]
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -17,9 +16,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm install --package-lock=false
+          cache-dependency-path: package.json
+      - run: npm install --no-audit --no-fund --package-lock=false
       - run: npm test
+      - name: Verify executable artifact
+        run: test -s dist/index.html && test -s dist/main.js
       - uses: actions/upload-artifact@v4
         with:
-          name: repository
+          name: repository-${{ github.sha }}
           path: dist/
+          if-no-files-found: error

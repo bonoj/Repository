@@ -4,7 +4,7 @@
     temporary:[
       {id:"spin",text:"🪄",label:"Spin presences",onClick:spinPresences},
       {id:"marble",text:"⚪️",label:"Compact Betwixt content",onClick:marbleBetwixtContent},
-      {id:"crucible",text:"🔥",label:"Summon intact Crucible",onClick:toggleCrucible}
+      {id:"crucible",text:"⚗️",label:"Summon intact Crucible",onClick:toggleCrucible}
     ],
     resident:[
       {id:"workshop",text:"🛠",label:"Clear the Workshop bench",onClick:toggleWorkshop},

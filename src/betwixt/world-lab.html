@@ -1392,7 +1392,7 @@ globalThis.WorkshopGravity=WorkshopGravity;
 
 // Workshop terrain is the intact transported Crucible implementation. It is one
 // useful terrain, not Workshop's definition of terrain.
-let workshopTerrain=null;
+let workshopTerrain=null,workshopTerrainGenesis=null,workshopTerrainSeed=741;
 function ensureWorkshopTerrain(){
   if(workshopTerrain)return workshopTerrain;
   if(typeof createTerrainSystem!=='function')return null;
@@ -1401,6 +1401,7 @@ function ensureWorkshopTerrain(){
   try{workshopTerrain=createTerrainSystem({THREE,scene})}
   finally{delete globalThis.__workshopTerrainOwner}
   workshopTerrain.owner=owner;
+  if(typeof createTerrainGenesis==='function')workshopTerrainGenesis=createTerrainGenesis({terrain:workshopTerrain});
   // Present the intact Crucible apparatus as a raised specimen in Workshop.
   // Its terrain/plinth relationship remains untouched inside this owner transform.
   owner.position.y=3.0;
@@ -1426,8 +1427,22 @@ globalThis.WorkshopTerrain={
   raise:(x,z,options={})=>ensureWorkshopTerrain()?.raise({x,z},options),
   carve:(x,z,options={})=>ensureWorkshopTerrain()?.excavate({x,z},options),
   groundHeight:(x,z)=>ensureWorkshopTerrain()?.groundHeight(x,z),
-  inspect:()=>ensureWorkshopTerrain()?.inspect()
+  inspect:()=>ensureWorkshopTerrain()?.inspect(),
+  next:()=>{const t=ensureWorkshopTerrain();if(!t||!workshopTerrainGenesis)return null;return workshopTerrainGenesis.runSeed(++workshopTerrainSeed)}
 };
+
+// Crucible water/lava remain their transported shallow-field systems, coupled to
+// the same raised terrain and parented with it.
+let workshopWater=null,workshopLava=null;
+function ensureWorkshopLiquids(){
+  const terrain=ensureWorkshopTerrain();if(!terrain||typeof createShallowWaterSystem!=='function')return null;
+  if(!workshopWater){
+    const proxy={add:o=>terrain.owner.add(o)};
+    workshopWater=createShallowWaterSystem({THREE,scene:proxy,terrain,kind:'water'});
+    workshopLava=createShallowWaterSystem({THREE,scene:proxy,terrain,kind:'lava',look:{color:0xffffff,opacity:.82,sideColor:0x4b0903,sideOpacity:.78,depthAccents:true,deepColor:0x260300,hotColor:0xff9a24},initialViscosity:26});
+  }
+  return{water:workshopWater,lava:workshopLava};
+}
 
 // Bearings cross with their Crucible terrain coupling intact. Water/lava coupling
 // remains optional until Workshop deliberately composes those systems.
@@ -1462,6 +1477,24 @@ globalThis.WorkshopBearings={
   field:(center,options)=>ensureWorkshopBearings()?.applyField(center,options),
   inspect:()=>ensureWorkshopBearings()?.inspect()
 };
+
+// Exact Crucible controls, presented in Repository's left temporary spell tray.
+let workshopCrucibleTool=null,workshopBearingMagnitude=0;
+function chooseWorkshopCrucibleTool(tool,button){
+  workshopCrucibleTool=tool;
+  for(const id of ['crucible-bearings','crucible-water','crucible-lava','crucible-carve','crucible-raise'])globalThis.RepositoryShell?.button?.(id)?.classList.remove('active');
+  button?.classList.add('active');
+}
+function installWorkshopCrucibleSpells(){
+  const shell=globalThis.RepositoryShell;if(!shell||shell.inspect().tools.includes('crucible-terrain-next'))return;
+  shell.registerTool({id:'crucible-terrain-next',text:'⛰️',label:'Next deterministic terrain',onClick:()=>WorkshopTerrain.next()});
+  shell.registerTool({id:'crucible-bearings',text:'⚫️',label:'Spawn 25 bearings at tapped point; tap again for 25 thousand',onClick:b=>{if(workshopCrucibleTool==='bearing-packet'||workshopCrucibleTool==='bearings-many')workshopBearingMagnitude=workshopBearingMagnitude?0:1;else workshopBearingMagnitude=0;chooseWorkshopCrucibleTool(workshopBearingMagnitude?'bearings-many':'bearing-packet',b);b.textContent=workshopBearingMagnitude?'⚫️⚫️':'⚫️'}});
+  shell.registerTool({id:'crucible-water',text:'💧',label:'Place transport source at tapped point',onClick:b=>chooseWorkshopCrucibleTool('source',b)});
+  shell.registerTool({id:'crucible-lava',text:'🌋',label:'Place lava at tapped point',onClick:b=>chooseWorkshopCrucibleTool('lava',b)});
+  shell.registerTool({id:'crucible-carve',text:'⛏️',label:'Carve terrain at tapped point',onClick:b=>chooseWorkshopCrucibleTool('carve',b)});
+  shell.registerTool({id:'crucible-raise',text:'🪏',label:'Raise terrain at tapped point',onClick:b=>chooseWorkshopCrucibleTool('raise',b)});
+}
+queueMicrotask(installWorkshopCrucibleSpells);
 
 // First Workshop pressure: one semantic request becomes a visible 7x7 possibility field.
 // This is deliberately local evidence, not a generalized fabrication protocol.
@@ -1963,6 +1996,17 @@ function workshopTap(x,y){
   const r=canvas.getBoundingClientRect();
   pointerNDC.set(((x-r.left)/r.width)*2-1,-((y-r.top)/r.height)*2+1);
   raycaster.setFromCamera(pointerNDC,camera);
+  if(workshopCrucibleTool&&workshopTerrain){
+    const hit=raycaster.intersectObject(workshopTerrain.mesh,true)[0];
+    if(hit){
+      const p=workshopTerrain.owner.worldToLocal(hit.point.clone()),tool=workshopCrucibleTool;
+      if(tool==='carve')workshopTerrain.excavate({x:p.x,z:p.z},{radius:.82,depth:.42});
+      else if(tool==='raise')workshopTerrain.raise({x:p.x,z:p.z},{radius:1.15,height:.55});
+      else if(tool==='bearing-packet'||tool==='bearings-many')WorkshopBearings.spawn(tool==='bearings-many'?25000:25,new THREE.Vector3(p.x,p.y+.35,p.z));
+      else if(tool==='source'||tool==='lava'){const q=ensureWorkshopLiquids(),liquid=tool==='lava'?q?.lava:q?.water;liquid?.addTimedSource({x:p.x,z:p.z,rate:.9,duration:3});liquid?.setEnabled(true)}
+      window.vestibuleDirty=true;return true;
+    }
+  }
   const focusables=[...specimens.map(([,o])=>o)];
   const hits=raycaster.intersectObjects(focusables,true);
   let obj=hits[0]?.object||null;
@@ -2613,6 +2657,7 @@ addEventListener('resize',()=>{
 renderer.setAnimationLoop((now)=>{
   if(contentWorkshopHidden){
     updateWorkshop(now);
+    if(workshopWater||workshopLava){workshopWater?.update(now);workshopLava?.update(now)}
     renderer.render(scene,camera);window.vestibuleDirty=false;
     return;
   }

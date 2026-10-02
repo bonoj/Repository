@@ -1292,6 +1292,12 @@ const CONTENT_CENTER_Y=5.6;
 const CONTENT_MARBLE_SCALE=0.085;
 const CONTENT_MARBLE_RADIUS=0.62;
 const CONTENT_GRAVITY=-24;
+function stepBetwixtGravity(object,velocity,dt,floorY,gravity=CONTENT_GRAVITY){
+  if(object.position.y<=floorY)return 0;
+  velocity+=gravity*dt;
+  object.position.y=Math.max(floorY,object.position.y+velocity*dt);
+  return object.position.y<=floorY?0:velocity;
+}
 let contentTinkered=false;
 let contentTinkerMotion=null;
 let contentGravityVelocity=0;
@@ -1358,6 +1364,27 @@ function setContentWorkshopHidden(hidden){
 }
 
 function toggleContentWorkshopHidden(){return setContentWorkshopHidden(!contentWorkshopHidden)}
+
+// Workshop gravity is the same tiny vertical integrator already earned by the
+// compacted Betwixt organism. Objects opt in; merely entering Workshop does not
+// make existing specimens fall.
+const workshopGravityBodies=new Map();
+const WorkshopGravity={
+  add(object,{floorY=GROUND_Y,radius=0,velocity=0,gravity=CONTENT_GRAVITY}={}){
+    workshopGravityBodies.set(object,{floorY:floorY+radius,velocity,gravity});
+    return object;
+  },
+  remove(object){workshopGravityBodies.delete(object);return object},
+  clear(){workshopGravityBodies.clear()},
+  update(dt){
+    if(!contentWorkshopHidden)return;
+    for(const [object,body] of workshopGravityBodies){
+      if(!object.parent){workshopGravityBodies.delete(object);continue}
+      body.velocity=stepBetwixtGravity(object,body.velocity,dt,body.floorY,body.gravity);
+    }
+  }
+};
+globalThis.WorkshopGravity=WorkshopGravity;
 
 // First Workshop pressure: one semantic request becomes a visible 7x7 possibility field.
 // This is deliberately local evidence, not a generalized fabrication protocol.
@@ -2532,13 +2559,13 @@ renderer.setAnimationLoop((now)=>{
     const dt=Math.min(0.05,Math.max(0,(now-(window.__contentGravityLast||now))/1000));
     const floorY=CONTENT_MARBLE_RADIUS;
     if(betwixtContent.position.y>floorY){
-      contentGravityVelocity+=CONTENT_GRAVITY*dt;
-      betwixtContent.position.y=Math.max(floorY,betwixtContent.position.y+contentGravityVelocity*dt);
-      if(betwixtContent.position.y<=floorY)contentGravityVelocity=0;
+      contentGravityVelocity=stepBetwixtGravity(betwixtContent,contentGravityVelocity,dt,floorY);
       window.vestibuleDirty=true;
     }
   }
   window.__contentGravityLast=now;
+  WorkshopGravity.update(Math.min(0.05,Math.max(0,(now-(window.__workshopGravityLast||now))/1000)));
+  window.__workshopGravityLast=now;
   updateFluidGlobes(now);
   JupurnSystem(now);
   ExchangeSystem(now);

@@ -1,5 +1,8 @@
 (()=>{
   const place={sigil:"🌀",title:"BETWIXT"};
+  const spellbook=[
+    {id:"refresh",text:"🔄",label:"Reload",onClick:()=>location.reload()}
+  ];
   const build=globalThis.__REPOSITORY_BUILD__||"local";
   const sha=globalThis.__REPOSITORY_SHA__||null;
 
@@ -56,10 +59,11 @@
     registered.delete(id);
   }
 
-  registerTool({id:"refresh",text:"🔄",label:"Reload",onClick:()=>location.reload()});
+  for(const spell of spellbook)registerTool(spell);
 
   globalThis.RepositoryShell={
     place,
+    spellbook,
     build,
     sha,
     status,

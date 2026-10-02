@@ -1870,6 +1870,91 @@ function workshopTap(x,y){
   return false;
 }
 
+
+/* FLUID GLOBES — raised reservoir → shallow-fluid transfer specimen.
+   The elevated contained phase is an explicit reservoir volume because Crucible's
+   earned fluid state is terrain-supported 2.5D. Shattering releases that volume;
+   a visible carrier falls to terrain, then the exact transported solver owns it. */
+const fluidGlobes=new THREE.Group();fluidGlobes.name='specimen:fluid-globes';scene.add(fluidGlobes);fluidGlobes.visible=false;
+let fluidGlobesActive=false,fluidGlobesReady=false,fluidLastNow=0;
+const fluidVessels=[],fluidFalls=[],fluidShards=[];
+let specimenWater=null,specimenLava=null;
+const specimenTerrain={
+  materialBoundary(x,z){
+    const apothem=8.7,ax=Math.abs(x),az=Math.abs(z),diag=(ax+az)/Math.SQRT2;
+    const d=apothem-Math.max(ax,az,diag);
+    let nx=0,nz=0;
+    if(diag>=ax&&diag>=az){nx=Math.sign(x||1)/Math.SQRT2;nz=Math.sign(z||1)/Math.SQRT2}
+    else if(ax>=az)nx=Math.sign(x||1);else nz=Math.sign(z||1);
+    return {inside:d>=0,distance:Math.abs(d),nx,nz};
+  },
+  groundHeightExact(){return GROUND_Y+.012},
+  groundHeight(){return GROUND_Y+.012}
+};
+function makeFluidVessel(kind,x){
+  const root=new THREE.Group();root.name='fluid-vessel:'+kind;root.position.set(x,3.4,0);fluidGlobes.add(root);
+  const shellMat=new THREE.MeshStandardMaterial({color:0xc8e2e3,transparent:true,opacity:.18,roughness:.08,metalness:0,depthWrite:false,side:THREE.DoubleSide});
+  const shellGeo=new THREE.SphereGeometry(1.05,16,10);
+  const shell=new THREE.Mesh(shellGeo,shellMat);shell.name=kind+'-uv-shell';root.add(shell);
+  const grid=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(1.055,12,7)),new THREE.LineBasicMaterial({color:0x667879,transparent:true,opacity:.62}));root.add(grid);
+  const liquidMat=new THREE.MeshBasicMaterial({color:kind==='water'?0x17636a:0xff6418,transparent:true,opacity:kind==='water'?.58:.78,depthWrite:false});
+  const fill=new THREE.Mesh(new THREE.SphereGeometry(.94,16,10),liquidMat);fill.name=kind+'-contained-reservoir';root.add(fill);
+  const vessel={kind,root,shell,grid,fill,released:false,volume:3.15,x};shell.userData.fluidVessel=vessel;grid.userData.fluidVessel=vessel;fill.userData.fluidVessel=vessel;
+  fluidVessels.push(vessel);return vessel;
+}
+function resetFluidGlobes(){
+  for(const s of fluidShards)s.mesh.removeFromParent();fluidShards.length=0;
+  for(const f of fluidFalls)f.mesh.removeFromParent();fluidFalls.length=0;
+  fluidVessels.length=0;fluidGlobes.clear();
+  specimenWater?.reset();specimenLava?.reset();
+  makeFluidVessel('water',-2.25);makeFluidVessel('lava',2.25);
+}
+function ensureFluidGlobes(){
+  if(fluidGlobesReady)return true;
+  const factory=globalThis.createShallowWaterSystem;if(typeof factory!=='function')return false;
+  specimenWater=factory({THREE,scene,terrain:specimenTerrain,kind:'water'});
+  specimenLava=factory({THREE,scene,terrain:specimenTerrain,kind:'lava',look:{color:0xffffff,opacity:.82,sideColor:0x4b0903,sideOpacity:.78,depthAccents:true,deepColor:0x260300,hotColor:0xff9a24},initialViscosity:26});
+  specimenWater.setEnabled(false);specimenLava.setEnabled(false);fluidGlobesReady=true;resetFluidGlobes();return true;
+}
+function shatterVessel(v){
+  if(v.released)return;v.released=true;v.shell.visible=false;v.grid.visible=false;v.fill.visible=false;
+  const pos=v.root.position.clone(),geo=v.shell.geometry.toNonIndexed(),a=geo.getAttribute('position'),count=a.count/3;
+  for(let tri=0;tri<count;tri+=4){
+    const verts=[];for(let q=0;q<3;q++)verts.push(new THREE.Vector3().fromBufferAttribute(a,tri*3+q));
+    const center=verts[0].clone().add(verts[1]).add(verts[2]).multiplyScalar(1/3);
+    const g=new THREE.BufferGeometry().setFromPoints(verts.map(p=>p.clone().sub(center)));g.setIndex([0,1,2]);g.computeVertexNormals();
+    const mesh=new THREE.Mesh(g,v.shell.material.clone());mesh.position.copy(pos).add(center);scene.add(mesh);
+    const outward=center.clone().normalize(),vel=outward.multiplyScalar(1.3+Math.random()*1.2).add(new THREE.Vector3((Math.random()-.5)*.5,.35+Math.random()*.5,(Math.random()-.5)*.5));
+    fluidShards.push({mesh,vel,spin:new THREE.Vector3(Math.random()-.5,Math.random()-.5,Math.random()-.5).multiplyScalar(5),age:0});
+  }
+  const carrier=new THREE.Mesh(new THREE.SphereGeometry(.94,16,10),v.fill.material.clone());carrier.position.copy(pos);scene.add(carrier);
+  fluidFalls.push({mesh:carrier,vessel:v,vy:0,landed:false});
+}
+function fluidGlobeTap(x,y){
+  if(!fluidGlobesActive)return false;
+  const r=canvas.getBoundingClientRect();pointerNDC.set(((x-r.left)/r.width)*2-1,-((y-r.top)/r.height)*2+1);raycaster.setFromCamera(pointerNDC,camera);
+  for(const hit of raycaster.intersectObjects(fluidVessels.flatMap(v=>[v.shell,v.grid,v.fill]),true)){
+    let o=hit.object,v=null;while(o&&!v){v=o.userData?.fluidVessel;o=o.parent}
+    if(v&&!v.released){shatterVessel(v);return true}
+  }return false;
+}
+function updateFluidGlobes(now){
+  if(!fluidGlobesActive||!fluidGlobesReady)return;
+  const dt=Math.min(.04,Math.max(.001,(now-(fluidLastNow||now))/1000));fluidLastNow=now;
+  for(let i=fluidFalls.length-1;i>=0;i--){const f=fluidFalls[i];f.vy-=8.5*dt;f.mesh.position.y+=f.vy*dt;
+    const floor=GROUND_Y+.96;if(f.mesh.position.y<=floor){const solver=f.vessel.kind==='water'?specimenWater:specimenLava;solver.setEnabled(true);solver.fillRegion({x:f.vessel.x,z:0,radius:1.05,amount:f.vessel.volume});f.mesh.removeFromParent();fluidFalls.splice(i,1)}
+  }
+  for(let i=fluidShards.length-1;i>=0;i--){const s=fluidShards[i];s.age+=dt;s.vel.y-=8.5*dt;s.mesh.position.addScaledVector(s.vel,dt);s.mesh.rotation.x+=s.spin.x*dt;s.mesh.rotation.y+=s.spin.y*dt;s.mesh.rotation.z+=s.spin.z*dt;if(s.mesh.position.y<GROUND_Y-.4||s.age>4){s.mesh.removeFromParent();fluidShards.splice(i,1)}}
+  specimenWater.update(now);specimenLava.update(now);
+}
+function setFluidGlobes(on){
+  on=!!on;if(on&&!ensureFluidGlobes())return false;fluidGlobesActive=on;fluidGlobes.visible=on;
+  specimenWater?.setEnabled(on&&specimenWater.inspect().water.injected>0);specimenLava?.setEnabled(on&&specimenLava.inspect().water.injected>0);
+  if(on&&fluidVessels.every(v=>v.released))resetFluidGlobes();
+  window.vestibuleDirty=true;return fluidGlobesActive;
+}
+function toggleFluidGlobes(){return setFluidGlobes(!fluidGlobesActive)}
+
 const raycaster=new THREE.Raycaster();
 const pointerNDC=new THREE.Vector2();
 const tapStarts=new Map();
@@ -2361,6 +2446,7 @@ const SelectionSystem={
     return null;
   },
   tap(x,y){
+    if(fluidGlobeTap(x,y))return;
     if(workshopTap(x,y))return;
     const hit=this.pick(x,y);
     if(selectedEntity){
@@ -2453,6 +2539,7 @@ renderer.setAnimationLoop((now)=>{
     }
   }
   window.__contentGravityLast=now;
+  updateFluidGlobes(now);
   JupurnSystem(now);
   ExchangeSystem(now);
   OrbitalSystem(now);
@@ -2530,6 +2617,9 @@ window.vestibule={
   toggleContentWorkshopHidden,
   get crayonActive(){return crayonActive},
   get arcballActive(){return arcballActive},
+  get fluidGlobesActive(){return fluidGlobesActive},
+  setFluidGlobes,
+  toggleFluidGlobes,
   setArcball,
   toggleArcball,
   setCrayon,

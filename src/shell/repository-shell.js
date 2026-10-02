@@ -3,6 +3,7 @@
   const spells={
     temporary:[],
     resident:[
+      {id:"refresh",text:"🔄",label:"Refresh",onClick:()=>location.reload()},
       {id:"workshop",text:"🛠",label:"Workshop",onClick:toggleWorkshop}
     ]
   };

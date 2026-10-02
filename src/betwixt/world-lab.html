@@ -500,7 +500,7 @@ function addPipe(parent,points){
 }
 function buildOrbitalIdentity(id,data){
   const root=C.RenderObject.get(id)?.object;if(!root)return;
-  const orbitRoot=new THREE.Group();scene.add(orbitRoot);
+  const orbitRoot=new THREE.Group();betwixtContent.add(orbitRoot);
   const station=new THREE.Group();orbitRoot.add(station);
   // Primary hub and orthogonal pressure grammar.
   const hub=new THREE.Mesh(new THREE.CylinderGeometry(.105,.105,.080,8),orbitalHull2Mat);
@@ -599,7 +599,7 @@ function nearestUnclaimedRock(from){
 function makeFoundryDrone(st){
   // Foundry drones are deliberately nothing more than little orange cubes.
   const g=new THREE.Group(),core=new THREE.Mesh(droneGeo,foundryOrangeMat);core.castShadow=true;g.add(core);
-  const mouth=foundryMouthWorld(st),fwd=foundryMouthForward(st);g.position.copy(mouth).addScaledVector(fwd,.060);scene.add(g);
+  const mouth=foundryMouthWorld(st),fwd=foundryMouthForward(st);g.position.copy(mouth).addScaledVector(fwd,.060);betwixtContent.add(g);
   const d={group:g,state:'seeking',rock:null,speed:.82,homeStage:null,launchStage:factoryFrontStage(st,.24),returnPath:[],returnIndex:0,returnAnchor:null};st.drones.push(d);return d;
 }
 function removeDeliveredRock(r){
@@ -999,7 +999,7 @@ function makeTorch(p){
 function spawnSpoil(id,p,step){
   const ro=C.RenderObject.get(id)?.object;if(!ro)return;ro.updateMatrixWorld(true);
   const radial=p.clone().normalize(),world=ro.localToWorld(radial.clone().multiplyScalar(.616));
-  const mesh=new THREE.Mesh(spoilGeo,spoilMat);mesh.castShadow=false;mesh.receiveShadow=false;mesh.position.copy(world);scene.add(mesh);
+  const mesh=new THREE.Mesh(spoilGeo,spoilMat);mesh.castShadow=false;mesh.receiveShadow=false;mesh.position.copy(world);betwixtContent.add(mesh);
   const a=(step*2.399963229728653)%(Math.PI*2),speed=.12+(step%5)*.018;
   const v=new THREE.Vector3(Math.cos(a)*speed,.035+((step*7)%4)*.018,Math.sin(a)*speed);
   spoil.push({id:nextSpoilId++,mesh,v,r:.034,sleep:false,quiet:0,delivered:false,claimedBy:null});spoilActive=true;
@@ -1308,6 +1308,38 @@ function setContentTinkered(tinkered){
   return contentTinkered;
 }
 function toggleContentTinkered(){return setContentTinkered(!contentTinkered)}
+
+// 🛠 clears the bench. Hidden means the entire content organism is absent;
+// frozen means its simulation clocks stop advancing while Betwixt remains live.
+let contentWorkshopHidden=false;
+let contentFrozenAt=0;
+function setContentWorkshopHidden(hidden){
+  hidden=!!hidden;
+  if(hidden===contentWorkshopHidden)return contentWorkshopHidden;
+  contentWorkshopHidden=hidden;
+  if(hidden){
+    // Restore ordinary geometry before removal; Workshop is not a transform stack.
+    contentRaised=false;contentLiftMotion=null;
+    contentTinkered=false;contentTinkerMotion=null;contentGravityVelocity=0;
+    betwixtContent.position.y=0;betwixtContent.scale.setScalar(1);
+    contentFrozenAt=performance.now();
+    betwixtContent.visible=false;
+    setLabActions(null);
+  }else{
+    const now=performance.now(),pause=Math.max(0,now-contentFrozenAt);
+    // Shift the donor systems' wall-clock anchors so hidden time never becomes a
+    // giant simulation step on return.
+    jupurnLastFrame+=pause;lastFoundryNow+=pause;lastSpoilNow+=pause;
+    nextFoundryWake+=pause;nextDescentWake+=pause;
+    for(const st of foundryStates.values())st.nextLaunch+=pause;
+    for(const st of descentStates.values())st.nextAt+=pause;
+    betwixtContent.visible=true;
+    contentFrozenAt=0;
+  }
+  window.vestibuleDirty=true;
+  return contentWorkshopHidden;
+}
+function toggleContentWorkshopHidden(){return setContentWorkshopHidden(!contentWorkshopHidden)}
 const raycaster=new THREE.Raycaster();
 const pointerNDC=new THREE.Vector2();
 const tapStarts=new Map();
@@ -1571,7 +1603,7 @@ function restoreDescentState(saved,now){
 }
 function restoreRocks(saved){
   for(const rs of saved||[]){
-    const mesh=new THREE.Mesh(spoilGeo,spoilMat);mesh.castShadow=false;mesh.receiveShadow=false;mesh.position.fromArray(rs.position);scene.add(mesh);
+    const mesh=new THREE.Mesh(spoilGeo,spoilMat);mesh.castShadow=false;mesh.receiveShadow=false;mesh.position.fromArray(rs.position);betwixtContent.add(mesh);
     const r={id:rs.id|0,mesh,v:new THREE.Vector3().fromArray(rs.velocity||[0,0,0]),r:rs.r||.034,sleep:!!rs.sleep,quiet:rs.quiet||0,delivered:false,claimedBy:null};
     spoil.push(r);nextSpoilId=Math.max(nextSpoilId,r.id+1);
   }
@@ -1742,6 +1774,10 @@ addEventListener('resize',()=>{
 });
 
 renderer.setAnimationLoop((now)=>{
+  if(contentWorkshopHidden){
+    if(window.vestibuleDirty!==false){renderer.render(scene,camera);window.vestibuleDirty=false}
+    return;
+  }
   if(contentLiftMotion){
     const m=contentLiftMotion,raw=Math.min(1,(now-m.started)/m.duration),t=easeQuiet(raw);
     betwixtContent.position.y=THREE.MathUtils.lerp(m.from,m.to,t);
@@ -1842,6 +1878,9 @@ window.vestibule={
   get contentTinkered(){return contentTinkered},
   setContentTinkered,
   toggleContentTinkered,
+  get contentWorkshopHidden(){return contentWorkshopHidden},
+  setContentWorkshopHidden,
+  toggleContentWorkshopHidden,
   get layout(){return 'Ring'},
   get selected(){return selectedEntity?C.Presence.get(selectedEntity).slot:null},
   home,

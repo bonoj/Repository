@@ -2,10 +2,11 @@
   const place={sigil:"🌀",title:"BETWIXT"};
   const spells={
     temporary:[
-      {id:"spin",text:"🪄",label:"Spin presences",onClick:spinPresences}
+      {id:"spin",text:"🪄",label:"Spin presences",onClick:spinPresences},
+      {id:"marble",text:"⚪️",label:"Compact Betwixt content",onClick:marbleBetwixtContent}
     ],
     resident:[
-      {id:"workshop",text:"🛠",label:"Tinker Betwixt content",onClick:tinkerBetwixtContent},
+      {id:"workshop",text:"🛠",label:"Clear the Workshop bench",onClick:toggleWorkshop},
       {id:"lift",text:"⬆️",label:"Lift Betwixt content",onClick:liftBetwixtContent},
       {id:"refresh",text:"🔄",label:"Reload",onClick:()=>location.reload()}
     ]
@@ -76,25 +77,38 @@
     registered.delete(id);
   }
 
-  function tinkerBetwixtContent(button){
+  function marbleBetwixtContent(button){
     const world=globalThis.vestibule;
-    if(!world?.toggleContentTinkered)return;
+    if(!world?.toggleContentTinkered||world.contentWorkshopHidden)return;
     const tinkered=world.toggleContentTinkered();
     button?.classList.toggle("active",tinkered);
     button?.setAttribute("aria-pressed",tinkered?"true":"false");
     const lift=registered.get("lift");
-    lift?.classList.remove("active");lift?.setAttribute("aria-pressed","false");
+    if(lift){lift.classList.remove("active");lift.setAttribute("aria-pressed","false");lift.textContent="⬆️"}
+  }
+
+  function toggleWorkshop(button){
+    const world=globalThis.vestibule;
+    if(!world?.toggleContentWorkshopHidden)return;
+    const hidden=world.toggleContentWorkshopHidden();
+    button?.classList.toggle("active",hidden);
+    button?.setAttribute("aria-pressed",hidden?"true":"false");
+    const lift=registered.get("lift");
+    if(lift){lift.classList.remove("active");lift.setAttribute("aria-pressed","false");lift.textContent="⬆️"}
+    const marble=registered.get("marble");
+    marble?.classList.remove("active");marble?.setAttribute("aria-pressed","false");
   }
 
   function liftBetwixtContent(button){
     const world=globalThis.vestibule;
-    if(!world?.toggleContentRaised)return;
+    if(!world?.toggleContentRaised||world.contentWorkshopHidden)return;
     if(world.contentTinkered)world.setContentTinkered(false);
     const raised=world.toggleContentRaised();
+    button.textContent=raised?"⬇️":"⬆️";
     button?.classList.toggle("active",raised);
     button?.setAttribute("aria-pressed",raised?"true":"false");
-    const workshop=registered.get("workshop");
-    workshop?.classList.remove("active");workshop?.setAttribute("aria-pressed","false");
+    const marble=registered.get("marble");
+    marble?.classList.remove("active");marble?.setAttribute("aria-pressed","false");
   }
 
   function spinPresences(){

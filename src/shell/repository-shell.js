@@ -6,6 +6,7 @@
       {id:"marble",text:"⚪️",label:"Compact Betwixt content",onClick:marbleBetwixtContent},
       {id:"crucible",text:"⚗️",label:"Summon intact Crucible",onClick:toggleCrucible},
       {id:"arcball",text:"🧭",label:"Arcball navigation",onClick:toggleArcball},
+      {id:"fluid-globes",text:"💦",label:"Water and lava shatter vessels",onClick:toggleFluidGlobes},
       {id:"crayon",text:"🖍",label:"Crayon",onClick:toggleCrayon,onDoubleClick:clearCrayon,onLongPress:exportCrayon,onContextMenu:exportCrayon}
     ],
     resident:[
@@ -158,6 +159,11 @@
   function toggleArcball(button){
     const world=globalThis.vestibule;if(!world?.toggleArcball)return;
     const active=world.toggleArcball();
+    button?.classList.toggle("active",active);button?.setAttribute("aria-pressed",active?"true":"false");
+  }
+  function toggleFluidGlobes(button){
+    const world=globalThis.vestibule;if(!world?.toggleFluidGlobes)return;
+    const active=world.toggleFluidGlobes();
     button?.classList.toggle("active",active);button?.setAttribute("aria-pressed",active?"true":"false");
   }
   function toggleCrayon(button){

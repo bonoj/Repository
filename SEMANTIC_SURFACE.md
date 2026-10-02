@@ -159,3 +159,48 @@ Do not create import/export machinery merely to move an entity between contexts 
 Do not promote a temporary spell, representation, component, or runtime seam into universal architecture before repetition earns it.
 
 When prose and executable evidence disagree, update or delete the prose.
+
+## Accepted Crucible Workshop baseline
+
+This section records a regression boundary, not a roadmap.
+
+The last human-accepted pre-meteor baseline is Repository `b27ca198e87f54b50d7440a31727241414dc176a`. It established the raised Crucible Workshop composition and remains the perceptual/behavioral reference for everything below except the later meteor addition.
+
+The current meteor-parity candidate is Repository `204763d31ce8b61a292ebca4a45a0eb47ad10554`, published by Home `88e0b4144b3a2f80f3f46bf0349b7c47b7474999`. Preserve the accepted baseline while evaluating this addition.
+
+### Composition that must not regress
+
+The raised Crucible terrain/plinth is one ownership space. Transported terrain, shallow water, shallow lava, packed bearings, steam contact effects, lava bearing pops, and meteors are composed against that terrain space rather than reimplemented as visual proxies.
+
+Water and lava are the transported shallow-field systems. They are 2.5D terrain-supported fields, not volumetric fluids. Their authoritative state drives their surfaces and consequences.
+
+Bearings use Crucible's packed-array bearing implementation, not one ECS entity per bearing. They remain liquid-aware. Lava bearing pops sample actual wet lava cells and spawn through the bearing system.
+
+Steam exists only at water/lava contact. Do not replace that causal rule with generic lava smoke.
+
+Meteors use the transported Crucible meteor system. Workshop supplies the composition seams that the module expects from Crucible's root: its ECS Transform is synchronized to its Three.js RenderObject, and meteor impacts are emitted onto the shared impact bus consumed by packed bearings. Terrain impact, rendered descent, and bearing impulse are separate consequences of the same meteor event.
+
+The current Crucible meteor module also owns a small additive orange wake. That wake is presently not visible correctly in Betwixt and is intentionally left unresolved. It is not required to reinterpret or rewrite the otherwise working meteor composition. Meteor presentation may be revisited later.
+
+### Current temporary controls
+
+The left tray currently exposes:
+
+- `☄️` meteor, with four impact magnitudes;
+- `⛰️` next deterministic terrain;
+- `⚫️` bearing spawn, cycling 25 / 25,000;
+- `💧` water source;
+- `🌋` lava;
+- `⛏️` carve terrain;
+- `🪏` raise terrain.
+
+These controls are working handles, not an API taxonomy.
+
+### Regression rule
+
+Do not casually reconstruct, simplify, normalize, or independently imitate any system in this composition.
+
+When extending it, preserve existing authoritative state and causal paths. Change the smallest seam required by the new behavior. A plausible visual result is not parity.
+
+A green build proves construction, not experiential acceptance. john's observed acceptance is the boundary for promotion.
+

@@ -75,6 +75,10 @@ There is no separate Workshop repository and no generalized Workshop implementat
 
 At present, `🛠` earns only one Workshop fact: Betwixt can clear its existing content out of the way while leaving the place and coordination surface alive.
 
+`⚗️` is a separate resident container spell. It owns the transported Crucible organism as one parented stateful boundary: raised plinth/terrain, its water and lava state, packed bearings, steam consequences, meteors, and their internal composition. When ⚗️ is off, that parent is absent and its simulation is suspended; its temporary left-tray controls are absent. When ⚗️ is on in Workshop, the same state returns with those controls.
+
+Workshop context does not own Crucible's fluids merely because the fluid machinery is reusable. Liquid authored inside ⚗️ remains Crucible state. Future Workshop fluids may coexist only as independently owned state.
+
 Do not build a fabrication framework merely because the bench is empty. Let construction pressure earn operations.
 
 ## Simulation and persistence
@@ -184,7 +188,7 @@ The current Crucible meteor module also owns a small additive orange wake. That 
 
 ### Controls at the snapshot
 
-The left tray currently exposes:
+At that snapshot the left tray exposed:
 
 - `☄️` meteor, with four impact magnitudes;
 - `⛰️` next deterministic terrain;

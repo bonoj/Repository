@@ -3,7 +3,8 @@
   const spells={
     temporary:[
       {id:"spin",text:"🪄",label:"Spin presences",onClick:spinPresences},
-      {id:"marble",text:"⚪️",label:"Compact Betwixt content",onClick:marbleBetwixtContent}
+      {id:"marble",text:"⚪️",label:"Compact Betwixt content",onClick:marbleBetwixtContent},
+      {id:"crucible",text:"🔥",label:"Summon intact Crucible",onClick:toggleCrucible}
     ],
     resident:[
       {id:"workshop",text:"🛠",label:"Clear the Workshop bench",onClick:toggleWorkshop},
@@ -26,6 +27,8 @@
     #repository-devtools button.wide{grid-column:span 2;width:auto}
     #repository-devtools button.tall{grid-row:span 2;height:auto}
     #repository-devtools button.large{grid-column:span 2;grid-row:span 2;width:auto;height:auto;font-size:1.6rem}
+    #repository-crucible{position:fixed;z-index:80;left:50%;top:50%;width:min(88vw,52rem);height:min(76dvh,44rem);transform:translate(-50%,-50%);border:1px solid #77736b66;border-radius:.7rem;background:#342820;box-shadow:0 1.2rem 4rem #0007;overflow:hidden}
+    #repository-crucible iframe{display:block;width:100%;height:100%;border:0;background:#342820}
   `;
   document.head.append(style);
 
@@ -75,6 +78,29 @@
   function removeTool(id){
     registered.get(id)?.remove();
     registered.delete(id);
+  }
+
+  let crucibleAperture=null;
+  function toggleCrucible(button){
+    if(crucibleAperture){
+      crucibleAperture.remove();
+      crucibleAperture=null;
+      button?.classList.remove("active");
+      button?.setAttribute("aria-pressed","false");
+      return false;
+    }
+    const host=document.createElement("section");
+    host.id="repository-crucible";
+    host.setAttribute("aria-label","Intact Crucible");
+    const frame=document.createElement("iframe");
+    frame.src="crucible/index.html";
+    frame.title="Crucible";
+    host.append(frame);
+    document.body.append(host);
+    crucibleAperture=host;
+    button?.classList.add("active");
+    button?.setAttribute("aria-pressed","true");
+    return true;
   }
 
   function marbleBetwixtContent(button){

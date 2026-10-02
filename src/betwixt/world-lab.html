@@ -1457,6 +1457,7 @@ for(let i=0;i<49;i++){
    Eight-limbed brass-and-glass amphibious octocopter. Form first; modes come later. */
 const octo=new THREE.Group();octo.name='workshop:brass-glass-octocopter';workshopField.add(octo);
 octo.position.y=1.65;
+octo.visible=false; // Drone v1 retained as source evidence; hidden from the current bench.
 
 const brass=new THREE.MeshStandardMaterial({color:0xb4772e,roughness:.24,metalness:.82});
 const brassDark=new THREE.MeshStandardMaterial({color:0x5d3b1d,roughness:.34,metalness:.72});

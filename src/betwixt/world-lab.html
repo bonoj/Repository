@@ -1988,6 +1988,12 @@ const localGravityCore=new THREE.Mesh(
   new THREE.MeshStandardMaterial({color:0xc8e2e3,transparent:true,opacity:.22,roughness:.08,metalness:0,depthWrite:false,side:THREE.DoubleSide})
 );
 localGravityCore.name='local-gravity-orb:core';localGravityOrb.add(localGravityCore);
+const localGravityLavaMat=new THREE.MeshStandardMaterial({
+  color:0xff4b16,emissive:0x7a1200,emissiveIntensity:.85,
+  roughness:.48,metalness:0,transparent:true,opacity:.9,depthWrite:true
+});
+const localGravityLava=new THREE.Mesh(new THREE.SphereGeometry(.835,32,20),localGravityLavaMat);
+localGravityLava.name='local-gravity-orb:lava-surface';localGravityOrb.add(localGravityLava);
 const localGravityEdges=new THREE.LineSegments(
   new THREE.EdgesGeometry(new THREE.SphereGeometry(.825,14,9)),
   new THREE.LineBasicMaterial({color:0x667879,transparent:true,opacity:.62})
@@ -2001,6 +2007,8 @@ let localGravityVelocity=new THREE.Vector3(0,0,1.35),localGravityLast=performanc
 
 function updateLocalGravityOrb(now){
   const dt=Math.min(.035,Math.max(0,(now-localGravityLast)/1000));localGravityLast=now;
+  localGravityLavaMat.emissiveIntensity=.72+.18*Math.sin(now*.0017)+.08*Math.sin(now*.0041);
+  localGravityLava.rotation.y+=dt*.045;
   if(!dt)return;
   const p=localGravitySatellite.position,r=Math.max(.35,p.length());
   const accel=p.clone().multiplyScalar(-2.35/(r*r*r));

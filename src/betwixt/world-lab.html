@@ -1325,7 +1325,7 @@ function setContentWorkshopHidden(hidden){
     contentFrozenAt=performance.now();
     betwixtContent.visible=false;
     workshopField.visible=true;
-    resetWorkshopTanks();
+    resetWorkshopGlass();
     target.set(0,.35,0);radius=11.8;theta=.16;phi=1.02;applyCamera();
     setLabActions(null);
   }else{
@@ -1338,7 +1338,7 @@ function setContentWorkshopHidden(hidden){
     for(const st of descentStates.values())st.nextAt+=pause;
     betwixtContent.visible=true;
     workshopField.visible=false;
-    if(workshopWater)workshopWater.setEnabled(false);
+
     contentFrozenAt=0;
     home();
   }
@@ -1453,93 +1453,44 @@ for(let i=0;i<49;i++){
 }
 
 
-/* Third Workshop pressure: two clear communicating tanks, finite Crucible water,
-   and one removable gate. The donor shallow-water solver remains untouched. */
-const workshopTanks=new THREE.Group();
-workshopTanks.name='workshop:communicating-crucible-water-tanks';
-workshopField.add(workshopTanks);
-const tankGlass=new THREE.MeshStandardMaterial({color:0xc8e2e3,transparent:true,opacity:.16,roughness:.08,metalness:0,depthWrite:false,side:THREE.DoubleSide});
-const tankEdge=new THREE.MeshStandardMaterial({color:0x6f7b7c,roughness:.5,metalness:.28});
-const gateMat=new THREE.MeshStandardMaterial({color:0xc67838,roughness:.55,metalness:.22});
-function tankBox(x){
-  const g=new THREE.Group();g.position.x=x;workshopTanks.add(g);
-  const bottom=new THREE.Mesh(new THREE.BoxGeometry(2.8,.10,2.4),tankGlass);bottom.position.y=.05;g.add(bottom);
-  for(const z of [-1.2,1.2]){const w=new THREE.Mesh(new THREE.BoxGeometry(2.8,2.25,.055),tankGlass);w.position.set(0,1.12,z);g.add(w)}
-  for(const sx of [-1.4,1.4]){const w=new THREE.Mesh(new THREE.BoxGeometry(.055,2.25,2.4),tankGlass);w.position.set(sx,1.12,0);g.add(w)}
-  const e=new THREE.EdgesGeometry(new THREE.BoxGeometry(2.8,2.25,2.4));
-  const lines=new THREE.LineSegments(e,new THREE.LineBasicMaterial({color:0x667879,transparent:true,opacity:.62}));
-  lines.position.y=1.12;g.add(lines);return g;
-}
-tankBox(-3.05);tankBox(3.05);
-const pipe=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,3.35,18,1,true),tankGlass);
-pipe.rotation.z=Math.PI/2;pipe.position.set(0,.48,0);workshopTanks.add(pipe);
-for(const x of [-1.68,1.68]){const rim=new THREE.Mesh(new THREE.TorusGeometry(.43,.035,6,18),tankEdge);rim.rotation.y=Math.PI/2;rim.position.set(x,.48,0);workshopTanks.add(rim)}
-const gate=new THREE.Mesh(new THREE.BoxGeometry(.12,1.12,1.12),gateMat);
-gate.position.set(0,.55,0);gate.castShadow=true;workshopTanks.add(gate);
-const gatePickables=[gate];
-let workshopGateOpen=false,workshopGateStart=0,workshopWater=null;
+/* Fourth Workshop pressure: 49 interpretations of glass on identical tank geometry.
+   Geometry is the control. Material/presentation is the variable. */
+const glassStudy=new THREE.Group();
+glassStudy.name='workshop:49-glass-tanks';
+workshopField.add(glassStudy);
 
-function tankBoundary(x,z){
-  const az=Math.abs(z),left=x>=-4.45&&x<=-1.65&&az<=1.2,right=x>=1.65&&x<=4.45&&az<=1.2;
-  const channel=x>-1.65&&x<1.65&&az<=.42;
-  const blockedGate=!workshopGateOpen&&Math.abs(x)<.16&&az<=.46;
-  const inside=(left||right||channel)&&!blockedGate;
-  if(!inside)return{inside:false,distance:-1,nx:0,nz:0};
-  // Solver only needs trustworthy normals near the outside wall. This rectangular
-  // approximation is sufficient for the contained communicating-vessel specimen.
-  let d=99,nx=0,nz=0;
-  const candidates=[];
-  if(left||right){const lo=left?-4.45:1.65,hi=left?-1.65:4.45;candidates.push([x-lo,-1,0],[hi-x,1,0],[1.2-az,0,Math.sign(z)||1]);}
-  else candidates.push([.42-az,0,Math.sign(z)||1]);
-  if(!workshopGateOpen)candidates.push([Math.abs(x)-.16,-Math.sign(x)||-1,0]);
-  for(const q of candidates)if(q[0]<d){d=q[0];nx=q[1];nz=q[2]}
-  return{inside:true,distance:Math.max(0,d),nx,nz};
-}
-const workshopTankTerrain={
-  materialBoundary:tankBoundary,
-  groundHeightExact(){return 0;},
-  groundHeight(){return 0;}
+const glassStandard={
+  name:'Standard',
+  face:{color:0xc8e2e3,opacity:.16,roughness:.08,metalness:0,depthWrite:false,side:THREE.DoubleSide},
+  edge:{color:0x667879,opacity:.62}
 };
-function ensureWorkshopWater(){
-  if(workshopWater)return workshopWater;
-  workshopWater=createShallowWaterSystem({THREE,scene,terrain:workshopTankTerrain,kind:'workshop-tanks',look:{color:0x17636a,opacity:.48,sideColor:0x245f73,sideOpacity:.42}});
-  workshopWater.setSources([]);workshopWater.setEnabled(false);return workshopWater;
+const glassLooks=[
+  ['Standard',0xc8e2e3,.16,.08,0,0x667879,.62],
+  ['Crystal',0xe8ffff,.09,.02,0,0x9bb6b8,.42],['Museum',0xd8edf0,.12,.04,0,0x81999c,.50],['Window',0xbfdadd,.18,.12,0,0x61777a,.58],['Bottle',0x7fae9b,.25,.18,0,0x456b5d,.65],['Sea Glass',0x8fc7bd,.32,.55,0,0x5d8f87,.45],['Smoked',0x536568,.28,.16,0,0x303b3e,.72],
+  ['Obsidian',0x182225,.48,.12,.05,0x05090a,.82],['Amber',0xd79b48,.26,.14,0,0x8a5a25,.66],['Rose',0xe3a5ac,.20,.10,0,0x9b6970,.55],['Cobalt',0x4779ad,.27,.10,0,0x294d75,.72],['Emerald',0x4e9b77,.24,.12,0,0x2d674d,.65],['Violet',0x9075b3,.22,.09,0,0x5d4779,.64],['Ruby',0xb44e57,.24,.11,0,0x762f37,.70],
+  ['Frosted',0xdce8e6,.34,.88,0,0x879492,.38],['Etched',0xc9dcda,.27,.68,0,0x6f8582,.52],['Milk',0xe9efea,.52,.72,0,0xa0aaa4,.34],['Ice',0xd9f4f5,.20,.32,0,0x8ab5b8,.44],['Glacier',0xa9d5df,.31,.46,0,0x648f9a,.48],['Fogged',0xbac8c5,.38,.95,0,0x737f7d,.34],['Chalk',0xd8ded6,.58,1,0,0x8c928b,.30],
+  ['Polished',0xe5fbfb,.11,.01,0,0x788f91,.72],['Hard Gloss',0xc7e4e7,.18,.015,.05,0,0x536c70,.78],['Metal Glass',0xa8c5c8,.22,.06,.32,0x53666a,.75],['Mercury',0x9faeb0,.38,.04,.65,0x3d4648,.86],['Graphite',0x667376,.34,.18,.28,0x303638,.80],['Bronze Glass',0x9d8063,.31,.16,.22,0x5c4735,.72],['Gold Glass',0xd1b46b,.25,.08,.25,0x846d37,.68],
+  ['Ghost',0xeaffff,.045,.02,0,0xa7c5c7,.24],['Outline',0xdff5f5,.025,.10,0,0x536d70,.92],['Heavy Edge',0xc8e2e3,.10,.08,0,0x44585b,1],['No Edge',0xc8e2e3,.20,.08,0,0xc8e2e3,0],['Dark Edge',0xd9eeee,.10,.04,0,0x182427,.92],['Pale Edge',0xb8d3d6,.18,.12,0,0xdcebec,.78],['Warm Edge',0xc8d9d7,.16,.10,0,0x9a7457,.72],
+  ['Laboratory',0xd7eeee,.13,.06,0,0x5f777a,.56],['Aquarium',0x9fd6dd,.19,.05,0,0x4d8790,.52],['Industrial',0xa8babc,.24,.30,.05,0x4c585a,.82],['Armored',0x83989b,.34,.22,.12,0x344245,.96],['Old Green',0x7f9f86,.29,.42,0,0x4e6553,.72],['Old Brown',0x9a8873,.30,.48,0,0x5e5143,.70],['Blue Plate',0x779cac,.31,.20,.03,0x405e6a,.76],
+  ['Thin Film',0xa7d7cf,.08,.03,0,0x8a6da0,.72],['Neon Rim',0x83d6d1,.12,.05,0,0x3bc9c1,.95],['Deep Teal',0x17636a,.32,.10,0,0x0c3439,.82],['Black Ice',0x33484d,.36,.05,.08,0x111b1e,.88],['Porcelain Glass',0xe6e8df,.44,.62,0,0xa6aaa0,.42],['Honey',0xd7ad62,.38,.24,0,0x916b2f,.66],['Alien',0x87b77c,.20,.06,.08,0x5566a8,.82]
+];
+function makeGlassTank(look,index){
+  const [name,color,opacity,roughness,metalness,edgeColor,edgeOpacity]=look;
+  const g=new THREE.Group();g.userData.workshop={index,name};
+  const face=new THREE.MeshStandardMaterial({color,transparent:true,opacity,roughness,metalness,depthWrite:false,side:THREE.DoubleSide});
+  const edgeMat=new THREE.LineBasicMaterial({color:edgeColor,transparent:true,opacity:edgeOpacity});
+  const box=new THREE.Mesh(new THREE.BoxGeometry(1.12,.92,.92),face);box.position.y=.46;g.add(box);
+  const edges=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.12,.92,.92)),edgeMat);edges.position.y=.46;g.add(edges);
+  return g;
 }
-function resetWorkshopTanks(){
-  workshopGateOpen=false;workshopGateStart=0;gate.visible=true;gate.position.y=.55;
-  const water=ensureWorkshopWater();water.reset();water.setSources([]);water.setEnabled(true);
-  // Finite initial charge only. Left tank footprint is 2.8 x 2.4 and the
-  // transparent walls are 2.25 high: 15.12 volume units fills it to the brim.
-  // Spread that charge across the solver cells in the tank so initialization is
-  // hydrostatic rather than a single violent injection.
-  const xs=[];for(let x=-4.30;x<=-1.80;x+=.28)xs.push(x);
-  const zs=[];for(let z=-1.05;z<=1.05;z+=.28)zs.push(z);
-  const q=15.12/(xs.length*zs.length);
-  for(const x of xs)for(const z of zs)water.inject(q,x,z);
+for(let i=0;i<49;i++){
+  const tank=makeGlassTank(glassLooks[i],i),col=i%7,row=Math.floor(i/7);
+  tank.position.set((col-3)*1.62,0,(row-3)*1.50);
+  glassStudy.add(tank);
 }
-function removeWorkshopGate(){
-  if(workshopGateOpen)return;
-  workshopGateOpen=true;workshopGateStart=performance.now();
-  // The solver samples support on update, so opening the semantic boundary opens the pipe.
-  window.vestibuleDirty=true;
-}
-function updateWorkshop(now){
-  const water=ensureWorkshopWater();
-  if(workshopGateOpen&&gate.visible){
-    const t=Math.min(1,(now-workshopGateStart)/320);
-    gate.position.y=.55+1.6*(1-Math.pow(1-t,3));
-    if(t>=1)gate.visible=false;
-  }
-  water.update(now);window.vestibuleDirty=true;
-}
-function workshopTap(x,y){
-  if(!contentWorkshopHidden||workshopGateOpen)return false;
-  const r=canvas.getBoundingClientRect();
-  pointerNDC.set(((x-r.left)/r.width)*2-1,-((y-r.top)/r.height)*2+1);
-  raycaster.setFromCamera(pointerNDC,camera);
-  if(raycaster.intersectObjects(gatePickables,false).length){removeWorkshopGate();return true}
-  return false;
-}
+function resetWorkshopGlass(){}
+function updateWorkshop(now){window.vestibuleDirty=true}
+function workshopTap(x,y){return false}
 
 const raycaster=new THREE.Raycaster();
 const pointerNDC=new THREE.Vector2();

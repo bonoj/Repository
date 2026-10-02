@@ -1652,13 +1652,13 @@ baubleB.name='workshop:B';
 baubleB.position.set(1.45,.92,0);
 workshopField.add(baubleB);
 const octonutMaterial=new THREE.MeshStandardMaterial({
-  color:0xc58a32,
-  roughness:.24,
-  metalness:.82
+  color:0xe0a43b,
+  roughness:.22,
+  metalness:.84
 });
 function addOctonut(parent,y){
-  const outer=new THREE.CylinderGeometry(.24,.24,.16,8,1,false);
-  const inner=new THREE.CylinderGeometry(.105,.105,.18,8,1,false);
+  const outer=new THREE.CylinderGeometry(.12,.12,.16,8,1,false);
+  const inner=new THREE.CylinderGeometry(.0525,.0525,.18,8,1,false);
   // Eight-sided nut silhouette plus a dark inset bore; centered on the glass vertex
   // so half its thickness is inside the dome and half outside.
   const nut=new THREE.Mesh(outer,octonutMaterial);

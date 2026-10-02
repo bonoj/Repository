@@ -1338,9 +1338,9 @@ function setContentWorkshopHidden(hidden){
     contentFrozenAt=performance.now();
     betwixtContent.visible=false;
     workshopField.visible=true;
-    // The Crucible plinth + terrain are the current requested Workshop specimen.
-    // Bearings and other transported capabilities remain latent until requested.
-    setWorkshopTerrainVisible(true);
+    // Workshop context does not own Crucible state. The resident ⚗️ container
+    // alone decides whether its parented organism is present here.
+    if(workshopCrucibleEnabled)workshopCrucible.visible=true;
     resetWorkshopGlass();
     target.set(0,.35,0);radius=11.8;theta=.16;phi=1.02;applyCamera();
     setLabActions(null);
@@ -1358,7 +1358,7 @@ function setContentWorkshopHidden(hidden){
     for(const st of descentStates.values())st.nextAt+=pause;
     betwixtContent.visible=true;
     workshopField.visible=false;
-    setWorkshopTerrainVisible(false);
+    workshopCrucible.visible=false;
 
     contentFrozenAt=0;
     home();
@@ -1542,7 +1542,7 @@ function removeWorkshopCrucibleSpells(){
 }
 function setWorkshopCrucibleEnabled(enabled,button){
   workshopCrucibleEnabled=!!enabled;
-  if(workshopCrucibleEnabled){ensureWorkshopTerrain();workshopCrucible.visible=true;installWorkshopCrucibleSpells()}
+  if(workshopCrucibleEnabled){ensureWorkshopTerrain();workshopCrucible.visible=contentWorkshopHidden;installWorkshopCrucibleSpells()}
   else{workshopCrucible.visible=false;removeWorkshopCrucibleSpells()}
   button?.classList.toggle('active',workshopCrucibleEnabled);button?.setAttribute('aria-pressed',workshopCrucibleEnabled?'true':'false');
   workshopBearingLast=performance.now();window.vestibuleDirty=true;return workshopCrucibleEnabled;

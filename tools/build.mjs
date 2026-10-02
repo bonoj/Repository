@@ -20,5 +20,5 @@ const injection=`<script>globalThis.__REPOSITORY_SHA__=${JSON.stringify(sha)};gl
 const executable=donor.replace("<body>",`<body data-repository-build="${build}" data-repository-sha="${sha}">${injection}`).replace("</body>",`${bridge}</body>`);
 if(executable===donor)throw new Error("Repository shell injection point missing");
 await writeFile("dist/index.html",executable);
-await copyFile("src/cargo/crucible/index.html","dist/crucible/index.html");
+await copyFile("vendor/crucible/dist/index.html","dist/crucible/index.html");
 console.log(`Repository executable built from intact World Lab donor with intact Crucible cargo: ${build}`);

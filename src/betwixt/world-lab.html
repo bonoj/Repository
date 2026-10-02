@@ -1264,8 +1264,7 @@ let lastPortrait=innerHeight>innerWidth*1.12;
 let selectedEntity=null;updateLabLabel();
 let presenceMotion=null;
 
-// 🛠 currently means only this: lift the intact content organism out of the way,
-// or return it exactly. The meaning is intentionally allowed to change later.
+// ⬆️ preserves the first operation earned by the content boundary: lift / exact return.
 const CONTENT_LIFT_Y=13.5;
 let contentRaised=false;
 let contentLiftMotion=null;
@@ -1279,6 +1278,36 @@ function setContentRaised(raised){
   return contentRaised;
 }
 function toggleContentRaised(){return setContentRaised(!contentRaised)}
+
+// 🛠 compacts the same intact organism around its own center, then lets the
+// resulting marble fall under simple Betwixt gravity. Tapping again restores it.
+const CONTENT_CENTER_Y=5.6;
+const CONTENT_MARBLE_SCALE=0.085;
+const CONTENT_MARBLE_RADIUS=0.62;
+const CONTENT_GRAVITY=-24;
+let contentTinkered=false;
+let contentTinkerMotion=null;
+let contentGravityVelocity=0;
+function setContentTinkered(tinkered){
+  tinkered=!!tinkered;
+  contentTinkered=tinkered;
+  contentGravityVelocity=0;
+  // The lift is an independent spell. Return it before changing physical form so
+  // compaction always begins from a readable, known place.
+  contentRaised=false;contentLiftMotion=null;
+  const currentScale=betwixtContent.scale.x;
+  const currentY=betwixtContent.position.y;
+  const compactY=CONTENT_CENTER_Y*(1-CONTENT_MARBLE_SCALE);
+  contentTinkerMotion={
+    fromScale:currentScale,toScale:tinkered?CONTENT_MARBLE_SCALE:1,
+    fromY:currentY,toY:tinkered?compactY:0,
+    started:performance.now(),duration:tinkered?430:500,
+    restoring:!tinkered
+  };
+  window.vestibuleDirty=true;
+  return contentTinkered;
+}
+function toggleContentTinkered(){return setContentTinkered(!contentTinkered)}
 const raycaster=new THREE.Raycaster();
 const pointerNDC=new THREE.Vector2();
 const tapStarts=new Map();
@@ -1719,6 +1748,28 @@ renderer.setAnimationLoop((now)=>{
     window.vestibuleDirty=true;
     if(raw>=1){betwixtContent.position.y=m.to;contentLiftMotion=null}
   }
+  if(contentTinkerMotion){
+    const m=contentTinkerMotion,raw=Math.min(1,(now-m.started)/m.duration),t=easeQuiet(raw);
+    const scale=THREE.MathUtils.lerp(m.fromScale,m.toScale,t);
+    betwixtContent.scale.setScalar(scale);
+    betwixtContent.position.y=THREE.MathUtils.lerp(m.fromY,m.toY,t);
+    window.vestibuleDirty=true;
+    if(raw>=1){
+      betwixtContent.scale.setScalar(m.toScale);betwixtContent.position.y=m.toY;
+      contentTinkerMotion=null;
+      contentGravityVelocity=0;
+    }
+  }else if(contentTinkered){
+    const dt=Math.min(0.05,Math.max(0,(now-(window.__contentGravityLast||now))/1000));
+    const floorY=CONTENT_MARBLE_RADIUS;
+    if(betwixtContent.position.y>floorY){
+      contentGravityVelocity+=CONTENT_GRAVITY*dt;
+      betwixtContent.position.y=Math.max(floorY,betwixtContent.position.y+contentGravityVelocity*dt);
+      if(betwixtContent.position.y<=floorY)contentGravityVelocity=0;
+      window.vestibuleDirty=true;
+    }
+  }
+  window.__contentGravityLast=now;
   JupurnSystem(now);
   ExchangeSystem(now);
   OrbitalSystem(now);
@@ -1788,6 +1839,9 @@ window.vestibule={
   get contentRaised(){return contentRaised},
   setContentRaised,
   toggleContentRaised,
+  get contentTinkered(){return contentTinkered},
+  setContentTinkered,
+  toggleContentTinkered,
   get layout(){return 'Ring'},
   get selected(){return selectedEntity?C.Presence.get(selectedEntity).slot:null},
   home,

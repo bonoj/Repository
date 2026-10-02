@@ -12,11 +12,21 @@ const shell=await readFile("src/shell/repository-shell.js","utf8");
 const ecs=await readFile("src/core/ecs.js","utf8");
 const mirror=await readFile("src/betwixt/mirror.js","utf8");
 const shallowWater=await readFile("src/cargo/crucible/source/src/runtime/shallow-water-system.js","utf8");
+const bearingSystem=await readFile("src/cargo/crucible/source/src/runtime/bearing-system.js","utf8");
+const terrainSystem=await readFile("src/cargo/crucible/source/src/runtime/terrain-system.js","utf8");
+const transportSystem=await readFile("src/cargo/crucible/source/src/runtime/transport-system.js","utf8");
 const ecsInline=ecs.replace("export function createWorld","function createWorld");
 const mirrorInline=mirror
   .replace('import {createWorld} from "../core/ecs.js";',"")
   .replace("export function attachBetwixtMirror","function attachBetwixtMirror");
 const shallowWaterInline=shallowWater.replace("export function createShallowWaterSystem","function createShallowWaterSystem");
+// Water transport boundary: preserve the earned organism as source evidence even
+// while Betwixt only executes the shallow-water module directly.
+for(const [name,source,evidence] of [
+  ["bearing-system",bearingSystem,["liquid?.surfaceY?.","liquid.flowInto?."]],
+  ["terrain-system",terrainSystem,["materialBoundary","groundHeightExact"]],
+  ["transport-system",transportSystem,["supportHeight"]]
+])for(const token of evidence)if(!source.includes(token))throw new Error(`Crucible water dependency evidence missing from ${name}: ${token}`);
 const bridge=`<script>${shallowWaterInline}\n${ecsInline}\n${mirrorInline}\n(function attachMirrorWhenReady(){if(globalThis.vestibuleReady&&globalThis.vestibule?.presences?.length){attachBetwixtMirror();return}addEventListener("vestibule-ready",attachMirrorWhenReady,{once:true})})();<\/script>`;
 const injection=`<script>globalThis.__REPOSITORY_SHA__=${JSON.stringify(sha)};globalThis.__REPOSITORY_BUILD__=${JSON.stringify(build)};<\/script><script>${shell}<\/script>`;
 const executable=donor.replace("<body>",`<body data-repository-build="${build}" data-repository-sha="${sha}">${injection}`).replace("</body>",`${bridge}</body>`);

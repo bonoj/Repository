@@ -1,0 +1,1655 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>World Lab Vestibule — Worldspace T0</title>
+<style>
+:root{
+  color-scheme:dark;
+  --glass:#0b1016d9; --line:#ffffff24; --text:#e9edf0; --muted:#9aa5ae;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#05070a;touch-action:none}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--text)}
+canvas{display:block;touch-action:none}
+#mark{
+  position:fixed;left:max(12px,env(safe-area-inset-left));top:max(10px,env(safe-area-inset-top));
+  z-index:3;pointer-events:none;color:var(--muted);font:10px/1.35 ui-monospace,SFMono-Regular,Consolas,monospace;
+  letter-spacing:.08em;text-shadow:0 1px 8px #000
+}
+#mark strong{display:block;color:#f3f5f6;font:600 12px/1.35 system-ui,sans-serif;letter-spacing:.13em}
+button,select{
+  min-height:48px;border:1px solid var(--line);border-radius:11px;
+  background:#151c24;color:var(--text);font:600 14px/1 system-ui,sans-serif;
+}
+button{font-size:20px}
+button:active,select:active{background:#202a35}
+select{width:100%;padding:0 12px;appearance:auto}
+#counter{
+  position:fixed;z-index:3;right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));
+  color:#aeb7bf;font:11px/1.4 ui-monospace,monospace;text-align:right;pointer-events:none
+}
+#fault{
+  display:none;position:fixed;z-index:99;left:10px;right:10px;bottom:76px;max-height:45%;overflow:auto;
+  background:#351b1bf5;border:1px solid #d98565;border-radius:8px;padding:12px;color:#ffb36b;
+  white-space:pre-wrap;font:11px/1.4 ui-monospace,monospace
+}
+@media (max-width:520px){#counter{top:48px}}
+@media (min-width:900px){button{min-height:42px}}
+
+#labName{
+  position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:15;
+  color:#e8edf0;font:600 12px/1 system-ui,sans-serif;letter-spacing:.08em;
+  text-transform:uppercase;pointer-events:none;opacity:0;transition:opacity .16s;
+}
+
+#labActions{
+  position:fixed;left:50%;bottom:max(26px,calc(env(safe-area-inset-bottom) + 18px));
+  z-index:40;width:min(250px,calc(100vw - 96px));
+  display:grid;gap:8px;opacity:0;visibility:hidden;pointer-events:none;
+  transform:translateX(-50%);transition:opacity .14s;
+}
+#labActions.visible{opacity:1;visibility:visible;pointer-events:auto}
+#labActions button{
+  width:100%;min-height:48px;border:1px solid rgba(30,34,36,.78);border-radius:0;
+  background:#e7e2d8;color:#17191a;
+  font:600 14px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  letter-spacing:.16em;text-transform:uppercase;
+  box-shadow:0 5px 18px rgba(40,36,30,.08);
+}
+#labActions button.secondary{
+  background:#e7e2d8;font-weight:500;color:#343638;
+}
+#labActions button:active{background:#ded8cd}
+</style>
+</head>
+<body>
+<div id="mark"><strong>WORLD LAB</strong></div>
+
+<div id="fault"></div>
+
+<div id="labName"></div>
+<div id="labActions" aria-hidden="true">
+  <button id="enterLab" type="button">ENTER LAB</button>
+  <button id="githubLab" class="secondary" type="button">GITHUB</button>
+</div>
+
+<script type="text/plain" id="vestibule-semantics">
+WORLD LAB VESTIBULE — SIX CITIES IDENTITY + CONTEXTUAL ACTIONS T0
+
+VISIBLE COPY T41
+Persistent display copy is reduced to WORLD LAB only. The former VESTIBULE · WORLDSPACE T0 subtitle and upper-right diagnostic/counter copy are retired.
+T41 removed the counter DOM but left applyRing() writing directly to that retired node, and the visible startup diagnostics correctly caught the null textContent write. T42 removes that stale write while preserving ring/profile behavior. Contextual action labels remain interaction controls and appear only when a lab is foregrounded.
+
+ROLE
+The vestibule is a spatial threshold between the World Lab landing surface and
+independent executable labs. It owns departure; each destination lab owns arrival.
+
+WORLD SPACE
+The current world is intentionally quiet and identity-neutral:
+- a broad matte white-grey plane;
+- a warm-neutral dome whose value remains close to, but distinct from, the plane;
+- five identical presences hovering clearly above the plane;
+- soft static shadows that establish the presences as things occupying a place.
+- a centered static overhead skylight; no directional lighting movement.
+- restrained distance fog begins only near the outer world, softening the floor/dome
+  horizon without washing out the presences during ordinary or far inspection.
+There are no paths, pedestals, landmarks, environmental animation, or moving light.
+The dome is the lateral/upper visual extent and observer constraint. The floor is
+also a hard observer boundary: the camera may approach it but never pass through it.
+Zoom itself has no arbitrary near/far leash; observer travel is governed by the
+physical world bounds instead. When pinch zoom reaches the dome boundary, continued
+pinch-out is clamped along the same viewing direction and must not become orbit.
+
+TOPOLOGY
+Five presences occupy a circular ring around a shared center. The ring is phased edge-forward so the initial view meets the flat span between
+two neighboring presences rather than a single vertex, without changing the earned
+observer home pose. Ring earned itself
+during the topology expedition and is now ordinary vestibule structure.
+
+SELECTION GRAMMAR
+- Tap a presence: it leaves its ring slot and travels toward the observer, settling
+  8.5 world units in front of the camera with a slight camera-relative lift.
+- Camera attention shifts to the arriving presence and remains locked to it.
+- Pinch/wheel zoom and orbit remain available around the foregrounded presence.
+- Selection snapshots the complete pre-selection observer pose.
+- Tap away reverses the presence and restores that exact pose.
+- A larger invisible interaction shell improves mobile acquisition without changing
+  the visible presence.
+- Only one presence can be foregrounded at a time.
+
+CONTEXTUAL ACTIONS
+Foregrounding an assigned lab reveals a small screen-space action stack anchored stably
+at bottom center with safe-area breathing room. ENTER LAB is primary; GITHUB is secondary
+provenance. The controls deliberately do not follow the physical presence: orbit and zoom
+remain visually free so the user can inspect the project marble without UI jitter or pursuit.
+Their fill matches the ground material, making the floor/substrate the visual source of
+interface rather than introducing a separate HTML-white or glass layer.
+Visibility is driven directly by foreground state. The unassigned control presence exposes
+no actions.
+
+ENTRY
+ENTER LAB invokes the established Camera Commit: the observer moves rapidly toward the
+foregrounded presence, then navigates to Destination. Navigation authority belongs to
+the explicit contextual action rather than a second tap on the physical object.
+
+ACTION-ANCHOR CORRECTION
+A projected object-relative action tether was implemented and rejected under touch inspection:
+small camera/orbit changes made the menu jitter and visually chase the marble. The action stack
+is therefore viewport-owned, fixed at bottom center. Physical inspection and interface stability
+are intentionally decoupled.
+
+BACK / WORLD CONTINUITY
+World Lab owns one versioned session WorldState. It persists semantic simulation state rather than
+Three.js representation: observer/focus state; Vertical Accretion route, stock/path progress, worker
+run, RNG and spoil physics; Foundry drones plus stable references to shared spoil; and Six Cities
+exchange scheduler, RNG and active packet progression. Meshes/groups remain disposable views and are
+reconstructed from that state when the document is rebuilt. BFCache may preserve the live ECS world
+as an optimization, but it no longer defines continuity.
+
+WorldState is a continuity boundary, not a new owner of every simulation. Each identity system retains
+its behavioral authority. Cross-system coupling occurs through the smallest shared semantic facts that
+have earned persistence. The current important example is spoil: Vertical Accretion produces physical
+spoil with stable identity; Foundry may independently claim, carry, and remove that same spoil; WorldState
+preserves the identity and relationship without making either system own the other's behavior. Stable
+identity is introduced only where restoration of a real relationship requires it.
+
+Navigation is deliberately outside WorldState. ENTER LAB checkpoints the stable inspection state
+before Camera Commit, then Camera Commit runs. finishEntry consumes
+entryMotion before assigning location.href. A BFCache return therefore cannot resume a completed
+Camera Commit and phantom-enter the same lab. pagehide/visibility lifecycle saves are suppressed only once navigation begins
+during sealed departure so the terminal commit camera cannot overwrite the inspection checkpoint.
+On pageshow from BFCache only ephemeral motion/departure state is cleared; on document reconstruction
+the versioned WorldState rebuilds meaningful world identity. Session storage intentionally limits
+continuity to the current tab/session rather than creating a permanent save game.
+
+CONTINUITY ARCHAEOLOGY
+The predecessor used a one-shot return snapshot containing only foreground presence and observer pose.
+That solved reconstructed Back framing but left simulation identity dependent on BFCache. More
+importantly, Camera Commit left its completed entryMotion live across navigation. BFCache restored that
+executable departure intent; the resumed animation loop immediately called finishEntry again, producing
+the observed World Lab flash followed by automatic re-entry and a damaged-feeling Back sequence.
+The repair separates durable world state from ephemeral commands and makes departure exactly-once.
+
+APPARATUS UI RETIREMENT
+The persistent lower-right Home/apparatus control was removed after camera interaction became
+bounded, reversible, and transactionally restored by the selection grammar. The user no longer
+needs a recovery control for ordinary camera exploration; permanent chrome would only advertise
+a failure mode the apparatus has already solved.
+The first retirement pass removed the Home DOM node but left a later direct onclick binding,
+which correctly failed visibly at startup. That stale binding was removed; the programmatic
+home() helper may remain available for diagnostics without requiring visible UI.
+
+PRECONNECT
+Foreground focus is a declaration of interest. If the entity owns a Destination,
+the vestibule preconnects to its origin. This is intentionally the only preload
+behavior: the preload expedition found speculative destination execution harmful
+to vestibule frame rate and not meaningfully beneficial to arrival. Lab startup
+experience belongs to the lab.
+
+ECS OWNERSHIP
+The vestibule uses a deliberately minimal ECS substrate.
+Entity identity and semantic components are independent of rendering. Transform owns
+world data. Three.js Object3D instances live only in RenderObject. RenderSyncSystem is
+the one-way bridge from authoritative data to views. Views remain dumb.
+LabIdentity and Destination own lab information; no lab-specific view classes exist.
+ExchangeIdentity owns the first project-derived behavioral vocabulary. A generic
+ExchangeSystem materializes its fittings and packet traffic; the Six Cities entity
+supplies only data.
+
+IDENTITY PROBE — SIX CITIES
+Six Cities alone has earned a first physical mutation while the other presences remain
+neutral controls. Its neutral sphere is retained. Six small octagonal metal fittings
+are attached at the four equatorial cardinal points and two poles. Sparse deterministic
+five-bearing material packets travel on raised spherical arcs between fittings. Each
+packet is a clearly separated five-bearing train with the size rhythm
+teeny -> tiny -> small -> tiny -> teeny. The center is the largest bearing, but even
+it remains smaller than the previous probe's largest bearings. Each bearing owns its
+own passage lifecycle: it appears only when its staggered departure begins, traverses
+the complete arc at the common packet speed, and disappears individually on reaching
+the destination fitting. Route ownership persists until the final bearing arrives.
+Packets choose deterministically among four terrain-derived material colors: forest
+green, warm sand/gold, pale stone, and water cyan. The underlying Six Cities presence remains the same opaque neutral white sphere as every
+other project presence. Its fittings are bright warm honey-brass, deliberately biased by
+material color rather than scene lighting. Each of the six octagonal fittings carries its
+own tiny translucent light-blue glass dome, derived from Reservoir City's containment
+architecture. Each dome is constructed from the brass interface rather than independently:
+each dome is a true hemisphere whose diameter is deliberately narrower than the
+octonut top, leaving a slim breathing annulus of warm brass around the glass. Its
+equatorial rim plane sits slightly below the brass top face, so the dome remains
+physically socketed with no hover gap. These are local structures attached to the six loci, not a shell around the
+whole project orb. Other project presences remain opaque neutral white controls. Bearings, fittings, and
+shell participate in the scene's physical lighting and shadows.
+
+Implementation archaeology: the first shell probe attempted to access RenderObject
+during entity construction before that component had been installed, causing startup
+to fail visibly. Shell appearance/materialization now occurs in the post-construction
+ExchangeIdentity + RenderObject pass, preserving component ownership and startup order.
+That whole-orb shell interpretation was subsequently rejected: the canonical white
+presence is restored unchanged. Translucency now belongs only to six tiny hemispherical
+domes mounted on the brass fittings.
+Traffic is intentionally lumpy but somewhat busier: quiet gaps, isolated transfers,
+and occasional simultaneous exchanges. Orthogonal/nonintersecting routes may overlap in
+time; only physically conflicting arc crossings are reserved out. There are no labels,
+trails, glows, miniature scenery, or explanatory UI. The mechanism is evidence of six loci exchanging matter, not an
+illustration of six cities.
+
+
+IDENTITY PROBE — FOUNDRY T2
+Foundry retains the canonical neutral white presence. Its first physical tether is a deliberately
+tiny beige drone factory socketed into the marble: squat warm-beige body, orange cap, and a black
+rectangular front mouth represented by an almost-flush outset. The previously proposed side poles
+were rejected as visual invention and removed.
+
+The factory now earns one verb: retrieve. Fifteen little orange true-cube drones belong to each factory. They emerge from the black mouth, claim
+the nearest unclaimed Vertical Accretion spoil rock, and actively pursue that physical rock even while
+it is still falling or bouncing. Claiming reserves a target but does not freeze its physics. On contact,
+the drone picks up that same object and carries it home. Drones treat presence surfaces and the factory as solid obstacles, round them rather than clipping through them, and return through a broad front-door staging corridor before entering the black mouth, giving the factory a visibly generous berth and preventing corner traps. The rock leaves the world only at the factory mouth. Cargo return is an explicit world-space waypoint path around obstructing presence spheres; generic tangent repulsion is not used after pickup. The terminal factory approach remains live and the route is rebuilt if the Foundry presence materially moves. The factory body grows upward while its seated floor plane stays fixed, giving the black bay more vertical breathing room.
+Claims prevent dogpiling. No processing or output is implied yet.
+
+ARCHAEOLOGY — FOUNDRY IDENTITY
+The older Foundry world supplies perceptual grammar rather than a scene to reproduce. Towers,
+lavender structures, cable machinery, terrain, and processing systems remain withheld. T1 made the
+factory too large and added unsupported skinny side poles; both were rejected. T2 makes the factory
+smaller and beiger, removes the poles, and lets retrieval behavior carry the identity.
+
+IDENTITY PROBE — ORBITAL CONSTRUCTION T1
+Orbital Construction retains the canonical neutral white presence, but its project identity does not
+sit on the marble. A distilled station orbits around it. The station is derived from the actual
+Orbital Construction lab vocabulary: a compact pale-grey central hub, orthogonal cylindrical pressure
+arms, asymmetric boxy habitation/workshop masses, a vertical mast, dark readable collars/structure,
+very thin orange routed pipes/rails, and a few tiny warm inhabited windows. It is intentionally not a
+miniature catalog of all thirty-seven module kinds and does not reproduce a finished composition.
+The station follows a slow wandering elliptical orbit with no visible orbit line. The ellipse plane,
+eccentricity, and attitude drift gently and independently over long periods, so the construction reads
+from changing aspects without becoming frantic. The marble remains the canonical presence substrate;
+the station is the lab's first identity evidence in the space around it.
+
+ARCHAEOLOGY — ORBITAL IDENTITY
+The source lab's executable and semantic surface were inspected before this probe. Earned visual
+grammar includes cool white/light-grey hulls, dark readable mechanical structure, orthogonal modular
+construction, thin orange framework/service routing, and scarce warm inhabited interiors. The vestibule
+does not import scene-specific machinery, module encyclopedias, or unearned construction behavior.
+
+IDENTITY PROBE — VERTICAL ACCRETION T28
+Vertical Accretion retains the canonical neutral white presence. A small block worker begins
+at a deterministic pseudo-random staging point with a broad finite pile of seventy-two actual
+wooden steps. The worker may not shortcut across the sphere to fetch material: every supply
+run retraces the graph of steps already constructed. He walks frontier -> built graph -> stock,
+carries one plank back across that same graph, and only then installs the new transverse step.
+The growing path therefore makes its own extension progressively more expensive in travel.
+A tiny torch begins beside each woodpile/restock site. Sparse additional torches are finite infrastructure attached to the path and cast tiny local illumination.
+When stock is exhausted, the worker retraverses the graph to its frontier, removes the final
+step, carries it home over the graph that remains, and repeats until the topology collapses
+back to the stockpile. He then chooses another deterministic pseudo-random staging route and
+starts again. The worker is a pictographic cream figure with a sphere head, subtly tapered cylinder body,
+no arms, and two nearly adjacent stubby grey legs slightly aft of centerline. Large warm-white spoil bearings use the original
+legible rubble scale, remain persistent physical consequence, and deliberately cast no shadows.
+
+ARCHAEOLOGY — VERTICAL ACCRETION IDENTITY
+Dark excavation channels failed to read as true cuts at marble scale. Permanent cuts and
+torches also accumulated toward ornamental end states. A direct stock-to-frontier spherical
+shuttle then exposed a deeper lie: finite lumber was physical, but the worker ignored the
+access topology it created. T27 makes constructed steps authoritative traversal edges. The
+worker now pays the logistics cost of his own growing graph; dismantling is its physical inverse.
+
+LAB ENTITIES
+Four presences currently own destinations:
+- Foundry -> https://bonoj.github.io/Foundry/
+- Six Cities -> https://bonoj.github.io/SixCities/
+- Vertical Accretion -> https://bonoj.github.io/VerticalAccretion/
+- Orbital Construction -> https://bonoj.github.io/OrbitalConstruction/
+The fifth presence remains deliberately unassigned and is not pre-named.
+
+ARCHAEOLOGY
+A 16-layout probe earned Ring. Transition probes earned Camera Commit. Preload probes
+compared none, preconnect, document prefetch, and warm iframe; Preconnect earned
+promotion. Warm iframe caused severe transient frame-rate collapse and did not improve
+the destination's meaningful render time. Experimental selectors and alternate
+implementations were removed after promotion rather than retained as dormant product UI.
+
+RUNTIME
+Dirty-on-change rendering except during bounded motion. Pixel ratio capped at 1.5.
+Startup/runtime/promise/WebGL/shader failures remain visibly diagnostic.
+
+WORKING RULE
+Attention brings a presence to the observer. Commitment carries the observer to the lab.
+</script>
+
+<script>
+const labNameEl=document.getElementById('labName');
+const labActionsEl=document.getElementById('labActions');
+const enterLabEl=document.getElementById('enterLab');
+const githubLabEl=document.getElementById('githubLab');
+
+window.vestibuleFail=(scope,e)=>{
+  clearTimeout(window.vestibuleWatch);
+  const f=document.getElementById('fault');
+  f.style.display='block';
+  f.textContent='WORLD LAB VESTIBULE — '+scope+'\n'+(e?.stack||e?.message||String(e));
+};
+addEventListener('error',e=>vestibuleFail('startup / runtime',e.error||e.message));
+addEventListener('unhandledrejection',e=>vestibuleFail('promise',e.reason));
+window.vestibuleWatch=setTimeout(()=>{
+  if(!window.vestibuleReady) vestibuleFail('load watchdog','Startup exceeded 30 seconds. Check CDN access / WebGL support.');
+},30000);
+</script>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+
+const scene=new THREE.Scene();
+const WORLD_RADIUS=58;
+const CAMERA_BOUNDARY=52;
+const GROUND_Y=0;
+scene.background=new THREE.Color(0xe8e1d8);
+scene.fog=new THREE.Fog(0xe8e1d8,48,78);
+
+const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.03,1000);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+renderer.setSize(innerWidth,innerHeight);
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.05;
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
+
+renderer.domElement.addEventListener('webglcontextlost',e=>{
+  e.preventDefault(); vestibuleFail('WebGL context lost','Reload to reconstruct the vestibule.');
+});
+renderer.debug.onShaderError=(gl,p,vs,fs)=>{
+  vestibuleFail('shader',gl.getProgramInfoLog(p)+'\n'+gl.getShaderInfoLog(vs)+'\n'+gl.getShaderInfoLog(fs));
+};
+
+scene.add(new THREE.HemisphereLight(0xfff9ef,0xc7c4be,1.7));
+const key=new THREE.DirectionalLight(0xfff4df,2.2);
+key.position.set(0,24,0);
+key.castShadow=true;
+key.shadow.mapSize.set(1024,1024);
+key.shadow.camera.left=-18;key.shadow.camera.right=18;
+key.shadow.camera.top=18;key.shadow.camera.bottom=-18;
+key.shadow.camera.near=.5;key.shadow.camera.far=60;
+key.shadow.bias=-.00015;
+scene.add(key);
+
+const floor=new THREE.Mesh(
+  new THREE.CircleGeometry(WORLD_RADIUS,128),
+  new THREE.MeshStandardMaterial({color:0xd9d9d6,roughness:1,metalness:0})
+);
+floor.rotation.x=-Math.PI/2;
+floor.position.y=GROUND_Y;
+floor.receiveShadow=true;
+scene.add(floor);
+
+// Back-face sphere: a quiet visible extent rather than a decorative sky.
+const dome=new THREE.Mesh(
+  new THREE.SphereGeometry(WORLD_RADIUS,64,32),
+  new THREE.MeshBasicMaterial({color:0xe8e1d8,side:THREE.BackSide,fog:false})
+);
+dome.position.y=GROUND_Y;
+scene.add(dome);
+
+// MINIMAL ECS — semantic state is independent of Three.js.
+function createWorld(){
+  let next=1; const alive=new Set(), stores=new Map();
+  const component=name=>{if(!stores.has(name))stores.set(name,new Map());return stores.get(name)};
+  const entity=()=>{const id=next++;alive.add(id);return id};
+  const add=(id,c,v=true)=>{if(!alive.has(id))throw Error(`dead entity ${id}`);c.set(id,v);return v};
+  const remove=(id,c)=>c.delete(id);
+  const has=(id,c)=>alive.has(id)&&c.has(id);
+  const query=(...cs)=>cs.length?[...cs.reduce((a,b)=>a.size<=b.size?a:b).keys()].filter(id=>alive.has(id)&&cs.every(c=>c.has(id))):[...alive];
+  const destroy=id=>{alive.delete(id);for(const c of stores.values())c.delete(id)};
+  return {component,entity,add,remove,has,query,destroy,alive,stores};
+}
+const ecs=createWorld();
+const C={
+  Presence:ecs.component('Presence'),
+  Transform:ecs.component('Transform'),
+  RenderObject:ecs.component('RenderObject'),
+  Selectable:ecs.component('Selectable'),
+  Foregroundable:ecs.component('Foregroundable'),
+  Foregrounded:ecs.component('Foregrounded'),
+  RingSlot:ecs.component('RingSlot'),
+  ObserverReturn:ecs.component('ObserverReturn'),
+  LabIdentity:ecs.component('LabIdentity'),
+  Destination:ecs.component('Destination'),
+  ExchangeIdentity:ecs.component('ExchangeIdentity'),
+  DescentIdentity:ecs.component('DescentIdentity'),
+  FoundryIdentity:ecs.component('FoundryIdentity'),
+  OrbitalIdentity:ecs.component('OrbitalIdentity')
+};
+
+const presenceMat=new THREE.MeshStandardMaterial({color:0xf0f0ed,roughness:.68,metalness:.04});
+const PRESENCES=[
+  {lab:{slug:'Foundry',name:'Foundry',url:'https://bonoj.github.io/Foundry/',github:'https://github.com/bonoj/Foundry'}},
+  {lab:{slug:'SixCities',name:'Six Cities',url:'https://bonoj.github.io/SixCities/',github:'https://github.com/bonoj/SixCities'}},
+  {lab:{slug:'VerticalAccretion',name:'Vertical Accretion',url:'https://bonoj.github.io/VerticalAccretion/',github:'https://github.com/bonoj/VerticalAccretion'}},
+  {lab:null},
+  {lab:{slug:'OrbitalConstruction',name:'Orbital Construction',url:'https://bonoj.github.io/OrbitalConstruction/',github:'https://github.com/bonoj/OrbitalConstruction'}}
+];
+
+const presenceEntities=PRESENCES.map((entry,slot)=>{
+  const id=ecs.entity(), g=new THREE.Group();
+  const sphere=new THREE.Mesh(new THREE.SphereGeometry(.58,28,18),presenceMat);
+  sphere.castShadow=true;sphere.receiveShadow=false;g.add(sphere);
+  const hitShell=new THREE.Mesh(new THREE.SphereGeometry(1.08,16,10),new THREE.MeshBasicMaterial({visible:false}));
+  g.add(hitShell);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(.72,.018,8,48),
+    new THREE.MeshBasicMaterial({color:0x66727c,transparent:true,opacity:.58}));
+  ring.rotation.x=Math.PI/2;ring.position.y=-.62;g.add(ring);scene.add(g);
+
+  ecs.add(id,C.Presence,{slot});
+  if(entry.lab){
+    ecs.add(id,C.LabIdentity,{slug:entry.lab.slug,name:entry.lab.name,github:entry.lab.github});
+    ecs.add(id,C.Destination,{url:entry.lab.url});
+    if(entry.lab.slug==='Foundry') ecs.add(id,C.FoundryIdentity,{seed:741});
+    if(entry.lab.slug==='SixCities') ecs.add(id,C.ExchangeIdentity,{
+      nodeCount:6,
+      seed:741,
+      minPause:520,
+      maxPause:1650,
+      packetDuration:[720,1180],
+      maxActive:3
+    });
+    if(entry.lab.slug==='VerticalAccretion') ecs.add(id,C.DescentIdentity,{
+      seed:741,stepMs:360,torchEvery:7
+    });
+    if(entry.lab.slug==='OrbitalConstruction') ecs.add(id,C.OrbitalIdentity,{
+      seed:741,orbitRadius:1.05
+    });
+  }
+  ecs.add(id,C.Transform,{
+    position:new THREE.Vector3(),
+    rotation:new THREE.Euler(),
+    scale:new THREE.Vector3(1,1,1)
+  });
+  ecs.add(id,C.RenderObject,{object:g,pickables:[sphere,hitShell,ring]});
+  ecs.add(id,C.Selectable,{enabled:true});
+  ecs.add(id,C.Foregroundable,{enabled:true});
+  for(const o of [sphere,hitShell,ring])o.userData.entityId=id; // routing only
+  return id;
+});
+// ORBITAL CONSTRUCTION IDENTITY T1 — distilled lab geometry in a wandering ellipse.
+const orbitalStates=new Map();
+const orbitalHullMat=new THREE.MeshStandardMaterial({color:0xcfd3d1,roughness:.58,metalness:.16});
+const orbitalHull2Mat=new THREE.MeshStandardMaterial({color:0xaeb6b6,roughness:.62,metalness:.13});
+const orbitalDarkMat=new THREE.MeshStandardMaterial({color:0x4d5659,roughness:.56,metalness:.28});
+const orbitalOrangeMat=new THREE.MeshStandardMaterial({color:0xd8782c,roughness:.48,metalness:.20});
+const orbitalWindowMat=new THREE.MeshStandardMaterial({color:0xffc66e,emissive:0xffa33a,emissiveIntensity:1.35,roughness:.40,metalness:0});
+function cylBetween(parent,a,b,r,mat,segments=8){
+  const d=b.clone().sub(a),m=a.clone().add(b).multiplyScalar(.5);
+  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),segments),mat);
+  mesh.position.copy(m);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());
+  mesh.castShadow=true;parent.add(mesh);return mesh;
+}
+function box(parent,size,pos,mat,cast=true){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(size.x,size.y,size.z),mat);m.position.copy(pos);m.castShadow=cast;parent.add(m);return m;
+}
+function addWindows(parent,pos,axis='x'){
+  for(let i=-1;i<=1;i++){
+    const p=pos.clone();
+    if(axis==='x')p.x+=i*.045;else p.z+=i*.045;
+    const w=box(parent,new THREE.Vector3(axis==='x'?.025:.006,.018,axis==='x'?.006:.025),p,orbitalWindowMat,false);
+  }
+}
+function addPipe(parent,points){
+  for(let i=0;i<points.length-1;i++)cylBetween(parent,points[i],points[i+1],.006,orbitalOrangeMat,6);
+}
+function buildOrbitalIdentity(id,data){
+  const root=C.RenderObject.get(id)?.object;if(!root)return;
+  const orbitRoot=new THREE.Group();scene.add(orbitRoot);
+  const station=new THREE.Group();orbitRoot.add(station);
+  // Primary hub and orthogonal pressure grammar.
+  const hub=new THREE.Mesh(new THREE.CylinderGeometry(.105,.105,.080,8),orbitalHull2Mat);
+  hub.rotation.x=Math.PI/2;hub.castShadow=true;station.add(hub);  const arms=[
+    [new THREE.Vector3(.07,0,0),new THREE.Vector3(.34,0,0)],
+    [new THREE.Vector3(-.07,0,0),new THREE.Vector3(-.30,0,0)],
+    [new THREE.Vector3(0,0,.07),new THREE.Vector3(0,0,.29)],
+    [new THREE.Vector3(0,0,-.07),new THREE.Vector3(0,0,-.23)]
+  ];
+  for(const [a,b] of arms)cylBetween(station,a,b,.045,orbitalHullMat,10);
+  // Readable collars.
+  for(const p of [new THREE.Vector3(.13,0,0),new THREE.Vector3(-.13,0,0),new THREE.Vector3(0,0,.13),new THREE.Vector3(0,0,-.13)])
+    {const c=new THREE.Mesh(new THREE.TorusGeometry(.051,.009,6,12),orbitalDarkMat);c.position.copy(p);if(Math.abs(p.x)>.01)c.rotation.y=Math.PI/2;station.add(c)}
+  // Asymmetric habitation/workshop masses.
+  box(station,new THREE.Vector3(.17,.13,.15),new THREE.Vector3(.39,.015,0),orbitalHullMat);
+  box(station,new THREE.Vector3(.15,.115,.14),new THREE.Vector3(0,.005,.34),orbitalHull2Mat);
+  box(station,new THREE.Vector3(.13,.10,.12),new THREE.Vector3(-.34,-.005,0),orbitalHullMat);
+  const drum=new THREE.Mesh(new THREE.CylinderGeometry(.072,.072,.16,12),orbitalHullMat);
+  drum.rotation.z=Math.PI/2;drum.position.set(0,0,-.30);drum.castShadow=true;station.add(drum);
+  // Vertical mast/tower: deliberately thin and asymmetrical.
+  cylBetween(station,new THREE.Vector3(0,.04,0),new THREE.Vector3(0,.30,0),.032,orbitalHull2Mat,10);
+  box(station,new THREE.Vector3(.13,.12,.12),new THREE.Vector3(0,.34,0),orbitalHullMat);
+  cylBetween(station,new THREE.Vector3(0,.40,0),new THREE.Vector3(0,.47,0),.018,orbitalDarkMat,8);
+  // Thin orange service piping: accent, never structure.
+  addPipe(station,[new THREE.Vector3(-.25,.052,.040),new THREE.Vector3(.28,.052,.040),new THREE.Vector3(.28,.052,.075)]);
+  addPipe(station,[new THREE.Vector3(.040,.050,-.20),new THREE.Vector3(.040,.050,.26)]);
+  addPipe(station,[new THREE.Vector3(.052,.08,.025),new THREE.Vector3(.052,.40,.025)]);
+  // Sparse inhabited evidence.
+  addWindows(station,new THREE.Vector3(.39,.02,.076),'x');
+  addWindows(station,new THREE.Vector3(.076,.01,.34),'z');
+  addWindows(station,new THREE.Vector3(-.34,.005,.061),'x');
+  station.scale.setScalar(.62);
+  orbitalStates.set(id,{id,root,orbitRoot,station,data,phase:1.17,attitude:0});
+}
+for(const id of ecs.query(C.OrbitalIdentity,C.RenderObject))buildOrbitalIdentity(id,C.OrbitalIdentity.get(id));
+function OrbitalSystem(now){
+  const t=now*.000075;
+  for(const st of orbitalStates.values()){
+    st.root.updateWorldMatrix(true,false);
+    const center=st.root.getWorldPosition(new THREE.Vector3());
+    // Wandering ellipse: slow precession and gentle eccentricity breathing.
+    const a=st.data.orbitRadius*(1+.055*Math.sin(t*.37+.8));
+    const b=a*(.72+.055*Math.sin(t*.29+1.9));
+    const u=t+st.phase;
+    const local=new THREE.Vector3(a*Math.cos(u),.18*Math.sin(u*.53),b*Math.sin(u));
+    const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(
+      .38+.16*Math.sin(t*.19),
+      .26*Math.sin(t*.13+1.2),
+      .18+.12*Math.sin(t*.17+.4)
+    ));
+    local.applyQuaternion(q);
+    st.orbitRoot.position.copy(center).add(local);
+    // Independent quiet attitude drift so the asymmetric construction reveals itself.
+    st.station.rotation.set(.20+.10*Math.sin(t*.31),t*.43,.12*Math.sin(t*.23));
+    window.vestibuleDirty=true;
+  }
+}
+
+// FOUNDRY IDENTITY T9 — explicit cargo return paths; taller factory preserves its seated floor.
+const foundryStates=new Map();
+const foundryBodyMat=new THREE.MeshStandardMaterial({color:0xc8b797,roughness:.80,metalness:.03});
+const foundryOrangeMat=new THREE.MeshStandardMaterial({color:0xd86625,roughness:.58,metalness:.10});
+const foundryDarkMat=new THREE.MeshStandardMaterial({color:0x171817,roughness:.86,metalness:.03});
+const droneGeo=new THREE.BoxGeometry(.045,.045,.045);
+function buildFoundryIdentity(id,data){
+  const root=C.RenderObject.get(id)?.object;if(!root)return;
+  const apparatus=new THREE.Group();root.add(apparatus);
+  const factory=new THREE.Group();factory.position.set(0,.555,0);apparatus.add(factory);
+  const body=new THREE.Mesh(new THREE.BoxGeometry(.245,.195,.205),foundryBodyMat);
+  // Preserve the old floor plane while adding breathing room above the bay.
+  body.position.y=.094;body.castShadow=true;body.receiveShadow=true;factory.add(body);
+  const cap=new THREE.Mesh(new THREE.BoxGeometry(.150,.040,.115),foundryOrangeMat);
+  cap.position.set(0,.212,0);cap.castShadow=true;factory.add(cap);
+  // At this scale a barely-proud black rectangle reads more reliably than literal recess geometry.
+  const mouth=new THREE.Mesh(new THREE.BoxGeometry(.104,.072,.010),foundryDarkMat);
+  mouth.position.set(0,.112,.108);mouth.castShadow=false;factory.add(mouth);
+  foundryStates.set(id,{id,root,apparatus,factory,mouth,data,drones:[],nextLaunch:performance.now()+900});
+}
+for(const id of ecs.query(C.FoundryIdentity,C.RenderObject))buildFoundryIdentity(id,C.FoundryIdentity.get(id));
+
+function foundryMouthWorld(st){
+  st.mouth.updateWorldMatrix(true,false);return st.mouth.getWorldPosition(new THREE.Vector3());
+}
+function foundryMouthForward(st){
+  st.mouth.updateWorldMatrix(true,false);
+  return new THREE.Vector3(0,0,1).applyQuaternion(st.mouth.getWorldQuaternion(new THREE.Quaternion())).normalize();
+}
+function nearestUnclaimedRock(from){
+  let best=null,bestD=Infinity;
+  for(const r of spoil){
+    if(r.delivered||r.claimedBy!=null||!r.mesh.visible)continue;
+    const d=from.distanceToSquared(r.mesh.position);if(d<bestD){bestD=d;best=r}
+  }
+  return best;
+}
+function makeFoundryDrone(st){
+  // Foundry drones are deliberately nothing more than little orange cubes.
+  const g=new THREE.Group(),core=new THREE.Mesh(droneGeo,foundryOrangeMat);core.castShadow=true;g.add(core);
+  const mouth=foundryMouthWorld(st),fwd=foundryMouthForward(st);g.position.copy(mouth).addScaledVector(fwd,.060);scene.add(g);
+  const d={group:g,state:'seeking',rock:null,speed:.82,homeStage:null,launchStage:factoryFrontStage(st,.24),returnPath:[],returnIndex:0,returnAnchor:null};st.drones.push(d);return d;
+}
+function removeDeliveredRock(r){
+  r.delivered=true;r.claimedBy=null;r.mesh.visible=false;r.mesh.removeFromParent();
+}
+let nextFoundryWake=performance.now()+500;
+const FOUNDRY_DRONES_PER_FACTORY=15;
+let lastFoundryNow=performance.now();
+const DRONE_HALF_DIAG=Math.sqrt(3)*.045*.5;
+const PRESENCE_COLLISION_RADIUS=.58+DRONE_HALF_DIAG+.008;
+function presenceCollisionSpheres(){
+  const out=[];
+  for(const id of ecs.query(C.Presence,C.RenderObject)){
+    const obj=C.RenderObject.get(id)?.object;if(!obj)continue;
+    obj.updateWorldMatrix(true,false);
+    out.push({id,center:obj.getWorldPosition(new THREE.Vector3()),r:PRESENCE_COLLISION_RADIUS});
+  }
+  return out;
+}
+function factoryFrontStage(st,extra=.24){
+  // Derive the approach point from the factory's CURRENT world transform every frame.
+  // The factory can move when its presence foregrounds/dismisses; drones never navigate to a stale world-space home.
+  const mouth=foundryMouthWorld(st),fwd=foundryMouthForward(st);
+  return mouth.clone().addScaledVector(fwd,extra);
+}
+function currentFactoryAnchor(st){
+  // Single live home authority for every drone state.
+  return {mouth:foundryMouthWorld(st),front:factoryFrontStage(st,.24)};
+}
+
+function factoryAvoidanceSphere(st){
+  st.factory.updateWorldMatrix(true,true);
+  const box=new THREE.Box3().setFromObject(st.factory);
+  const center=box.getCenter(new THREE.Vector3());
+  const half=box.getSize(new THREE.Vector3()).multiplyScalar(.5);
+  // Deliberately generous: drones should visibly route around the little factory, not scrape it.
+  return {center,r:Math.max(half.x,half.y,half.z)+DRONE_HALF_DIAG+.105};
+}
+
+function collisionAwareDirection(pos,target,ignoreFactoryIngress=false){
+  const desired=target.clone().sub(pos),dist=desired.length();
+  if(dist<1e-7)return {dir:new THREE.Vector3(),dist};
+  const dir=desired.clone().multiplyScalar(1/dist);
+  // Presence marbles are solid. If the direct step points through one, bend along its tangent instead.
+  for(const s of presenceCollisionSpheres()){
+    const rel=pos.clone().sub(s.center),rlen=rel.length();
+    const toward=dir.dot(rel);
+    const closest=rel.clone().addScaledVector(dir,-toward);
+    if(toward<0 && closest.length()<s.r && -toward<dist+.18){
+      const n=rlen>1e-6?rel.multiplyScalar(1/rlen):new THREE.Vector3(0,1,0);
+      let tangent=dir.clone().addScaledVector(n,-dir.dot(n));
+      if(tangent.lengthSq()<1e-6)tangent=new THREE.Vector3(0,1,0).cross(n);
+      tangent.normalize();
+      // Bias outward enough that a cube never clips the white surface while rounding it.
+      return {dir:tangent.addScaledVector(n,.34).normalize(),dist};
+    }
+    if(rlen<s.r){
+      return {dir:rel.normalize(),dist};
+    }
+  }
+  if(!ignoreFactoryIngress){
+    // Give every factory a broad keep-out volume. If a route intersects it, steer tangentially
+    // around the volume with an outward bias. This prevents corner traps and visible wall-scraping.
+    for(const st of foundryStates.values()){
+      const guard=factoryAvoidanceSphere(st);
+      const rel=pos.clone().sub(guard.center),rlen=rel.length();
+      const toward=dir.dot(rel);
+      const closest=rel.clone().addScaledVector(dir,-toward);
+      if(rlen<guard.r){
+        const n=rlen>1e-6?rel.multiplyScalar(1/rlen):foundryMouthForward(st);
+        return {dir:n,dist};
+      }
+      if(toward<0 && closest.length()<guard.r && -toward<dist+.20){
+        const n=rel.multiplyScalar(1/rlen);
+        let tangent=dir.clone().addScaledVector(n,-dir.dot(n));
+        if(tangent.lengthSq()<1e-6){
+          tangent=foundryMouthForward(st).addScaledVector(n,-foundryMouthForward(st).dot(n));
+          if(tangent.lengthSq()<1e-6)tangent=new THREE.Vector3(0,1,0).cross(n);
+        }
+        return {dir:tangent.normalize().addScaledVector(n,.62).normalize(),dist};
+      }
+    }
+  }
+  return {dir,dist};
+}
+
+function segmentSphereHit(a,b,s,margin=.055){
+  const ab=b.clone().sub(a),len=ab.length();if(len<1e-6)return null;
+  const dir=ab.clone().multiplyScalar(1/len),rel=a.clone().sub(s.center);
+  const t=THREE.MathUtils.clamp(-rel.dot(dir),0,len);
+  const closest=a.clone().addScaledVector(dir,t),off=closest.clone().sub(s.center);
+  const rr=s.r+margin;if(off.lengthSq()>=rr*rr)return null;
+  return {t,closest,off,rr};
+}
+function buildDronePath(start,end){
+  // A path is a sequence of actual world-space waypoints, not a repeatedly perturbed direction.
+  // Each obstructing marble earns one stable clearance waypoint; the drone then commits to it.
+  const path=[],spheres=presenceCollisionSpheres();let cursor=start.clone();
+  for(let guard=0;guard<12;guard++){
+    let best=null,bestS=null;
+    for(const s of spheres){
+      const hit=segmentSphereHit(cursor,end,s);
+      if(hit && hit.t>.025 && (!best || hit.t<best.t)){best=hit;bestS=s;}
+    }
+    if(!best)break;
+    let out=best.off;
+    if(out.lengthSq()<1e-8){
+      const travel=end.clone().sub(cursor).normalize();
+      out=new THREE.Vector3(0,1,0).cross(travel);
+      if(out.lengthSq()<1e-8)out=new THREE.Vector3(1,0,0);
+    }
+    out.normalize();
+    // Push the waypoint a little forward as well as outward so successive segments make progress.
+    const travel=end.clone().sub(cursor).normalize();
+    const wp=bestS.center.clone().addScaledVector(out,best.rr+.085).addScaledVector(travel,.12);
+    path.push(wp);cursor=wp;
+  }
+  path.push(end.clone());return path;
+}
+function beginDroneReturn(d,st){
+  const anchor=currentFactoryAnchor(st);
+  d.returnAnchor=anchor.front.clone();
+  d.returnPath=buildDronePath(d.group.position,anchor.front);
+  d.returnIndex=0;d.state='homePath';
+}
+function refreshDroneReturnIfFactoryMoved(d,st){
+  const front=currentFactoryAnchor(st).front;
+  if(!d.returnAnchor || d.returnAnchor.distanceToSquared(front)>.0064){
+    d.returnAnchor=front.clone();d.returnPath=buildDronePath(d.group.position,front);d.returnIndex=0;
+  }else if(d.returnPath.length){
+    d.returnPath[d.returnPath.length-1].copy(front);
+  }
+}
+
+function steerDroneToward(d,target,dt,speed,ignoreFactoryIngress=false){
+  const steer=collisionAwareDirection(d.group.position,target,ignoreFactoryIngress);
+  if(steer.dist>1e-7)d.group.position.addScaledVector(steer.dir,Math.min(steer.dist,speed*dt));
+  return steer.dist;
+}
+function FoundrySystem(now){
+  const dt=Math.min(.035,Math.max(.001,(now-lastFoundryNow)/1000));lastFoundryNow=now;
+  let changed=false,nextWake=Infinity;
+  for(const st of foundryStates.values()){
+    // A factory owns fifteen cubes. Launches are staggered only for legibility; all fifteen may be active.
+    if(now>=st.nextLaunch && st.drones.length<FOUNDRY_DRONES_PER_FACTORY){
+      const mouth=foundryMouthWorld(st),rock=nearestUnclaimedRock(mouth);
+      if(rock){
+        const d=makeFoundryDrone(st);d.rock=rock;rock.claimedBy=d;
+        // Claiming reserves the target only. It does NOT freeze it: falling rocks keep falling.
+        d.state='launchClear';st.nextLaunch=now+115;changed=true;
+      }else st.nextLaunch=now+180;
+    }
+    for(let i=st.drones.length-1;i>=0;i--){
+      const d=st.drones[i];
+      if(d.state==='launchClear' && d.rock && !d.rock.delivered){
+        // Exit straight through the mouth into open space before ordinary obstacle avoidance begins.
+        const anchor=currentFactoryAnchor(st);
+        d.launchStage=anchor.front;
+        const target=anchor.front,dist=steerDroneToward(d,target,dt,.78,true);
+        if(dist>.0001)d.group.lookAt(target);changed=true;
+        if(dist<=.025)d.state='toRock';
+      }else if(d.state==='toRock' && d.rock && !d.rock.delivered){
+        // True pursuit: target the rock's current position every frame, including while it is falling/bouncing.
+        const target=d.rock.mesh.position;
+        const dist=steerDroneToward(d,target,dt,d.speed);
+        if(dist>.0001)d.group.lookAt(target);changed=true;
+        if(dist<=.050){
+          d.rock.sleep=true;d.rock.v.set(0,0,0);
+          d.rock.mesh.position.copy(d.group.position).add(new THREE.Vector3(0,-.040,0));
+          beginDroneReturn(d,st);
+        }
+      }else if(d.state==='homePath'){
+        // Cargo return uses committed world-space waypoints. Generic tangent steering is intentionally
+        // bypassed here: it was the source of the long post-pickup excursions.
+        refreshDroneReturnIfFactoryMoved(d,st);
+        const target=d.returnPath[d.returnIndex] || currentFactoryAnchor(st).front;
+        const delta=target.clone().sub(d.group.position),dist=delta.length();
+        if(dist>.0001){
+          const step=Math.min(dist,.92*dt);d.group.position.addScaledVector(delta.multiplyScalar(1/dist),step);d.group.lookAt(target);
+        }
+        if(d.rock)d.rock.mesh.position.copy(d.group.position).add(new THREE.Vector3(0,-.040,0));
+        changed=true;
+        if(dist<=.028){
+          d.returnIndex++;
+          if(d.returnIndex>=d.returnPath.length)d.state='homeIngress';
+        }
+      }else if(d.state==='homeIngress'){
+        // Once aligned with the front door, the final short motion is allowed through the mouth only.
+        const anchor=currentFactoryAnchor(st);
+        const target=anchor.mouth,dist=steerDroneToward(d,target,dt,.70,true);
+        if(dist>.0001)d.group.lookAt(target);
+        if(d.rock)d.rock.mesh.position.copy(d.group.position).add(new THREE.Vector3(0,-.040,0));
+        changed=true;
+        if(dist<=.035){
+          if(d.rock)removeDeliveredRock(d.rock);d.group.removeFromParent();st.drones.splice(i,1);
+          st.nextLaunch=Math.min(st.nextLaunch,now+70);
+        }
+      }
+    }
+    nextWake=Math.min(nextWake,st.drones.length?now+16:st.nextLaunch);
+  }
+  nextFoundryWake=nextWake;if(changed)window.vestibuleDirty=true;return changed;
+}
+
+// GENERIC EXCHANGE IDENTITY — physical surface apparatus driven by component data.
+const exchangeStates=new Map();
+const nutMat=new THREE.MeshStandardMaterial({color:0xe0ad55,roughness:.36,metalness:.58});
+const packetMats=[
+  new THREE.MeshStandardMaterial({color:0x587b49,roughness:.34,metalness:.48}), // forest
+  new THREE.MeshStandardMaterial({color:0xc89b4c,roughness:.34,metalness:.48}), // sand/gold
+  new THREE.MeshStandardMaterial({color:0xd7d9d2,roughness:.38,metalness:.42}), // pale stone
+  new THREE.MeshStandardMaterial({color:0x62aeb4,roughness:.30,metalness:.50})  // water
+];
+const nutGeo=new THREE.CylinderGeometry(.105,.105,.075,8);
+const bearingGeo=new THREE.SphereGeometry(.055,12,8);
+const domeGeo=new THREE.SphereGeometry(.088,16,8,0,Math.PI*2,0,Math.PI/2);
+const domeMat=new THREE.MeshPhysicalMaterial({
+  color:0xbfe8f2,
+  roughness:.14,
+  metalness:0,
+  transparent:true,
+  opacity:.32,
+  transmission:.62,
+  thickness:.028,
+  ior:1.18,
+  depthWrite:false,
+  side:THREE.DoubleSide
+});
+const NODE_DIRS=[
+  new THREE.Vector3(1,0,0),new THREE.Vector3(-1,0,0),
+  new THREE.Vector3(0,0,1),new THREE.Vector3(0,0,-1),
+  new THREE.Vector3(0,1,0),new THREE.Vector3(0,-1,0)
+];
+function seeded(seed){
+  let x=seed>>>0;
+  const next=()=>{x=(Math.imul(x,1664525)+1013904223)>>>0;return x/4294967296};
+  next.getState=()=>x>>>0;
+  next.setState=v=>{x=(v>>>0)};
+  return next;
+}
+
+function buildExchangeIdentity(id,data){
+  const root=C.RenderObject.get(id).object;
+  const apparatus=new THREE.Group();root.add(apparatus);
+  const nodes=[];
+  for(const dir of NODE_DIRS.slice(0,data.nodeCount)){
+    const nut=new THREE.Mesh(nutGeo,nutMat);
+    nut.position.copy(dir).multiplyScalar(.594);
+    nut.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);
+    nut.castShadow=true;nut.receiveShadow=true;
+    apparatus.add(nut);nodes.push(nut);
+
+    const dome=new THREE.Mesh(domeGeo,domeMat);
+    dome.position.copy(dir).multiplyScalar(0.6365);
+    dome.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);
+    dome.castShadow=true;dome.receiveShadow=true;
+    apparatus.add(dome);
+  }
+  exchangeStates.set(id,{apparatus,nodes,active:[],routes:[],rng:seeded(data.seed),nextAt:performance.now()+650});
+}
+function arcPoint(a,b,t,out){
+  // Spherical interpolation, then a small physical lift above the neutral shell.
+  const omega=Math.acos(THREE.MathUtils.clamp(a.dot(b),-1,1));
+  if(omega>Math.PI-.001){
+    const axis=Math.abs(a.y)<.9?new THREE.Vector3(0,1,0):new THREE.Vector3(1,0,0);
+    const mid=new THREE.Vector3().crossVectors(a,axis).normalize();
+    if(t<.5)return arcPoint(a,mid,t*2,out);
+    return arcPoint(mid,b,(t-.5)*2,out);
+  }
+  const so=Math.sin(omega);
+  out.copy(a).multiplyScalar(Math.sin((1-t)*omega)/so)
+     .addScaledVector(b,Math.sin(t*omega)/so)
+     .normalize().multiplyScalar(.70 + Math.sin(Math.PI*t)*.055);
+  return out;
+}
+function routeSamples(a,b){
+  const pts=[];for(let i=0;i<=12;i++)pts.push(arcPoint(a,b,i/12,new THREE.Vector3()));
+  return pts;
+}
+function routesCross(A,B){
+  // Physical clearance test on sampled raised arcs. Shared endpoints are allowed.
+  if(A.a===B.a||A.a===B.b||A.b===B.a||A.b===B.b)return false;
+  for(const p of A.samples)for(const q of B.samples)if(p.distanceToSquared(q)<.0085)return true;
+  return false;
+}
+function scheduleNext(state,data,now){
+  state.nextAt=now+data.minPause+(data.maxPause-data.minPause)*state.rng();
+}
+function tryLaunchExchange(id,now){
+  const data=C.ExchangeIdentity.get(id),state=exchangeStates.get(id);
+  if(!data||!state||state.active.length>=data.maxActive)return scheduleNext(state,data,now);
+  const candidates=[];
+  for(let a=0;a<data.nodeCount;a++)for(let b=0;b<data.nodeCount;b++)if(a!==b){
+    const route={a,b,samples:routeSamples(NODE_DIRS[a],NODE_DIRS[b])};
+    if(!state.routes.some(r=>routesCross(route,r)))candidates.push(route);
+  }
+  if(!candidates.length)return scheduleNext(state,data,now);
+  const route=candidates[Math.floor(state.rng()*candidates.length)];
+  const matIndex=Math.floor(state.rng()*packetMats.length),mat=packetMats[matIndex];
+  const packet=new THREE.Group();
+  const scales=[.30,.40,.54,.40,.30]; // teeny -> tiny -> small -> tiny -> teeny
+  const bearings=scales.map(scale=>{
+    const b=new THREE.Mesh(bearingGeo,mat);
+    b.scale.setScalar(scale);b.castShadow=true;b.receiveShadow=true;b.visible=false;
+    packet.add(b);return b;
+  });
+  state.apparatus.add(packet);
+  const duration=data.packetDuration[0]+(data.packetDuration[1]-data.packetDuration[0])*state.rng();
+  const stagger=duration*.105;
+  state.routes.push(route);state.active.push({packet,bearings,route,started:now,duration,stagger,matIndex});
+  scheduleNext(state,data,now);
+}
+function ExchangeSystem(now){
+  let moving=false;
+  for(const id of ecs.query(C.ExchangeIdentity,C.RenderObject)){
+    const data=C.ExchangeIdentity.get(id),state=exchangeStates.get(id);
+    if(!state)continue;
+    if(now>=state.nextAt)tryLaunchExchange(id,now);
+    for(let i=state.active.length-1;i>=0;i--){
+      const p=state.active[i];
+      let anyVisible=false,allArrived=true;
+      for(let j=0;j<p.bearings.length;j++){
+        const elapsed=now-(p.started+j*p.stagger);
+        const bt=elapsed/p.duration;
+        const b=p.bearings[j];
+        if(bt<0){
+          b.visible=false;allArrived=false;continue;
+        }
+        if(bt>=1){
+          b.visible=false;continue;
+        }
+        allArrived=false;anyVisible=true;b.visible=true;
+        arcPoint(NODE_DIRS[p.route.a],NODE_DIRS[p.route.b],bt,b.position);
+        b.rotation.x+=.08;b.rotation.z+=.055;
+      }
+      moving=moving||anyVisible;
+      if(allArrived){
+        state.apparatus.remove(p.packet);
+        state.routes.splice(state.routes.indexOf(p.route),1);
+        state.active.splice(i,1);
+      }
+    }
+    if(state.active.length||now>=state.nextAt-34)window.vestibuleDirty=true;
+  }
+  return moving;
+}
+for(const id of ecs.query(C.ExchangeIdentity,C.RenderObject)){
+  buildExchangeIdentity(id,C.ExchangeIdentity.get(id));
+}
+
+// VERTICAL ACCRETION IDENTITY — finite stock whose own constructed graph is the only shuttle route.
+const descentStates=new Map(),spoil=[];
+let nextSpoilId=1;
+const workerCreamMat=new THREE.MeshStandardMaterial({color:0xd8c6a1,roughness:.80,metalness:.01});
+const workerDarkMat=new THREE.MeshStandardMaterial({color:0x626663,roughness:.78,metalness:.04});
+const plankMat=new THREE.MeshStandardMaterial({color:0x8a6540,roughness:.88,metalness:0});
+const torchStemMat=new THREE.MeshStandardMaterial({color:0x4b4035,roughness:.92});
+const flameMat=new THREE.MeshBasicMaterial({color:0xffad3d});
+const spoilMat=new THREE.MeshStandardMaterial({color:0xe9e8e2,roughness:.76,metalness:.02});
+const plankGeo=new THREE.BoxGeometry(.082,.008,.018);
+const spoilGeo=new THREE.SphereGeometry(.034,10,7);
+let spoilActive=false,lastSpoilNow=performance.now();
+
+function accessPoint(i,route=0){
+  const band=30,phase=(i%band)/(band-1),cycle=Math.floor(i/band);
+  const down=(cycle%2===0)?phase:1-phase;
+  const lat=THREE.MathUtils.lerp(.78,-.78,down);
+  const lon=-.55+route*.73+i*.205+Math.sin(i*.51+route)*.07;
+  const r=.589,c=Math.cos(lat);
+  return new THREE.Vector3(r*c*Math.sin(lon),r*Math.sin(lat),r*c*Math.cos(lon));
+}
+function orientRadial(o,p){o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),p.clone().normalize())}
+function orientWorkerStable(o,p,route,index){
+  const up=p.clone().normalize();
+  const a=accessPoint(Math.max(0,index-.28),route),b=accessPoint(index+.28,route);
+  const forward=b.sub(a);forward.addScaledVector(up,-forward.dot(up));
+  if(forward.lengthSq()<1e-8)forward.set(0,0,1);forward.normalize();
+  const right=new THREE.Vector3().crossVectors(up,forward).normalize();
+  forward.crossVectors(right,up).normalize();
+  o.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right,up,forward));
+}
+function orientPlank(mesh,p,prev,next){
+  const n=p.clone().normalize();
+  let tangent=next.clone().sub(prev);tangent.addScaledVector(n,-tangent.dot(n));
+  if(tangent.lengthSq()<1e-7)tangent.set(1,0,0);tangent.normalize();
+  const side=new THREE.Vector3().crossVectors(n,tangent).normalize();
+  mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(side,n,tangent));
+}
+function makeTorch(p){
+  const radial=p.clone().normalize(),root=radial.clone().multiplyScalar(.592),torch=new THREE.Group();
+  const stem=new THREE.Mesh(new THREE.CylinderGeometry(.0028,.0038,.046,5),torchStemMat);stem.position.y=.021;torch.add(stem);
+  const flame=new THREE.Mesh(new THREE.SphereGeometry(.0075,7,5),flameMat);flame.scale.set(.62,1.16,.62);flame.position.y=.049;torch.add(flame);
+  torch.position.copy(root);orientRadial(torch,root);
+  const light=new THREE.PointLight(0xffb45c,.20,.52,2);light.position.y=.052;torch.add(light);
+  return torch;
+}
+function spawnSpoil(id,p,step){
+  const ro=C.RenderObject.get(id)?.object;if(!ro)return;ro.updateMatrixWorld(true);
+  const radial=p.clone().normalize(),world=ro.localToWorld(radial.clone().multiplyScalar(.616));
+  const mesh=new THREE.Mesh(spoilGeo,spoilMat);mesh.castShadow=false;mesh.receiveShadow=false;mesh.position.copy(world);scene.add(mesh);
+  const a=(step*2.399963229728653)%(Math.PI*2),speed=.12+(step%5)*.018;
+  const v=new THREE.Vector3(Math.cos(a)*speed,.035+((step*7)%4)*.018,Math.sin(a)*speed);
+  spoil.push({id:nextSpoilId++,mesh,v,r:.034,sleep:false,quiet:0,delivered:false,claimedBy:null});spoilActive=true;
+}function buildDescentIdentity(id,data){
+  const ro=C.RenderObject.get(id);if(!ro)return;const apparatus=new THREE.Group();ro.object.add(apparatus);
+  const worker=new THREE.Group();
+  // Pictographic worker: warm cream sphere head + subtly tapered cylindrical body.
+  // No arms. Two almost-adjacent grey leg stubs sit slightly aft of the centerline.
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(.026,.030,.084,10),workerCreamMat);body.position.y=.061;body.castShadow=true;worker.add(body);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.027,12,8),workerCreamMat);head.position.y=.128;head.castShadow=true;worker.add(head);
+  const legGeo=new THREE.CylinderGeometry(.007,.008,.034,6);
+  for(const x of [-.008,.008]){const leg=new THREE.Mesh(legGeo,workerDarkMat);leg.position.set(x,.017,-.008);leg.castShadow=true;worker.add(leg)}
+  apparatus.add(worker);
+  const stock=72,planks=[];for(let i=0;i<stock;i++){const m=new THREE.Mesh(plankGeo,plankMat);m.castShadow=true;m.receiveShadow=true;apparatus.add(m);planks.push(m)}
+  const rng=seeded(data.seed^0x51f15e),startRoute=Math.floor(rng()*7);const p0=accessPoint(0,startRoute);
+  worker.position.copy(p0.clone().normalize().multiplyScalar(.594));orientWorkerStable(worker,p0,startRoute,0);
+  descentStates.set(id,{apparatus,worker,planks,stock,laid:0,phase:'build',route:startRoute,step:0,nextAt:performance.now()+650,torches:[],stockTorch:null,rng,run:null});
+  const st=descentStates.get(id);arrangeLumberPile(st);placeStockTorch(st);
+}
+function placeStockTorch(st){
+  if(st.stockTorch)st.apparatus.remove(st.stockTorch);
+  const base=accessPoint(0,st.route).clone().normalize();
+  const axis=Math.abs(base.y)<.88?new THREE.Vector3(0,1,0):new THREE.Vector3(1,0,0);
+  const side=new THREE.Vector3().crossVectors(base,axis).normalize();
+  const p=base.clone().multiplyScalar(.592).addScaledVector(side,.115);
+  st.stockTorch=makeTorch(p);st.apparatus.add(st.stockTorch);
+}
+function arrangeLumberPile(st){
+  const base=accessPoint(0,st.route).clone().normalize(),up=base.clone();
+  const axis=Math.abs(up.y)<.88?new THREE.Vector3(0,1,0):new THREE.Vector3(1,0,0);
+  const side=new THREE.Vector3().crossVectors(up,axis).normalize(),forward=new THREE.Vector3().crossVectors(side,up).normalize();
+  for(let i=st.laid;i<st.stock;i++){
+    const m=st.planks[i]; if(m.parent!==st.apparatus){m.removeFromParent();st.apparatus.add(m)}
+    const j=i-st.laid,row=Math.floor(j/12),col=j%12;
+    const p=base.clone().multiplyScalar(.594).addScaledVector(side,(col-5.5)*.0125+(row%2)*.003).addScaledVector(forward,(row-2.5)*.019);
+    m.position.copy(p).addScaledVector(up,Math.floor(row/4)*.005);m.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(side,up,forward));m.rotateY(((i*37)%17-8)*.018);m.visible=true;
+  }
+}
+function placePlank(st,index){
+  const p=accessPoint(index+1,st.route),prev=accessPoint(index,st.route),next=accessPoint(index+2,st.route),m=st.planks[index];
+  if(m.parent!==st.apparatus){m.removeFromParent();st.apparatus.add(m)}m.position.copy(p);orientPlank(m,p,prev,next);m.visible=true;
+  st.worker.position.copy(p.clone().normalize().multiplyScalar(.594));orientWorkerStable(st.worker,p,st.route,index+1);
+  if(index===5||index===18||index===34||index===52){const t=makeTorch(p);st.apparatus.add(t);st.torches.push({slot:index,group:t})}
+  return p;
+}
+function removeTorchAt(st,index){const ti=st.torches.findIndex(t=>t.slot===index);if(ti>=0){st.apparatus.remove(st.torches[ti].group);st.torches.splice(ti,1)}}
+function carry(st,index,on){
+  const m=st.planks[index];
+  if(on){m.removeFromParent();st.worker.add(m);m.position.set(0,.155,0);m.rotation.set(0,0,Math.PI/2);m.visible=true}
+  else if(m.parent!==st.apparatus){m.removeFromParent();st.apparatus.add(m)}
+}
+function surfaceBetweenIndices(st,a,b,t){
+  const idx=THREE.MathUtils.lerp(a,b,t),lo=Math.floor(idx),hi=Math.ceil(idx),f=idx-lo;
+  const A=accessPoint(lo,st.route).normalize(),B=accessPoint(hi,st.route).normalize();
+  if(lo===hi)return A.multiplyScalar(.594);
+  const d=THREE.MathUtils.clamp(A.dot(B),-1,1),o=Math.acos(d);if(o<1e-6)return A.multiplyScalar(.594);
+  const so=Math.sin(o);return A.multiplyScalar(Math.sin((1-f)*o)/so).addScaledVector(B,Math.sin(f*o)/so).normalize().multiplyScalar(.594);
+}
+function beginGraphRun(st,kind,index,fromIndex,toIndex,now){
+  const edges=Math.abs(toIndex-fromIndex);st.run={kind,index,fromIndex,toIndex,started:now,duration:Math.max(180,edges*105)};st.nextAt=Infinity;
+}
+function randomRestock(st){
+  st.route=Math.floor(st.rng()*7);st.torches.forEach(t=>st.apparatus.remove(t.group));st.torches.length=0;
+  arrangeLumberPile(st);placeStockTorch(st);const p0=accessPoint(0,st.route);st.worker.position.copy(p0.clone().normalize().multiplyScalar(.594));orientWorkerStable(st.worker,p0,st.route,0);
+}
+let nextDescentWake=Infinity;
+function DescentSystem(now){
+  let changed=false,nextWake=Infinity;
+  for(const id of ecs.query(C.DescentIdentity,C.RenderObject)){
+    const st=descentStates.get(id);if(!st)continue;
+    if(st.run){
+      const q=st.run,t=THREE.MathUtils.clamp((now-q.started)/q.duration,0,1),e=t*t*(3-2*t),idx=THREE.MathUtils.lerp(q.fromIndex,q.toIndex,e),p=surfaceBetweenIndices(st,q.fromIndex,q.toIndex,e);
+      st.worker.position.copy(p);orientWorkerStable(st.worker,p,st.route,idx);window.vestibuleDirty=true;changed=true;
+      if(t>=1){st.run=null;
+        if(q.kind==='toStock'){
+          carry(st,q.index,true);
+          // The return trip uses only the graph that already exists. The new plank is cargo, not an edge yet.
+          beginGraphRun(st,'toFrontier',q.index,0,st.laid,now);
+        }else if(q.kind==='toFrontier'){
+          carry(st,q.index,false);const pp=placePlank(st,q.index);st.laid++;st.step++;spawnSpoil(id,pp,st.step);
+          if(st.laid>=st.stock){st.phase='recover';st.nextAt=now+600}
+          else beginGraphRun(st,'toStock',st.laid,st.laid,0,now);
+        }else if(q.kind==='toSalvage'){
+          // At the frontier, lift the final edge. The worker steps onto the preceding node,
+          // then the removed plank becomes cargo; the remaining graph is still traversable.
+          const index=q.index;removeTorchAt(st,index);carry(st,index,true);st.laid--;
+          const back=Math.max(0,st.laid);const bp=accessPoint(back,st.route);st.worker.position.copy(bp.clone().normalize().multiplyScalar(.594));orientWorkerStable(st.worker,bp,st.route,back);
+          beginGraphRun(st,'salvageHome',index,back,0,now);
+        }else if(q.kind==='salvageHome'){
+          carry(st,q.index,false);arrangeLumberPile(st);
+          if(st.laid<=0){st.phase='build';randomRestock(st);st.nextAt=now+700}
+          else beginGraphRun(st,'toSalvage',st.laid-1,0,st.laid,now);
+        }
+      }
+    }else if(now>=st.nextAt){
+      if(st.phase==='build'){
+        // Worker starts at stock. First placement is local; every later fetch retraces the built graph.
+        carry(st,st.laid,true);beginGraphRun(st,'toFrontier',st.laid,0,st.laid,now);
+      }else beginGraphRun(st,'toSalvage',st.laid-1,0,st.laid,now);
+    }
+    nextWake=Math.min(nextWake,st.run?now+16:st.nextAt);
+  }
+  nextDescentWake=nextWake;return changed;
+}
+function SpoilSystem(now){
+  if(!spoilActive){lastSpoilNow=now;return false}
+  const dt=Math.min(.025,Math.max(.001,(now-lastSpoilNow)/1000));lastSpoilNow=now;let awake=0;
+  for(let i=0;i<spoil.length;i++){
+    const a=spoil[i];if(a.sleep)continue;awake++;a.v.y-=3.8*dt;a.mesh.position.addScaledVector(a.v,dt);
+    if(a.mesh.position.y<a.r){a.mesh.position.y=a.r;if(a.v.y<0)a.v.y*=-.31;a.v.x*=.94;a.v.z*=.94}
+    for(let j=0;j<spoil.length;j++)if(j!==i){const b=spoil[j],d=a.mesh.position.clone().sub(b.mesh.position),dist=d.length(),min=a.r+b.r;if(dist>0&&dist<min){const n=d.multiplyScalar(1/dist),push=(min-dist)*.52;a.mesh.position.addScaledVector(n,push);if(!b.sleep)b.mesh.position.addScaledVector(n,-push);const rel=a.v.dot(n);if(rel<0)a.v.addScaledVector(n,-1.28*rel)}}
+    const speed=a.v.length();if(a.mesh.position.y<=a.r+.003&&speed<.05)a.quiet+=dt;else a.quiet=0;if(a.quiet>.5){a.sleep=true;a.v.set(0,0,0)}
+  }
+  spoilActive=spoil.some(x=>!x.sleep);if(awake)window.vestibuleDirty=true;return awake>0;
+}
+for(const id of ecs.query(C.DescentIdentity,C.RenderObject))buildDescentIdentity(id,C.DescentIdentity.get(id));
+nextDescentWake=Math.min(...[...descentStates.values()].map(st=>st.nextAt));
+
+const presences=presenceEntities.map(id=>C.RenderObject.get(id).object);
+
+const P=(x,y,z)=>[x,y,z];
+const RING={
+  wide:[P(4.460,5.6,4.307),P(5.465,5.6,-2.924),P(-1.062,5.6,-6.099),P(-6.132,5.6,-0.847),P(-2.731,5.6,5.564)],
+  tall:[P(3.885,5.6,3.751),P(4.278,5.6,-2.055),P(-1.218,5.6,-5.000),P(-5.040,5.6,-1.043),P(-1.904,5.6,4.348)]
+};
+const target=new THREE.Vector3(0,1,0);
+let radius=14,theta=.18,phi=1.18;
+let lastPortrait=innerHeight>innerWidth*1.12;
+let selectedEntity=null;updateLabLabel();
+let presenceMotion=null;
+const raycaster=new THREE.Raycaster();
+const pointerNDC=new THREE.Vector2();
+const tapStarts=new Map();
+window.vestibuleDirty=true;
+
+function profile(){ return innerHeight>innerWidth*1.12?'tall':'wide'; }
+function applyRing({preserveCamera=true}={}){
+  presenceMotion=null;
+  if(selectedEntity){
+    ecs.remove(selectedEntity,C.Foregrounded);
+    ecs.remove(selectedEntity,C.ObserverReturn);
+  }
+  selectedEntity=null;updateLabLabel();
+  const pts=RING[profile()];
+  for(const id of ecs.query(C.Presence,C.Transform)){
+    const p=new THREE.Vector3(...pts[C.Presence.get(id).slot]);
+    C.RingSlot.set(id,{position:p.clone()});
+    C.Transform.get(id).position.copy(p);
+  }
+  RenderSyncSystem.sync();
+  // T42: visible topology/profile counter retired with persistent copy. Layout still applies normally.
+  if(!preserveCamera) home();
+  window.vestibuleDirty=true;
+}
+function home(){
+  presenceMotion=null;entryMotion=null;
+  if(selectedEntity){
+    const slot=C.RingSlot.get(selectedEntity);
+    if(slot)C.Transform.get(selectedEntity).position.copy(slot.position);
+    ecs.remove(selectedEntity,C.Foregrounded);ecs.remove(selectedEntity,C.ObserverReturn);
+  }
+  selectedEntity=null;updateLabLabel();
+  const pts=RING[profile()];
+  const box=new THREE.Box3();
+  pts.forEach(p=>box.expandByPoint(new THREE.Vector3(...p)));
+  const center=box.getCenter(new THREE.Vector3());
+  const size=box.getSize(new THREE.Vector3());
+  target.copy(center);
+  const vertical=Math.max(size.y+3,size.z*.42+4);
+  const horizontal=size.x+4;
+  const fov=THREE.MathUtils.degToRad(camera.fov);
+  const aspect=camera.aspect;
+  const needV=(vertical*.5)/Math.tan(fov*.5);
+  const needH=(horizontal*.5)/(Math.tan(fov*.5)*aspect);
+  radius=Math.max(8,needV,needH)*1.25;
+  theta=.16;phi=1.16;
+  RenderSyncSystem.sync();applyCamera();
+}
+
+function applyCamera(){
+  phi=THREE.MathUtils.clamp(phi,.12,Math.PI-.12);
+  radius=Math.max(.75,radius);
+  camera.position.set(
+    target.x+radius*Math.sin(phi)*Math.sin(theta),
+    target.y+radius*Math.cos(phi),
+    target.z+radius*Math.sin(phi)*Math.cos(theta)
+  );
+  // The dome is physical navigation grammar: neither camera nor panned target may
+  // escape its usable interior. Preserve a margin so the boundary is approached,
+  // never intersected.
+  // Dome boundary: clamp travel along the current viewing ray so reaching the
+  // boundary cannot rotate the camera. Continued pinch-out at the boundary is
+  // therefore a spatial no-op rather than an angle change.
+  const worldLen=camera.position.length();
+  if(worldLen>CAMERA_BOUNDARY){
+    const k=CAMERA_BOUNDARY/worldLen;
+    camera.position.multiplyScalar(k);
+    const off=camera.position.clone().sub(target);
+    radius=off.length();
+    phi=Math.acos(THREE.MathUtils.clamp(off.y/radius,-1,1));
+    theta=Math.atan2(off.x,off.z);
+  }
+  camera.position.y=Math.max(GROUND_Y+.18,camera.position.y);
+  const targetHorizontal=Math.hypot(target.x,target.z);
+  if(targetHorizontal>CAMERA_BOUNDARY*.72){
+    const k=CAMERA_BOUNDARY*.72/targetHorizontal;target.x*=k;target.z*=k;
+  }
+  camera.lookAt(target);
+  window.vestibuleDirty=true;
+}
+
+const canvas=renderer.domElement, pointers=new Map();
+let pinch=null,pinchCentroid=null;
+const centroid=a=>({x:a.reduce((s,p)=>s+p.x,0)/a.length,y:a.reduce((s,p)=>s+p.y,0)/a.length});
+function panPixels(dx,dy,gain=.8){
+  const scale=radius*gain/innerHeight;
+  target.addScaledVector(new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,0),-dx*scale);
+  target.addScaledVector(new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1),dy*scale);
+}
+function clearPointer(id){pointers.delete(id);tapStarts.delete(id);if(pointers.size<2){pinch=null;pinchCentroid=null}}
+
+function easeQuiet(t){
+  // Cubic ease-in-out: decisive departure, readable middle, quiet arrival.
+  return t<.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2;
+}
+function ringSlotPosition(id){return C.RingSlot.get(id).position.clone()}
+function presentationPosition(){
+  const forward=new THREE.Vector3();camera.getWorldDirection(forward);
+  const up=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1).normalize();
+  return camera.position.clone().addScaledVector(forward,8.5).addScaledVector(up,.35);
+}
+
+const RenderSyncSystem={
+  sync(){
+    for(const id of ecs.query(C.Transform,C.RenderObject)){
+      const t=C.Transform.get(id),o=C.RenderObject.get(id).object;
+      o.position.copy(t.position);
+      o.rotation.copy(t.rotation);
+      o.scale.copy(t.scale);
+    }
+  }
+};
+
+const ForegroundSystem={
+  begin(id,toForeground){
+    if(!ecs.has(id,C.Foregroundable)||presenceMotion)return;
+    const pos=C.Transform.get(id).position,from=pos.clone();
+    const to=toForeground?presentationPosition():ringSlotPosition(id);
+    if(toForeground){
+      ecs.add(id,C.ObserverReturn,{cameraPosition:camera.position.clone(),target:target.clone(),radius,theta,phi});
+      ecs.add(id,C.Foregrounded,true);selectedEntity=id;
+      PreconnectSystem.begin(id);
+      setLabActions(id);
+    }
+    const saved=C.ObserverReturn.get(id);
+    presenceMotion={
+      id,from,to,toForeground,fromTarget:target.clone(),
+      toTarget:toForeground?to.clone():(saved?saved.target.clone():target.clone()),
+      fromCameraPosition:camera.position.clone(),
+      toCameraPosition:(!toForeground&&saved)?saved.cameraPosition.clone():camera.position.clone(),
+      started:performance.now(),duration:THREE.MathUtils.clamp(390+from.distanceTo(to)*22,430,610)
+    };
+    window.vestibuleDirty=true;
+  },
+  dismiss(){
+    if(selectedEntity&&!presenceMotion){
+      setLabActions(null);
+      this.begin(selectedEntity,false);
+    }
+  }
+};
+
+
+let entryMotion=null;
+
+function selectedLabName(){
+  return selectedEntity?C.LabIdentity.get(selectedEntity)?.name:null;
+}
+
+function setLabActions(id){
+  const lab=id?C.LabIdentity.get(id):null;
+  const destination=id?C.Destination.get(id):null;
+  const visible=!!(lab&&destination);
+  labActionsEl.classList.toggle('visible',visible);
+  labActionsEl.setAttribute('aria-hidden',visible?'false':'true');
+}
+function updateLabLabel(){
+  const name=selectedLabName();
+  labNameEl.textContent=name||'';
+  labNameEl.style.opacity=name?'1':'0';
+}
+enterLabEl.addEventListener('click',e=>{
+  e.stopPropagation();
+  if(selectedEntity&&ecs.has(selectedEntity,C.Destination))beginEntry(selectedEntity);
+});
+githubLabEl.addEventListener('click',e=>{
+  e.stopPropagation();
+  const url=selectedEntity?C.LabIdentity.get(selectedEntity)?.github:null;
+  if(url){
+    checkpointForDeparture();
+    departing=true;
+    window.location.href=url;
+  }
+});
+
+const preconnectedOrigins=new Set();
+const PreconnectSystem={
+  begin(id){
+    const d=C.Destination.get(id);
+    if(!d)return;
+    const origin=new URL(d.url).origin;
+    if(preconnectedOrigins.has(origin))return;
+    const link=document.createElement('link');
+    link.rel='preconnect';link.href=origin;link.crossOrigin='anonymous';
+    document.head.appendChild(link);preconnectedOrigins.add(origin);
+  }
+};
+
+const WORLD_STATE_KEY='worldLab.worldState.v1';
+const WORLD_STATE_VERSION=1;
+let departing=false,lastWorldSave=0;
+
+function slotForId(id){return id==null?null:C.Presence.get(id)?.slot??null}
+function idForSlot(slot){return presenceEntities.find(id=>C.Presence.get(id).slot===slot)||null}
+function vec(v){return v?.toArray?v.toArray():v}
+function remaining(at,now){return Number.isFinite(at)?Math.max(0,at-now):null}
+
+function captureObserverState(){
+  const id=selectedEntity,saved=id?C.ObserverReturn.get(id):null,transform=id?C.Transform.get(id):null;
+  return {
+    selectedSlot:slotForId(id),
+    selectedPosition:transform?transform.position.toArray():null,
+    cameraPosition:camera.position.toArray(),target:target.toArray(),radius,theta,phi,
+    observerReturn:saved?{cameraPosition:saved.cameraPosition.toArray(),target:saved.target.toArray(),radius:saved.radius,theta:saved.theta,phi:saved.phi}:null
+  };
+}
+function captureWorldState(now=performance.now()){
+  const descent=[];
+  for(const [id,st] of descentStates){
+    descent.push({slot:slotForId(id),laid:st.laid,phase:st.phase,route:st.route,step:st.step,
+      nextIn:remaining(st.nextAt,now),rng:st.rng.getState?.(),
+      run:st.run?{kind:st.run.kind,index:st.run.index,fromIndex:st.run.fromIndex,toIndex:st.run.toIndex,duration:st.run.duration,elapsed:Math.max(0,now-st.run.started)}:null});
+  }
+  const rocks=spoil.filter(r=>!r.delivered).map(r=>({id:r.id,position:r.mesh.position.toArray(),velocity:r.v.toArray(),r:r.r,sleep:!!r.sleep,quiet:r.quiet||0}));
+  const foundry=[];
+  for(const [id,st] of foundryStates){
+    foundry.push({slot:slotForId(id),nextLaunchIn:remaining(st.nextLaunch,now),drones:st.drones.map(d=>({
+      state:d.state,position:d.group.position.toArray(),rockId:d.rock?.id??null,speed:d.speed,
+      returnPath:(d.returnPath||[]).map(vec),returnIndex:d.returnIndex||0,returnAnchor:d.returnAnchor?d.returnAnchor.toArray():null
+    }))});
+  }
+  const exchange=[];
+  for(const [id,st] of exchangeStates){
+    exchange.push({slot:slotForId(id),rng:st.rng.getState?.(),nextIn:remaining(st.nextAt,now),active:st.active.map(p=>({
+      a:p.route.a,b:p.route.b,duration:p.duration,stagger:p.stagger,elapsed:Math.max(0,now-p.started),matIndex:p.matIndex??0
+    }))});
+  }
+  return {version:WORLD_STATE_VERSION,savedAt:Date.now(),observer:captureObserverState(),descent,rocks,foundry,exchange};
+}
+function saveWorldState({force=false}={}){
+  if(departing)return false;
+  const now=performance.now();if(!force&&now-lastWorldSave<900)return false;
+  try{sessionStorage.setItem(WORLD_STATE_KEY,JSON.stringify(captureWorldState(now)));lastWorldSave=now;return true}
+  catch(e){console.warn('WorldState save unavailable',e);return false}
+}
+function clearDynamicWorldForRestore(){
+  for(const r of spoil)r.mesh.removeFromParent();spoil.length=0;nextSpoilId=1;
+  for(const st of foundryStates.values()){for(const d of st.drones)d.group.removeFromParent();st.drones.length=0}
+  for(const st of exchangeStates.values()){for(const p of st.active)st.apparatus.remove(p.packet);st.active.length=0;st.routes.length=0}
+}
+function restoreDescentState(saved,now){
+  for(const ds of saved||[]){
+    const id=idForSlot(ds.slot),st=id?descentStates.get(id):null;if(!st)continue;
+    st.torches.forEach(t=>st.apparatus.remove(t.group));st.torches.length=0;
+    for(const m of st.planks){m.removeFromParent();st.apparatus.add(m);m.visible=true}
+    st.laid=THREE.MathUtils.clamp(ds.laid|0,0,st.stock);st.phase=ds.phase==='recover'?'recover':'build';st.route=ds.route|0;st.step=ds.step|0;
+    if(ds.rng!=null)st.rng.setState?.(ds.rng);
+    for(let i=0;i<st.laid;i++)placePlank(st,i);
+    arrangeLumberPile(st);placeStockTorch(st);
+    st.run=null;st.nextAt=now+(ds.nextIn??250);
+    if(ds.run){
+      const q=ds.run;st.run={kind:q.kind,index:q.index,fromIndex:q.fromIndex,toIndex:q.toIndex,duration:q.duration,started:now-Math.min(q.elapsed||0,q.duration)};st.nextAt=Infinity;
+      if(q.kind==='toFrontier'||q.kind==='salvageHome')carry(st,q.index,true);
+    }else{
+      const idx=st.phase==='recover'?Math.max(0,st.laid):0,p=accessPoint(idx,st.route);st.worker.position.copy(p.clone().normalize().multiplyScalar(.594));orientWorkerStable(st.worker,p,st.route,idx);
+    }
+  }
+}
+function restoreRocks(saved){
+  for(const rs of saved||[]){
+    const mesh=new THREE.Mesh(spoilGeo,spoilMat);mesh.castShadow=false;mesh.receiveShadow=false;mesh.position.fromArray(rs.position);scene.add(mesh);
+    const r={id:rs.id|0,mesh,v:new THREE.Vector3().fromArray(rs.velocity||[0,0,0]),r:rs.r||.034,sleep:!!rs.sleep,quiet:rs.quiet||0,delivered:false,claimedBy:null};
+    spoil.push(r);nextSpoilId=Math.max(nextSpoilId,r.id+1);
+  }
+  spoilActive=spoil.some(r=>!r.sleep);lastSpoilNow=performance.now();
+}
+function restoreFoundryState(saved,now){
+  const rocks=new Map(spoil.map(r=>[r.id,r])),claimedRockIds=new Set();
+  for(const fs of saved||[]){
+    const id=idForSlot(fs.slot),st=id?foundryStates.get(id):null;if(!st)continue;st.nextLaunch=now+(fs.nextLaunchIn??300);
+    for(const ds of fs.drones||[]){
+      const d=makeFoundryDrone(st);d.group.position.fromArray(ds.position);d.state=ds.state||'seeking';d.speed=ds.speed||.82;
+      d.returnPath=(ds.returnPath||[]).map(a=>new THREE.Vector3().fromArray(a));d.returnIndex=ds.returnIndex||0;d.returnAnchor=ds.returnAnchor?new THREE.Vector3().fromArray(ds.returnAnchor):null;
+      d.rock=ds.rockId!=null?rocks.get(ds.rockId)||null:null;
+      if(d.rock&&claimedRockIds.has(d.rock.id)){d.group.removeFromParent();st.drones.pop();continue}
+      if(d.rock){claimedRockIds.add(d.rock.id);d.rock.claimedBy=d}
+      if((d.state==='toRock'||d.state==='launchClear'||d.state==='homePath'||d.state==='homeIngress')&&!d.rock){d.group.removeFromParent();st.drones.pop()}
+      else if(d.rock&&(d.state==='homePath'||d.state==='homeIngress')){d.rock.sleep=true;d.rock.v.set(0,0,0);d.rock.mesh.position.copy(d.group.position).add(new THREE.Vector3(0,-.040,0))}
+    }
+  }
+  lastFoundryNow=now;
+}
+function restoreExchangeState(saved,now){
+  for(const es of saved||[]){
+    const id=idForSlot(es.slot),st=id?exchangeStates.get(id):null;if(!st)continue;if(es.rng!=null)st.rng.setState?.(es.rng);st.nextAt=now+(es.nextIn??400);
+    for(const ps of es.active||[]){
+      const route={a:ps.a,b:ps.b,samples:routeSamples(NODE_DIRS[ps.a],NODE_DIRS[ps.b])},packet=new THREE.Group(),matIndex=ps.matIndex??0,mat=packetMats[matIndex]||packetMats[0];
+      const scales=[.30,.40,.54,.40,.30],bearings=scales.map(scale=>{const b=new THREE.Mesh(bearingGeo,mat);b.scale.setScalar(scale);b.castShadow=true;b.receiveShadow=true;b.visible=false;packet.add(b);return b});
+      st.apparatus.add(packet);st.routes.push(route);st.active.push({packet,bearings,route,started:now-(ps.elapsed||0),duration:ps.duration,stagger:ps.stagger,matIndex});
+    }
+  }
+}
+function restoreObserverState(o){
+  if(!o)return;
+  if(selectedEntity){ecs.remove(selectedEntity,C.Foregrounded);ecs.remove(selectedEntity,C.ObserverReturn)}selectedEntity=null;
+  if(o.cameraPosition)camera.position.fromArray(o.cameraPosition);if(o.target)target.fromArray(o.target);radius=o.radius??radius;theta=o.theta??theta;phi=o.phi??phi;camera.lookAt(target);
+  const id=o.selectedSlot!=null?idForSlot(o.selectedSlot):null;
+  if(id){const transform=C.Transform.get(id);if(o.selectedPosition)transform.position.fromArray(o.selectedPosition);RenderSyncSystem.sync();ecs.add(id,C.Foregrounded,true);selectedEntity=id;
+    const q=o.observerReturn;ecs.add(id,C.ObserverReturn,q?{cameraPosition:new THREE.Vector3().fromArray(q.cameraPosition),target:new THREE.Vector3().fromArray(q.target),radius:q.radius,theta:q.theta,phi:q.phi}:{cameraPosition:HOME.camera.clone(),target:HOME.target.clone(),radius:HOME.radius,theta:HOME.theta,phi:HOME.phi});PreconnectSystem.begin(id)}
+  updateLabLabel();setLabActions(id);window.vestibuleDirty=true;
+}
+function validateWorldState(state){
+  if(!state||state.version!==WORLD_STATE_VERSION)throw new Error('Incompatible WorldState schema');
+  for(const key of ['descent','rocks','foundry','exchange'])if(state[key]!=null&&!Array.isArray(state[key]))throw new Error('Malformed WorldState '+key);
+  const rockIds=new Set();
+  for(const r of state.rocks||[]){
+    if(!Number.isInteger(r.id)||r.id<=0||rockIds.has(r.id))throw new Error('Malformed or duplicate spoil identity');
+    if(!Array.isArray(r.position)||r.position.length!==3||!r.position.every(Number.isFinite))throw new Error('Malformed spoil position');
+    rockIds.add(r.id);
+  }
+  const claims=new Set();
+  for(const f of state.foundry||[])for(const d of f.drones||[]){
+    if(d.rockId==null)continue;
+    if(!rockIds.has(d.rockId))continue; // orphaned drone is safely discarded by restore
+    if(claims.has(d.rockId))throw new Error('Duplicate Foundry spoil claim');
+    claims.add(d.rockId);
+  }
+  return state;
+}
+function applyWorldState(state,now){
+  clearDynamicWorldForRestore();
+  restoreDescentState(state.descent,now);restoreRocks(state.rocks);restoreFoundryState(state.foundry,now);restoreExchangeState(state.exchange,now);restoreObserverState(state.observer);
+}
+function restoreCheckpointObserver(){
+  let raw=null;try{raw=sessionStorage.getItem(WORLD_STATE_KEY)}catch(e){console.warn('WorldState observer restore unavailable',e)}if(!raw)return false;
+  try{const state=validateWorldState(JSON.parse(raw));restoreObserverState(state.observer);return true}
+  catch(e){console.warn('WorldState observer restore failed',e);return false}
+}
+function restoreWorldState(){
+  let raw=null;try{raw=sessionStorage.getItem(WORLD_STATE_KEY)}catch(e){console.warn('WorldState restore unavailable',e)}if(!raw)return false;
+  const now=performance.now(),fallback=captureWorldState(now);
+  try{
+    const state=validateWorldState(JSON.parse(raw));applyWorldState(state,now);
+    lastWorldSave=now;window.vestibuleDirty=true;return true;
+  }catch(e){
+    console.warn('WorldState restore failed; rolling back to live world',e);try{sessionStorage.removeItem(WORLD_STATE_KEY)}catch(_){}
+    try{applyWorldState(fallback,performance.now())}catch(rollbackError){vestibuleFail('WorldState rollback',rollbackError)}
+    window.vestibuleDirty=true;return false;
+  }
+}
+function checkpointForDeparture(){return saveWorldState({force:true})}
+
+function finishEntry(id){
+  const destination=C.Destination.get(id)?.url;
+  if(!destination){entryMotion=null;return}
+  // Consume executable departure intent BEFORE navigation. A BFCache-restored page can never replay it.
+  entryMotion=null;departing=true;location.href=destination;
+}
+
+function beginEntry(id){
+  if(entryMotion||presenceMotion||!ecs.has(id,C.Destination))return;
+  // Return continuity belongs to the stable inspection pose, not the terminal
+  // Camera Commit pose. Snapshot before entry starts moving the observer.
+  checkpointForDeparture();
+  const t=C.Transform.get(id);
+  const distance=camera.position.distanceTo(t.position);
+  entryMotion={
+    id,started:performance.now(),duration:520,
+    fromCamera:camera.position.clone(),fromTarget:target.clone(),
+    distance
+  };
+  window.vestibuleDirty=true;
+}
+const SelectionSystem={
+  pick(x,y){
+    const r=canvas.getBoundingClientRect();
+    pointerNDC.set(((x-r.left)/r.width)*2-1,-((y-r.top)/r.height)*2+1);
+    raycaster.setFromCamera(pointerNDC,camera);
+    const pickables=[];
+    for(const id of ecs.query(C.Selectable,C.RenderObject))
+      if(C.Selectable.get(id).enabled)pickables.push(...C.RenderObject.get(id).pickables);
+    for(const hit of raycaster.intersectObjects(pickables,false)){
+      const id=hit.object.userData.entityId;      if(id&&ecs.has(id,C.Selectable))return id;
+    }
+    return null;
+  },
+  tap(x,y){
+    const hit=this.pick(x,y);
+    if(selectedEntity){
+      if(hit===selectedEntity)return;
+      ForegroundSystem.dismiss();return
+    }
+    if(hit&&!presenceMotion)ForegroundSystem.begin(hit,true);
+  }
+};
+canvas.addEventListener('pointerdown',e=>{
+  canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  tapStarts.set(e.pointerId,{x:e.clientX,y:e.clientY,t:performance.now()});
+  if(pointers.size===2){const a=[...pointers.values()];pinch=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);pinchCentroid=centroid(a)}
+});
+canvas.addEventListener('pointermove',e=>{
+  if(!pointers.has(e.pointerId))return;
+  const old=pointers.get(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  const a=[...pointers.values()];
+  if(a.length===1){
+    if(e.shiftKey||e.buttons===2)panPixels(e.clientX-old.x,e.clientY-old.y);
+    else{theta-=(e.clientX-old.x)*.006;phi-=(e.clientY-old.y)*.006}
+    applyCamera();
+  }else if(a.length===2){
+    const d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y),c=centroid(a);
+    if(pinch&&d>0)radius*=pinch/d;
+    if(pinchCentroid)panPixels(c.x-pinchCentroid.x,c.y-pinchCentroid.y,.42);
+    pinch=d;pinchCentroid=c;applyCamera();
+  }
+});
+canvas.addEventListener('pointerup',e=>{
+  const start=tapStarts.get(e.pointerId);
+  if(start){
+    const travel=Math.hypot(e.clientX-start.x,e.clientY-start.y);
+    const elapsed=performance.now()-start.t;
+    if(travel<10 && elapsed<420 && pointers.size===1) SelectionSystem.tap(e.clientX,e.clientY);
+  }
+  clearPointer(e.pointerId);
+});
+canvas.addEventListener('pointercancel',e=>clearPointer(e.pointerId));
+canvas.addEventListener('lostpointercapture',e=>clearPointer(e.pointerId));
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('wheel',e=>{e.preventDefault();radius*=Math.exp(e.deltaY*.001);applyCamera()},{passive:false});
+
+addEventListener('keydown',e=>{if(e.key==='Home')home()});
+addEventListener('resize',()=>{
+  const wasPortrait=lastPortrait;
+  lastPortrait=innerHeight>innerWidth*1.12;
+  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+  applyRing({preserveCamera:true});
+  if(wasPortrait!==lastPortrait) home();
+  window.vestibuleDirty=true;
+});
+
+renderer.setAnimationLoop((now)=>{
+  ExchangeSystem(now);
+  OrbitalSystem(now);
+  FoundrySystem(now);
+  DescentSystem(now);
+  SpoilSystem(now);
+  if(entryMotion){
+    const m=entryMotion,raw=Math.min(1,(now-m.started)/m.duration),t=easeQuiet(raw);
+    const tr=C.Transform.get(m.id);
+    const toward=tr.position.clone().sub(m.fromCamera).normalize();
+    camera.position.copy(m.fromCamera).addScaledVector(toward,m.distance*.92*t);
+    const len=camera.position.length();
+    if(len>CAMERA_BOUNDARY)camera.position.multiplyScalar(CAMERA_BOUNDARY/len);
+    camera.position.y=Math.max(GROUND_Y+.18,camera.position.y);
+    target.copy(tr.position);camera.lookAt(target);
+    window.vestibuleDirty=true;
+    if(raw>=1)finishEntry(m.id);
+  }
+  if(presenceMotion){
+    const m=presenceMotion,raw=Math.min(1,(now-m.started)/m.duration),t=easeQuiet(raw);
+    const transform=C.Transform.get(m.id);
+    transform.position.lerpVectors(m.from,m.to,t);
+    RenderSyncSystem.sync();
+    camera.position.lerpVectors(m.fromCameraPosition,m.toCameraPosition,t);
+    target.lerpVectors(m.fromTarget,m.toTarget,t);camera.lookAt(target);
+    window.vestibuleDirty=true;
+    if(raw>=1){
+      transform.position.copy(m.to);RenderSyncSystem.sync();
+      target.copy(m.toTarget);camera.lookAt(target);
+      if(!m.toForeground){
+        const saved=C.ObserverReturn.get(m.id);
+        if(saved){
+          camera.position.copy(saved.cameraPosition);target.copy(saved.target);
+          radius=saved.radius;theta=saved.theta;phi=saved.phi;camera.lookAt(target);
+        }
+        ecs.remove(m.id,C.Foregrounded);ecs.remove(m.id,C.ObserverReturn);selectedEntity=null;updateLabLabel();
+      }else{
+        target.copy(transform.position);
+        const off=camera.position.clone().sub(target);radius=off.length();
+        phi=Math.acos(THREE.MathUtils.clamp(off.y/radius,-1,1));theta=Math.atan2(off.x,off.z);
+        camera.lookAt(target);updateLabLabel();setLabActions(m.id);
+      }
+      presenceMotion=null;
+    }
+  }
+  if(!departing&&(now-lastWorldSave>1000))saveWorldState();
+  if(window.vestibuleDirty!==false){renderer.render(scene,camera);window.vestibuleDirty=false}
+});
+
+
+addEventListener('pagehide',()=>{if(!departing)saveWorldState({force:true})});
+addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&!departing)saveWorldState({force:true})});
+addEventListener('pageshow',e=>{
+  // BFCache restores the live simulation. Clear ephemeral departure state, then reconcile the stable observer checkpoint.
+  departing=false;entryMotion=null;presenceMotion=null;
+  if(e.persisted){
+    // The live simulation is valuable, but Camera Commit left the live observer at its terminal pose.
+    // Reconcile only the stable pre-departure observer checkpoint; do not rewind the simulated world.
+    if(!restoreCheckpointObserver()){updateLabLabel();setLabActions(selectedEntity)}
+    saveWorldState({force:true});window.vestibuleDirty=true;return
+  }
+  restoreWorldState();
+});
+
+window.vestibule={
+  scene,camera,renderer,presences,
+  get layout(){return 'Ring'},
+  get selected(){return selectedEntity?C.Presence.get(selectedEntity).slot:null},
+  home,
+  select:i=>{const id=presenceEntities.find(id=>C.Presence.get(id).slot===i);if(id&&!selectedEntity&&!presenceMotion)ForegroundSystem.begin(id,true)},
+  dismiss:()=>ForegroundSystem.dismiss(),
+  enter:()=>{if(selectedEntity&&ecs.has(selectedEntity,C.Destination))beginEntry(selectedEntity)},
+  ecs:{world:ecs,components:C,systems:{SelectionSystem,ForegroundSystem,RenderSyncSystem}},
+  invalidate:()=>window.vestibuleDirty=true,
+  inspect:()=>({
+    ready:!!window.vestibuleReady,
+    layout:'Ring',
+    profile:profile(),
+    selected:selectedEntity?C.Presence.get(selectedEntity).slot:null,
+    positions:presenceEntities.map(id=>C.Transform.get(id).position.toArray()),
+    camera:{position:camera.position.toArray(),target:target.toArray(),radius,theta,phi},
+    rules:{worldRadius:WORLD_RADIUS,cameraBoundary:CAMERA_BOUNDARY,orientationChangeReframes:true,pixelRatioCap:1.5}
+  })
+};
+
+applyRing({preserveCamera:true});
+home();
+window.vestibuleReady=true;
+clearTimeout(window.vestibuleWatch);
+window.vestibuleDirty=true;
+</script>
+</body>
+</html>

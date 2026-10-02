@@ -1508,8 +1508,14 @@ function ensureWorkshopWater(){
 function resetWorkshopTanks(){
   workshopGateOpen=false;workshopGateStart=0;gate.visible=true;gate.position.y=.55;
   const water=ensureWorkshopWater();water.reset();water.setSources([]);water.setEnabled(true);
-  // Finite initial charge only: enough to visibly fill one tank, with no source thereafter.
-  for(let x=-4.0;x<=-2.05;x+=.28)for(let z=-.84;z<=.84;z+=.28)water.inject(.030,x,z);
+  // Finite initial charge only. Left tank footprint is 2.8 x 2.4 and the
+  // transparent walls are 2.25 high: 15.12 volume units fills it to the brim.
+  // Spread that charge across the solver cells in the tank so initialization is
+  // hydrostatic rather than a single violent injection.
+  const xs=[];for(let x=-4.30;x<=-1.80;x+=.28)xs.push(x);
+  const zs=[];for(let z=-1.05;z<=1.05;z+=.28)zs.push(z);
+  const q=15.12/(xs.length*zs.length);
+  for(const x of xs)for(const z of zs)water.inject(q,x,z);
 }
 function removeWorkshopGate(){
   if(workshopGateOpen)return;

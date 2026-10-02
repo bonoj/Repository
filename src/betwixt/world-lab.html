@@ -1338,6 +1338,7 @@ function setContentWorkshopHidden(hidden){
     contentFrozenAt=performance.now();
     betwixtContent.visible=false;
     workshopField.visible=true;
+    workshopCrucibleOrb.visible=true;
     // Workshop context does not own Crucible state. The resident ⚗️ container
     // alone decides whether its parented organism is present here.
     if(workshopCrucibleEnabled)workshopCrucible.visible=true;
@@ -1358,6 +1359,7 @@ function setContentWorkshopHidden(hidden){
     for(const st of descentStates.values())st.nextAt+=pause;
     betwixtContent.visible=true;
     workshopField.visible=false;
+    workshopCrucibleOrb.visible=false;
     workshopCrucible.visible=false;
 
     contentFrozenAt=0;
@@ -1553,6 +1555,32 @@ function installWorkshopCrucibleContainerSpell(){
   shell.registerTool({id:'crucible-container',text:'⚗️',label:'Crucible',lane:'resident',onClick:b=>toggleWorkshopCrucible(b)});
 }
 queueMicrotask(installWorkshopCrucibleContainerSpell);
+
+// First spatial spell: the Crucible container has a physical handle in quiet
+// Betwixt. It delegates to the exact same toggle as the resident ⚗️ spell.
+const workshopCrucibleOrb=new THREE.Group();
+workshopCrucibleOrb.name='spell-orb:crucible';
+const workshopCrucibleOrbMesh=new THREE.Mesh(
+  new THREE.SphereGeometry(.46,24,16),
+  new THREE.MeshStandardMaterial({color:0xd7e3df,roughness:.16,metalness:.08,transparent:true,opacity:.82})
+);
+workshopCrucibleOrbMesh.castShadow=true;
+workshopCrucibleOrbMesh.userData.workshopCrucibleOrb=true;
+workshopCrucibleOrb.add(workshopCrucibleOrbMesh);
+const workshopCrucibleOrbRing=new THREE.Mesh(
+  new THREE.TorusGeometry(.58,.025,8,36),
+  new THREE.MeshStandardMaterial({color:0x879b99,roughness:.62,metalness:.18})
+);
+workshopCrucibleOrbRing.rotation.x=Math.PI/2;
+workshopCrucibleOrbRing.position.y=-.46;
+workshopCrucibleOrb.add(workshopCrucibleOrbRing);
+workshopCrucibleOrb.position.set(-4.6,GROUND_Y+.48,2.8);
+workshopCrucibleOrb.visible=false;
+scene.add(workshopCrucibleOrb);
+function tapWorkshopCrucibleOrb(){
+  const button=globalThis.RepositoryShell?.button('crucible-container')||null;
+  return toggleWorkshopCrucible(button);
+}
 
 // First Workshop pressure: one semantic request becomes a visible 7x7 possibility field.
 // This is deliberately local evidence, not a generalized fabrication protocol.
@@ -2054,6 +2082,9 @@ function workshopTap(x,y){
   const r=canvas.getBoundingClientRect();
   pointerNDC.set(((x-r.left)/r.width)*2-1,-((y-r.top)/r.height)*2+1);
   raycaster.setFromCamera(pointerNDC,camera);
+  if(raycaster.intersectObject(workshopCrucibleOrbMesh,false).length){
+    tapWorkshopCrucibleOrb();window.vestibuleDirty=true;return true;
+  }
   if(workshopCrucibleTool&&workshopTerrain){
     const hit=raycaster.intersectObject(workshopTerrain.mesh,true)[0];
     if(hit){

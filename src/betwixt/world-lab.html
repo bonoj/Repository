@@ -1618,48 +1618,87 @@ for(let i=0;i<25;i++){
 }
 
 
-/* Eighth Workshop pressure: one object only.
-   A geodesic glass pressure bauble. The faceting belongs to the shell itself. */
-const geodesicGlass=new THREE.MeshStandardMaterial({
-  color:0xc8e2e3,
-  transparent:true,
-  opacity:.16,
-  roughness:.08,
-  metalness:0,
-  depthWrite:false,
-  side:THREE.DoubleSide
+/* Tinker vocabulary: three forms, two compositions. */
+const glassMaterial=new THREE.MeshStandardMaterial({
+  color:0xc8e2e3,transparent:true,opacity:.16,roughness:.08,metalness:0,
+  depthWrite:false,side:THREE.DoubleSide
 });
-const baubleEdgeMaterial=new THREE.LineBasicMaterial({color:0x667879,transparent:true,opacity:.62});
-function makeBauble(){
+const edgeMaterial=new THREE.LineBasicMaterial({color:0x667879,transparent:true,opacity:.62});
+const brassMaterial=new THREE.MeshStandardMaterial({color:0xe0a43b,roughness:.22,metalness:.84});
+
+function makeGeosphere(){
   const g=new THREE.Group();
-  const shellGeometry=new THREE.SphereGeometry(.92,18,12);
-  g.add(new THREE.Mesh(shellGeometry,geodesicGlass));
-  g.add(new THREE.LineSegments(
-    new THREE.EdgesGeometry(new THREE.SphereGeometry(.92,10,7)),
-    baubleEdgeMaterial
-  ));
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(.92,18,12),glassMaterial));
+  g.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(.92,10,7)),edgeMaterial));
   return g;
 }
-// A — retained exactly, now resting on the workshop floor.
-const baubleA=makeBauble();
-baubleA.name='workshop:A';
-baubleA.position.set(-1.45,.92,0);
-workshopField.add(baubleA);
 
-// Standalone octagonal n × n × n specimen.
-const octonutMaterial=new THREE.MeshStandardMaterial({
-  color:0xe0a43b,
-  roughness:.22,
-  metalness:.84
-});
-const octonutN=.42;
-const octonut=new THREE.Mesh(
-  new THREE.CylinderGeometry(octonutN/2,octonutN/2,octonutN,8,1,false),
-  octonutMaterial
-);
-octonut.name='workshop:octagonal-n-cube';
-octonut.position.set(1.45,octonutN/2,0);
-workshopField.add(octonut);
+// Octagonal prism whose FINAL local bounding box is exactly n × n × n.
+// CylinderGeometry's radius is circumradius, so compensate for the octagon's flat-to-flat span.
+function makeOctonut(n=.42){
+  const circumradius=n/(2*Math.cos(Math.PI/8));
+  const geometry=new THREE.CylinderGeometry(circumradius,circumradius,n,8,1,false);
+  geometry.rotateY(Math.PI/8); // flats, not vertices, define local X/Z bounds
+  const mesh=new THREE.Mesh(geometry,brassMaterial);
+  const measured=new THREE.Vector3();
+  geometry.computeBoundingBox();
+  geometry.boundingBox.getSize(measured);
+  const eps=1e-6;
+  if(Math.abs(measured.x-n)>eps||Math.abs(measured.y-n)>eps||Math.abs(measured.z-n)>eps)
+    throw new Error('octonut invariant failed: '+measured.toArray().join(' × '));
+  return mesh;
+}
+
+function makeRing(radius=.72,tube=.055){
+  const mesh=new THREE.Mesh(new THREE.TorusGeometry(radius,tube,8,32),brassMaterial);
+  mesh.rotation.x=Math.PI/2; // canonical instance shown horizontal
+  return mesh;
+}
+
+function makeGimbalCage(){
+  const g=new THREE.Group();
+  const r1=new THREE.Mesh(new THREE.TorusGeometry(.72,.045,8,32),brassMaterial);
+  const r2=r1.clone(),r3=r1.clone();
+  r2.rotation.x=Math.PI/2;
+  r3.rotation.y=Math.PI/2;
+  g.add(r1,r2,r3);
+  return g;
+}
+
+function makeTentacle(){
+  const g=new THREE.Group();
+  let y=0;
+  for(let i=0;i<5;i++){
+    const t=i/4;
+    const width=THREE.MathUtils.lerp(.34,.15,t);
+    const length=THREE.MathUtils.lerp(.42,.72,t);
+    const part=makeOctonut(1);
+    part.scale.set(width,length,width);
+    part.position.y=y+length/2;
+    g.add(part);
+    y+=length;
+  }
+  return g;
+}
+
+const specimens=[
+  ['geosphere',makeGeosphere()],
+  ['octonut',makeOctonut(.42)],
+  ['ring',makeRing()],
+  ['gimbal-cage',makeGimbalCage()],
+  ['tentacle',makeTentacle()]
+];
+const specimenX=[-4,-2,0,2,4];
+for(let i=0;i<specimens.length;i++){
+  const [name,obj]=specimens[i];
+  obj.name='workshop:'+name;
+  obj.position.x=specimenX[i];
+  if(name==='geosphere')obj.position.y=.92;
+  else if(name==='octonut')obj.position.y=.21;
+  else if(name==='ring')obj.position.y=.06;
+  else if(name==='gimbal-cage')obj.position.y=.77;
+  workshopField.add(obj);
+}
 
 function resetWorkshopGlass(){}
 function updateWorkshop(now){

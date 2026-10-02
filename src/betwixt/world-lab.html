@@ -1453,43 +1453,94 @@ for(let i=0;i<49;i++){
 }
 
 
-/* Fourth Workshop pressure: 49 interpretations of glass on identical tank geometry.
-   Geometry is the control. Material/presentation is the variable. */
-const glassStudy=new THREE.Group();
-glassStudy.name='workshop:49-glass-tanks';
-workshopField.add(glassStudy);
+/* Fifth Workshop pressure: raster -> executable material evidence.
+   Reference proposition: dark green fractured mineral with broad planes, pale exposed facets,
+   and sparse fracture seams. No image texture and no imported mesh. */
+const rasterRock=new THREE.Group();
+rasterRock.name='workshop:raster-green-fractured-rock';
+workshopField.add(rasterRock);
 
-const glassStandard={
-  name:'Standard',
-  face:{color:0xc8e2e3,opacity:.16,roughness:.08,metalness:0,depthWrite:false,side:THREE.DoubleSide},
-  edge:{color:0x667879,opacity:.62}
-};
-const glassLooks=[
-  ['Standard',0xc8e2e3,.16,.08,0,0x667879,.62],
-  ['Crystal',0xe8ffff,.09,.02,0,0x9bb6b8,.42],['Museum',0xd8edf0,.12,.04,0,0x81999c,.50],['Window',0xbfdadd,.18,.12,0,0x61777a,.58],['Bottle',0x7fae9b,.25,.18,0,0x456b5d,.65],['Sea Glass',0x8fc7bd,.32,.55,0,0x5d8f87,.45],['Smoked',0x536568,.28,.16,0,0x303b3e,.72],
-  ['Obsidian',0x182225,.48,.12,.05,0x05090a,.82],['Amber',0xd79b48,.26,.14,0,0x8a5a25,.66],['Rose',0xe3a5ac,.20,.10,0,0x9b6970,.55],['Cobalt',0x4779ad,.27,.10,0,0x294d75,.72],['Emerald',0x4e9b77,.24,.12,0,0x2d674d,.65],['Violet',0x9075b3,.22,.09,0,0x5d4779,.64],['Ruby',0xb44e57,.24,.11,0,0x762f37,.70],
-  ['Frosted',0xdce8e6,.34,.88,0,0x879492,.38],['Etched',0xc9dcda,.27,.68,0,0x6f8582,.52],['Milk',0xe9efea,.52,.72,0,0xa0aaa4,.34],['Ice',0xd9f4f5,.20,.32,0,0x8ab5b8,.44],['Glacier',0xa9d5df,.31,.46,0,0x648f9a,.48],['Fogged',0xbac8c5,.38,.95,0,0x737f7d,.34],['Chalk',0xd8ded6,.58,1,0,0x8c928b,.30],
-  ['Polished',0xe5fbfb,.11,.01,0,0x788f91,.72],['Hard Gloss',0xc7e4e7,.18,.015,.05,0,0x536c70,.78],['Metal Glass',0xa8c5c8,.22,.06,.32,0x53666a,.75],['Mercury',0x9faeb0,.38,.04,.65,0x3d4648,.86],['Graphite',0x667376,.34,.18,.28,0x303638,.80],['Bronze Glass',0x9d8063,.31,.16,.22,0x5c4735,.72],['Gold Glass',0xd1b46b,.25,.08,.25,0x846d37,.68],
-  ['Ghost',0xeaffff,.045,.02,0,0xa7c5c7,.24],['Outline',0xdff5f5,.025,.10,0,0x536d70,.92],['Heavy Edge',0xc8e2e3,.10,.08,0,0x44585b,1],['No Edge',0xc8e2e3,.20,.08,0,0xc8e2e3,0],['Dark Edge',0xd9eeee,.10,.04,0,0x182427,.92],['Pale Edge',0xb8d3d6,.18,.12,0,0xdcebec,.78],['Warm Edge',0xc8d9d7,.16,.10,0,0x9a7457,.72],
-  ['Laboratory',0xd7eeee,.13,.06,0,0x5f777a,.56],['Aquarium',0x9fd6dd,.19,.05,0,0x4d8790,.52],['Industrial',0xa8babc,.24,.30,.05,0x4c585a,.82],['Armored',0x83989b,.34,.22,.12,0x344245,.96],['Old Green',0x7f9f86,.29,.42,0,0x4e6553,.72],['Old Brown',0x9a8873,.30,.48,0,0x5e5143,.70],['Blue Plate',0x779cac,.31,.20,.03,0x405e6a,.76],
-  ['Thin Film',0xa7d7cf,.08,.03,0,0x8a6da0,.72],['Neon Rim',0x83d6d1,.12,.05,0,0x3bc9c1,.95],['Deep Teal',0x17636a,.32,.10,0,0x0c3439,.82],['Black Ice',0x33484d,.36,.05,.08,0x111b1e,.88],['Porcelain Glass',0xe6e8df,.44,.62,0,0xa6aaa0,.42],['Honey',0xd7ad62,.38,.24,0,0x916b2f,.66],['Alien',0x87b77c,.20,.06,.08,0x5566a8,.82]
+function rockRand(i){
+  const x=Math.sin(i*127.1+41.7)*43758.5453123;
+  return x-Math.floor(x);
+}
+const rockGeo=new THREE.IcosahedronGeometry(1.72,2);
+const pos=rockGeo.attributes.position;
+for(let i=0;i<pos.count;i++){
+  let x=pos.getX(i),y=pos.getY(i),z=pos.getZ(i);
+  const len=Math.hypot(x,y,z)||1;
+  const nx=x/len,ny=y/len,nz=z/len;
+  const broad=.78+rockRand(i*3)*.34;
+  const directional=1+.16*nx-.08*ny+.11*nz;
+  x*=broad*directional*1.08;
+  y*=broad*(.90+.10*rockRand(i*3+1));
+  z*=broad*(.92+.12*rockRand(i*3+2));
+  pos.setXYZ(i,x,y,z);
+}
+pos.needsUpdate=true;
+rockGeo.computeVertexNormals();
+
+const rockBase=new THREE.MeshStandardMaterial({
+  color:0x315c49,roughness:.88,metalness:0,flatShading:true
+});
+const rock=new THREE.Mesh(rockGeo,rockBase);
+rock.position.y=1.34;
+rock.rotation.set(-.12,.48,.08);
+rasterRock.add(rock);
+
+/* Facet evidence: selected triangular faces get thin, coplanar mineral plates.
+   They are not random speckles; each reads as one exposed fracture plane. */
+const rockVerts=rockGeo.attributes.position;
+const facetMats=[
+  new THREE.MeshStandardMaterial({color:0x527c65,roughness:.72,flatShading:true,side:THREE.DoubleSide}),
+  new THREE.MeshStandardMaterial({color:0x73917a,roughness:.68,flatShading:true,side:THREE.DoubleSide}),
+  new THREE.MeshStandardMaterial({color:0x244638,roughness:.92,flatShading:true,side:THREE.DoubleSide})
 ];
-function makeGlassTank(look,index){
-  const [name,color,opacity,roughness,metalness,edgeColor,edgeOpacity]=look;
-  const g=new THREE.Group();g.userData.workshop={index,name};
-  const face=new THREE.MeshStandardMaterial({color,transparent:true,opacity,roughness,metalness,depthWrite:false,side:THREE.DoubleSide});
-  const edgeMat=new THREE.LineBasicMaterial({color:edgeColor,transparent:true,opacity:edgeOpacity});
-  const box=new THREE.Mesh(new THREE.BoxGeometry(1.12,.92,.92),face);box.position.y=.46;g.add(box);
-  const edges=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.12,.92,.92)),edgeMat);edges.position.y=.46;g.add(edges);
-  return g;
+for(let t=0;t<rockVerts.count/3;t++){
+  const r=rockRand(900+t);
+  if(r>.24)continue;
+  const ia=t*3;
+  const A=new THREE.Vector3().fromBufferAttribute(rockVerts,ia);
+  const B=new THREE.Vector3().fromBufferAttribute(rockVerts,ia+1);
+  const C=new THREE.Vector3().fromBufferAttribute(rockVerts,ia+2);
+  const center=A.clone().add(B).add(C).multiplyScalar(1/3);
+  const n=B.clone().sub(A).cross(C.clone().sub(A)).normalize();
+  const shrink=.91;
+  const pts=[A,B,C].map(v=>center.clone().lerp(v,shrink).addScaledVector(n,.008));
+  const g=new THREE.BufferGeometry().setFromPoints(pts);
+  g.setIndex([0,1,2]);g.computeVertexNormals();
+  rock.add(new THREE.Mesh(g,facetMats[Math.floor(rockRand(1200+t)*facetMats.length)]));
 }
-for(let i=0;i<49;i++){
-  const tank=makeGlassTank(glassLooks[i],i),col=i%7,row=Math.floor(i/7);
-  tank.position.set((col-3)*1.62,0,(row-3)*1.50);
-  glassStudy.add(tank);
+
+/* Fracture evidence: sparse dark seams are geometry, not a texture.
+   A few connected strokes cross the visible mineral rather than outlining every polygon. */
+const seamMat=new THREE.LineBasicMaterial({color:0x132a22,transparent:true,opacity:.72});
+const seamSets=[
+  [[-.88,.88,1.40],[-.38,1.18,1.53],[.08,.94,1.60],[.52,1.20,1.42]],
+  [[-.62,.28,1.56],[-.20,.56,1.68],[.24,.40,1.62],[.68,.70,1.36]],
+  [[-.18,1.58,.82],[.02,1.28,1.40],[.34,.98,1.57]],
+  [[.78,1.50,.44],[.54,1.28,1.14],[.22,.98,1.58]]
+];
+for(const pts of seamSets){
+  const g=new THREE.BufferGeometry().setFromPoints(pts.map(p=>new THREE.Vector3(...p)));
+  const line=new THREE.Line(g,seamMat);rock.add(line);
 }
+
+/* A few pale chips provide the raster's fresh-break highlights without painting the whole stone. */
+const chipMat=new THREE.MeshStandardMaterial({color:0xa2ad8c,roughness:.64,flatShading:true});
+[
+  [-1.05,1.42,.64,.22],[.92,1.72,.38,.18],[-.38,2.38,.44,.20],[.55,.54,1.30,.16]
+].forEach(([x,y,z,s],i)=>{
+  const chip=new THREE.Mesh(new THREE.TetrahedronGeometry(s,0),chipMat);
+  chip.position.set(x,y,z);chip.rotation.set(rockRand(i)*2,rockRand(i+8)*3,rockRand(i+20)*2);
+  rasterRock.add(chip);
+});
+
 function resetWorkshopGlass(){}
-function updateWorkshop(now){window.vestibuleDirty=true}
+function updateWorkshop(now){
+  rasterRock.rotation.y=Math.sin(now*.00018)*.035;
+  window.vestibuleDirty=true;
+}
 function workshopTap(x,y){return false}
 
 const raycaster=new THREE.Raycaster();

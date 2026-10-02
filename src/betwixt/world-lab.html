@@ -334,6 +334,7 @@ window.vestibuleWatch=setTimeout(()=>{
 
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+import { ArcballControls } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/ArcballControls.js';
 
 const scene=new THREE.Scene();
 const WORLD_RADIUS=58;
@@ -2027,6 +2028,38 @@ inkCanvas.addEventListener('pointercancel',finishInkPointer);
 sizeInk();
 
 const canvas=renderer.domElement, pointers=new Map();
+const arcball=new ArcballControls(camera,canvas,scene);
+arcball.enabled=false;
+arcball.enableAnimations=true;
+arcball.enableGrid=false;
+arcball.setGizmosVisible(false);
+let arcballActive=false;
+arcball.addEventListener('change',()=>{window.vestibuleDirty=true});
+function syncObserverFromCamera(){
+  target.copy(arcball.target);
+  const off=camera.position.clone().sub(target);
+  radius=off.length();
+  if(radius>1e-6){
+    phi=Math.acos(THREE.MathUtils.clamp(off.y/radius,-1,1));
+    theta=Math.atan2(off.x,off.z);
+  }
+}
+function setArcball(on){
+  on=!!on;
+  if(on===arcballActive)return arcballActive;
+  pointers.clear();tapStarts.clear();pinch=null;pinchCentroid=null;
+  if(on){
+    arcball.target.copy(target);
+    arcball.update();
+    arcball.enabled=true;
+  }else{
+    syncObserverFromCamera();
+    arcball.enabled=false;
+  }
+  arcballActive=on;window.vestibuleDirty=true;return arcballActive;
+}
+function toggleArcball(){return setArcball(!arcballActive)}
+
 let pinch=null,pinchCentroid=null;
 const centroid=a=>({x:a.reduce((s,p)=>s+p.x,0)/a.length,y:a.reduce((s,p)=>s+p.y,0)/a.length});
 function panPixels(dx,dy,gain=.8){
@@ -2335,11 +2368,13 @@ const SelectionSystem={
   }
 };
 canvas.addEventListener('pointerdown',e=>{
+  if(arcballActive)return;
   canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   tapStarts.set(e.pointerId,{x:e.clientX,y:e.clientY,t:performance.now()});
   if(pointers.size===2){const a=[...pointers.values()];pinch=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);pinchCentroid=centroid(a)}
 });
 canvas.addEventListener('pointermove',e=>{
+  if(arcballActive)return;
   if(!pointers.has(e.pointerId))return;
   const old=pointers.get(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   const a=[...pointers.values()];
@@ -2355,6 +2390,7 @@ canvas.addEventListener('pointermove',e=>{
   }
 });
 canvas.addEventListener('pointerup',e=>{
+  if(arcballActive)return;
   const start=tapStarts.get(e.pointerId);
   if(start){
     const travel=Math.hypot(e.clientX-start.x,e.clientY-start.y);
@@ -2366,7 +2402,7 @@ canvas.addEventListener('pointerup',e=>{
 canvas.addEventListener('pointercancel',e=>clearPointer(e.pointerId));
 canvas.addEventListener('lostpointercapture',e=>clearPointer(e.pointerId));
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
-canvas.addEventListener('wheel',e=>{e.preventDefault();radius*=Math.exp(e.deltaY*.001);applyCamera()},{passive:false});
+canvas.addEventListener('wheel',e=>{if(arcballActive)return;e.preventDefault();radius*=Math.exp(e.deltaY*.001);applyCamera()},{passive:false});
 
 addEventListener('keydown',e=>{if(e.key==='Home')home()});
 addEventListener('resize',()=>{
@@ -2490,6 +2526,9 @@ window.vestibule={
   setContentWorkshopHidden,
   toggleContentWorkshopHidden,
   get crayonActive(){return crayonActive},
+  get arcballActive(){return arcballActive},
+  setArcball,
+  toggleArcball,
   setCrayon,
   toggleCrayon,
   clearCrayon:clearInk,

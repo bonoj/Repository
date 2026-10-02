@@ -1325,6 +1325,7 @@ function setContentWorkshopHidden(hidden){
     contentFrozenAt=performance.now();
     betwixtContent.visible=false;
     workshopField.visible=true;
+    resetWorkshopBucket();
     target.set(0,.35,0);radius=11.8;theta=.16;phi=1.02;applyCamera();
     setLabActions(null);
   }else{
@@ -1337,6 +1338,7 @@ function setContentWorkshopHidden(hidden){
     for(const st of descentStates.values())st.nextAt+=pause;
     betwixtContent.visible=true;
     workshopField.visible=false;
+    if(workshopWater)workshopWater.setEnabled(false);
     contentFrozenAt=0;
     home();
   }
@@ -1446,7 +1448,77 @@ for(let i=0;i<49;i++){
   const piece=buildWorkshopPiece(i),col=i%7,row=Math.floor(i/7);
   piece.position.set((col-3)*1.65,0,(row-3)*1.65);
   piece.rotation.y=((i*37)%17-8)*.025;
+  piece.visible=false; // first Workshop specimen remains in source evidence, not on the current bench
   workshopField.add(piece);
+}
+
+
+/* Second Workshop pressure: a finite bucket of the actual Crucible shallow-water solver.
+   Repository's build injects the donor solver verbatim from cargo; this code supplies
+   only Betwixt's flat support and the bucket interaction. */
+const workshopBucket=new THREE.Group();
+workshopBucket.name='workshop:finite-crucible-water-bucket';
+workshopBucket.position.set(0,0,0);
+workshopField.add(workshopBucket);
+const bucketMat=new THREE.MeshStandardMaterial({color:0x777b78,roughness:.68,metalness:.32,side:THREE.DoubleSide});
+const bucketBody=new THREE.Mesh(new THREE.CylinderGeometry(.48,.38,.72,16,1,true),bucketMat);
+bucketBody.position.y=.38;bucketBody.castShadow=true;workshopBucket.add(bucketBody);
+const bucketRim=new THREE.Mesh(new THREE.TorusGeometry(.48,.035,6,18),bucketMat);
+bucketRim.rotation.x=Math.PI/2;bucketRim.position.y=.74;workshopBucket.add(bucketRim);
+const bucketWaterMat=new THREE.MeshBasicMaterial({color:0x17636a,transparent:true,opacity:.58,side:THREE.DoubleSide});
+const bucketWaterTop=new THREE.Mesh(new THREE.CircleGeometry(.43,20),bucketWaterMat);
+bucketWaterTop.rotation.x=-Math.PI/2;bucketWaterTop.position.y=.72;workshopBucket.add(bucketWaterTop);
+const bucketHandle=new THREE.Mesh(new THREE.TorusGeometry(.56,.025,6,22,Math.PI),bucketMat);
+bucketHandle.rotation.z=Math.PI/2;bucketHandle.position.y=.57;workshopBucket.add(bucketHandle);
+const workshopBucketPickables=[bucketBody,bucketRim,bucketWaterTop,bucketHandle];
+let workshopBucketTipped=false,workshopBucketTipStart=0,workshopBucketWaterReleased=false;
+let workshopWater=null;
+const workshopFlatTerrain={
+  materialBoundary(x,z){
+    const inside=Math.abs(x)<=8.9&&Math.abs(z)<=8.9;
+    const dx=8.9-Math.abs(x),dz=8.9-Math.abs(z),distance=Math.min(dx,dz);
+    let nx=0,nz=0;if(dx<dz)nx=Math.sign(x)||1;else nz=Math.sign(z)||1;
+    return{inside,distance:inside?distance:-Math.abs(distance),nx,nz};
+  },
+  groundHeightExact(){return 0;},
+  groundHeight(){return 0;}
+};
+function ensureWorkshopWater(){
+  if(workshopWater)return workshopWater;
+  workshopWater=createShallowWaterSystem({THREE,scene,terrain:workshopFlatTerrain,kind:'workshop-water',look:{color:0x17636a,opacity:.42,sideColor:0x245f73,sideOpacity:.34}});
+  workshopWater.setSources([]);workshopWater.setEnabled(false);return workshopWater;
+}
+function resetWorkshopBucket(){
+  workshopBucketTipped=false;workshopBucketTipStart=0;workshopBucketWaterReleased=false;
+  workshopBucket.rotation.set(0,0,0);bucketWaterTop.visible=true;
+  if(workshopWater){workshopWater.reset();workshopWater.setSources([]);workshopWater.setEnabled(false);}
+}
+function tipWorkshopBucket(){
+  if(workshopBucketTipped)return;
+  workshopBucketTipped=true;workshopBucketTipStart=performance.now();window.vestibuleDirty=true;
+}
+function updateWorkshop(now){
+  const water=ensureWorkshopWater();
+  if(workshopBucketTipped){
+    const t=Math.min(1,(now-workshopBucketTipStart)/620),q=1-Math.pow(1-t,3);
+    workshopBucket.rotation.z=-Math.PI*.53*q;
+    if(t>.30&&!workshopBucketWaterReleased){
+      workshopBucketWaterReleased=true;bucketWaterTop.visible=false;
+      water.reset();water.setSources([]);water.setEnabled(true);
+      // One finite bucket. No continuing source exists after this injection.
+      water.inject(1.15,.62,0);
+    }
+  }
+  if(workshopBucketTipped||workshopBucketWaterReleased)water.update(now);
+  window.vestibuleDirty=true;
+}
+function workshopTap(x,y){
+  if(!contentWorkshopHidden)return false;
+  const r=canvas.getBoundingClientRect();
+  pointerNDC.set(((x-r.left)/r.width)*2-1,-((y-r.top)/r.height)*2+1);
+  raycaster.setFromCamera(pointerNDC,camera);
+  if(raycaster.intersectObjects(workshopBucketPickables,false).length){tipWorkshopBucket();return true}
+  return false;
 }
 
 const raycaster=new THREE.Raycaster();
@@ -1829,6 +1901,7 @@ const SelectionSystem={
     return null;
   },
   tap(x,y){
+    if(workshopTap(x,y))return;
     const hit=this.pick(x,y);
     if(selectedEntity){
       if(hit===selectedEntity)return;
@@ -1884,7 +1957,8 @@ addEventListener('resize',()=>{
 
 renderer.setAnimationLoop((now)=>{
   if(contentWorkshopHidden){
-    if(window.vestibuleDirty!==false){renderer.render(scene,camera);window.vestibuleDirty=false}
+    updateWorkshop(now);
+    renderer.render(scene,camera);window.vestibuleDirty=false;
     return;
   }
   if(contentLiftMotion){

@@ -1,7 +1,19 @@
 import {access,readFile} from "node:fs/promises";
 
 await access("dist/index.html");
+await access("dist/crucible/index.html");
 const html=await readFile("dist/index.html","utf8");
+const crucible=await readFile("dist/crucible/index.html","utf8");
+for(const evidence of [
+  '__CRUCIBLE_BUILD__="d1c5e437197e72b16624c0b7104c6e9d9cbb0d0f"',
+  "<title>Crucible</title>",
+  "createImpactSystem()",
+  "createShallowWaterSystem",
+  "createBearingSystem"
+]){
+  if(!crucible.includes(evidence))throw new Error(`Intact Crucible cargo evidence missing: ${evidence}`);
+}
+if(crucible.length<1900000)throw new Error("Crucible cargo unexpectedly truncated");
 for(const evidence of [
   "WORLD LAB",
   "ENTER LAB",
@@ -62,4 +74,4 @@ for(const boundaryEvidence of [
   if(!html.includes(boundaryEvidence))throw new Error(`Betwixt content-boundary evidence missing: ${boundaryEvidence}`);
 }
 if(/scene\.add\((orbitRoot|g|mesh)\)/.test(html))throw new Error("Organism-owned dynamic content escaped betwixtContent");
-console.log("Intact Betwixt donor with shell, content boundary, and read-only Repository ECS mirror verified.");
+console.log("Intact Betwixt donor and intact Crucible cargo verified.");

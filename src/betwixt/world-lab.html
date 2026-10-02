@@ -57,12 +57,22 @@ select{width:100%;padding:0 12px;appearance:auto}
   background:#e7e2d8;font-weight:500;color:#343638;
 }
 #labActions button:active{background:#ded8cd}
+#crayon{
+  position:fixed;right:max(14px,env(safe-area-inset-right));bottom:max(22px,calc(env(safe-area-inset-bottom) + 14px));
+  z-index:62;width:52px;height:52px;padding:0;border-radius:50%;background:#e7e2d8;color:#17191a;
+  border:1px solid rgba(30,34,36,.78);touch-action:none;user-select:none;-webkit-user-select:none;
+}
+#crayon.active{background:#f0c85a}
+#ink{position:fixed;inset:0;z-index:61;pointer-events:none;touch-action:none}
+#ink.active{pointer-events:auto}
 </style>
 </head>
 <body>
 <div id="mark"><strong>WORLD LAB</strong></div>
 
 <div id="fault"></div>
+<canvas id="ink" aria-label="Crayon annotation layer"></canvas>
+<button id="crayon" type="button" aria-pressed="false" title="Crayon: tap draw, double tap clear, long press export">🖍</button>
 
 <div id="labActions" aria-hidden="true">
   <button id="enterLab" type="button">ENTER LAB</button>
@@ -1812,6 +1822,99 @@ function applyCamera(){
   window.vestibuleDirty=true;
 }
 
+/* CRAYON — ephemeral 2D intent over the live world.
+   Tap toggles ink. Double tap clears. Long press / right click exports PNG + JSON.
+   Samples retain screen coordinates and raycast world hits when geometry is beneath the stroke. */
+const inkCanvas=document.getElementById('ink');
+const inkCtx=inkCanvas.getContext('2d');
+const crayonButton=document.getElementById('crayon');
+let crayonActive=false,inkPointer=null,currentStroke=null,crayonPressTimer=null,lastCrayonTap=0;
+const inkStrokes=[];
+function sizeInk(){
+  const dpr=Math.min(devicePixelRatio,2);
+  inkCanvas.width=Math.round(innerWidth*dpr);inkCanvas.height=Math.round(innerHeight*dpr);
+  inkCanvas.style.width=innerWidth+'px';inkCanvas.style.height=innerHeight+'px';
+  inkCtx.setTransform(dpr,0,0,dpr,0,0);redrawInk();
+}
+function redrawInk(){
+  inkCtx.clearRect(0,0,innerWidth,innerHeight);
+  inkCtx.lineCap='round';inkCtx.lineJoin='round';inkCtx.lineWidth=4;inkCtx.strokeStyle='#d94b3d';
+  for(const s of inkStrokes){
+    if(s.points.length<1)continue;
+    inkCtx.beginPath();inkCtx.moveTo(s.points[0].screen[0],s.points[0].screen[1]);
+    for(let i=1;i<s.points.length;i++)inkCtx.lineTo(s.points[i].screen[0],s.points[i].screen[1]);
+    inkCtx.stroke();
+  }
+}
+function crayonHit(x,y){
+  const ndc=new THREE.Vector2((x/innerWidth)*2-1,-(y/innerHeight)*2+1);
+  const rc=new THREE.Raycaster();rc.setFromCamera(ndc,camera);
+  const hits=rc.intersectObjects(scene.children,true).filter(h=>h.object!==dome);
+  if(!hits.length)return null;
+  const h=hits[0],named=[];
+  let o=h.object;while(o){if(o.name)named.push(o.name);o=o.parent}
+  return {world:h.point.toArray(),object:named[0]||h.object.type,path:named};
+}
+function inkPoint(e){
+  return {screen:[+e.clientX.toFixed(2),+e.clientY.toFixed(2)],hit:crayonHit(e.clientX,e.clientY)};
+}
+function setCrayon(on){
+  crayonActive=!!on;inkCanvas.classList.toggle('active',crayonActive);
+  crayonButton.classList.toggle('active',crayonActive);crayonButton.setAttribute('aria-pressed',String(crayonActive));
+}
+function clearInk(){inkStrokes.length=0;currentStroke=null;redrawInk()}
+function crayonDocument(){
+  return {
+    kind:'betwixt-crayon',version:1,
+    viewport:{width:innerWidth,height:innerHeight,pixelRatio:devicePixelRatio},
+    camera:{position:camera.position.toArray(),quaternion:camera.quaternion.toArray(),target:target.toArray(),fov:camera.fov,aspect:camera.aspect},
+    strokes:inkStrokes
+  };
+}
+function downloadBlob(blob,name){
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function exportCrayon(){
+  if(!inkStrokes.length)return;
+  const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+  const out=document.createElement('canvas'),dpr=Math.min(devicePixelRatio,2);
+  out.width=Math.round(innerWidth*dpr);out.height=Math.round(innerHeight*dpr);
+  const ctx=out.getContext('2d');ctx.scale(dpr,dpr);
+  ctx.drawImage(renderer.domElement,0,0,innerWidth,innerHeight);
+  ctx.drawImage(inkCanvas,0,0,innerWidth,innerHeight);
+  out.toBlob(b=>{if(b)downloadBlob(b,'betwixt-crayon-'+stamp+'.png')},'image/png');
+  downloadBlob(new Blob([JSON.stringify(crayonDocument(),null,2)],{type:'application/json'}),'betwixt-crayon-'+stamp+'.json');
+}
+inkCanvas.addEventListener('pointerdown',e=>{
+  if(!crayonActive)return;e.preventDefault();inkPointer=e.pointerId;inkCanvas.setPointerCapture(e.pointerId);
+  currentStroke={points:[inkPoint(e)]};inkStrokes.push(currentStroke);redrawInk();
+});
+inkCanvas.addEventListener('pointermove',e=>{
+  if(e.pointerId!==inkPointer||!currentStroke)return;e.preventDefault();
+  const p=inkPoint(e),prev=currentStroke.points[currentStroke.points.length-1];
+  if(Math.hypot(p.screen[0]-prev.screen[0],p.screen[1]-prev.screen[1])<2)return;
+  currentStroke.points.push(p);redrawInk();
+});
+function finishInkPointer(e){if(e.pointerId===inkPointer){inkPointer=null;currentStroke=null}}
+inkCanvas.addEventListener('pointerup',finishInkPointer);
+inkCanvas.addEventListener('pointercancel',finishInkPointer);
+crayonButton.addEventListener('pointerdown',e=>{
+  e.stopPropagation();clearTimeout(crayonPressTimer);
+  crayonPressTimer=setTimeout(()=>{crayonPressTimer=null;exportCrayon()},650);
+});
+crayonButton.addEventListener('pointerup',e=>{
+  e.stopPropagation();
+  if(!crayonPressTimer)return;
+  clearTimeout(crayonPressTimer);crayonPressTimer=null;
+  const now=performance.now();
+  if(now-lastCrayonTap<320){lastCrayonTap=0;clearInk();return}
+  lastCrayonTap=now;setTimeout(()=>{if(lastCrayonTap===now){setCrayon(!crayonActive);lastCrayonTap=0}},330);
+});
+crayonButton.addEventListener('pointercancel',()=>{clearTimeout(crayonPressTimer);crayonPressTimer=null});
+crayonButton.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();exportCrayon()});
+sizeInk();
+
 const canvas=renderer.domElement, pointers=new Map();
 let pinch=null,pinchCentroid=null;
 const centroid=a=>({x:a.reduce((s,p)=>s+p.x,0)/a.length,y:a.reduce((s,p)=>s+p.y,0)/a.length});
@@ -2157,6 +2260,7 @@ canvas.addEventListener('wheel',e=>{e.preventDefault();radius*=Math.exp(e.deltaY
 addEventListener('keydown',e=>{if(e.key==='Home')home()});
 addEventListener('resize',()=>{
   const wasPortrait=lastPortrait;
+  sizeInk();
   lastPortrait=innerHeight>innerWidth*1.12;
   camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));

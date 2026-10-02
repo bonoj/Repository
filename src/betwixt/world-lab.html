@@ -1631,14 +1631,13 @@ const geodesicGlass=new THREE.MeshStandardMaterial({
   roughness:.08,
   metalness:0,
   depthWrite:false,
-  side:THREE.DoubleSide,
-  flatShading:true
+  side:THREE.DoubleSide
 });
-const geodesicGeometry=new THREE.IcosahedronGeometry(.92,2);
+const geodesicGeometry=new THREE.SphereGeometry(.92,18,12);
 const geodesicShell=new THREE.Mesh(geodesicGeometry,geodesicGlass);
 geodesicBauble.add(geodesicShell);
 const geodesicEdges=new THREE.LineSegments(
-  new THREE.EdgesGeometry(geodesicGeometry,1),
+  new THREE.EdgesGeometry(new THREE.SphereGeometry(.92,10,7)),
   new THREE.LineBasicMaterial({color:0x667879,transparent:true,opacity:.62})
 );
 geodesicBauble.add(geodesicEdges);

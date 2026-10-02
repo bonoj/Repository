@@ -1496,15 +1496,31 @@ globalThis.WorkshopBearings={
   inspect:()=>ensureWorkshopBearings()?.inspect()
 };
 
+// Crucible meteor spell: same four impact buckets, same transported flight/impact system.
+let workshopMeteors=null,workshopMeteorWorld=null,workshopMeteorBucket=1;
+const workshopImpactBuckets=[.18,.42,.85,1.55];
+function ensureWorkshopMeteors(){
+  if(workshopMeteors)return workshopMeteors;const terrain=ensureWorkshopTerrain();if(!terrain||typeof createMeteorSystem!=='function')return null;
+  const world=createWorld(),Transform=world.component('Transform'),RenderObject=world.component('RenderObject'),Meteor=world.component('Meteor'),MeteorShower=world.component('MeteorShower'),Body=world.component('Body'),Locus=world.component('Locus');
+  workshopMeteorWorld=world;const proxy={add:o=>terrain.owner.add(o),remove:o=>o.parent?.remove(o)};
+  workshopMeteors=createMeteorSystem({world,components:{Transform,RenderObject,Meteor,MeteorShower,Body,Locus},THREE,scene:proxy,terrain,locus:'workshop'});
+  return workshopMeteors;
+}
+function cycleWorkshopMeteor(button){
+  if(workshopCrucibleTool==='meteor')workshopMeteorBucket=(workshopMeteorBucket+1)%4;
+  chooseWorkshopCrucibleTool('meteor',button);button.style.setProperty('--meteor-scale',String(1+workshopMeteorBucket*.08));button.style.transform='scale('+String(1+workshopMeteorBucket*.08)+')';button.setAttribute('aria-label','Call meteor magnitude '+(workshopMeteorBucket+1)+' at tapped point');
+}
+
 // Exact Crucible controls, presented in Repository's left temporary spell tray.
 let workshopCrucibleTool=null,workshopBearingMagnitude=0;
 function chooseWorkshopCrucibleTool(tool,button){
   workshopCrucibleTool=tool;
-  for(const id of ['crucible-bearings','crucible-water','crucible-lava','crucible-carve','crucible-raise'])globalThis.RepositoryShell?.button?.(id)?.classList.remove('active');
+  for(const id of ['crucible-meteor','crucible-bearings','crucible-water','crucible-lava','crucible-carve','crucible-raise'])globalThis.RepositoryShell?.button?.(id)?.classList.remove('active');
   button?.classList.add('active');
 }
 function installWorkshopCrucibleSpells(){
   const shell=globalThis.RepositoryShell;if(!shell||shell.inspect().tools.includes('crucible-terrain-next'))return;
+  shell.registerTool({id:'crucible-meteor',text:'☄️',label:'Call meteor magnitude 2 at tapped point',onClick:b=>cycleWorkshopMeteor(b)});
   shell.registerTool({id:'crucible-terrain-next',text:'⛰️',label:'Next deterministic terrain',onClick:()=>WorkshopTerrain.next()});
   shell.registerTool({id:'crucible-bearings',text:'⚫️',label:'Spawn 25 bearings at tapped point; tap again for 25 thousand',onClick:b=>{if(workshopCrucibleTool==='bearing-packet'||workshopCrucibleTool==='bearings-many')workshopBearingMagnitude=workshopBearingMagnitude?0:1;else workshopBearingMagnitude=0;chooseWorkshopCrucibleTool(workshopBearingMagnitude?'bearings-many':'bearing-packet',b);b.textContent='⚫️';b.style.fontSize=workshopBearingMagnitude?'1.9rem':'.9rem';b.setAttribute('aria-label',workshopBearingMagnitude?'Spawn 25 thousand bearings at tapped point':'Spawn 25 bearings at tapped point')}});
   shell.registerTool({id:'crucible-water',text:'💧',label:'Place transport source at tapped point',onClick:b=>chooseWorkshopCrucibleTool('source',b)});
@@ -2018,7 +2034,8 @@ function workshopTap(x,y){
     const hit=raycaster.intersectObject(workshopTerrain.mesh,true)[0];
     if(hit){
       const p=workshopTerrain.owner.worldToLocal(hit.point.clone()),tool=workshopCrucibleTool;
-      if(tool==='carve')workshopTerrain.excavate({x:p.x,z:p.z},{radius:.82,depth:.42});
+      if(tool==='meteor'){const m=ensureWorkshopMeteors();m?.meteor(m.targetAt(p.x,p.z),workshopImpactBuckets[workshopMeteorBucket]);}
+      else if(tool==='carve')workshopTerrain.excavate({x:p.x,z:p.z},{radius:.82,depth:.42});
       else if(tool==='raise')workshopTerrain.raise({x:p.x,z:p.z},{radius:1.15,height:.55});
       else if(tool==='bearing-packet'||tool==='bearings-many')WorkshopBearings.spawn(tool==='bearings-many'?25000:25,new THREE.Vector3(p.x,p.y+.35,p.z));
       else if(tool==='source'||tool==='lava'){const q=ensureWorkshopLiquids(),liquid=tool==='lava'?q?.lava:q?.water;liquid?.addTimedSource({x:p.x,z:p.z,rate:.9,duration:3});liquid?.setEnabled(true)}
@@ -2677,6 +2694,7 @@ renderer.setAnimationLoop((now)=>{
     updateWorkshop(now);
     const workshopDt=Math.min(.05,Math.max(.001,(now-workshopBearingLast)/1000));
     if(workshopWater||workshopLava){workshopWater?.update(now);workshopLava?.update(now);updateWorkshopSteam(now,workshopDt)}
+    workshopMeteors?.update(now);
     if(workshopBearings){const bearingDt=Math.min(.15,Math.max(.001,(now-workshopBearingLast)/1000));workshopBearingLast=now;workshopBearings.update(bearingDt);updateWorkshopLavaPops(now)}else workshopBearingLast=now;
     renderer.render(scene,camera);window.vestibuleDirty=false;
     return;

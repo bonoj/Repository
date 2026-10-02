@@ -53,8 +53,8 @@ for(const shellEvidence of [
 ]){
   if(!html.includes(shellEvidence))throw new Error(`Repository shell evidence missing: ${shellEvidence}`);
 }
-if(!shellSource.includes("temporary:[]")||!shellSource.includes('{id:"workshop",text:"🛠"'))throw new Error("Workshop must be the sole manifested shell spell");
-for(const retiredId of ['id:"spin"','id:"marble"','id:"crucible"','id:"arcball"','id:"fluid-globes"','id:"crayon"','id:"lift"','id:"refresh"']){
+if(!shellSource.includes("temporary:[]")||!shellSource.includes('{id:"workshop",text:"🛠"')||!shellSource.includes('{id:"refresh",text:"🔄"'))throw new Error("Shell must manifest Workshop and Refresh");
+for(const retiredId of ['id:"spin"','id:"marble"','id:"crucible"','id:"arcball"','id:"fluid-globes"','id:"crayon"','id:"lift"']){
   if(shellSource.includes(retiredId))throw new Error(`Retired spell still manifests in shell: ${retiredId}`);
 }
 if(!shellSource.includes("enterWorkshopOnReady"))throw new Error("Betwixt must begin in Workshop");

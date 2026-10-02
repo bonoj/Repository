@@ -150,8 +150,13 @@
 
   function freshArrival(){
     try{sessionStorage.removeItem("worldLab.worldState.v1")}catch(_){}
+    // Reset the live observer before navigation too. On mobile a same-document
+    // replace can be satisfied from the current page/BFCache; the new document
+    // will independently boot to the same home pose.
+    globalThis.vestibule?.home?.();
     const url=new URL(location.href);
     for(const key of [...url.searchParams.keys()])if(key!=="build")url.searchParams.delete(key);
+    url.searchParams.set("fresh",Date.now().toString(36));
     url.hash="";
     location.replace(url);
   }

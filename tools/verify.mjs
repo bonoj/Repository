@@ -7,7 +7,11 @@ for(const evidence of [
   "ENTER LAB",
   "github.com",
   "pageshow",
-  "pagehide"
+  "pagehide",
+  "JupurnSystem",
+  "createJupurnRingField",
+  "count:1600",
+  "jupurn.position.set(0,5.6,0)"
 ]){
   if(!html.includes(evidence))throw new Error(`World Lab donor evidence missing: ${evidence}`);
 }

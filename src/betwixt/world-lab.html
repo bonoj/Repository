@@ -1339,6 +1339,7 @@ function setContentWorkshopHidden(hidden){
     betwixtContent.visible=false;
     workshopField.visible=true;
     setWorkshopTerrainVisible(true);
+    setWorkshopBearingsVisible(true);
     resetWorkshopGlass();
     target.set(0,.35,0);radius=11.8;theta=.16;phi=1.02;applyCamera();
     setLabActions(null);
@@ -1422,6 +1423,40 @@ globalThis.WorkshopTerrain={
   carve:(x,z,options={})=>ensureWorkshopTerrain()?.excavate({x,z},options),
   groundHeight:(x,z)=>ensureWorkshopTerrain()?.groundHeight(x,z),
   inspect:()=>ensureWorkshopTerrain()?.inspect()
+};
+
+// Bearings cross with their Crucible terrain coupling intact. Water/lava coupling
+// remains optional until Workshop deliberately composes those systems.
+let workshopBearings=null,workshopBearingOwner=null,workshopBearingLast=performance.now();
+function ensureWorkshopBearings(){
+  if(workshopBearings)return workshopBearings;
+  const terrain=ensureWorkshopTerrain();
+  if(!terrain||typeof createBearingSystem!=='function')return null;
+  workshopBearingOwner=new THREE.Group();workshopBearingOwner.name='workshop:crucible-bearings-owner';scene.add(workshopBearingOwner);
+  const world=createWorld(),Locus=world.component('Locus');
+  globalThis.__workshopBearingOwner=workshopBearingOwner;
+  try{workshopBearings=createBearingSystem({world,components:{Locus},THREE,scene,terrain,locus:'workshop',liquids:[]})}
+  finally{delete globalThis.__workshopBearingOwner}
+  workshopBearings.mesh.name='workshop:crucible-bearings';
+  workshopBearingOwner.visible=contentWorkshopHidden;
+  return workshopBearings;
+}
+function setWorkshopBearingsVisible(visible){
+  const bearings=visible?ensureWorkshopBearings():workshopBearings;
+  if(!bearings)return false;
+  workshopBearingOwner.visible=!!visible;
+  window.vestibuleDirty=true;
+  return !!visible;
+}
+globalThis.WorkshopBearings={
+  ensure:ensureWorkshopBearings,
+  show:()=>setWorkshopBearingsVisible(true),
+  hide:()=>setWorkshopBearingsVisible(false),
+  spawn:(count=25,position=new THREE.Vector3(0,3.5,0))=>ensureWorkshopBearings()?.spawnBatch(count,position),
+  spawnOne:(position,velocity)=>ensureWorkshopBearings()?.spawnOne(position,velocity),
+  clear:()=>ensureWorkshopBearings()?.clear(),
+  field:(center,options)=>ensureWorkshopBearings()?.applyField(center,options),
+  inspect:()=>ensureWorkshopBearings()?.inspect()
 };
 
 // First Workshop pressure: one semantic request becomes a visible 7x7 possibility field.
@@ -2604,6 +2639,10 @@ renderer.setAnimationLoop((now)=>{
   window.__contentGravityLast=now;
   WorkshopGravity.update(Math.min(0.05,Math.max(0,(now-(window.__workshopGravityLast||now))/1000)));
   window.__workshopGravityLast=now;
+  if(contentWorkshopHidden&&workshopBearings){
+    const bearingDt=Math.min(.15,Math.max(.001,(now-workshopBearingLast)/1000));
+    workshopBearingLast=now;workshopBearings.update(bearingDt);
+  }else workshopBearingLast=now;
   updateFluidGlobes(now);
   JupurnSystem(now);
   ExchangeSystem(now);

@@ -1393,10 +1393,13 @@ globalThis.WorkshopGravity=WorkshopGravity;
 // Workshop terrain is the intact transported Crucible implementation. It is one
 // useful terrain, not Workshop's definition of terrain.
 let workshopTerrain=null,workshopTerrainGenesis=null,workshopTerrainSeed=741;
+const workshopCrucible=new THREE.Group();workshopCrucible.name='workshop:crucible';workshopCrucible.visible=false;scene.add(workshopCrucible);
+let workshopCrucibleEnabled=false;
+const workshopCrucibleSpellIds=['crucible-meteor','crucible-terrain-next','crucible-bearings','crucible-water','crucible-lava','crucible-carve','crucible-raise'];
 function ensureWorkshopTerrain(){
   if(workshopTerrain)return workshopTerrain;
   if(typeof createTerrainSystem!=='function')return null;
-  const owner=new THREE.Group();owner.name='workshop:crucible-terrain-owner';scene.add(owner);
+  const owner=new THREE.Group();owner.name='workshop:crucible-terrain-owner';workshopCrucible.add(owner);
   globalThis.__workshopTerrainOwner=owner;
   try{workshopTerrain=createTerrainSystem({THREE,scene})}
   finally{delete globalThis.__workshopTerrainOwner}
@@ -1523,7 +1526,7 @@ function chooseWorkshopCrucibleTool(tool,button){
   button?.classList.add('active');
 }
 function installWorkshopCrucibleSpells(){
-  const shell=globalThis.RepositoryShell;if(!shell||shell.inspect().tools.includes('crucible-terrain-next'))return;
+  const shell=globalThis.RepositoryShell;if(!shell||!workshopCrucibleEnabled||shell.inspect().tools.includes('crucible-terrain-next'))return;
   shell.registerTool({id:'crucible-meteor',text:'☄️',label:'Call meteor magnitude 2 at tapped point',onClick:b=>cycleWorkshopMeteor(b)});
   shell.registerTool({id:'crucible-terrain-next',text:'⛰️',label:'Next deterministic terrain',onClick:()=>WorkshopTerrain.next()});
   shell.registerTool({id:'crucible-bearings',text:'⚫️',label:'Spawn 25 bearings at tapped point; tap again for 25 thousand',onClick:b=>{if(workshopCrucibleTool==='bearing-packet'||workshopCrucibleTool==='bearings-many')workshopBearingMagnitude=workshopBearingMagnitude?0:1;else workshopBearingMagnitude=0;chooseWorkshopCrucibleTool(workshopBearingMagnitude?'bearings-many':'bearing-packet',b);b.textContent='⚫️';b.style.fontSize=workshopBearingMagnitude?'1.9rem':'.9rem';b.setAttribute('aria-label',workshopBearingMagnitude?'Spawn 25 thousand bearings at tapped point':'Spawn 25 bearings at tapped point')}});
@@ -1532,7 +1535,24 @@ function installWorkshopCrucibleSpells(){
   shell.registerTool({id:'crucible-carve',text:'⛏️',label:'Carve terrain at tapped point',onClick:b=>chooseWorkshopCrucibleTool('carve',b)});
   shell.registerTool({id:'crucible-raise',text:'🪏',label:'Raise terrain at tapped point',onClick:b=>chooseWorkshopCrucibleTool('raise',b)});
 }
-queueMicrotask(installWorkshopCrucibleSpells);
+function removeWorkshopCrucibleSpells(){
+  const shell=globalThis.RepositoryShell;if(!shell)return;
+  for(const id of workshopCrucibleSpellIds)shell.removeTool(id);
+  workshopCrucibleTool=null;
+}
+function setWorkshopCrucibleEnabled(enabled,button){
+  workshopCrucibleEnabled=!!enabled;
+  if(workshopCrucibleEnabled){ensureWorkshopTerrain();workshopCrucible.visible=true;installWorkshopCrucibleSpells()}
+  else{workshopCrucible.visible=false;removeWorkshopCrucibleSpells()}
+  button?.classList.toggle('active',workshopCrucibleEnabled);button?.setAttribute('aria-pressed',workshopCrucibleEnabled?'true':'false');
+  workshopBearingLast=performance.now();window.vestibuleDirty=true;return workshopCrucibleEnabled;
+}
+function toggleWorkshopCrucible(button){return setWorkshopCrucibleEnabled(!workshopCrucibleEnabled,button)}
+function installWorkshopCrucibleContainerSpell(){
+  const shell=globalThis.RepositoryShell;if(!shell||shell.inspect().tools.includes('crucible-container'))return;
+  shell.registerTool({id:'crucible-container',text:'⚗️',label:'Crucible',lane:'resident',onClick:b=>toggleWorkshopCrucible(b)});
+}
+queueMicrotask(installWorkshopCrucibleContainerSpell);
 
 // First Workshop pressure: one semantic request becomes a visible 7x7 possibility field.
 // This is deliberately local evidence, not a generalized fabrication protocol.
@@ -2696,6 +2716,7 @@ addEventListener('resize',()=>{
 renderer.setAnimationLoop((now)=>{
   if(contentWorkshopHidden){
     updateWorkshop(now);
+    if(!workshopCrucibleEnabled){renderer.render(scene,camera);window.vestibuleDirty=false;return;}
     const workshopDt=Math.min(.05,Math.max(.001,(now-workshopBearingLast)/1000));
     if(workshopWater||workshopLava){workshopWater?.update(now);workshopLava?.update(now);updateWorkshopSteam(now,workshopDt)}
     workshopMeteors?.update(now);workshopMeteors?.syncRender?.();

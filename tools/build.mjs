@@ -25,6 +25,9 @@ const terrainInline=terrainSystem
   // Workshop supplies an ownership group; the transported terrain remains otherwise intact.
   .replace("scene.add(mesh);","(globalThis.__workshopTerrainOwner||scene).add(mesh);")
   .replace("scene.add(apparatus);","(globalThis.__workshopTerrainOwner||scene).add(apparatus);");
+const bearingInline=bearingSystem
+  .replace("export function createBearingSystem","function createBearingSystem")
+  .replace("scene.add(mesh);","(globalThis.__workshopBearingOwner||scene).add(mesh);");
 // Water transport boundary: preserve the earned organism as source evidence even
 // while Betwixt only executes the shallow-water module directly.
 for(const [name,source,evidence] of [
@@ -45,7 +48,7 @@ for(const token of [
   'function updateLavaPops()',
   'lavaTransport.update(simNow)'
 ])if(!crucibleMain.includes(token))throw new Error(`Crucible lava organism evidence missing: ${token}`);
-const bridge=`<script>${shallowWaterInline}\n${terrainInline}\n${ecsInline}\n${mirrorInline}\n(function attachMirrorWhenReady(){if(globalThis.vestibuleReady&&globalThis.vestibule?.presences?.length){attachBetwixtMirror();return}addEventListener("vestibule-ready",attachMirrorWhenReady,{once:true})})();<\/script>`;
+const bridge=`<script>${shallowWaterInline}\n${terrainInline}\n${bearingInline}\n${ecsInline}\n${mirrorInline}\n(function attachMirrorWhenReady(){if(globalThis.vestibuleReady&&globalThis.vestibule?.presences?.length){attachBetwixtMirror();return}addEventListener("vestibule-ready",attachMirrorWhenReady,{once:true})})();<\/script>`;
 const injection=`<script>globalThis.__REPOSITORY_SHA__=${JSON.stringify(sha)};globalThis.__REPOSITORY_BUILD__=${JSON.stringify(build)};<\/script><script>${shell}<\/script>`;
 const executable=donor.replace("<body>",`<body data-repository-build="${build}" data-repository-sha="${sha}">${injection}`).replace("</body>",`${bridge}</body>`);
 if(executable===donor)throw new Error("Repository shell injection point missing");

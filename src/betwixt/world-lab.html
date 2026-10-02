@@ -1453,92 +1453,95 @@ for(let i=0;i<49;i++){
 }
 
 
-/* Fifth Workshop pressure: raster -> executable material evidence.
-   Reference proposition: dark green fractured mineral with broad planes, pale exposed facets,
-   and sparse fracture seams. No image texture and no imported mesh. */
-const rasterRock=new THREE.Group();
-rasterRock.name='workshop:raster-green-fractured-rock';
-workshopField.add(rasterRock);
+/* Sixth Workshop pressure: the raster earned an organism.
+   Eight-limbed brass-and-glass amphibious octocopter. Form first; modes come later. */
+const octo=new THREE.Group();octo.name='workshop:brass-glass-octocopter';workshopField.add(octo);
+octo.position.y=1.65;
 
-function rockRand(i){
-  const x=Math.sin(i*127.1+41.7)*43758.5453123;
-  return x-Math.floor(x);
+const brass=new THREE.MeshStandardMaterial({color:0xb4772e,roughness:.24,metalness:.82});
+const brassDark=new THREE.MeshStandardMaterial({color:0x5d3b1d,roughness:.34,metalness:.72});
+const steel=new THREE.MeshStandardMaterial({color:0x34383a,roughness:.28,metalness:.78});
+const rubber=new THREE.MeshStandardMaterial({color:0x171817,roughness:.86,metalness:.04});
+const warm=new THREE.MeshStandardMaterial({color:0xffb14a,emissive:0xff7a18,emissiveIntensity:1.8,roughness:.35});
+const glassFace=new THREE.MeshStandardMaterial({color:0xc8e2e3,transparent:true,opacity:.16,roughness:.08,metalness:0,depthWrite:false,side:THREE.DoubleSide});
+const glassEdge=new THREE.LineBasicMaterial({color:0x667879,transparent:true,opacity:.62});
+
+function mesh(g,m,p=[0,0,0],r=[0,0,0],s=[1,1,1],parent=octo){
+  const x=new THREE.Mesh(g,m);x.position.set(...p);x.rotation.set(...r);x.scale.set(...s);parent.add(x);return x;
 }
-const rockGeo=new THREE.IcosahedronGeometry(1.72,2);
-const pos=rockGeo.attributes.position;
-for(let i=0;i<pos.count;i++){
-  let x=pos.getX(i),y=pos.getY(i),z=pos.getZ(i);
-  const len=Math.hypot(x,y,z)||1;
-  const nx=x/len,ny=y/len,nz=z/len;
-  const broad=.78+rockRand(i*3)*.34;
-  const directional=1+.16*nx-.08*ny+.11*nz;
-  x*=broad*directional*1.08;
-  y*=broad*(.90+.10*rockRand(i*3+1));
-  z*=broad*(.92+.12*rockRand(i*3+2));
-  pos.setXYZ(i,x,y,z);
+function glassBauble(radius,p,parent=octo){
+  const g=new THREE.SphereGeometry(radius,18,12);
+  const shell=mesh(g,glassFace,p,[0,0,0],[1,1,1],parent);
+  const e=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(radius,10,7)),glassEdge);e.position.set(...p);parent.add(e);
+  return shell;
 }
-pos.needsUpdate=true;
-rockGeo.computeVertexNormals();
-
-const rockBase=new THREE.MeshStandardMaterial({
-  color:0x315c49,roughness:.88,metalness:0,flatShading:true
-});
-const rock=new THREE.Mesh(rockGeo,rockBase);
-rock.position.y=1.34;
-rock.rotation.set(-.12,.48,.08);
-rasterRock.add(rock);
-
-/* Facet evidence: selected triangular faces get thin, coplanar mineral plates.
-   They are not random speckles; each reads as one exposed fracture plane. */
-const rockVerts=rockGeo.attributes.position;
-const facetMats=[
-  new THREE.MeshStandardMaterial({color:0x527c65,roughness:.72,flatShading:true,side:THREE.DoubleSide}),
-  new THREE.MeshStandardMaterial({color:0x73917a,roughness:.68,flatShading:true,side:THREE.DoubleSide}),
-  new THREE.MeshStandardMaterial({color:0x244638,roughness:.92,flatShading:true,side:THREE.DoubleSide})
-];
-for(let t=0;t<rockVerts.count/3;t++){
-  const r=rockRand(900+t);
-  if(r>.24)continue;
-  const ia=t*3;
-  const A=new THREE.Vector3().fromBufferAttribute(rockVerts,ia);
-  const B=new THREE.Vector3().fromBufferAttribute(rockVerts,ia+1);
-  const C=new THREE.Vector3().fromBufferAttribute(rockVerts,ia+2);
-  const center=A.clone().add(B).add(C).multiplyScalar(1/3);
-  const n=B.clone().sub(A).cross(C.clone().sub(A)).normalize();
-  const shrink=.91;
-  const pts=[A,B,C].map(v=>center.clone().lerp(v,shrink).addScaledVector(n,.008));
-  const g=new THREE.BufferGeometry().setFromPoints(pts);
-  g.setIndex([0,1,2]);g.computeVertexNormals();
-  rock.add(new THREE.Mesh(g,facetMats[Math.floor(rockRand(1200+t)*facetMats.length)]));
+function cylinderBetween(a,b,r,mat,parent=octo){
+  const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b),d=B.clone().sub(A),len=d.length();
+  const x=mesh(new THREE.CylinderGeometry(r,r,len,10),mat,A.clone().add(B).multiplyScalar(.5).toArray(),[0,0,0],[1,1,1],parent);
+  x.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return x;
 }
 
-/* Fracture evidence: sparse dark seams are geometry, not a texture.
-   A few connected strokes cross the visible mineral rather than outlining every polygon. */
-const seamMat=new THREE.LineBasicMaterial({color:0x132a22,transparent:true,opacity:.72});
-const seamSets=[
-  [[-.88,.88,1.40],[-.38,1.18,1.53],[.08,.94,1.60],[.52,1.20,1.42]],
-  [[-.62,.28,1.56],[-.20,.56,1.68],[.24,.40,1.62],[.68,.70,1.36]],
-  [[-.18,1.58,.82],[.02,1.28,1.40],[.34,.98,1.57]],
-  [[.78,1.50,.44],[.54,1.28,1.14],[.22,.98,1.58]]
-];
-for(const pts of seamSets){
-  const g=new THREE.BufferGeometry().setFromPoints(pts.map(p=>new THREE.Vector3(...p)));
-  const line=new THREE.Line(g,seamMat);rock.add(line);
+/* central pressure cabin: earned glass, structural brass ribs, inhabited warm core */
+glassBauble(1.08,[0,.18,0]);
+mesh(new THREE.TorusGeometry(1.10,.065,8,28),brass,[0,.18,0],[Math.PI/2,0,0]);
+mesh(new THREE.TorusGeometry(1.10,.055,8,28),brass,[0,.18,0],[0,Math.PI/2,0]);
+mesh(new THREE.TorusGeometry(1.10,.045,8,28),brass,[0,.18,0],[0,0,0]);
+mesh(new THREE.CylinderGeometry(.34,.44,.12,12),brassDark,[0,-.88,0]);
+mesh(new THREE.SphereGeometry(.10,8,6),warm,[0,.18,.72]);
+mesh(new THREE.BoxGeometry(.38,.52,.32),brassDark,[0,-.10,.05],[0,0,0]);
+mesh(new THREE.BoxGeometry(.32,.06,.30),brass,[0,.19,.04]);
+
+/* belly keel and lower orientation bauble */
+glassBauble(.36,[0,-1.18,0]);
+cylinderBetween([0,-.82,0],[0,-1.02,0],.12,brass);
+
+/* eight radial flight limbs; each has shoulder, two structural rails, rotor can, rotor, and articulated ground leg */
+const limbs=[];
+for(let i=0;i<8;i++){
+  const ang=i*Math.PI/4,ca=Math.cos(ang),sa=Math.sin(ang);
+  const tang=[-sa,0,ca];
+  const root=[ca*.88,.24,sa*.88],elbow=[ca*1.78,.42,sa*1.78],hub=[ca*2.62,.58,sa*2.62];
+  const limb=new THREE.Group();octo.add(limb);limbs.push(limb);
+  mesh(new THREE.CylinderGeometry(.20,.20,.20,12),brass,root,[Math.PI/2,0,ang],undefined,limb);
+  cylinderBetween([root[0]+tang[0]*.10,root[1],root[2]+tang[2]*.10],[elbow[0]+tang[0]*.10,elbow[1],elbow[2]+tang[2]*.10],.075,brass,limb);
+  cylinderBetween([root[0]-tang[0]*.10,root[1],root[2]-tang[2]*.10],[elbow[0]-tang[0]*.10,elbow[1],elbow[2]-tang[2]*.10],.075,brassDark,limb);
+  cylinderBetween(elbow,hub,.12,steel,limb);
+  mesh(new THREE.SphereGeometry(.20,10,7),brass,elbow,undefined,undefined,limb);
+  mesh(new THREE.CylinderGeometry(.30,.34,.48,14),brassDark,hub,undefined,undefined,limb);
+  mesh(new THREE.CylinderGeometry(.17,.17,.58,12),steel,[hub[0],hub[1]+.34,hub[2]],undefined,undefined,limb);
+  mesh(new THREE.BoxGeometry(1.28,.035,.10),steel,[hub[0],hub[1]+.66,hub[2]],[0,-ang,0],undefined,limb);
+  mesh(new THREE.BoxGeometry(1.28,.035,.10),steel,[hub[0],hub[1]+.66,hub[2]],[0,-ang+Math.PI/2,0],undefined,limb);
+
+  /* leg folds from flight elbow toward a wheel/foot, giving appendages a second job */
+  const knee=[ca*1.92,-.48,sa*1.92],foot=[ca*2.12,-1.36,sa*2.12];
+  cylinderBetween(elbow,knee,.095,brass,limb);
+  cylinderBetween(knee,foot,.105,brassDark,limb);
+  mesh(new THREE.SphereGeometry(.16,10,7),steel,knee,undefined,undefined,limb);
+  const wheel=mesh(new THREE.TorusGeometry(.28,.10,8,14),rubber,foot,[Math.PI/2,ang,0],undefined,limb);
+  mesh(new THREE.CylinderGeometry(.12,.12,.22,10),brass,foot,[Math.PI/2,ang,0],undefined,limb);
+
+  /* four secondary glass maneuvering baubles alternate around the body */
+  if(i%2===0){
+    const bp=[ca*1.42,-.10,sa*1.42];
+    glassBauble(.32,bp,limb);
+    cylinderBetween([ca*1.02,.02,sa*1.02],bp,.075,brass,limb);
+    mesh(new THREE.CylinderGeometry(.10,.15,.24,10),brassDark,[bp[0],bp[1]-.30,bp[2]],undefined,undefined,limb);
+  }
 }
 
-/* A few pale chips provide the raster's fresh-break highlights without painting the whole stone. */
-const chipMat=new THREE.MeshStandardMaterial({color:0xa2ad8c,roughness:.64,flatShading:true});
-[
-  [-1.05,1.42,.64,.22],[.92,1.72,.38,.18],[-.38,2.38,.44,.20],[.55,.54,1.30,.16]
-].forEach(([x,y,z,s],i)=>{
-  const chip=new THREE.Mesh(new THREE.TetrahedronGeometry(s,0),chipMat);
-  chip.position.set(x,y,z);chip.rotation.set(rockRand(i)*2,rockRand(i+8)*3,rockRand(i+20)*2);
-  rasterRock.add(chip);
-});
+/* underside skids imply planing/contact without yet simulating water */
+for(const side of [-1,1]){
+  cylinderBetween([-1.35,-1.18,side*.58],[1.35,-1.18,side*.58],.075,brassDark);
+  cylinderBetween([-.72,-.82,side*.45],[-1.18,-1.18,side*.58],.06,brass);
+  cylinderBetween([.72,-.82,side*.45],[1.18,-1.18,side*.58],.06,brass);
+}
 
 function resetWorkshopGlass(){}
 function updateWorkshop(now){
-  rasterRock.rotation.y=Math.sin(now*.00018)*.035;
+  for(let i=0;i<limbs.length;i++){
+    const rotor=limbs[i].children.find(x=>x.geometry&&x.geometry.type==='BoxGeometry');
+    if(rotor){} // organism stays inspectable; motion is not yet the question
+  }
   window.vestibuleDirty=true;
 }
 function workshopTap(x,y){return false}

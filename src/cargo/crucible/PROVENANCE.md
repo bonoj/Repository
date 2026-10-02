@@ -13,3 +13,16 @@ Exact rebuildable source transplant of Crucible executable candidate.
 This cargo is inert. It has not been integrated with Betwixt, Repository ECS, shell, renderer, input, or publication.
 
 Preserve the organism before extracting seams.
+
+
+## Water organism boundary
+
+Crucible water is not merely its solver. The transported source closure preserves:
+
+- `runtime/shallow-water-system.js` — authoritative 64×64 state **and** continuous presentation reconstruction, wet/support/terrain clipping, free-surface mesh, boundary curtain, injection, viscosity, and sampled surface/flow interfaces.
+- `runtime/terrain-system.js` — exact bed/support and material-boundary semantics consumed by water.
+- `runtime/bearing-system.js` — buoyancy and flow coupling through `surfaceY` + `flowInto`.
+- `runtime/transport-system.js` — scalar-carrier coupling to the solved water support surface.
+- Crucible `main.js` — integration evidence wiring terrain → water → bearings/scalar presentation.
+
+The intact Crucible executable remains the behavioral reference. Extraction into Betwixt must not be described as full water transfer unless these couplings are preserved or explicitly replaced and verified.

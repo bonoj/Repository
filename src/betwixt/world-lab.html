@@ -1962,7 +1962,7 @@ function workshopTap(x,y){
   const focusables=[...specimens.map(([,o])=>o),localGravityOrb];
   const hits=raycaster.intersectObjects(focusables,true);
   let obj=hits[0]?.object||null;
-  while(obj&&obj.parent&&obj.parent!==workshopField&&obj.parent!==scene)obj=obj.parent;
+  while(obj&&obj!==localGravityOrb&&obj.parent&&obj.parent!==workshopField&&obj.parent!==scene)obj=obj.parent;
   if(focusedWorkshopObject){
     if(obj===focusedWorkshopObject)return true;
     dismissWorkshopFocus();return true;
@@ -1975,10 +1975,14 @@ function workshopTap(x,y){
 /* LOCAL GRAVITY ORB — one Betwixt-focusable entity with its own field.
    This is deliberately not universal gravity. The orb owns a tiny satellite
    body and attracts it toward its own center regardless of Betwixt down. */
+const grimoire=new THREE.Group();
+grimoire.name='entity:Grimoire';
+scene.add(grimoire);
+
 const localGravityOrb=new THREE.Group();
 localGravityOrb.name='betwixt:local-gravity-orb';
 localGravityOrb.position.set(0,4.2,0);
-scene.add(localGravityOrb);
+grimoire.add(localGravityOrb);
 const localGravityCore=new THREE.Mesh(
   new THREE.SphereGeometry(.82,24,16),
   new THREE.MeshStandardMaterial({color:0xc8e2e3,transparent:true,opacity:.22,roughness:.08,metalness:0,depthWrite:false,side:THREE.DoubleSide})

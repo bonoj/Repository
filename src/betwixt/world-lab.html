@@ -1394,7 +1394,11 @@ let workshopTerrain=null;
 function ensureWorkshopTerrain(){
   if(workshopTerrain)return workshopTerrain;
   if(typeof createTerrainSystem!=='function')return null;
-  workshopTerrain=createTerrainSystem({THREE,scene});
+  const owner=new THREE.Group();owner.name='workshop:crucible-terrain-owner';scene.add(owner);
+  globalThis.__workshopTerrainOwner=owner;
+  try{workshopTerrain=createTerrainSystem({THREE,scene})}
+  finally{delete globalThis.__workshopTerrainOwner}
+  workshopTerrain.owner=owner;
   workshopTerrain.mesh.name='workshop:crucible-terrain';
   workshopTerrain.apparatus.name='workshop:crucible-terrain-apparatus';
   workshopTerrain.mesh.visible=contentWorkshopHidden;

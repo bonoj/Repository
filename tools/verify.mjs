@@ -26,8 +26,15 @@ for(const shellEvidence of [
   "repository-devtools",
   "🌀",
   "BETWIXT",
-  "🔄"
+  "🔄",
+  "RepositoryBetwixt",
+  "betwixt-presence",
+  "attachBetwixtMirror"
 ]){
   if(!html.includes(shellEvidence))throw new Error(`Repository shell evidence missing: ${shellEvidence}`);
 }
-console.log("Intact World Lab executable with Betwixt shell verified.");
+const bridgeMark=html.indexOf("attachBetwixtMirror");
+const donorRuntime=html.indexOf("window.vestibule={");
+if(!(bridgeMark>donorRuntime))throw new Error("Repository ECS mirror must attach after donor runtime");
+if(!html.includes('addEventListener("load",()=>attachBetwixtMirror()'))throw new Error("Repository ECS mirror lacks post-donor attachment");
+console.log("Intact Betwixt donor with shell and read-only Repository ECS mirror verified.");

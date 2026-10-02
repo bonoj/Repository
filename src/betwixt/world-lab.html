@@ -1433,15 +1433,32 @@ globalThis.WorkshopTerrain={
 
 // Crucible water/lava remain their transported shallow-field systems, coupled to
 // the same raised terrain and parented with it.
-let workshopWater=null,workshopLava=null;
+let workshopWater=null,workshopLava=null,workshopSteamGroup=null,workshopSteamPuffs=[],workshopSteamContactCooldown=new Map(),workshopNextLavaPopAt=0;
 function ensureWorkshopLiquids(){
   const terrain=ensureWorkshopTerrain();if(!terrain||typeof createShallowWaterSystem!=='function')return null;
   if(!workshopWater){
     const proxy={add:o=>terrain.owner.add(o)};
     workshopWater=createShallowWaterSystem({THREE,scene:proxy,terrain,kind:'water'});
     workshopLava=createShallowWaterSystem({THREE,scene:proxy,terrain,kind:'lava',look:{color:0xffffff,opacity:.82,sideColor:0x4b0903,sideOpacity:.78,depthAccents:true,deepColor:0x260300,hotColor:0xff9a24},initialViscosity:26});
+    workshopSteamGroup=new THREE.Group();workshopSteamGroup.name='workshop:water-lava-steam';terrain.owner.add(workshopSteamGroup);
   }
   return{water:workshopWater,lava:workshopLava};
+}
+
+function spawnWorkshopSteam(x,y,z){
+  if(!workshopSteamGroup)return;const geometry=new THREE.SphereGeometry(.18,7,5),material=new THREE.MeshBasicMaterial({color:0xd9ddd8,transparent:true,opacity:.14,depthWrite:false}),mesh=new THREE.Mesh(geometry,material);
+  mesh.position.set(x,y+.08,z);const s=.9+Math.random()*.8;mesh.scale.set(s*.85,s,s*.85);workshopSteamGroup.add(mesh);workshopSteamPuffs.push({mesh,age:0,life:.9+Math.random()*.65,vy:.65+Math.random()*.4});
+}
+function updateWorkshopSteam(now,dt){
+  if(!workshopWater||!workshopLava)return;const seconds=now/1000,waterCells=new Map();workshopWater.forEachWetCell(c=>waterCells.set(c.ix+','+c.iz,c));
+  workshopLava.forEachWetCell(c=>{const key=c.ix+','+c.iz,w=waterCells.get(key);if(!w)return;const last=workshopSteamContactCooldown.get(key)??-Infinity;if(seconds-last<.18)return;workshopSteamContactCooldown.set(key,seconds);spawnWorkshopSteam(c.x,Math.max(c.surface,w.surface),c.z)});
+  for(let i=workshopSteamPuffs.length-1;i>=0;i--){const p=workshopSteamPuffs[i];p.age+=dt;p.mesh.position.y+=p.vy*dt;p.mesh.scale.multiplyScalar(1+dt*1.15);p.mesh.material.opacity=.14*Math.pow(Math.max(0,1-p.age/p.life),1.35);if(p.age>=p.life){workshopSteamGroup.remove(p.mesh);p.mesh.geometry.dispose();p.mesh.material.dispose();workshopSteamPuffs.splice(i,1)}}
+  for(const [key,t] of workshopSteamContactCooldown)if(seconds-t>2)workshopSteamContactCooldown.delete(key);
+}
+function updateWorkshopLavaPops(now){
+  if(!workshopLava||!workshopBearings||now<workshopNextLavaPopAt)return;const wet=[];workshopLava.forEachWetCell(c=>wet.push(c));if(!wet.length){workshopNextLavaPopAt=now+220;return}
+  workshopNextLavaPopAt=now+260+Math.random()*620;const cell=wet[(Math.random()*wet.length)|0],n=1+((Math.random()*3)|0);
+  for(let i=0;i<n;i++){const angle=Math.random()*Math.PI*2,speed=.28+Math.random()*.52,lift=.65+Math.random()*.8;workshopBearings.spawnOne(new THREE.Vector3(cell.x,cell.surface+.09,cell.z),new THREE.Vector3(Math.cos(angle)*speed,lift,Math.sin(angle)*speed))}
 }
 
 // Bearings cross with their Crucible terrain coupling intact. Water/lava coupling
@@ -1454,7 +1471,8 @@ function ensureWorkshopBearings(){
   workshopBearingOwner=new THREE.Group();workshopBearingOwner.name='workshop:crucible-bearings-owner';workshopTerrain.owner.add(workshopBearingOwner);
   const world=createWorld(),Locus=world.component('Locus');
   globalThis.__workshopBearingOwner=workshopBearingOwner;
-  try{workshopBearings=createBearingSystem({world,components:{Locus},THREE,scene,terrain,locus:'workshop',liquids:[]})}
+  const liquids=ensureWorkshopLiquids();
+  try{workshopBearings=createBearingSystem({world,components:{Locus},THREE,scene,terrain,locus:'workshop',liquids:[liquids.water,liquids.lava]})}
   finally{delete globalThis.__workshopBearingOwner}
   workshopBearings.mesh.name='workshop:crucible-bearings';
   workshopBearingOwner.visible=contentWorkshopHidden;
@@ -2657,8 +2675,9 @@ addEventListener('resize',()=>{
 renderer.setAnimationLoop((now)=>{
   if(contentWorkshopHidden){
     updateWorkshop(now);
-    if(workshopWater||workshopLava){workshopWater?.update(now);workshopLava?.update(now)}
-    if(workshopBearings){const bearingDt=Math.min(.15,Math.max(.001,(now-workshopBearingLast)/1000));workshopBearingLast=now;workshopBearings.update(bearingDt)}else workshopBearingLast=now;
+    const workshopDt=Math.min(.05,Math.max(.001,(now-workshopBearingLast)/1000));
+    if(workshopWater||workshopLava){workshopWater?.update(now);workshopLava?.update(now);updateWorkshopSteam(now,workshopDt)}
+    if(workshopBearings){const bearingDt=Math.min(.15,Math.max(.001,(now-workshopBearingLast)/1000));workshopBearingLast=now;workshopBearings.update(bearingDt);updateWorkshopLavaPops(now)}else workshopBearingLast=now;
     renderer.render(scene,camera);window.vestibuleDirty=false;
     return;
   }

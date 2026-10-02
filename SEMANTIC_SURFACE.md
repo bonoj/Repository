@@ -123,6 +123,14 @@ Spells are model-mediated working controls. Temporary spells may appear and disa
 
 Current shell still declares Betwixt's place identity and spell arrays directly in `src/shell/repository-shell.js`. The stronger generic-shell/place-config separation has not yet been implemented.
 
+## Earned material: glass
+
+Betwixt has one visually accepted glass baseline, earned by the communicating-tanks Workshop specimen.
+
+Current glass standard is intentionally cheap: a pale cyan-gray `THREE.MeshStandardMaterial` with `color: 0xc8e2e3`, `transparent: true`, `opacity: .16`, `roughness: .08`, `metalness: 0`, `depthWrite: false`, and `side: THREE.DoubleSide`, paired with explicit `EdgesGeometry` drawn in muted blue-gray at about .62 opacity.
+
+The accepted perceptual result came from translucent faces plus explicit edges, not refraction, transmission, environment mapping, Fresnel, thickness simulation, or a custom shader. Treat this as the local glass standard until executable evidence earns a replacement or family, not as a universal material abstraction.
+
 ## Publication
 
 Repository builds the executable.

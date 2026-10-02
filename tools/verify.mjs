@@ -11,7 +11,10 @@ for(const evidence of [
   "JupurnSystem",
   "createJupurnRingField",
   "count:1600",
-  "jupurn.position.set(0,5.6,0)"
+  "JupurnIdentity",
+  "jupurnHitShell",
+  "RingSlot,{position:new THREE.Vector3(0,5.6,0)}",
+  "if(slot==='jupurn')return jupurnEntity"
 ]){
   if(!html.includes(evidence))throw new Error(`World Lab donor evidence missing: ${evidence}`);
 }
@@ -41,4 +44,5 @@ const bridgeMark=html.indexOf("attachBetwixtMirror");
 const donorRuntime=html.indexOf("window.vestibule={");
 if(!(bridgeMark>donorRuntime))throw new Error("Repository ECS mirror must attach after donor runtime");
 if(!html.includes('addEventListener("load",()=>attachBetwixtMirror()'))throw new Error("Repository ECS mirror lacks post-donor attachment");
+if(html.includes("{radius:4.45,size:0.20,rate:0.08,phase:3.45}"))throw new Error("Ganymede must remain absent from Betwixt");
 console.log("Intact Betwixt donor with shell and read-only Repository ECS mirror verified.");

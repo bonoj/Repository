@@ -1,0 +1,16 @@
+{
+  "name": "crucible",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "npm test && node tools/build.mjs",
+    "test": "node tests/spatial-evidence.test.mjs && node tests/inference-parcel.test.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10"
+  },
+  "dependencies": {
+    "three": "0.180.0"
+  }
+}

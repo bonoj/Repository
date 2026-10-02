@@ -1338,8 +1338,8 @@ function setContentWorkshopHidden(hidden){
     contentFrozenAt=performance.now();
     betwixtContent.visible=false;
     workshopField.visible=true;
-    setWorkshopTerrainVisible(true);
-    setWorkshopBearingsVisible(true);
+    // Workshop entry reveals no latent capability. Terrain and bearings remain
+    // possible until an explicit operation manifests them.
     resetWorkshopGlass();
     target.set(0,.35,0);radius=11.8;theta=.16;phi=1.02;applyCamera();
     setLabActions(null);

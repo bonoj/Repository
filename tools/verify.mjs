@@ -48,7 +48,10 @@ for(const shellEvidence of [
   "🔄",
   "RepositoryBetwixt",
   "betwixt-presence",
-  "attachBetwixtMirror"
+  "attachBetwixtMirror",
+  "repository-crucible",
+  'frame.src="crucible/index.html"',
+  "Summon intact Crucible"
 ]){
   if(!html.includes(shellEvidence))throw new Error(`Repository shell evidence missing: ${shellEvidence}`);
 }

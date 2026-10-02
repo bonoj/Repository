@@ -160,13 +160,13 @@ Do not promote a temporary spell, representation, component, or runtime seam int
 
 When prose and executable evidence disagree, update or delete the prose.
 
-## Accepted Crucible Workshop baseline
+## Crucible Workshop stability snapshot
 
-This section records a regression boundary, not a roadmap.
+This section records a recoverable regression boundary, not current project state or a roadmap.
 
-The last human-accepted pre-meteor baseline is Repository `b27ca198e87f54b50d7440a31727241414dc176a`. It established the raised Crucible Workshop composition and remains the perceptual/behavioral reference for everything below except the later meteor addition.
+Repository `0233e12a26b58fbd7fd7709b3ef52e5be5f3592d` is the stability snapshot after the raised Crucible Workshop composition, meteor transport seams, and fixed-footprint meteor magnitude control were working together. Home published that exact Repository revision through its pinned build route.
 
-The current meteor-parity candidate is Repository `204763d31ce8b61a292ebca4a45a0eb47ad10554`, published by Home `88e0b4144b3a2f80f3f46bf0349b7c47b7474999`. Preserve the accepted baseline while evaluating this addition.
+Earlier accepted pre-meteor reference `b27ca198e87f54b50d7440a31727241414dc176a` remains useful archaeology if a regression specifically concerns the meteor addition. Do not keep advancing these SHAs as development moves; they are recovery coordinates.
 
 ### Composition that must not regress
 
@@ -182,7 +182,7 @@ Meteors use the transported Crucible meteor system. Workshop supplies the compos
 
 The current Crucible meteor module also owns a small additive orange wake. That wake is presently not visible correctly in Betwixt and is intentionally left unresolved. It is not required to reinterpret or rewrite the otherwise working meteor composition. Meteor presentation may be revisited later.
 
-### Current temporary controls
+### Controls at the snapshot
 
 The left tray currently exposes:
 

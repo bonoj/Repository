@@ -50,15 +50,33 @@ const key=new THREE.DirectionalLight(0xffffff,2.4);
 key.position.set(4,9,6);
 three.scene.add(key);
 
-const witness=new THREE.Mesh(
-  new THREE.IcosahedronGeometry(0.62,2),
-  new THREE.MeshStandardMaterial({color:0xb7b9b8,roughness:0.58,metalness:0.08})
-);
-const witnessId=entity(witness,new THREE.Vector3(0,0,0));
+const presenceMaterial=new THREE.MeshStandardMaterial({color:0xf0f0ed,roughness:.68,metalness:.04});
+const ringMaterial=new THREE.MeshBasicMaterial({color:0x66727c,transparent:true,opacity:.58});
+const presenceIds=[];
+const presencePositions=[];
+const ringRadius=3.4;
+const phase=Math.PI/3; // edge-forward: two neighboring presences greet the observer as a span.
+for(let slot=0;slot<3;slot++){
+  const angle=phase+slot*(Math.PI*2/3);
+  const position=new THREE.Vector3(
+    Math.sin(angle)*ringRadius,
+    0,
+    Math.cos(angle)*ringRadius
+  );
+  const group=new THREE.Group();
+  const orb=new THREE.Mesh(new THREE.SphereGeometry(.58,28,18),presenceMaterial);
+  group.add(orb);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(.72,.018,8,48),ringMaterial);
+  ring.rotation.x=Math.PI/2;
+  ring.position.y=-.62;
+  group.add(ring);
+  presencePositions.push(position);
+  presenceIds.push(entity(group,position));
+}
 
 const camera=new THREE.PerspectiveCamera(48,1,0.03,80);
-const target=new THREE.Vector3(0,0,0);
-let azimuth=0,polar=Math.PI/2.35,distance=7.5;
+const target=new THREE.Vector3();
+let azimuth=.16,polar=1.16,distance=8;
 const pointers=new Map();
 let pinchDistance=null;
 let dirty=true;
@@ -88,6 +106,23 @@ function placeCamera(){
 function showFault(message){
   fault.hidden=false;
   fault.textContent=message;
+}
+
+function frameArrival(){
+  const box=new THREE.Box3();
+  presencePositions.forEach(p=>box.expandByPoint(p));
+  box.getCenter(target);
+  const size=box.getSize(new THREE.Vector3());
+  const {width,height}=three.size();
+  const aspect=Math.max(.1,width/height);
+  const fov=THREE.MathUtils.degToRad(camera.fov);
+  const vertical=Math.max(size.y+3,size.z*.42+4);
+  const horizontal=size.x+4;
+  const needV=(vertical*.5)/Math.tan(fov*.5);
+  const needH=(horizontal*.5)/(Math.tan(fov*.5)*aspect);
+  distance=Math.max(8,needV,needH)*1.25;
+  azimuth=.16;
+  polar=1.16;
 }
 
 function invalidate(){dirty=true;requestAnimationFrame(frame)}
@@ -138,6 +173,15 @@ canvas.addEventListener("wheel",e=>{
   invalidate();
 },{passive:false});
 
-new ResizeObserver(invalidate).observe(mount);
+let arrivalFramed=false;
+new ResizeObserver(()=>{
+  if(!arrivalFramed){
+    frameArrival();
+    arrivalFramed=true;
+  }
+  invalidate();
+}).observe(mount);
+frameArrival();
+arrivalFramed=true;
 invalidate();
-globalThis.__repository={world,components,three,witnessId,observer:{camera,target}};
+globalThis.__repository={world,components,three,presenceIds,observer:{camera,target}};

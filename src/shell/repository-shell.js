@@ -230,6 +230,7 @@
     trays:{temporary:temporaryTray,resident:residentTray},
     registerTool,
     removeTool,
+    button:id=>registered.get(id)||null,
     inspect:()=>({place:{...place},build,sha,fps,tools:[...registered.keys()]})
   };
 })();

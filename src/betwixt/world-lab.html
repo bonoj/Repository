@@ -57,12 +57,6 @@ select{width:100%;padding:0 12px;appearance:auto}
   background:#e7e2d8;font-weight:500;color:#343638;
 }
 #labActions button:active{background:#ded8cd}
-#crayon{
-  position:fixed;right:max(14px,env(safe-area-inset-right));bottom:max(22px,calc(env(safe-area-inset-bottom) + 14px));
-  z-index:62;width:52px;height:52px;padding:0;border-radius:50%;background:#e7e2d8;color:#17191a;
-  border:1px solid rgba(30,34,36,.78);touch-action:none;user-select:none;-webkit-user-select:none;
-}
-#crayon.active{background:#f0c85a}
 #ink{position:fixed;inset:0;z-index:61;pointer-events:none;touch-action:none}
 #ink.active{pointer-events:auto}
 </style>
@@ -72,7 +66,6 @@ select{width:100%;padding:0 12px;appearance:auto}
 
 <div id="fault"></div>
 <canvas id="ink" aria-label="Crayon annotation layer"></canvas>
-<button id="crayon" type="button" aria-pressed="false" title="Crayon: tap draw, double tap clear, long press export">🖍</button>
 
 <div id="labActions" aria-hidden="true">
   <button id="enterLab" type="button">ENTER LAB</button>
@@ -1827,8 +1820,7 @@ function applyCamera(){
    Samples retain screen coordinates and raycast world hits when geometry is beneath the stroke. */
 const inkCanvas=document.getElementById('ink');
 const inkCtx=inkCanvas.getContext('2d');
-const crayonButton=document.getElementById('crayon');
-let crayonActive=false,inkPointer=null,currentStroke=null,crayonPressTimer=null,lastCrayonTap=0;
+let crayonActive=false,inkPointer=null,currentStroke=null;
 const inkStrokes=[];
 function sizeInk(){
   const dpr=Math.min(devicePixelRatio,2);
@@ -1860,8 +1852,9 @@ function inkPoint(e){
 }
 function setCrayon(on){
   crayonActive=!!on;inkCanvas.classList.toggle('active',crayonActive);
-  crayonButton.classList.toggle('active',crayonActive);crayonButton.setAttribute('aria-pressed',String(crayonActive));
+  return crayonActive;
 }
+function toggleCrayon(){return setCrayon(!crayonActive)}
 function clearInk(){inkStrokes.length=0;currentStroke=null;redrawInk()}
 function crayonDocument(){
   return {
@@ -1899,20 +1892,6 @@ inkCanvas.addEventListener('pointermove',e=>{
 function finishInkPointer(e){if(e.pointerId===inkPointer){inkPointer=null;currentStroke=null}}
 inkCanvas.addEventListener('pointerup',finishInkPointer);
 inkCanvas.addEventListener('pointercancel',finishInkPointer);
-crayonButton.addEventListener('pointerdown',e=>{
-  e.stopPropagation();clearTimeout(crayonPressTimer);
-  crayonPressTimer=setTimeout(()=>{crayonPressTimer=null;exportCrayon()},650);
-});
-crayonButton.addEventListener('pointerup',e=>{
-  e.stopPropagation();
-  if(!crayonPressTimer)return;
-  clearTimeout(crayonPressTimer);crayonPressTimer=null;
-  const now=performance.now();
-  if(now-lastCrayonTap<320){lastCrayonTap=0;clearInk();return}
-  lastCrayonTap=now;setTimeout(()=>{if(lastCrayonTap===now){setCrayon(!crayonActive);lastCrayonTap=0}},330);
-});
-crayonButton.addEventListener('pointercancel',()=>{clearTimeout(crayonPressTimer);crayonPressTimer=null});
-crayonButton.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();exportCrayon()});
 sizeInk();
 
 const canvas=renderer.domElement, pointers=new Map();
@@ -2378,6 +2357,11 @@ window.vestibule={
   get contentWorkshopHidden(){return contentWorkshopHidden},
   setContentWorkshopHidden,
   toggleContentWorkshopHidden,
+  get crayonActive(){return crayonActive},
+  setCrayon,
+  toggleCrayon,
+  clearCrayon:clearInk,
+  exportCrayon,
   get layout(){return 'Ring'},
   get selected(){return selectedEntity?C.Presence.get(selectedEntity).slot:null},
   home,

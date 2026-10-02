@@ -1324,6 +1324,8 @@ function setContentWorkshopHidden(hidden){
     betwixtContent.position.y=0;betwixtContent.scale.setScalar(1);
     contentFrozenAt=performance.now();
     betwixtContent.visible=false;
+    workshopField.visible=true;
+    target.set(0,.35,0);radius=11.8;theta=.16;phi=1.02;applyCamera();
     setLabActions(null);
   }else{
     const now=performance.now(),pause=Math.max(0,now-contentFrozenAt);
@@ -1334,12 +1336,119 @@ function setContentWorkshopHidden(hidden){
     for(const st of foundryStates.values())st.nextLaunch+=pause;
     for(const st of descentStates.values())st.nextAt+=pause;
     betwixtContent.visible=true;
+    workshopField.visible=false;
     contentFrozenAt=0;
+    home();
   }
   window.vestibuleDirty=true;
   return contentWorkshopHidden;
 }
+
 function toggleContentWorkshopHidden(){return setContentWorkshopHidden(!contentWorkshopHidden)}
+
+// First Workshop pressure: one semantic request becomes a visible 7x7 possibility field.
+// This is deliberately local evidence, not a generalized fabrication protocol.
+const workshopField=new THREE.Group();
+workshopField.name='workshop:49-radically-different-artillery';
+workshopField.visible=false;
+scene.add(workshopField);
+
+const workshopMetal=new THREE.MeshStandardMaterial({color:0x5f625d,roughness:.72,metalness:.28});
+const workshopDark=new THREE.MeshStandardMaterial({color:0x252724,roughness:.8,metalness:.18});
+const workshopWood=new THREE.MeshStandardMaterial({color:0x70513a,roughness:.92});
+const workshopPale=new THREE.MeshStandardMaterial({color:0xb9b7aa,roughness:.75,metalness:.08});
+const workshopWarm=new THREE.MeshStandardMaterial({color:0x9b6638,roughness:.78,metalness:.2});
+const workshopBlack=new THREE.MeshStandardMaterial({color:0x111312,roughness:.65,metalness:.35});
+const workshopMats=[workshopMetal,workshopDark,workshopWood,workshopPale,workshopWarm,workshopBlack];
+
+function workshopBox(g,x,y,z,sx,sy,sz,m=workshopMetal,rx=0,ry=0,rz=0){
+  const q=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),m);q.position.set(x,y,z);q.rotation.set(rx,ry,rz);q.castShadow=true;q.receiveShadow=true;g.add(q);return q;
+}
+function workshopCyl(g,a,b,r,m=workshopMetal,segments=10){
+  const d=b.clone().sub(a),mid=a.clone().add(b).multiplyScalar(.5);
+  const q=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),segments),m);
+  q.position.copy(mid);q.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());q.castShadow=true;g.add(q);return q;
+}
+function workshopWheel(g,x,y,z,r=.23,w=.09,m=workshopDark){
+  const q=new THREE.Mesh(new THREE.CylinderGeometry(r,r,w,12),m);q.position.set(x,y,z);q.rotation.z=Math.PI/2;q.castShadow=true;g.add(q);return q;
+}
+function workshopTube(g,x,y,z,len=.9,r=.07,m=workshopMetal,tilt=0){
+  return workshopCyl(g,new THREE.Vector3(x,y,z-len*.5),new THREE.Vector3(x,y+Math.sin(tilt)*len,z+Math.cos(tilt)*len*.5),r,m,12);
+}
+function workshopArc(g,r=.5,m=workshopWood){
+  const q=new THREE.Mesh(new THREE.TorusGeometry(r,.045,6,18,Math.PI),m);q.rotation.x=Math.PI/2;q.castShadow=true;g.add(q);return q;
+}
+
+const artilleryNames=[
+'Bombard','Ship Cannon','Field Gun','Mountain Gun','Siege Mortar','Howitzer','Carronade',
+'Rocket Cart','Hwacha','Organ Gun','Volley Gun','Revolving Cannon','Twin Gun','Pepperbox Battery',
+'Trebuchet','Counterweight Sling','Mangonel','Onager','Ballista','Springald','Giant Crossbow',
+'Rail Cannon','Casemate Gun','Disappearing Gun','Turret Gun','Coastal Battery','Railway Gun','Siege Tower Gun',
+'Recoilless Piece','Tripod Gun','Sled Gun','Pack Artillery','Gun Sledge','Skid Mortar','Pedestal Gun',
+'Pneumatic Cannon','Steam Cannon','Coil Cannon','Arc Projector','Crystal Mortar','Bell Cannon','Ring Gun',
+'Walking Gun','Spider Battery','Monowheel Gun','Tracked Landship','Floating Battery','Drill Cannon','Orbital Lance'
+];
+
+function buildWorkshopPiece(i){
+  const g=new THREE.Group(),k=i%7,row=Math.floor(i/7),m=workshopMats[(i*5+row)%workshopMats.length];
+  const tall=.16+(row%3)*.035, long=.72+(i%4)*.11, spread=.30+(row%4)*.05;
+  if(row===0){ // conventional carriage grammar
+    workshopBox(g,0,.16,0,.72,.16,.42,workshopWood);workshopWheel(g,-.39,.17,0,.28);workshopWheel(g,.39,.17,0,.28);
+    workshopTube(g,0,.34,.08,long,.075+(k%3)*.018,m,(k-3)*.035);
+    if(k===4)workshopTube(g,0,.25,.03,.48,.15,workshopBlack,.42);
+  }else if(row===1){ // many-tube / rocket / volley grammar
+    workshopBox(g,0,.13,0,.72,.18,.58,workshopWood);workshopWheel(g,-.4,.16,.08,.24);workshopWheel(g,.4,.16,.08,.24);
+    const count=3+k;
+    for(let n=0;n<count;n++){const x=((n%(k<3?2:3))-1)*.13,z=Math.floor(n/(k<3?2:3))*.11-.08;workshopTube(g,x,.30,z,.52,.025+(k%2)*.012,m,.22);}
+  }else if(row===2){ // tension / torsion siege grammar
+    workshopBox(g,0,.10,0,.78,.12,.55,workshopWood);workshopWheel(g,-.38,.15,.12,.22);workshopWheel(g,.38,.15,.12,.22);
+    workshopCyl(g,new THREE.Vector3(-spread,.15,0),new THREE.Vector3(spread,.15,0),.045,workshopDark);
+    if(k<4){workshopCyl(g,new THREE.Vector3(0,.18,.08),new THREE.Vector3(0,.78,-.15),.055,workshopWood);workshopArc(g,.34,workshopWood).position.set(0,.54,-.12);}
+    else {workshopCyl(g,new THREE.Vector3(-.52,.42,0),new THREE.Vector3(.52,.42,0),.045,workshopWood);workshopTube(g,0,.39,.12,.82,.035,workshopDark,.05);}
+  }else if(row===3){ // fixed fortress / monumental grammar
+    const base=new THREE.Mesh(new THREE.CylinderGeometry(.42+.04*k,.50,.18,8),workshopPale);base.position.y=.09;base.castShadow=true;g.add(base);
+    if(k===0||k===1)workshopTube(g,0,.27,.04,.78,.12,m,.48);
+    else if(k===2){workshopBox(g,0,.28,0,.72,.22,.55,workshopPale);workshopTube(g,0,.34,.12,.68,.07,m,.05);}
+    else if(k===3){const dome=new THREE.Mesh(new THREE.SphereGeometry(.32,12,7,0,Math.PI*2,0,Math.PI/2),workshopDark);dome.position.y=.18;g.add(dome);workshopTube(g,0,.27,.08,.78,.065,m,.03);}
+    else if(k===4){workshopCyl(g,new THREE.Vector3(-.45,.24,0),new THREE.Vector3(.45,.24,0),.09,m);workshopTube(g,0,.28,.08,1.05,.06,m,.02);}
+    else {workshopBox(g,0,.31,0,.42,.44,.42,workshopDark);workshopTube(g,0,.36,.08,1.0,.07,m,.08);}
+  }else if(row===4){ // stripped portable / unusual support grammar
+    if(k===0){workshopCyl(g,new THREE.Vector3(0,.08,0),new THREE.Vector3(0,.42,0),.045,workshopDark);for(const a of [-1,0,1])workshopCyl(g,new THREE.Vector3(0,.12,0),new THREE.Vector3(Math.sin(a*2.1)*.42,.02,Math.cos(a*2.1)*.42),.025,workshopDark);}
+    else if(k===1){workshopBox(g,0,.07,0,.65,.10,.34,workshopWood);}
+    else if(k===2){workshopBox(g,0,.07,0,.75,.08,.25,workshopDark);}
+    else if(k===3){workshopBox(g,0,.13,0,.36,.28,.32,workshopWood);}
+    else if(k===4){workshopBox(g,0,.07,0,.85,.10,.22,workshopWood);}
+    else {const p=new THREE.Mesh(new THREE.CylinderGeometry(.16,.28,.25,8),workshopDark);p.position.y=.125;g.add(p);}
+    workshopTube(g,0,.24,.06,long,.055+(k%3)*.018,m,.12+(k%2)*.12);
+  }else if(row===5){ // speculative energy / pressure grammar
+    const base=new THREE.Mesh(new THREE.CylinderGeometry(.30,.38,.12,10),workshopDark);base.position.y=.06;g.add(base);
+    if(k===0){workshopTube(g,0,.26,.05,.75,.11,workshopPale,.18);}
+    else if(k===1){for(const x of [-.09,.09])workshopTube(g,x,.24,.06,.72,.045,m,.12);}
+    else if(k===2){for(let n=0;n<5;n++){const ring=new THREE.Mesh(new THREE.TorusGeometry(.14,.025,6,14),m);ring.position.set(0,.28,.05+n*.12);ring.rotation.x=Math.PI/2;g.add(ring)}}
+    else if(k===3){const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.22),m);gem.position.y=.36;g.add(gem);workshopTube(g,0,.22,.02,.58,.04,workshopDark,.5);}
+    else if(k===4){const bell=new THREE.Mesh(new THREE.ConeGeometry(.23,.34,12,1,true),m);bell.rotation.x=Math.PI/2;bell.position.set(0,.31,.23);g.add(bell);}
+    else if(k===5){for(let n=0;n<4;n++){const ring=new THREE.Mesh(new THREE.TorusGeometry(.18+n*.035,.025,6,16),m);ring.position.set(0,.30,.10+n*.10);ring.rotation.x=Math.PI/2;g.add(ring)}}
+    else {workshopCyl(g,new THREE.Vector3(0,.15,0),new THREE.Vector3(0,.95,0),.045,m);const tip=new THREE.Mesh(new THREE.ConeGeometry(.12,.28,8),m);tip.position.y=1.08;g.add(tip);}
+  }else{ // locomotion dominates silhouette
+    if(k===0){for(const x of [-.24,.24])for(const z of [-.22,.22])workshopCyl(g,new THREE.Vector3(0,.28,0),new THREE.Vector3(x,.02,z),.035,workshopDark);workshopBox(g,0,.30,0,.38,.16,.32,m);}
+    else if(k===1){for(let a=0;a<6;a++){const ang=a*Math.PI/3;workshopCyl(g,new THREE.Vector3(0,.25,0),new THREE.Vector3(Math.sin(ang)*.48,.02,Math.cos(ang)*.48),.025,workshopDark);}workshopBox(g,0,.27,0,.32,.18,.30,m);}
+    else if(k===2){const w=workshopWheel(g,0,.34,0,.42,.10,workshopDark);w.rotation.z=Math.PI/2;workshopBox(g,0,.36,0,.18,.18,.24,m);}
+    else if(k===3){for(const x of [-.28,.28]){workshopBox(g,x,.11,0,.16,.18,.70,workshopDark);}workshopBox(g,0,.28,0,.45,.24,.46,m);}
+    else if(k===4){const hull=new THREE.Mesh(new THREE.CylinderGeometry(.30,.40,.20,10),workshopPale);hull.position.y=.18;g.add(hull);for(const x of [-.32,.32]){const f=new THREE.Mesh(new THREE.SphereGeometry(.13,8,6),workshopDark);f.scale.set(1,0.45,1.6);f.position.set(x,.05,0);g.add(f)}}
+    else if(k===5){const drill=new THREE.Mesh(new THREE.ConeGeometry(.20,.55,10),m);drill.rotation.x=Math.PI/2;drill.position.set(0,.25,.35);g.add(drill);workshopBox(g,0,.22,-.08,.42,.24,.48,workshopDark);}
+    else {workshopCyl(g,new THREE.Vector3(0,.05,0),new THREE.Vector3(0,.78,0),.06,workshopDark);const ring=new THREE.Mesh(new THREE.TorusGeometry(.30,.035,6,18),m);ring.rotation.x=Math.PI/2;ring.position.y=.58;g.add(ring);}
+    if(k!==5&&k!==6)workshopTube(g,0,.38,.08,.72,.05,m,.12);
+  }
+  g.userData.workshop={index:i,name:artilleryNames[i]};
+  return g;
+}
+for(let i=0;i<49;i++){
+  const piece=buildWorkshopPiece(i),col=i%7,row=Math.floor(i/7);
+  piece.position.set((col-3)*1.65,0,(row-3)*1.65);
+  piece.rotation.y=((i*37)%17-8)*.025;
+  workshopField.add(piece);
+}
+
 const raycaster=new THREE.Raycaster();
 const pointerNDC=new THREE.Vector2();
 const tapStarts=new Map();

@@ -2003,6 +2003,29 @@ const localGravitySatellite=new THREE.Mesh(
   new THREE.MeshStandardMaterial({color:0xe9edf0,roughness:.55,metalness:.15})
 );
 localGravitySatellite.name='local-gravity-orb:satellite';localGravitySatellite.position.set(1.65,.34,0);localGravityOrb.add(localGravitySatellite);
+
+// Restore Crucible's earned lava -> bearing consequence at the orb boundary.
+// These are deliberately tiny local bodies rather than the planar packed bearing
+// solver: once spawned, their only new law is the orb's radial gravity.
+const localGravityBearingGeo=new THREE.SphereGeometry(.055,8,6);
+const localGravityBearingMat=new THREE.MeshStandardMaterial({color:0xb8bdc2,roughness:.38,metalness:.72});
+const localGravityBearings=[];
+let nextLocalLavaPopAt=0;
+function spawnLocalLavaBearing(){
+  const normal=new THREE.Vector3().randomDirection();
+  const mesh=new THREE.Mesh(localGravityBearingGeo,localGravityBearingMat);
+  mesh.name='local-gravity-orb:lava-bearing';mesh.position.copy(normal).multiplyScalar(.92);localGravityOrb.add(mesh);
+  const tangent=new THREE.Vector3().randomDirection();tangent.addScaledVector(normal,-tangent.dot(normal)).normalize();
+  const speed=.28+Math.random()*.52,lift=.65+Math.random()*.8;
+  const velocity=tangent.multiplyScalar(speed).addScaledVector(normal,lift);
+  localGravityBearings.push({mesh,velocity});
+}
+function updateLocalLavaPops(now){
+  if(now<nextLocalLavaPopAt)return;
+  nextLocalLavaPopAt=now+260+Math.random()*620;
+  const n=1+((Math.random()*3)|0);
+  for(let i=0;i<n;i++)spawnLocalLavaBearing();
+}
 let localGravityVelocity=new THREE.Vector3(0,0,1.35),localGravityLast=performance.now();
 
 function updateLocalGravityOrb(now){
@@ -2014,6 +2037,19 @@ function updateLocalGravityOrb(now){
   const accel=p.clone().multiplyScalar(-2.35/(r*r*r));
   localGravityVelocity.addScaledVector(accel,dt);
   localGravitySatellite.position.addScaledVector(localGravityVelocity,dt);
+  updateLocalLavaPops(now);
+  for(let i=localGravityBearings.length-1;i>=0;i--){
+    const body=localGravityBearings[i],bp=body.mesh.position,radius=Math.max(.2,bp.length());
+    body.velocity.addScaledVector(bp,-2.35*dt/(radius*radius*radius));
+    bp.addScaledVector(body.velocity,dt);
+    const surface=.89;
+    if(bp.length()<surface){
+      const n=bp.clone().normalize();bp.copy(n).multiplyScalar(surface);
+      const inward=body.velocity.dot(n);if(inward<0)body.velocity.addScaledVector(n,-1.28*inward);
+      body.velocity.multiplyScalar(.992);
+    }
+    if(bp.length()>5.5){body.mesh.removeFromParent();localGravityBearings.splice(i,1)}
+  }
   // Keep this first specimen readable if numerical drift carries it too far.
   if(localGravitySatellite.position.length()>3.4){
     localGravitySatellite.position.set(1.65,.34,0);localGravityVelocity.set(0,0,1.35);

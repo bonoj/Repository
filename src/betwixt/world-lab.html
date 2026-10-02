@@ -1959,15 +1959,54 @@ function workshopTap(x,y){
   const r=canvas.getBoundingClientRect();
   pointerNDC.set(((x-r.left)/r.width)*2-1,-((y-r.top)/r.height)*2+1);
   raycaster.setFromCamera(pointerNDC,camera);
-  const hits=raycaster.intersectObjects(specimens.map(([,o])=>o),true);
+  const focusables=[...specimens.map(([,o])=>o),localGravityOrb];
+  const hits=raycaster.intersectObjects(focusables,true);
   let obj=hits[0]?.object||null;
-  while(obj&&obj.parent&&obj.parent!==workshopField)obj=obj.parent;
+  while(obj&&obj.parent&&obj.parent!==workshopField&&obj.parent!==scene)obj=obj.parent;
   if(focusedWorkshopObject){
     if(obj===focusedWorkshopObject)return true;
     dismissWorkshopFocus();return true;
   }
-  if(obj?.parent===workshopField){beginWorkshopFocus(obj,true);return true}
+  if(obj===localGravityOrb||obj?.parent===workshopField){beginWorkshopFocus(obj,true);return true}
   return false;
+}
+
+
+/* LOCAL GRAVITY ORB — one Betwixt-focusable entity with its own field.
+   This is deliberately not universal gravity. The orb owns a tiny satellite
+   body and attracts it toward its own center regardless of Betwixt down. */
+const localGravityOrb=new THREE.Group();
+localGravityOrb.name='betwixt:local-gravity-orb';
+localGravityOrb.position.set(0,4.2,0);
+scene.add(localGravityOrb);
+const localGravityCore=new THREE.Mesh(
+  new THREE.SphereGeometry(.82,24,16),
+  new THREE.MeshStandardMaterial({color:0xc8e2e3,transparent:true,opacity:.22,roughness:.08,metalness:0,depthWrite:false,side:THREE.DoubleSide})
+);
+localGravityCore.name='local-gravity-orb:core';localGravityOrb.add(localGravityCore);
+const localGravityEdges=new THREE.LineSegments(
+  new THREE.EdgesGeometry(new THREE.SphereGeometry(.825,14,9)),
+  new THREE.LineBasicMaterial({color:0x667879,transparent:true,opacity:.62})
+);localGravityOrb.add(localGravityEdges);
+const localGravitySatellite=new THREE.Mesh(
+  new THREE.SphereGeometry(.11,12,8),
+  new THREE.MeshStandardMaterial({color:0xe9edf0,roughness:.55,metalness:.15})
+);
+localGravitySatellite.name='local-gravity-orb:satellite';localGravitySatellite.position.set(1.65,.34,0);localGravityOrb.add(localGravitySatellite);
+let localGravityVelocity=new THREE.Vector3(0,0,1.35),localGravityLast=performance.now();
+
+function updateLocalGravityOrb(now){
+  const dt=Math.min(.035,Math.max(0,(now-localGravityLast)/1000));localGravityLast=now;
+  if(!dt)return;
+  const p=localGravitySatellite.position,r=Math.max(.35,p.length());
+  const accel=p.clone().multiplyScalar(-2.35/(r*r*r));
+  localGravityVelocity.addScaledVector(accel,dt);
+  localGravitySatellite.position.addScaledVector(localGravityVelocity,dt);
+  // Keep this first specimen readable if numerical drift carries it too far.
+  if(localGravitySatellite.position.length()>3.4){
+    localGravitySatellite.position.set(1.65,.34,0);localGravityVelocity.set(0,0,1.35);
+  }
+  window.vestibuleDirty=true;
 }
 
 
@@ -2608,6 +2647,7 @@ addEventListener('resize',()=>{
 renderer.setAnimationLoop((now)=>{
   if(contentWorkshopHidden){
     updateWorkshop(now);
+    updateLocalGravityOrb(now);
     renderer.render(scene,camera);window.vestibuleDirty=false;
     return;
   }

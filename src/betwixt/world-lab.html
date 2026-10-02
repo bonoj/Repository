@@ -1120,6 +1120,124 @@ nextDescentWake=Math.min(...[...descentStates.values()].map(st=>st.nextAt));
 
 const presences=presenceEntities.map(id=>C.RenderObject.get(id).object);
 
+// Jupurn — transplanted from bonoj/Accessibility.
+// Keep this organism visually and behaviorally faithful to its donor.
+const jupurn=new THREE.Group();
+jupurn.rotation.z=-0.16;
+jupurn.position.set(0,5.6,0);
+const jupurnPlanet=new THREE.Mesh(
+  new THREE.SphereGeometry(0.82,32,20),
+  new THREE.MeshStandardMaterial({color:0xc9b88d,roughness:0.76,metalness:0.02})
+);
+jupurnPlanet.scale.y=0.91;
+jupurnPlanet.castShadow=true;
+jupurn.add(jupurnPlanet);
+scene.add(jupurn);
+
+function createJupurnRingField({parent,count=1600}){
+  const geometry=new THREE.SphereGeometry(0.023,5,4);
+  const material=new THREE.MeshStandardMaterial({color:0xb08d57,roughness:0.5,metalness:0.5});
+  const mesh=new THREE.InstancedMesh(geometry,material,count);
+  mesh.castShadow=true;parent.add(mesh);
+  const bands=[
+    {inner:1.18,outer:1.58,density:0.92,rate:0.105},
+    {inner:1.72,outer:2.18,density:1.0,rate:0.086},
+    {inner:2.34,outer:2.86,density:0.82,rate:0.069}
+  ];
+  const particles=[];let seed=0x51f15e;
+  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};
+  const weights=bands.map(b=>(b.outer-b.inner)*b.density),totalWeight=weights.reduce((a,b)=>a+b,0);
+  for(let i=0;i<count;i++){
+    let pick=random()*totalWeight,bandIndex=0;
+    while(bandIndex<bands.length-1&&pick>weights[bandIndex])pick-=weights[bandIndex++];
+    const band=bands[bandIndex],radius=band.inner+(band.outer-band.inner)*Math.sqrt(random());
+    particles.push({
+      radius,homeRadius:radius,angle:random()*Math.PI*2,
+      rate:band.rate*Math.pow(band.inner/radius,1.5),
+      verticalAmplitude:0.008+random()*0.025,
+      verticalFrequency:0.22+random()*0.31,
+      verticalPhase:random()*Math.PI*2,radialPhase:random()*Math.PI*2,
+      disturbance:0,present:true,claimedBy:null,pull:0
+    });
+  }
+  const dummy=new THREE.Object3D(),clearers=[];
+  function addClearer(clearer){clearers.push(clearer)}
+  function update(dt,timeSeconds){
+    const positions=new Array(particles.length);
+    for(let i=0;i<particles.length;i++){
+      const p=particles[i];if(!p.present)continue;
+      p.angle=(p.angle+p.rate*dt)%(Math.PI*2);
+      const baseRadius=p.homeRadius+Math.sin(timeSeconds*0.12+p.radialPhase)*0.012;
+      let disturbance=0;
+      for(const clearer of clearers){
+        const o=clearer.orbit,moonAngle=(o.phase??0)+timeSeconds*o.rate;
+        const angularDelta=Math.atan2(Math.sin(p.angle-moonAngle),Math.cos(p.angle-moonAngle));
+        const radialDelta=baseRadius-o.radius,distance=Math.hypot(radialDelta,angularDelta*o.radius);
+        if(distance<clearer.influenceRadius){
+          const strength=1-distance/clearer.influenceRadius;
+          disturbance=Math.max(disturbance,strength);p.disturbance=Math.max(p.disturbance,strength);
+        }
+      }
+      p.disturbance=Math.max(disturbance,p.disturbance-dt*0.34);
+      const displacedRadius=baseRadius+p.disturbance*0.16*Math.sign(Math.sin(p.radialPhase)||1);
+      positions[i]={
+        x:Math.cos(p.angle)*displacedRadius,
+        y:Math.sin(timeSeconds*p.verticalFrequency+p.verticalPhase)*p.verticalAmplitude+p.disturbance*0.035*Math.sin(p.angle*7+p.verticalPhase),
+        z:Math.sin(p.angle)*displacedRadius
+      };
+    }
+    for(let i=0;i<particles.length;i++){
+      const p=particles[i],position=positions[i];
+      if(!p.present||!position){dummy.position.set(0,-1000,0);dummy.scale.setScalar(0)}
+      else{dummy.position.set(position.x,position.y,position.z);dummy.scale.setScalar(0.7+(i%9)*0.045)}
+      dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
+    }
+    mesh.instanceMatrix.needsUpdate=true;
+  }
+  return {mesh,particles,bands,addClearer,update};
+}
+const jupurnRingField=createJupurnRingField({parent:jupurn,count:1600});
+const jupurnMoonSpecs=[
+  {radius:3.35,size:0.13,rate:0.32,phase:0.0},
+  {radius:3.85,size:0.16,rate:0.16,phase:1.75},
+  {radius:4.45,size:0.20,rate:0.08,phase:3.45}
+];
+const jupurnMoons=jupurnMoonSpecs.map((spec,index)=>{
+  const object=new THREE.Mesh(
+    new THREE.SphereGeometry(spec.size,12,8),
+    new THREE.MeshStandardMaterial({color:0xd7d3c8,roughness:0.88})
+  );
+  object.castShadow=true;jupurn.add(object);
+  return {object,...spec,verticalAmplitude:0.035+index*0.012,verticalFrequency:0.7};
+});
+const jupurnClearingMoonObject=new THREE.Mesh(
+  new THREE.SphereGeometry(0.09,12,8),
+  new THREE.MeshStandardMaterial({color:0xe4dfd2,roughness:0.9})
+);
+jupurnClearingMoonObject.castShadow=true;jupurn.add(jupurnClearingMoonObject);
+const jupurnClearingOrbit={
+  object:jupurnClearingMoonObject,radius:2.27,rate:0.095,phase:0.8,
+  verticalAmplitude:0.055,verticalFrequency:0.9
+};
+jupurnRingField.addClearer({orbit:jupurnClearingOrbit,influenceRadius:0.26});
+let jupurnLastFrame=performance.now();
+function JupurnSystem(now){
+  const dt=Math.min(0.05,Math.max(0,(now-jupurnLastFrame)/1000));
+  jupurnLastFrame=now;
+  const elapsed=now/1000;
+  for(const orbit of [...jupurnMoons,jupurnClearingOrbit]){
+    const angle=(orbit.phase??0)+elapsed*orbit.rate;
+    orbit.object.position.set(
+      Math.cos(angle)*orbit.radius,
+      (orbit.verticalAmplitude??0)*Math.sin(angle*(orbit.verticalFrequency??0.7)+(orbit.verticalPhase??0)),
+      Math.sin(angle)*orbit.radius
+    );
+  }
+  jupurnRingField.update(dt,elapsed);
+  window.vestibuleDirty=true;
+}
+
+
 const P=(x,y,z)=>[x,y,z];
 const RING={
   wide:[P(4.460,5.6,4.307),P(5.465,5.6,-2.924),P(-1.062,5.6,-6.099),P(-6.132,5.6,-0.847),P(-2.731,5.6,5.564)],
@@ -1561,6 +1679,7 @@ addEventListener('resize',()=>{
 });
 
 renderer.setAnimationLoop((now)=>{
+  JupurnSystem(now);
   ExchangeSystem(now);
   OrbitalSystem(now);
   FoundrySystem(now);

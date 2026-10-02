@@ -2029,7 +2029,10 @@ function refreshGrimoireLava(){
 }
 function spawnGrimoireLavaBearing(){
   const wet=[];grimoireLava.forEachWetCell(q=>wet.push(q));if(!wet.length)return;const q=wet[(Math.random()*wet.length)|0],n=grimoireSurfacePoint(q.x,q.z,0,new THREE.Vector3()).normalize(),mesh=new THREE.Mesh(grimoireBearingGeo,grimoireBearingMat);mesh.position.copy(n).multiplyScalar(GRIMOIRE_R+.09);localGravityOrb.add(mesh);
-  const tangent=new THREE.Vector3().randomDirection();tangent.addScaledVector(n,-tangent.dot(n)).normalize(),speed=.28+Math.random()*.52,lift=.65+Math.random()*.8;
+  const tangent=new THREE.Vector3().randomDirection();
+  tangent.addScaledVector(n,-tangent.dot(n)).normalize();
+  const speed=.28+Math.random()*.52;
+  const lift=.65+Math.random()*.8;
   grimoireBearings.push({mesh,velocity:tangent.multiplyScalar(speed).addScaledVector(n,lift)});
 }
 function updateGrimoireLava(now,dt){

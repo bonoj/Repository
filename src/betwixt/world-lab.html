@@ -419,7 +419,8 @@ const C={
   ExchangeIdentity:ecs.component('ExchangeIdentity'),
   DescentIdentity:ecs.component('DescentIdentity'),
   FoundryIdentity:ecs.component('FoundryIdentity'),
-  OrbitalIdentity:ecs.component('OrbitalIdentity')
+  OrbitalIdentity:ecs.component('OrbitalIdentity'),
+  JupurnIdentity:ecs.component('JupurnIdentity')
 };
 
 const presenceMat=new THREE.MeshStandardMaterial({color:0xf0f0ed,roughness:.68,metalness:.04});
@@ -1124,7 +1125,6 @@ const presences=presenceEntities.map(id=>C.RenderObject.get(id).object);
 // Keep this organism visually and behaviorally faithful to its donor.
 const jupurn=new THREE.Group();
 jupurn.rotation.z=-0.16;
-jupurn.position.set(0,5.6,0);
 const jupurnPlanet=new THREE.Mesh(
   new THREE.SphereGeometry(0.82,32,20),
   new THREE.MeshStandardMaterial({color:0xc9b88d,roughness:0.76,metalness:0.02})
@@ -1132,7 +1132,24 @@ const jupurnPlanet=new THREE.Mesh(
 jupurnPlanet.scale.y=0.91;
 jupurnPlanet.castShadow=true;
 jupurn.add(jupurnPlanet);
+const jupurnHitShell=new THREE.Mesh(
+  new THREE.SphereGeometry(3.05,16,10),
+  new THREE.MeshBasicMaterial({visible:false})
+);
+jupurn.add(jupurnHitShell);
 scene.add(jupurn);
+const jupurnEntity=ecs.entity();
+ecs.add(jupurnEntity,C.JupurnIdentity,{name:'Jupurn'});
+ecs.add(jupurnEntity,C.Transform,{
+  position:new THREE.Vector3(0,5.6,0),
+  rotation:new THREE.Euler(0,0,-0.16),
+  scale:new THREE.Vector3(1,1,1)
+});
+ecs.add(jupurnEntity,C.RenderObject,{object:jupurn,pickables:[jupurnPlanet,jupurnHitShell]});
+ecs.add(jupurnEntity,C.Selectable,{enabled:true});
+ecs.add(jupurnEntity,C.Foregroundable,{enabled:true});
+ecs.add(jupurnEntity,C.RingSlot,{position:new THREE.Vector3(0,5.6,0)});
+for(const o of [jupurnPlanet,jupurnHitShell])o.userData.entityId=jupurnEntity;
 
 function createJupurnRingField({parent,count=1600}){
   const geometry=new THREE.SphereGeometry(0.023,5,4);
@@ -1199,8 +1216,7 @@ function createJupurnRingField({parent,count=1600}){
 const jupurnRingField=createJupurnRingField({parent:jupurn,count:1600});
 const jupurnMoonSpecs=[
   {radius:3.35,size:0.13,rate:0.32,phase:0.0},
-  {radius:3.85,size:0.16,rate:0.16,phase:1.75},
-  {radius:4.45,size:0.20,rate:0.08,phase:3.45}
+  {radius:3.85,size:0.16,rate:0.16,phase:1.75}
 ];
 const jupurnMoons=jupurnMoonSpecs.map((spec,index)=>{
   const object=new THREE.Mesh(
@@ -1440,8 +1456,15 @@ const WORLD_STATE_KEY='worldLab.worldState.v1';
 const WORLD_STATE_VERSION=1;
 let departing=false,lastWorldSave=0;
 
-function slotForId(id){return id==null?null:C.Presence.get(id)?.slot??null}
-function idForSlot(slot){return presenceEntities.find(id=>C.Presence.get(id).slot===slot)||null}
+function slotForId(id){
+  if(id==null)return null;
+  if(ecs.has(id,C.JupurnIdentity))return 'jupurn';
+  return C.Presence.get(id)?.slot??null;
+}
+function idForSlot(slot){
+  if(slot==='jupurn')return jupurnEntity;
+  return presenceEntities.find(id=>C.Presence.get(id).slot===slot)||null;
+}
 function vec(v){return v?.toArray?v.toArray():v}
 function remaining(at,now){return Number.isFinite(at)?Math.max(0,at-now):null}
 

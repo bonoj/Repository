@@ -26,3 +26,17 @@ Crucible water is not merely its solver. The transported source closure preserve
 - Crucible `main.js` — integration evidence wiring terrain → water → bearings/scalar presentation.
 
 The intact Crucible executable remains the behavioral reference. Extraction into Betwixt must not be described as full water transfer unless these couplings are preserved or explicitly replaced and verified.
+
+
+## Lava organism boundary
+
+Crucible lava is a sibling use of the transported shallow-fluid machinery, but its identity includes integration behavior outside the solver:
+
+- `createShallowWaterSystem(... kind:"lava" ...)` with the earned hot/deep presentation and viscosity level 26.
+- shared terrain/material-boundary semantics and the same continuous reconstructed surface machinery.
+- bearing coupling through `liquids:[transport,lavaTransport]`.
+- water/lava overlap producing the `water-lava-steam` consequence.
+- lava wet cells driving intermittent bearing pops from the live surface.
+- live update ordering: bearings → water → lava → steam → lava pops.
+
+The intact Crucible executable remains the behavioral reference for lava as well as water.

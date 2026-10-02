@@ -149,6 +149,9 @@ Do not reproduce a finished behavior from screenshots, prose, or apparent extern
 
 Discover seams from inside the organism under executable pressure.
 
+Do not preserve only the appearance or one downstream consequence of authoritative material and call the material transported. The Grimoire lava failure at Repository `9c0a6a6e` rendered an orange spherical proxy and manually restored lava → bearing pops while bypassing the transported lava state. It looked causally plausible but could not participate in fluid interactions such as external gravity. Material transport is accepted only when one authoritative state drives its presentation and its earned consequences.
+
+
 Do not equate place with repository.
 
 Do not create import/export machinery merely to move an entity between contexts inside Repository.

@@ -1,18 +1,9 @@
 (()=>{
   const place={sigil:"🌀",title:"BETWIXT"};
   const spells={
-    temporary:[
-      {id:"spin",text:"🪄",label:"Spin presences",onClick:spinPresences},
-      {id:"marble",text:"⚪️",label:"Compact Betwixt content",onClick:marbleBetwixtContent},
-      {id:"crucible",text:"⚗️",label:"Summon intact Crucible",onClick:toggleCrucible},
-      {id:"arcball",text:"🧭",label:"Arcball navigation",onClick:toggleArcball},
-      {id:"fluid-globes",text:"💦",label:"Water and lava shatter vessels",onClick:toggleFluidGlobes},
-      {id:"crayon",text:"🖍",label:"Crayon",onClick:toggleCrayon,onDoubleClick:clearCrayon,onLongPress:exportCrayon,onContextMenu:exportCrayon}
-    ],
+    temporary:[],
     resident:[
-      {id:"workshop",text:"🛠",label:"Clear the Workshop bench",onClick:toggleWorkshop},
-      {id:"lift",text:"⬆️",label:"Lift Betwixt content",onClick:liftBetwixtContent},
-      {id:"refresh",text:"🔄",label:"Reload",onClick:()=>location.reload()}
+      {id:"workshop",text:"🛠",label:"Workshop",onClick:toggleWorkshop}
     ]
   };
   const build=globalThis.__REPOSITORY_BUILD__||"local";
@@ -191,6 +182,18 @@
 
   for(const spell of spells.temporary)registerTool({...spell,lane:"temporary"});
   for(const spell of spells.resident)registerTool({...spell,lane:"resident"});
+
+  // Betwixt now begins at the bench. Workshop is the sole manifested spell.
+  // Wait for the donor to expose its world boundary, then enter exactly once.
+  function enterWorkshopOnReady(){
+    const world=globalThis.vestibule;
+    if(!world?.setContentWorkshopHidden)return false;
+    if(!world.contentWorkshopHidden)world.setContentWorkshopHidden(true);
+    const button=registered.get("workshop");
+    button?.classList.add("active");button?.setAttribute("aria-pressed","true");
+    return true;
+  }
+  if(!enterWorkshopOnReady())addEventListener("vestibule-ready",enterWorkshopOnReady,{once:true});
 
   globalThis.RepositoryShell={
     place,

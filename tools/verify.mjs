@@ -4,6 +4,7 @@ await access("dist/index.html");
 await access("dist/crucible/index.html");
 const html=await readFile("dist/index.html","utf8");
 const crucible=await readFile("dist/crucible/index.html","utf8");
+const shellSource=await readFile("src/shell/repository-shell.js","utf8");
 for(const evidence of [
   '__CRUCIBLE_BUILD__="d1c5e437197e72b16624c0b7104c6e9d9cbb0d0f"',
   "<title>Crucible</title>",
@@ -45,16 +46,18 @@ for(const shellEvidence of [
   "repository-devtools",
   "🌀",
   "BETWIXT",
-  "🔄",
+  "🛠",
   "RepositoryBetwixt",
   "betwixt-presence",
-  "attachBetwixtMirror",
-  "repository-crucible",
-  'frame.src="crucible/index.html"',
-  "Summon intact Crucible"
+  "attachBetwixtMirror"
 ]){
   if(!html.includes(shellEvidence))throw new Error(`Repository shell evidence missing: ${shellEvidence}`);
 }
+if(!shellSource.includes("temporary:[]")||!shellSource.includes('{id:"workshop",text:"🛠"'))throw new Error("Workshop must be the sole manifested shell spell");
+for(const retiredId of ['id:"spin"','id:"marble"','id:"crucible"','id:"arcball"','id:"fluid-globes"','id:"crayon"','id:"lift"','id:"refresh"']){
+  if(shellSource.includes(retiredId))throw new Error(`Retired spell still manifests in shell: ${retiredId}`);
+}
+if(!shellSource.includes("enterWorkshopOnReady"))throw new Error("Betwixt must begin in Workshop");
 const bridgeMark=html.indexOf("attachBetwixtMirror");
 const donorRuntime=html.indexOf("window.vestibule={");
 if(!(bridgeMark>donorRuntime))throw new Error("Repository ECS mirror must attach after donor runtime");

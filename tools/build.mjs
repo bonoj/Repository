@@ -27,6 +27,19 @@ for(const [name,source,evidence] of [
   ["terrain-system",terrainSystem,["materialBoundary","groundHeightExact"]],
   ["transport-system",transportSystem,["supportHeight"]]
 ])for(const token of evidence)if(!source.includes(token))throw new Error(`Crucible water dependency evidence missing from ${name}: ${token}`);
+const crucibleMain=await readFile("src/cargo/crucible/source/src/main.js","utf8");
+for(const token of [
+  'kind:"lava"',
+  'initialViscosity:26',
+  'depthAccents:true',
+  'deepColor:0x260300',
+  'hotColor:0xff9a24',
+  'liquids:[transport,lavaTransport]',
+  'steamGroup.name="water-lava-steam"',
+  'function updateSteam(dt)',
+  'function updateLavaPops()',
+  'lavaTransport.update(simNow)'
+])if(!crucibleMain.includes(token))throw new Error(`Crucible lava organism evidence missing: ${token}`);
 const bridge=`<script>${shallowWaterInline}\n${ecsInline}\n${mirrorInline}\n(function attachMirrorWhenReady(){if(globalThis.vestibuleReady&&globalThis.vestibule?.presences?.length){attachBetwixtMirror();return}addEventListener("vestibule-ready",attachMirrorWhenReady,{once:true})})();<\/script>`;
 const injection=`<script>globalThis.__REPOSITORY_SHA__=${JSON.stringify(sha)};globalThis.__REPOSITORY_BUILD__=${JSON.stringify(build)};<\/script><script>${shell}<\/script>`;
 const executable=donor.replace("<body>",`<body data-repository-build="${build}" data-repository-sha="${sha}">${injection}`).replace("</body>",`${bridge}</body>`);

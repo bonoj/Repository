@@ -38,11 +38,6 @@ select{width:100%;padding:0 12px;appearance:auto}
 @media (max-width:520px){#counter{top:48px}}
 @media (min-width:900px){button{min-height:42px}}
 
-#labName{
-  position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:15;
-  color:#e8edf0;font:600 12px/1 system-ui,sans-serif;letter-spacing:.08em;
-  text-transform:uppercase;pointer-events:none;opacity:0;transition:opacity .16s;
-}
 
 #labActions{
   position:fixed;left:50%;bottom:max(26px,calc(env(safe-area-inset-bottom) + 18px));
@@ -69,7 +64,6 @@ select{width:100%;padding:0 12px;appearance:auto}
 
 <div id="fault"></div>
 
-<div id="labName"></div>
 <div id="labActions" aria-hidden="true">
   <button id="enterLab" type="button">ENTER LAB</button>
   <button id="githubLab" class="secondary" type="button">GITHUB</button>
@@ -318,7 +312,6 @@ Attention brings a presence to the observer. Commitment carries the observer to 
 </script>
 
 <script>
-const labNameEl=document.getElementById('labName');
 const labActionsEl=document.getElementById('labActions');
 const enterLabEl=document.getElementById('enterLab');
 const githubLabEl=document.getElementById('githubLab');
@@ -1420,11 +1413,7 @@ function setLabActions(id){
   labActionsEl.classList.toggle('visible',visible);
   labActionsEl.setAttribute('aria-hidden',visible?'false':'true');
 }
-function updateLabLabel(){
-  const name=selectedLabName();
-  labNameEl.textContent=name||'';
-  labNameEl.style.opacity=name?'1':'0';
-}
+function updateLabLabel(){}
 enterLabEl.addEventListener('click',e=>{
   e.stopPropagation();
   if(selectedEntity&&ecs.has(selectedEntity,C.Destination))beginEntry(selectedEntity);

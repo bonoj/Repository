@@ -1709,15 +1709,83 @@ function makeTentacle(){
   return g;
 }
 
-const specimens=[
-  ['geosphere',makeGeosphere()],
-  ['octonut',makeOctonut(.42)],
-  ['ring',makeRing()],
-  ['gimbal-cage',makeGimbalCage()],
-  ['tentacle',makeTentacle()],
-  ['six-nut-sphere',makeSixNutSphere()]
+// Controls: retained intact as source evidence from the grammar-kit pass.
+const controls=[
+  ['control-geosphere',makeGeosphere()],
+  ['control-octonut',makeOctonut(.42)],
+  ['control-ring',makeRing()],
+  ['control-gimbal-cage',makeGimbalCage()],
+  ['control-tentacle',makeTentacle()],
+  ['control-six-nut-sphere',makeSixNutSphere()]
 ];
-const specimenX=[-5,-3,-1,1,3,5];
+for(const [,obj] of controls)obj.visible=false;
+
+function kitRing(r=.45,t=.035){
+  const m=new THREE.Mesh(new THREE.TorusGeometry(r,t,8,24),brassMaterial);return m;
+}
+function kitSphere(r=.38){
+  return new THREE.Mesh(new THREE.SphereGeometry(r,18,12),glassMaterial);
+}
+function kitNut(n=.18){return makeOctonut(n)}
+function orientBetween(obj,a,b){
+  const d=b.clone().sub(a),mid=a.clone().add(b).multiplyScalar(.5);
+  obj.position.copy(mid);obj.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());return d.length();
+}
+function kitStrut(a,b,w=.08){
+  const m=kitNut(1),len=orientBetween(m,a,b);m.scale.set(w,len,w);return m;
+}
+function kitTentacle(count=5,len=.28,width=.14,curl=.18){
+  const g=new THREE.Group();let p=new THREE.Vector3();
+  for(let i=0;i<count;i++){
+    const q=p.clone().add(new THREE.Vector3(Math.sin(i*.75)*curl,len,Math.cos(i*.55)*curl*.45));
+    const s=kitStrut(p,q,width*(1-i/(count*1.5)));g.add(s);p=q;
+  } return g;
+}
+function makeKitThing(k){
+  const g=new THREE.Group();
+  const S=(r,x=0,y=.5,z=0)=>{const m=kitSphere(r);m.position.set(x,y,z);g.add(m);return m};
+  const R=(r,x=0,y=.5,z=0,rx=0,ry=0,rz=0,t=.035)=>{const m=kitRing(r,t);m.position.set(x,y,z);m.rotation.set(rx,ry,rz);g.add(m);return m};
+  const N=(n,x=0,y=.5,z=0,sx=1,sy=1,sz=1)=>{const m=kitNut(n);m.position.set(x,y,z);m.scale.set(sx,sy,sz);g.add(m);return m};
+  const B=(a,b,w=.07)=>g.add(kitStrut(new THREE.Vector3(...a),new THREE.Vector3(...b),w));
+  const T=(x,y,z,ry=0,s=.8)=>{const m=kitTentacle();m.position.set(x,y,z);m.rotation.y=ry;m.scale.setScalar(s);g.add(m)};
+  switch(k){
+    case 0:S(.46);R(.58,0,.5,0,Math.PI/2);R(.32,0,.5,.43,Math.PI/2);B([0,.5,-.46],[0,.5,.46]);break;
+    case 1:S(.32,-.36,.42);S(.32,.36,.72);R(.24,0,.56,0,0,Math.PI/2);B([-.12,.5,0],[.12,.65,0],.11);break;
+    case 2:R(.55,0,.56);S(.27,0,.56);N(.18,.55,.56);N(.18,-.55,.56);T(0,.38,.05,0,.65);break;
+    case 3:S(.48);R(.34,0,.5,.42,Math.PI/2);R(.34,0,.5,-.42,Math.PI/2);N(.2,0,1.0);break;
+    case 4:S(.28,0,.9);R(.5,0,.55,0,Math.PI/2);B([-.5,.55,0],[0,.9,0]);B([.5,.55,0],[0,.9,0]);T(0,.3,0,Math.PI,.55);break;
+    case 5:S(.3,-.32,.5);S(.3,.32,.5);R(.23,0,.5,0,0,Math.PI/2);R(.55,0,.5,0,Math.PI/2);break;
+    case 6:R(.62,0,.52,0,0,0);R(.38,0,.52,0,Math.PI/2);S(.22,0,.52);N(.16,0,1.12);break;
+    case 7:S(.38,0,.78);N(.2,0,.28,0,1,2.2,1);T(-.22,.3,0,-.4,.55);T(.22,.3,0,.4,.55);break;
+    case 8:R(.58,0,.5,0,Math.PI/2);R(.34,0,.5,0,Math.PI/2);N(.2,0,.5);for(let i=0;i<4;i++){const a=i*Math.PI/2;B([Math.cos(a)*.34,.5,Math.sin(a)*.34],[Math.cos(a)*.58,.5,Math.sin(a)*.58],.06)}break;
+    case 9:S(.42);for(let i=0;i<3;i++)R(.52,0,.5,0,i*Math.PI/3,Math.PI/2);T(0,.42,.35,0,.45);break;
+    case 10:S(.25,0,.35);S(.25,0,.9);R(.38,0,.62,0,Math.PI/2);B([0,.35,0],[0,.9,0],.09);break;
+    case 11:R(.55,0,.62);N(.2,0,.62);for(let i=0;i<3;i++){const a=i*2*Math.PI/3;T(Math.cos(a)*.42,.25,Math.sin(a)*.42,a,.55)}break;
+    case 12:S(.34);R(.46,0,.5,0,0,Math.PI/2);B([-.46,.5,0],[-.72,.25,0],.08);B([.46,.5,0],[.72,.25,0],.08);N(.18,-.72,.2);N(.18,.72,.2);break;
+    case 13:S(.3,0,.72);R(.52,0,.38,Math.PI/2);R(.28,0,.72,0,Math.PI/2);T(0,.25,-.2,Math.PI,.5);break;
+    case 14:for(let i=-1;i<=1;i++)S(.22,i*.4,.5+Math.abs(i)*.15);R(.62,0,.52,0,Math.PI/2);B([-.4,.65,0],[.4,.65,0],.07);break;
+    case 15:S(.44);R(.56,0,.5,Math.PI/2);N(.18,0,.5,.44,1,1,2.2);N(.18,0,.5,-.44,1,1,2.2);break;
+    case 16:R(.6,0,.62);R(.32,0,.62,Math.PI/2);B([-.6,.62,0],[.6,.62,0],.07);T(0,.2,0,0,.5);break;
+    case 17:S(.3,-.3,.42);S(.3,.3,.78);R(.2,0,.6,0,Math.PI/2);B([-.1,.48,0],[.1,.72,0],.12);T(.3,.35,0,0,.45);break;
+    case 18:S(.38,0,.72);for(let i=0;i<4;i++){const a=i*Math.PI/2;N(.16,Math.cos(a)*.38,.72,Math.sin(a)*.38)}R(.5,0,.72,Math.PI/2);B([0,.34,0],[0,.12,0],.16);break;
+    case 19:R(.58,0,.58,Math.PI/2);S(.24,0,.58);T(-.38,.25,0,-.8,.55);T(.38,.25,0,.8,.55);N(.18,0,1.16);break;
+    case 20:S(.28,0,.95);R(.58,0,.42,0,Math.PI/2);for(let i=0;i<3;i++){const a=i*2*Math.PI/3;B([0,.95,0],[Math.cos(a)*.58,.42,Math.sin(a)*.58],.06)}break;
+    case 21:S(.36);R(.5,0,.5,0,0,Math.PI/2);R(.22,0,.5,.35,0,0);R(.22,0,.5,-.35,0,0);break;
+    case 22:N(.24,0,.34,0,1,2.4,1);R(.48,0,.78,Math.PI/2);S(.22,0,.78);T(0,.35,.18,0,.55);break;
+    case 23:S(.3,-.3,.55);S(.3,.3,.55);R(.26,0,.55,0,Math.PI/2);T(-.3,.3,0,-.4,.45);T(.3,.3,0,.4,.45);break;
+    case 24:S(.4);R(.54,0,.5,0,Math.PI/2);R(.54,0,.5,Math.PI/2);N(.18,0,1.02);T(0,.25,.25,0,.5);T(0,.25,-.25,Math.PI,.5);break;
+  }
+  return g;
+}
+const specimens=[];
+for(let i=0;i<25;i++)specimens.push(['kit-'+String(i+1).padStart(2,'0'),makeKitThing(i)]);
+const grid=5,spacing=2.15;
+for(let i=0;i<specimens.length;i++){
+  const row=Math.floor(i/grid),col=i%grid,[name,obj]=specimens[i];
+  obj.name='workshop:'+name;
+  obj.position.set((col-2)*spacing,0,(row-2)*spacing);
+  workshopField.add(obj);floorWorkshopObject(obj);
+}
 let focusedWorkshopObject=null,workshopFocusMotion=null,workshopObserverReturn=null;
 function floorWorkshopObject(obj){
   obj.updateMatrixWorld(true);
@@ -1753,14 +1821,6 @@ function beginWorkshopFocus(obj,toForeground){
   window.vestibuleDirty=true;
 }
 function dismissWorkshopFocus(){if(focusedWorkshopObject&&!workshopFocusMotion)beginWorkshopFocus(focusedWorkshopObject,false)}
-for(let i=0;i<specimens.length;i++){
-  const [name,obj]=specimens[i];
-  obj.name='workshop:'+name;
-  obj.position.x=specimenX[i];
-  workshopField.add(obj);
-  floorWorkshopObject(obj);
-}
-
 function resetWorkshopGlass(){}
 function updateWorkshop(now){
   if(workshopFocusMotion){

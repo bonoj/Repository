@@ -1332,6 +1332,10 @@ function setContentWorkshopHidden(hidden){
     target.set(0,.35,0);radius=11.8;theta=.16;phi=1.02;applyCamera();
     setLabActions(null);
   }else{
+    if(focusedWorkshopObject){
+      focusedWorkshopObject.position.copy(workshopObserverReturn?.position||focusedWorkshopObject.position);
+      focusedWorkshopObject=null;workshopFocusMotion=null;workshopObserverReturn=null;
+    }
     const now=performance.now(),pause=Math.max(0,now-contentFrozenAt);
     // Shift the donor systems' wall-clock anchors so hidden time never becomes a
     // giant simulation step on return.
@@ -1692,7 +1696,7 @@ const specimens=[
   ['tentacle',makeTentacle()]
 ];
 const specimenX=[-4,-2,0,2,4];
-let focusedWorkshopObject=null;
+let focusedWorkshopObject=null,workshopFocusMotion=null,workshopObserverReturn=null;
 function floorWorkshopObject(obj){
   obj.updateMatrixWorld(true);
   const box=new THREE.Box3().setFromObject(obj);
@@ -1701,17 +1705,32 @@ function floorWorkshopObject(obj){
   const check=new THREE.Box3().setFromObject(obj);
   if(check.min.y<GROUND_Y-1e-6)throw Error('Workshop floor invariant failed: '+obj.name);
 }
-function focusWorkshopObject(obj){
-  focusedWorkshopObject=obj;
-  const box=new THREE.Box3().setFromObject(obj);
-  const center=box.getCenter(new THREE.Vector3()),size=box.getSize(new THREE.Vector3());
-  target.copy(center);
-  const fov=THREE.MathUtils.degToRad(camera.fov);
-  const needV=(Math.max(size.y,size.z)*.72)/Math.tan(fov*.5);
-  const needH=(size.x*.72)/(Math.tan(fov*.5)*camera.aspect);
-  radius=Math.max(2.2,needV,needH);
-  theta=.16;phi=1.08;applyCamera();
+function workshopPresentationPosition(obj){
+  const center=new THREE.Box3().setFromObject(obj).getCenter(new THREE.Vector3());
+  const forward=new THREE.Vector3();camera.getWorldDirection(forward);
+  const up=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1).normalize();
+  return camera.position.clone().addScaledVector(forward,8.5).addScaledVector(up,.35).sub(center);
 }
+function beginWorkshopFocus(obj,toForeground){
+  if(workshopFocusMotion)return;
+  if(toForeground){
+    workshopObserverReturn={cameraPosition:camera.position.clone(),target:target.clone(),radius,theta,phi,position:obj.position.clone()};
+    focusedWorkshopObject=obj;
+  }
+  const saved=workshopObserverReturn;
+  const from=obj.position.clone();
+  const delta=toForeground?workshopPresentationPosition(obj):saved.position.clone().sub(obj.position);
+  const to=toForeground?obj.position.clone().add(delta):saved.position.clone();
+  workshopFocusMotion={
+    obj,from,to,toForeground,fromTarget:target.clone(),
+    toTarget:toForeground?new THREE.Box3().setFromObject(obj).getCenter(new THREE.Vector3()).add(delta):saved.target.clone(),
+    fromCameraPosition:camera.position.clone(),
+    toCameraPosition:toForeground?camera.position.clone():saved.cameraPosition.clone(),
+    started:performance.now(),duration:THREE.MathUtils.clamp(390+from.distanceTo(to)*22,430,610)
+  };
+  window.vestibuleDirty=true;
+}
+function dismissWorkshopFocus(){if(focusedWorkshopObject&&!workshopFocusMotion)beginWorkshopFocus(focusedWorkshopObject,false)}
 for(let i=0;i<specimens.length;i++){
   const [name,obj]=specimens[i];
   obj.name='workshop:'+name;
@@ -1722,6 +1741,26 @@ for(let i=0;i<specimens.length;i++){
 
 function resetWorkshopGlass(){}
 function updateWorkshop(now){
+  if(workshopFocusMotion){
+    const m=workshopFocusMotion,raw=Math.min(1,(now-m.started)/m.duration),t=easeQuiet(raw);
+    m.obj.position.lerpVectors(m.from,m.to,t);
+    camera.position.lerpVectors(m.fromCameraPosition,m.toCameraPosition,t);
+    target.lerpVectors(m.fromTarget,m.toTarget,t);camera.lookAt(target);
+    if(raw>=1){
+      m.obj.position.copy(m.to);
+      if(!m.toForeground){
+        camera.position.copy(workshopObserverReturn.cameraPosition);
+        target.copy(workshopObserverReturn.target);
+        radius=workshopObserverReturn.radius;theta=workshopObserverReturn.theta;phi=workshopObserverReturn.phi;
+        camera.lookAt(target);focusedWorkshopObject=null;workshopObserverReturn=null;
+      }else{
+        target.copy(m.toTarget);
+        const off=camera.position.clone().sub(target);radius=off.length();
+        phi=Math.acos(THREE.MathUtils.clamp(off.y/radius,-1,1));theta=Math.atan2(off.x,off.z);
+      }
+      workshopFocusMotion=null;
+    }
+  }
   for(let i=0;i<limbs.length;i++){
     const rotor=limbs[i].children.find(x=>x.geometry&&x.geometry.type==='BoxGeometry');
     if(rotor){} // organism stays inspectable; motion is not yet the question
@@ -1734,12 +1773,14 @@ function workshopTap(x,y){
   pointerNDC.set(((x-r.left)/r.width)*2-1,-((y-r.top)/r.height)*2+1);
   raycaster.setFromCamera(pointerNDC,camera);
   const hits=raycaster.intersectObjects(specimens.map(([,o])=>o),true);
-  if(!hits.length)return false;
-  let obj=hits[0].object;
-  while(obj.parent&&obj.parent!==workshopField)obj=obj.parent;
-  if(obj.parent!==workshopField)return false;
-  focusWorkshopObject(obj);
-  return true;
+  let obj=hits[0]?.object||null;
+  while(obj&&obj.parent&&obj.parent!==workshopField)obj=obj.parent;
+  if(focusedWorkshopObject){
+    if(obj===focusedWorkshopObject)return true;
+    dismissWorkshopFocus();return true;
+  }
+  if(obj?.parent===workshopField){beginWorkshopFocus(obj,true);return true}
+  return false;
 }
 
 const raycaster=new THREE.Raycaster();

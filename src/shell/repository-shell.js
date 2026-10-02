@@ -5,7 +5,8 @@
       {id:"spin",text:"🪄",label:"Spin presences",onClick:spinPresences}
     ],
     resident:[
-      {id:"workshop",text:"🛠",label:"Lift Betwixt content",onClick:toggleBetwixtContent},
+      {id:"workshop",text:"🛠",label:"Tinker Betwixt content",onClick:tinkerBetwixtContent},
+      {id:"lift",text:"⬆️",label:"Lift Betwixt content",onClick:liftBetwixtContent},
       {id:"refresh",text:"🔄",label:"Reload",onClick:()=>location.reload()}
     ]
   };
@@ -75,12 +76,25 @@
     registered.delete(id);
   }
 
-  function toggleBetwixtContent(button){
+  function tinkerBetwixtContent(button){
+    const world=globalThis.vestibule;
+    if(!world?.toggleContentTinkered)return;
+    const tinkered=world.toggleContentTinkered();
+    button?.classList.toggle("active",tinkered);
+    button?.setAttribute("aria-pressed",tinkered?"true":"false");
+    const lift=registered.get("lift");
+    lift?.classList.remove("active");lift?.setAttribute("aria-pressed","false");
+  }
+
+  function liftBetwixtContent(button){
     const world=globalThis.vestibule;
     if(!world?.toggleContentRaised)return;
+    if(world.contentTinkered)world.setContentTinkered(false);
     const raised=world.toggleContentRaised();
     button?.classList.toggle("active",raised);
     button?.setAttribute("aria-pressed",raised?"true":"false");
+    const workshop=registered.get("workshop");
+    workshop?.classList.remove("active");workshop?.setAttribute("aria-pressed","false");
   }
 
   function spinPresences(){

@@ -1657,17 +1657,12 @@ const octonutMaterial=new THREE.MeshStandardMaterial({
   metalness:.84
 });
 function addOctonut(parent,y){
-  const outer=new THREE.CylinderGeometry(.12,.12,.16,8,1,false);
-  const inner=new THREE.CylinderGeometry(.0525,.0525,.18,8,1,false);
-  // Bottom is canonical. Top is the same complete fitting rotated through 180 degrees.
-  const fitting=new THREE.Group();
-  const nut=new THREE.Mesh(outer,octonutMaterial);
-  fitting.add(nut);
-  const bore=new THREE.Mesh(inner,new THREE.MeshStandardMaterial({color:0x3b2a18,roughness:.35,metalness:.45}));
-  bore.position.y=-.081;
-  fitting.add(bore);
+  // One fitting, twice: identical geometry and identical intersection depth.
+  const fitting=new THREE.Mesh(
+    new THREE.CylinderGeometry(.12,.12,.16,8,1,false),
+    octonutMaterial
+  );
   fitting.position.y=y;
-  if(y>0) fitting.rotation.z=Math.PI;
   parent.add(fitting);
 }
 addOctonut(baubleB,.92);

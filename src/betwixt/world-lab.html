@@ -1710,15 +1710,16 @@ function makeTentacle(){
 }
 
 // Controls: retained intact as source evidence from the grammar-kit pass.
+// The two field survivors are candidates, not canon; preserve their generated geometry verbatim.
 const controls=[
   ['control-geosphere',makeGeosphere()],
   ['control-octonut',makeOctonut(.42)],
   ['control-ring',makeRing()],
   ['control-gimbal-cage',makeGimbalCage()],
-  ['control-tentacle',makeTentacle()],
-  ['control-six-nut-sphere',makeSixNutSphere()]
+  ['control-tentacle',makeTentacle()]
 ];
-for(const [,obj] of controls)obj.visible=false;
+const retainedEvidence=[['six-nut-sphere',makeSixNutSphere()]];
+for(const [,obj] of [...controls,...retainedEvidence])obj.visible=false;
 
 function kitRing(r=.45,t=.035){
   const m=new THREE.Mesh(new THREE.TorusGeometry(r,t,8,24),brassMaterial);return m;
@@ -1777,6 +1778,12 @@ function makeKitThing(k){
   }
   return g;
 }
+// Promote only the two circled field survivors into the hidden control evidence.
+// makeKitThing(8) = kit-09; makeKitThing(12) = kit-13.
+controls.push(['control-candidate-kit-09',makeKitThing(8)]);
+controls.push(['control-candidate-kit-13',makeKitThing(12)]);
+for(const [,obj] of controls.slice(-2))obj.visible=false;
+
 const specimens=[];
 for(let i=0;i<25;i++)specimens.push(['kit-'+String(i+1).padStart(2,'0'),makeKitThing(i)]);
 const grid=5,spacing=2.15;

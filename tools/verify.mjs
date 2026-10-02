@@ -1,9 +1,15 @@
 import {access,readFile} from "node:fs/promises";
 
 await access("dist/index.html");
-await access("dist/main.js");
 const html=await readFile("dist/index.html","utf8");
-const js=await readFile("dist/main.js","utf8");
-if(!html.includes("./main.js"))throw new Error("shell does not load executable");
-if(!js.includes("__repository"))throw new Error("bundle missing Repository evidence handle");
-console.log("Repository bones verified.");
+for(const evidence of [
+  "WORLD LAB",
+  "ENTER LAB",
+  "github.com",
+  "pageshow",
+  "pagehide"
+]){
+  if(!html.includes(evidence))throw new Error(`World Lab donor evidence missing: ${evidence}`);
+}
+if(html.length<80000)throw new Error("World Lab donor unexpectedly truncated");
+console.log("Intact World Lab executable verified.");

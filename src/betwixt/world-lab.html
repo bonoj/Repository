@@ -1338,6 +1338,7 @@ function setContentWorkshopHidden(hidden){
     contentFrozenAt=performance.now();
     betwixtContent.visible=false;
     workshopField.visible=true;
+    setWorkshopTerrainVisible(true);
     resetWorkshopGlass();
     target.set(0,.35,0);radius=11.8;theta=.16;phi=1.02;applyCamera();
     setLabActions(null);
@@ -1355,6 +1356,7 @@ function setContentWorkshopHidden(hidden){
     for(const st of descentStates.values())st.nextAt+=pause;
     betwixtContent.visible=true;
     workshopField.visible=false;
+    setWorkshopTerrainVisible(false);
 
     contentFrozenAt=0;
     home();
@@ -1385,6 +1387,38 @@ const WorkshopGravity={
   }
 };
 globalThis.WorkshopGravity=WorkshopGravity;
+
+// Workshop terrain is the intact transported Crucible implementation. It is one
+// useful terrain, not Workshop's definition of terrain.
+let workshopTerrain=null;
+function ensureWorkshopTerrain(){
+  if(workshopTerrain)return workshopTerrain;
+  if(typeof createTerrainSystem!=='function')return null;
+  workshopTerrain=createTerrainSystem({THREE,scene});
+  workshopTerrain.mesh.name='workshop:crucible-terrain';
+  workshopTerrain.apparatus.name='workshop:crucible-terrain-apparatus';
+  workshopTerrain.mesh.visible=contentWorkshopHidden;
+  workshopTerrain.apparatus.visible=contentWorkshopHidden;
+  return workshopTerrain;
+}
+function setWorkshopTerrainVisible(visible){
+  const terrain=visible?ensureWorkshopTerrain():workshopTerrain;
+  if(!terrain)return false;
+  terrain.mesh.visible=!!visible;
+  terrain.apparatus.visible=!!visible;
+  window.vestibuleDirty=true;
+  return !!visible;
+}
+globalThis.WorkshopTerrain={
+  ensure:ensureWorkshopTerrain,
+  show:()=>setWorkshopTerrainVisible(true),
+  hide:()=>setWorkshopTerrainVisible(false),
+  reset:()=>{const t=ensureWorkshopTerrain();t?.loadLandCandidate();return t?.inspect()},
+  raise:(x,z,options={})=>ensureWorkshopTerrain()?.raise({x,z},options),
+  carve:(x,z,options={})=>ensureWorkshopTerrain()?.excavate({x,z},options),
+  groundHeight:(x,z)=>ensureWorkshopTerrain()?.groundHeight(x,z),
+  inspect:()=>ensureWorkshopTerrain()?.inspect()
+};
 
 // First Workshop pressure: one semantic request becomes a visible 7x7 possibility field.
 // This is deliberately local evidence, not a generalized fabrication protocol.

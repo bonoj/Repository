@@ -1574,7 +1574,9 @@ const workshopCrucibleOrbRing=new THREE.Mesh(
 workshopCrucibleOrbRing.rotation.x=Math.PI/2;
 workshopCrucibleOrbRing.position.y=-.46;
 workshopCrucibleOrb.add(workshopCrucibleOrbRing);
-workshopCrucibleOrb.position.set(-4.6,GROUND_Y+.48,2.8);
+// Share Jupurn's world-space XZ. The orb remains on the Workshop floor.
+const workshopJupurnXZ=C.Transform.get(jupurnEntity).position;
+workshopCrucibleOrb.position.set(workshopJupurnXZ.x,GROUND_Y+.48,workshopJupurnXZ.z);
 workshopCrucibleOrb.visible=false;
 scene.add(workshopCrucibleOrb);
 function tapWorkshopCrucibleOrb(){

@@ -10,6 +10,30 @@
   const build=globalThis.__REPOSITORY_BUILD__||"local";
   const sha=globalThis.__REPOSITORY_SHA__||null;
 
+  // A successful Pages deployment is not the same thing as a visitor receiving
+  // the current document: browsers/CDNs may still reuse an older index.html.
+  // Compare this executable's embedded provenance with the independently
+  // published marker. If they disagree, force one SHA-keyed navigation so the
+  // stale document cannot remain silently authoritative.
+  async function reconcilePublishedBuild(){
+    if(!sha||sha==="local"||location.protocol==="file:")return;
+    try{
+      const markerUrl=new URL(".repository-sha",location.href);
+      markerUrl.searchParams.set("probe",Date.now().toString(36));
+      const response=await fetch(markerUrl,{cache:"no-store"});
+      if(!response.ok)return;
+      const published=(await response.text()).trim();
+      if(!/^[0-9a-f]{40}$/i.test(published)||published===sha)return;
+      const current=new URL(location.href);
+      if(current.searchParams.get("build")===published.slice(0,8))return;
+      current.searchParams.set("build",published.slice(0,8));
+      location.replace(current);
+    }catch(error){
+      console.warn("Repository provenance probe failed",error);
+    }
+  }
+  reconcilePublishedBuild();
+
   const style=document.createElement("style");
   style.textContent=`
     #repository-status{position:fixed;z-index:90;left:max(.7rem,env(safe-area-inset-left));right:max(.7rem,env(safe-area-inset-right));top:max(.7rem,env(safe-area-inset-top));width:max-content;max-width:calc(100% - max(.7rem,env(safe-area-inset-left)) - max(.7rem,env(safe-area-inset-right)));box-sizing:border-box;padding:.45rem .6rem;border:1px solid #77736b40;border-radius:.45rem;background:#e7e2d8df;color:#4d4d49;font:600 11px/1.25 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;letter-spacing:.04em;pointer-events:none;box-shadow:0 3px 12px #5a514314;backdrop-filter:blur(4px)}

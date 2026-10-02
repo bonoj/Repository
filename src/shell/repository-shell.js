@@ -3,7 +3,7 @@
   const spells={
     temporary:[],
     resident:[
-      {id:"refresh",text:"🔄",label:"Refresh",onClick:()=>location.reload()},
+      {id:"refresh",text:"🔄",label:"Refresh",onClick:freshArrival},
       {id:"workshop",text:"🛠",label:"Workshop",onClick:toggleWorkshop}
     ]
   };
@@ -146,6 +146,14 @@
     button?.setAttribute("aria-pressed",tinkered?"true":"false");
     const lift=registered.get("lift");
     if(lift){lift.classList.remove("active");lift.setAttribute("aria-pressed","false");lift.textContent="⬆️"}
+  }
+
+  function freshArrival(){
+    try{sessionStorage.removeItem("worldLab.worldState.v1")}catch(_){}
+    const url=new URL(location.href);
+    for(const key of [...url.searchParams.keys()])if(key!=="build")url.searchParams.delete(key);
+    url.hash="";
+    location.replace(url);
   }
 
   function toggleWorkshop(button){

@@ -1659,14 +1659,16 @@ const octonutMaterial=new THREE.MeshStandardMaterial({
 function addOctonut(parent,y){
   const outer=new THREE.CylinderGeometry(.12,.12,.16,8,1,false);
   const inner=new THREE.CylinderGeometry(.0525,.0525,.18,8,1,false);
-  // Eight-sided nut silhouette plus a dark inset bore; centered on the glass vertex
-  // so half its thickness is inside the dome and half outside.
+  // Bottom is canonical. Top is the same complete fitting rotated through 180 degrees.
+  const fitting=new THREE.Group();
   const nut=new THREE.Mesh(outer,octonutMaterial);
-  nut.position.y=y;
-  parent.add(nut);
+  fitting.add(nut);
   const bore=new THREE.Mesh(inner,new THREE.MeshStandardMaterial({color:0x3b2a18,roughness:.35,metalness:.45}));
-  bore.position.y=y+(y>0?.081:-.081);
-  parent.add(bore);
+  bore.position.y=-.081;
+  fitting.add(bore);
+  fitting.position.y=y;
+  if(y>0) fitting.rotation.z=Math.PI;
+  parent.add(fitting);
 }
 addOctonut(baubleB,.92);
 addOctonut(baubleB,-.92);

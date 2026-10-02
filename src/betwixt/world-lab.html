@@ -1512,7 +1512,7 @@ function ensureWorkshopMeteors(){
 }
 function cycleWorkshopMeteor(button){
   if(workshopCrucibleTool==='meteor')workshopMeteorBucket=(workshopMeteorBucket+1)%4;
-  chooseWorkshopCrucibleTool('meteor',button);button.style.setProperty('--meteor-scale',String(1+workshopMeteorBucket*.08));button.style.transform='scale('+String(1+workshopMeteorBucket*.08)+')';button.setAttribute('aria-label','Call meteor magnitude '+(workshopMeteorBucket+1)+' at tapped point');
+  chooseWorkshopCrucibleTool('meteor',button);button.style.setProperty('--meteor-scale',String(1+workshopMeteorBucket*.08));button.style.fontSize=String(1.25*(1+workshopMeteorBucket*.08))+'rem';button.setAttribute('aria-label','Call meteor magnitude '+(workshopMeteorBucket+1)+' at tapped point');
 }
 
 // Exact Crucible controls, presented in Repository's left temporary spell tray.

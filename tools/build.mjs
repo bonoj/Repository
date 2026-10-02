@@ -20,7 +20,11 @@ const mirrorInline=mirror
   .replace('import {createWorld} from "../core/ecs.js";',"")
   .replace("export function attachBetwixtMirror","function attachBetwixtMirror");
 const shallowWaterInline=shallowWater.replace("export function createShallowWaterSystem","function createShallowWaterSystem");
-const terrainInline=terrainSystem.replace("export function createTerrainSystem","function createTerrainSystem");
+const terrainInline=terrainSystem
+  .replace("export function createTerrainSystem","function createTerrainSystem")
+  // Workshop supplies an ownership group; the transported terrain remains otherwise intact.
+  .replace("scene.add(mesh);","(globalThis.__workshopTerrainOwner||scene).add(mesh);")
+  .replace("scene.add(apparatus);","(globalThis.__workshopTerrainOwner||scene).add(apparatus);");
 // Water transport boundary: preserve the earned organism as source evidence even
 // while Betwixt only executes the shallow-water module directly.
 for(const [name,source,evidence] of [

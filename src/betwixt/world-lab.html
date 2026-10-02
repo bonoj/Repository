@@ -1537,6 +1537,85 @@ for(const side of [-1,1]){
   cylinderBetween([.72,-.82,side*.45],[1.18,-1.18,side*.58],.06,brass);
 }
 
+
+/* Seventh Workshop pressure: SixCities as a 5x5 civilization field.
+   Twenty-five different relationship propositions; scale intentionally loose. */
+const civField=new THREE.Group();civField.name='workshop:six-cities-5x5';workshopField.add(civField);
+const civGreen=new THREE.MeshStandardMaterial({color:0x55734b,roughness:.78,metalness:.04});
+const civWater=new THREE.MeshStandardMaterial({color:0x5c9da4,transparent:true,opacity:.34,roughness:.20,metalness:.05,depthWrite:false});
+const civStone=new THREE.MeshStandardMaterial({color:0x4a4640,roughness:.88,metalness:.04});
+const civNames=['Squid','Floater','Manta','Crawler','Tender','Bauble','Garden','Reservoir','Nursery','Refuge','Unzip','Link','Launcher','Thumper','Exchange','Ringstream','Confluence','Spillway','Lift','Dock','City seed','Bridge','Deep station','Sky station','Commons'];
+function civMesh(parent,g,m,p=[0,0,0],r=[0,0,0],s=[1,1,1]){return mesh(g,m,p,r,s,parent)}
+function civTube(parent,a,b,r=.045,m=brass){return cylinderBetween(a,b,r,m,parent)}
+function civRing(parent,p=[0,0,0],rad=.48,r=[Math.PI/2,0,0],m=brass){return civMesh(parent,new THREE.TorusGeometry(rad,.055,6,18),m,p,r)}
+function civBall(parent,p=[0,0,0],rad=.32,m=glassFace,cage=false){
+ const x=civMesh(parent,new THREE.SphereGeometry(rad,12,8),m,p);
+ if(cage){civRing(parent,p,rad*1.02,[0,0,0]);civRing(parent,p,rad*1.02,[0,Math.PI/2,0]);}
+ return x;
+}
+function civBase(parent,w=.9,d=.9){return civMesh(parent,new THREE.CylinderGeometry(w*.52,w*.62,.10,8),civStone,[0,.05,0],[0,0,0],[1,1,d/w]);}
+function civStream(parent,a,b,count=6,m=warm){
+ const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b);
+ civTube(parent,a,b,.025,brassDark);
+ for(let i=1;i<=count;i++){const p=A.clone().lerp(B,i/(count+1));civMesh(parent,new THREE.OctahedronGeometry(.075,0),m,p.toArray());}
+}
+function buildCivilizationPiece(i){
+ const g=new THREE.Group();g.name='civilization:'+civNames[i];g.userData.workshop={index:i,name:civNames[i]};
+ const k=i;
+ if(k===0){ // Squid: pressure body, opposed swivel jets, four articulated tendrils
+   civBall(g,[0,.62,0],.38,glassFace,true);for(const s of [-1,1]){civTube(g,[s*.34,.62,0],[s*.70,.62,0],.07);civMesh(g,new THREE.CylinderGeometry(.15,.20,.28,10),brassDark,[s*.82,.62,0],[0,0,Math.PI/2]);}
+   for(const a of [-.65,-.22,.22,.65]){civTube(g,[a*.35,.36,0],[a*.70,.05,.18],.055);civTube(g,[a*.70,.05,.18],[a*.88,-.38,.34],.045,brassDark);}
+ } else if(k===1){ // Floater
+   civBall(g,[0,.78,0],.46,glassFace,true);civRing(g,[0,.78,0],.62);for(const s of [-1,1]){civTube(g,[s*.28,.48,0],[s*.62,.10,0],.055);civMesh(g,new THREE.CylinderGeometry(.11,.18,.24,8),brassDark,[s*.68,-.02,0]);}civTube(g,[0,.35,0],[0,-.35,0],.045);civRing(g,[0,-.42,0],.22,[Math.PI/2,0,0]);
+ } else if(k===2){ // Manta
+   civBall(g,[0,.45,0],.25,glassFace,true);civMesh(g,new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-.95,.38,0),new THREE.Vector3(0,.55,.38),new THREE.Vector3(.95,.38,0),new THREE.Vector3(0,.28,-.32)]),brass);civTube(g,[-.9,.38,0],[.9,.38,0],.04);
+ } else if(k===3){ // Crawler
+   civBase(g,.65,.65);civBall(g,[0,.55,0],.28,glassFace,true);for(const s of [-1,1])for(const z of [-1,1]){civTube(g,[s*.22,.38,z*.12],[s*.58,.05,z*.42],.05);civMesh(g,new THREE.SphereGeometry(.09,7,5),rubber,[s*.62,0,z*.46]);}
+ } else if(k===4){ // Tender
+   civBall(g,[0,.58,0],.28,glassFace,true);for(const s of [-1,1]){civTube(g,[s*.22,.45,0],[s*.55,.20,.05],.05);civTube(g,[s*.55,.20,.05],[s*.82,.40,.18],.04);civTube(g,[s*.55,.20,.05],[s*.82,.05,-.10],.04);}
+ } else if(k===5){civBase(g);civBall(g,[0,.55,0],.50,glassFace,true);
+ } else if(k===6){civBase(g,1,1);civBall(g,[0,.62,0],.52,glassFace,true);for(let n=0;n<7;n++){const a=n*2.4;civMesh(g,new THREE.ConeGeometry(.07,.32,6),civGreen,[Math.cos(a)*.28,.30,Math.sin(a)*.28]);}
+ } else if(k===7){civBase(g);civBall(g,[0,.52,0],.50,civWater,true);civTube(g,[-.75,.42,0],[-.48,.42,0],.07);civTube(g,[.48,.42,0],[.75,.42,0],.07);
+ } else if(k===8){civBase(g);civBall(g,[0,.62,0],.46,glassFace,true);for(let n=0;n<6;n++){const a=n*Math.PI/3;civBall(g,[Math.cos(a)*.27,.55,Math.sin(a)*.27],.09,civGreen);}
+ } else if(k===9){civBase(g);civMesh(g,new THREE.SphereGeometry(.55,14,8,0,Math.PI*2,0,Math.PI/2),glassFace,[0,.12,0]);civRing(g,[0,.12,0],.56,[0,0,0]);civMesh(g,new THREE.BoxGeometry(.55,.18,.35),brassDark,[0,.22,0]);
+ } else if(k===10){ // Unzip
+   civBase(g);civRing(g,[0,.48,0],.35,[0,0,0]);civStream(g,[-.85,.48,0],[-.35,.48,0],4);civStream(g,[.35,.55,0],[.85,.72,.20],4,warm);civStream(g,[.35,.40,0],[.85,.22,-.20],4,civGreen);
+ } else if(k===11){ // Link
+   civBase(g,.65,.65);for(const x of [-.65,0,.65])civRing(g,[x,.48,0],.24,[0,Math.PI/2,0]);civStream(g,[-.85,.48,0],[.85,.48,0],7);
+ } else if(k===12){ // Launcher
+   civBase(g);civTube(g,[-.42,.20,0],[.48,.92,0],.10);civRing(g,[.48,.92,0],.22,[0,Math.PI/2,-.65]);civStream(g,[.55,1.0,0],[1.02,1.38,0],3);
+ } else if(k===13){ // Thumper
+   civBase(g);civMesh(g,new THREE.CylinderGeometry(.22,.34,.72,8),brassDark,[0,.52,0]);civMesh(g,new THREE.CylinderGeometry(.34,.34,.12,8),brass,[0,.15,0]);for(let n=0;n<6;n++){const a=n*Math.PI/3;civMesh(g,new THREE.OctahedronGeometry(.10,0),civStone,[Math.cos(a)*.55,.08,Math.sin(a)*.55]);}
+ } else if(k===14){ // Exchange
+   civBase(g);civRing(g,[0,.48,0],.34,[0,0,0]);civStream(g,[-.85,.30,-.18],[-.30,.43,-.08],3,civGreen);civStream(g,[.30,.53,.08],[.85,.72,.18],3,warm);civBall(g,[0,.48,0],.18,glassFace,true);
+ } else if(k===15){for(const x of [-.65,0,.65])civRing(g,[x,.50,0],.26,[0,Math.PI/2,0]);civStream(g,[-.95,.50,0],[.95,.50,0],9);
+ } else if(k===16){ // Confluence
+   civRing(g,[0,.46,0],.30,[0,0,0]);civStream(g,[-.9,.72,.35],[-.20,.50,.08],4,civGreen);civStream(g,[-.9,.18,-.35],[-.20,.42,-.08],4,warm);civStream(g,[.20,.46,0],[.95,.46,0],5);
+ } else if(k===17){ // Spillway
+   civBase(g);civBall(g,[-.28,.68,0],.32,civWater,true);civTube(g,[-.05,.52,0],[.55,.20,0],.12,brassDark);for(let n=0;n<5;n++)civBall(g,[.40+n*.12,.10-n*.025,0],.055,civWater);
+ } else if(k===18){ // Lift
+   civBase(g,.65,.65);civTube(g,[0,.12,0],[0,1.20,0],.09);for(const y of [.30,.65,1.0])civRing(g,[0,y,0],.28,[Math.PI/2,0,0]);civBall(g,[0,.72,0],.13,glassFace,true);
+ } else if(k===19){ // Dock
+   civBase(g,1.1,.7);civRing(g,[0,.48,0],.40,[0,0,0]);civTube(g,[0,.08,0],[0,.48,0],.06);civBall(g,[.52,.48,0],.24,glassFace,true);civTube(g,[.30,.48,0],[.18,.48,0],.05);
+ } else if(k===20){ // City seed
+   civBase(g,1.1,1.1);civBall(g,[0,.55,0],.42,glassFace,true);for(let n=0;n<6;n++){const a=n*Math.PI/3;civMesh(g,new THREE.CylinderGeometry(.07,.10,.45,6),brass,[Math.cos(a)*.42,.34,Math.sin(a)*.42]);}
+ } else if(k===21){ // Bridge
+   for(const x of [-.75,.75])civBase(g,.45,.45).position.x=x;civTube(g,[-.75,.42,0],[.75,.42,0],.07);for(const x of [-.45,0,.45])civRing(g,[x,.48,0],.18,[0,Math.PI/2,0]);
+ } else if(k===22){ // Deep station
+   civBase(g,1,1);civBall(g,[0,.35,0],.48,glassFace,true);civMesh(g,new THREE.CylinderGeometry(.12,.18,.60,8),brassDark,[0,-.05,0]);for(const x of [-.62,.62])civBall(g,[x,.25,0],.18,glassFace,true);
+ } else if(k===23){ // Sky station
+   civBall(g,[0,.82,0],.44,glassFace,true);civRing(g,[0,.82,0],.62,[Math.PI/2,0,0]);for(const a of [0,Math.PI/2,Math.PI,Math.PI*1.5])civTube(g,[Math.cos(a)*.42,.82,Math.sin(a)*.42],[Math.cos(a)*.78,.82,Math.sin(a)*.78],.045);
+ } else { // Commons
+   civBase(g,1.15,1.15);civRing(g,[0,.50,0],.46,[Math.PI/2,0,0]);for(let n=0;n<4;n++){const a=n*Math.PI/2;civStream(g,[Math.cos(a)*.95,.30,Math.sin(a)*.95],[Math.cos(a)*.30,.44,Math.sin(a)*.30],3,n%2?civGreen:warm);}civBall(g,[0,.50,0],.20,glassFace,true);
+ }
+ return g;
+}
+for(let i=0;i<25;i++){
+ const p=buildCivilizationPiece(i),col=i%5,row=Math.floor(i/5);
+ p.position.set((col-2)*2.25,0,(row-2)*2.25);
+ civField.add(p);
+}
+
 function resetWorkshopGlass(){}
 function updateWorkshop(now){
   for(let i=0;i<limbs.length;i++){

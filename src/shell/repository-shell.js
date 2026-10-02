@@ -4,7 +4,8 @@
     temporary:[
       {id:"spin",text:"🪄",label:"Spin presences",onClick:spinPresences},
       {id:"marble",text:"⚪️",label:"Compact Betwixt content",onClick:marbleBetwixtContent},
-      {id:"crucible",text:"⚗️",label:"Summon intact Crucible",onClick:toggleCrucible}
+      {id:"crucible",text:"⚗️",label:"Summon intact Crucible",onClick:toggleCrucible},
+      {id:"crayon",text:"🖍",label:"Crayon",onClick:toggleCrayon,onDoubleClick:clearCrayon,onLongPress:exportCrayon,onContextMenu:exportCrayon}
     ],
     resident:[
       {id:"workshop",text:"🛠",label:"Clear the Workshop bench",onClick:toggleWorkshop},
@@ -62,7 +63,7 @@
   requestAnimationFrame(sample);
 
   const registered=new Map();
-  function registerTool({id,text,label,onClick,active=false,size,lane="temporary"}){
+  function registerTool({id,text,label,onClick,onDoubleClick,onLongPress,onContextMenu,active=false,size,lane="temporary"}){
     if(!id||registered.has(id))throw new Error(`Repository tool already registered: ${id}`);
     const button=document.createElement("button");
     button.type="button";
@@ -70,7 +71,23 @@
     button.setAttribute("aria-label",label||id);
     button.classList.toggle("active",!!active);
     if(size)button.classList.add(size);
-    button.addEventListener("click",()=>onClick?.(button));
+    if(onDoubleClick||onLongPress||onContextMenu){
+      let pressTimer=null,lastTap=0,longFired=false;
+      button.addEventListener("pointerdown",e=>{
+        e.stopPropagation();longFired=false;
+        if(onLongPress)pressTimer=setTimeout(()=>{pressTimer=null;longFired=true;onLongPress(button)},650);
+      });
+      button.addEventListener("pointerup",e=>{
+        e.stopPropagation();if(pressTimer){clearTimeout(pressTimer);pressTimer=null}
+        if(longFired)return;
+        const now=performance.now();
+        if(onDoubleClick&&now-lastTap<320){lastTap=0;onDoubleClick(button);return}
+        lastTap=now;
+        setTimeout(()=>{if(lastTap===now){onClick?.(button);lastTap=0}},onDoubleClick?330:0);
+      });
+      button.addEventListener("pointercancel",()=>{if(pressTimer)clearTimeout(pressTimer);pressTimer=null});
+      button.addEventListener("contextmenu",e=>{if(onContextMenu){e.preventDefault();e.stopPropagation();onContextMenu(button)}});
+    }else button.addEventListener("click",()=>onClick?.(button));
     registered.set(id,button);
     (lane==="resident"?residentTray:temporaryTray).append(button);
     return button;
@@ -136,6 +153,14 @@
     const marble=registered.get("marble");
     marble?.classList.remove("active");marble?.setAttribute("aria-pressed","false");
   }
+
+  function toggleCrayon(button){
+    const world=globalThis.vestibule;if(!world?.toggleCrayon)return;
+    const active=world.toggleCrayon();
+    button?.classList.toggle("active",active);button?.setAttribute("aria-pressed",active?"true":"false");
+  }
+  function clearCrayon(){globalThis.vestibule?.clearCrayon?.()}
+  function exportCrayon(){globalThis.vestibule?.exportCrayon?.()}
 
   function spinPresences(){
     const world=globalThis.vestibule;

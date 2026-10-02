@@ -1923,11 +1923,11 @@ function shatterVessel(v){
     const verts=[];for(let q=0;q<3;q++)verts.push(new THREE.Vector3().fromBufferAttribute(a,tri*3+q));
     const center=verts[0].clone().add(verts[1]).add(verts[2]).multiplyScalar(1/3);
     const g=new THREE.BufferGeometry().setFromPoints(verts.map(p=>p.clone().sub(center)));g.setIndex([0,1,2]);g.computeVertexNormals();
-    const mesh=new THREE.Mesh(g,v.shell.material.clone());mesh.position.copy(pos).add(center);scene.add(mesh);
+    const mesh=new THREE.Mesh(g,v.shell.material.clone());mesh.position.copy(pos).add(center);fluidGlobes.add(mesh);
     const outward=center.clone().normalize(),vel=outward.multiplyScalar(1.3+Math.random()*1.2).add(new THREE.Vector3((Math.random()-.5)*.5,.35+Math.random()*.5,(Math.random()-.5)*.5));
     fluidShards.push({mesh,vel,spin:new THREE.Vector3(Math.random()-.5,Math.random()-.5,Math.random()-.5).multiplyScalar(5),age:0});
   }
-  const carrier=new THREE.Mesh(new THREE.SphereGeometry(.94,16,10),v.fill.material.clone());carrier.position.copy(pos);scene.add(carrier);
+  const carrier=new THREE.Mesh(new THREE.SphereGeometry(.94,16,10),v.fill.material.clone());carrier.position.copy(pos);fluidGlobes.add(carrier);
   fluidFalls.push({mesh:carrier,vessel:v,vy:0,landed:false});
 }
 function fluidGlobeTap(x,y){

@@ -1338,7 +1338,6 @@ function setContentWorkshopHidden(hidden){
     contentFrozenAt=performance.now();
     betwixtContent.visible=false;
     workshopField.visible=true;
-    workstationRoot.visible=true;
     // Workshop entry reveals no latent capability. Terrain and bearings remain
     // possible until an explicit operation manifests them.
     resetWorkshopGlass();
@@ -1358,7 +1357,6 @@ function setContentWorkshopHidden(hidden){
     for(const st of descentStates.values())st.nextAt+=pause;
     betwixtContent.visible=true;
     workshopField.visible=false;
-    workstationRoot.visible=false;
     setWorkshopTerrainVisible(false);
 
     contentFrozenAt=0;
@@ -1390,47 +1388,6 @@ const WorkshopGravity={
   }
 };
 globalThis.WorkshopGravity=WorkshopGravity;
-
-// The workstation is one parent entity in Workshop. Everything that becomes part
-// of the station belongs beneath this root so the whole bench can disappear with
-// one visibility operation instead of leaking apparatus into Betwixt.
-const workstationEntity=ecs.entity();
-const workstationRoot=new THREE.Group();
-workstationRoot.name='workshop:workstation';
-workstationRoot.visible=false;
-scene.add(workstationRoot);
-ecs.add(workstationEntity,C.Transform,{
-  position:new THREE.Vector3(0,0,0),
-  rotation:new THREE.Euler(),
-  scale:new THREE.Vector3(1,1,1)
-});
-ecs.add(workstationEntity,C.RenderObject,{object:workstationRoot,pickables:[]});
-
-const workstationSteel=new THREE.MeshStandardMaterial({color:0x555a59,roughness:.72,metalness:.32});
-const workstationDark=new THREE.MeshStandardMaterial({color:0x202526,roughness:.82,metalness:.18});
-const workstationTop=new THREE.MeshStandardMaterial({color:0x777a74,roughness:.88,metalness:.08});
-function workstationBox(name,size,position,material=workstationSteel){
-  const mesh=new THREE.Mesh(new THREE.BoxGeometry(...size),material);
-  mesh.name=name;mesh.position.set(...position);mesh.castShadow=true;mesh.receiveShadow=true;
-  workstationRoot.add(mesh);return mesh;
-}
-// A deliberately plain physical bench. It earns only enough shape to be a place
-// to put things: top, four legs, and a recessed lower shelf.
-workstationBox('workstation:top',[4.8,.18,2.25],[0,1.48,0],workstationTop);
-for(const x of [-2.12,2.12])for(const z of [-.88,.88])
-  workstationBox('workstation:leg',[.16,1.42,.16],[x,.71,z],workstationSteel);
-workstationBox('workstation:shelf',[4.18,.10,1.72],[0,.42,0],workstationDark);
-
-const Workstation={
-  entity:workstationEntity,
-  root:workstationRoot,
-  show(){workstationRoot.visible=contentWorkshopHidden;window.vestibuleDirty=true;return workstationRoot.visible},
-  hide(){workstationRoot.visible=false;window.vestibuleDirty=true;return false},
-  setVisible(visible){return visible?this.show():this.hide()},
-  put(object){if(!object)return null;workstationRoot.add(object);window.vestibuleDirty=true;return object},
-  inspect:()=>({entity:workstationEntity,visible:workstationRoot.visible,children:workstationRoot.children.map(o=>o.name)})
-};
-globalThis.Workstation=Workstation;
 
 // Workshop terrain is the intact transported Crucible implementation. It is one
 // useful terrain, not Workshop's definition of terrain.

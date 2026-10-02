@@ -2004,6 +2004,17 @@ const localGravitySatellite=new THREE.Mesh(
 );
 localGravitySatellite.name='local-gravity-orb:satellite';localGravitySatellite.position.set(1.65,.34,0);localGravityOrb.add(localGravitySatellite);
 
+// Temporary moon-gravity specimen control. The moon pulls bodies toward itself;
+// at high values its field can overpower the orb and strip material away.
+let localMoonGravity=0;
+const moonGravityHud=document.createElement('div');
+moonGravityHud.style.cssText='position:absolute;left:50%;bottom:72px;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid rgba(200,226,227,.34);border-radius:10px;background:rgba(9,12,13,.72);color:#d8e3e3;font:12px system-ui,sans-serif;backdrop-filter:blur(6px)';
+const moonGravityLabel=document.createElement('span');moonGravityLabel.textContent='MOON 0';
+const moonGravitySlider=document.createElement('input');moonGravitySlider.type='range';moonGravitySlider.min='0';moonGravitySlider.max='100';moonGravitySlider.value='0';moonGravitySlider.step='1';moonGravitySlider.setAttribute('aria-label','Moon gravity');
+moonGravitySlider.style.cssText='width:min(48vw,220px);accent-color:#c8e2e3';
+moonGravitySlider.addEventListener('input',()=>{localMoonGravity=Number(moonGravitySlider.value)/100*18;moonGravityLabel.textContent='MOON '+moonGravitySlider.value;window.vestibuleDirty=true});
+moonGravityHud.append(moonGravityLabel,moonGravitySlider);document.body.appendChild(moonGravityHud);
+
 // Restore Crucible's earned lava -> bearing consequence at the orb boundary.
 // These are deliberately tiny local bodies rather than the planar packed bearing
 // solver: once spawned, their only new law is the orb's radial gravity.
@@ -2041,6 +2052,10 @@ function updateLocalGravityOrb(now){
   for(let i=localGravityBearings.length-1;i>=0;i--){
     const body=localGravityBearings[i],bp=body.mesh.position,radius=Math.max(.2,bp.length());
     body.velocity.addScaledVector(bp,-2.35*dt/(radius*radius*radius));
+    if(localMoonGravity>0){
+      const toMoon=localGravitySatellite.position.clone().sub(bp),moonR=Math.max(.18,toMoon.length());
+      body.velocity.addScaledVector(toMoon,localMoonGravity*dt/(moonR*moonR*moonR));
+    }
     bp.addScaledVector(body.velocity,dt);
     const surface=.89;
     if(bp.length()<surface){

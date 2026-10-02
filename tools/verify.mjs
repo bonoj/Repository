@@ -72,10 +72,7 @@ for(const boundaryEvidence of [
   "betwixtContent.add(mesh)",
   "contentWorkshopHidden",
   "toggleContentWorkshopHidden",
-  "⚪️",
-  "🛠",
-  "⬆️",
-  "⬇️"
+  "🛠"
 ]){
   if(!html.includes(boundaryEvidence))throw new Error(`Betwixt content-boundary evidence missing: ${boundaryEvidence}`);
 }

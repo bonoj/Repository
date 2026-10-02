@@ -94,7 +94,6 @@ let lastPortrait=innerHeight>innerWidth*1.12;
 let selectedEntity=null;
 let presenceMotion=null;
 let dirty=true;
-let fpsFrames=0,fpsStamp=performance.now();
 
 function showFault(message){
   fault.hidden=false;
@@ -314,13 +313,6 @@ function invalidate(){
   requestAnimationFrame(frame);
 }
 function frame(now){
-  fpsFrames++;
-  if(now-fpsStamp>=500){
-    const fps=Math.round(fpsFrames*1000/(now-fpsStamp));
-    const build=status.textContent.split(" • ")[0];
-    status.textContent=`${build} • fps ${fps}`;
-    fpsFrames=0;fpsStamp=now;
-  }
   const {width,height}=three.size();
   camera.aspect=width/height;
   camera.updateProjectionMatrix();
@@ -387,6 +379,19 @@ const initial=three.size();
 camera.aspect=initial.width/initial.height;
 camera.updateProjectionMatrix();
 home();
+
+let statusFrames=0,statusStamp=performance.now(),statusRaf=0;
+function sampleStatus(now){
+  statusFrames++;
+  if(now-statusStamp>=500){
+    const fps=Math.round(statusFrames*1000/(now-statusStamp));
+    const build=status.textContent.split(" • ")[0];
+    status.textContent=`${build} • fps ${fps}`;
+    statusFrames=0;statusStamp=now;
+  }
+  statusRaf=requestAnimationFrame(sampleStatus);
+}
+statusRaf=requestAnimationFrame(sampleStatus);
 
 globalThis.__repository={
   world,

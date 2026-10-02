@@ -46,4 +46,20 @@ if(!(bridgeMark>donorRuntime))throw new Error("Repository ECS mirror must attach
 if(!html.includes('addEventListener("load",()=>attachBetwixtMirror()'))throw new Error("Repository ECS mirror lacks post-donor attachment");
 if(html.includes("{radius:4.45,size:0.20,rate:0.08,phase:3.45}"))throw new Error("Ganymede must remain absent from Betwixt");
 if(html.includes('id="labName"')||html.includes("getElementById(\'labName\')"))throw new Error("Per-lab Betwixt signage must remain retired");
-console.log("Intact Betwixt donor with shell and read-only Repository ECS mirror verified.");
+for(const boundaryEvidence of [
+  "const betwixtContent=new THREE.Group()",
+  "betwixtContent.add(g)",
+  "betwixtContent.add(jupurn)",
+  "betwixtContent.add(orbitRoot)",
+  "betwixtContent.add(mesh)",
+  "contentWorkshopHidden",
+  "toggleContentWorkshopHidden",
+  "⚪️",
+  "🛠",
+  "⬆️",
+  "⬇️"
+]){
+  if(!html.includes(boundaryEvidence))throw new Error(`Betwixt content-boundary evidence missing: ${boundaryEvidence}`);
+}
+if(/scene\.add\((orbitRoot|g|mesh)\)/.test(html))throw new Error("Organism-owned dynamic content escaped betwixtContent");
+console.log("Intact Betwixt donor with shell, content boundary, and read-only Repository ECS mirror verified.");

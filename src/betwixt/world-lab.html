@@ -1690,9 +1690,9 @@ function makeSixRingSphere(){
     r.rotation.set(...rotation);
     g.add(r);
   }
-  // Two top rings, four evenly around the equator.
-  port(new THREE.Vector3(-.28,.86,0),[Math.PI/2,0,0]);
-  port(new THREE.Vector3(.28,.86,0),[Math.PI/2,0,0]);
+  // One polar ring above, one below, plus four evenly around the equator.
+  port(new THREE.Vector3(0,.92,0),[Math.PI/2,0,0]);
+  port(new THREE.Vector3(0,-.92,0),[Math.PI/2,0,0]);
   for(let i=0;i<4;i++){
     const a=i*Math.PI/2;
     const x=Math.cos(a)*.90,z=Math.sin(a)*.90;

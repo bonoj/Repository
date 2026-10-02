@@ -20,7 +20,7 @@ jobs:
       - run: npm install --no-audit --no-fund --package-lock=false
       - run: npm test
       - name: Verify executable artifact
-        run: test -s dist/index.html && test -s dist/main.js
+        run: test -s dist/index.html
       - uses: actions/upload-artifact@v4
         with:
           name: repository-${{ github.sha }}

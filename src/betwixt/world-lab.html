@@ -1338,8 +1338,9 @@ function setContentWorkshopHidden(hidden){
     contentFrozenAt=performance.now();
     betwixtContent.visible=false;
     workshopField.visible=true;
-    // Workshop entry reveals no latent capability. Terrain and bearings remain
-    // possible until an explicit operation manifests them.
+    // The Crucible plinth + terrain are the current requested Workshop specimen.
+    // Bearings and other transported capabilities remain latent until requested.
+    setWorkshopTerrainVisible(true);
     resetWorkshopGlass();
     target.set(0,.35,0);radius=11.8;theta=.16;phi=1.02;applyCamera();
     setLabActions(null);
@@ -1400,6 +1401,9 @@ function ensureWorkshopTerrain(){
   try{workshopTerrain=createTerrainSystem({THREE,scene})}
   finally{delete globalThis.__workshopTerrainOwner}
   workshopTerrain.owner=owner;
+  // Present the intact Crucible apparatus as a raised specimen in Workshop.
+  // Its terrain/plinth relationship remains untouched inside this owner transform.
+  owner.position.y=3.0;
   workshopTerrain.mesh.name='workshop:crucible-terrain';
   workshopTerrain.apparatus.name='workshop:crucible-terrain-apparatus';
   workshopTerrain.mesh.visible=contentWorkshopHidden;

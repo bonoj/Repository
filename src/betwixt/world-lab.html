@@ -2555,6 +2555,7 @@ window.vestibule={
 applyRing({preserveCamera:true});
 home();
 window.vestibuleReady=true;
+dispatchEvent(new Event('vestibule-ready'));
 clearTimeout(window.vestibuleWatch);
 window.vestibuleDirty=true;
 </script>

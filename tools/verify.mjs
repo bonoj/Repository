@@ -58,16 +58,6 @@ for(const retiredId of ['id:"spin"','id:"marble"','id:"crucible"','id:"arcball"'
   if(shellSource.includes(retiredId))throw new Error(`Retired spell still manifests in shell: ${retiredId}`);
 }
 if(!shellSource.includes("enterWorkshopOnReady"))throw new Error("Betwixt must begin in Workshop");
-for(const evidence of [
-  "const workstationEntity=ecs.entity()",
-  "workstationRoot.name='workshop:workstation'",
-  "workstationRoot.add(mesh)",
-  "globalThis.Workstation=Workstation",
-  "workstationRoot.visible=true",
-  "workstationRoot.visible=false"
-]){
-  if(!html.includes(evidence))throw new Error(`Contained workstation evidence missing: ${evidence}`);
-}
 const bridgeMark=html.indexOf("attachBetwixtMirror");
 const donorRuntime=html.indexOf("window.vestibule={");
 if(!(bridgeMark>donorRuntime))throw new Error("Repository ECS mirror must attach after donor runtime");

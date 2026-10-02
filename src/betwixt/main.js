@@ -5,6 +5,7 @@ import {createRenderSyncSystem} from "../runtime/render-sync.js";
 
 const mount=document.querySelector("#world");
 const fault=document.querySelector("#fault");
+const status=document.querySelector("#status");
 const three=createThreeRuntimeCore({
   THREE,mount,
   onContextLost:()=>showFault("WebGL context lost. Reload to reconstruct."),
@@ -93,6 +94,7 @@ let lastPortrait=innerHeight>innerWidth*1.12;
 let selectedEntity=null;
 let presenceMotion=null;
 let dirty=true;
+let fpsFrames=0,fpsStamp=performance.now();
 
 function showFault(message){
   fault.hidden=false;
@@ -312,6 +314,13 @@ function invalidate(){
   requestAnimationFrame(frame);
 }
 function frame(now){
+  fpsFrames++;
+  if(now-fpsStamp>=500){
+    const fps=Math.round(fpsFrames*1000/(now-fpsStamp));
+    const build=status.textContent.split(" • ")[0];
+    status.textContent=`${build} • fps ${fps}`;
+    fpsFrames=0;fpsStamp=now;
+  }
   const {width,height}=three.size();
   camera.aspect=width/height;
   camera.updateProjectionMatrix();

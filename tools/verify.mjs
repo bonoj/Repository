@@ -58,7 +58,7 @@ for(const shellEvidence of [
 const bridgeMark=html.indexOf("attachBetwixtMirror");
 const donorRuntime=html.indexOf("window.vestibule={");
 if(!(bridgeMark>donorRuntime))throw new Error("Repository ECS mirror must attach after donor runtime");
-if(!html.includes('addEventListener("load",()=>attachBetwixtMirror()'))throw new Error("Repository ECS mirror lacks post-donor attachment");
+if(!html.includes('addEventListener("vestibule-ready",attachMirrorWhenReady'))throw new Error("Repository ECS mirror lacks donor-readiness attachment");
 if(html.includes("{radius:4.45,size:0.20,rate:0.08,phase:3.45}"))throw new Error("Ganymede must remain absent from Betwixt");
 if(html.includes('id="labName"')||html.includes("getElementById(\'labName\')"))throw new Error("Per-lab Betwixt signage must remain retired");
 for(const boundaryEvidence of [

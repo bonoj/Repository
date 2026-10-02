@@ -5,6 +5,7 @@
       {id:"spin",text:"🪄",label:"Spin presences",onClick:spinPresences}
     ],
     resident:[
+      {id:"workshop",text:"🛠",label:"Lift Betwixt content",onClick:toggleBetwixtContent},
       {id:"refresh",text:"🔄",label:"Reload",onClick:()=>location.reload()}
     ]
   };
@@ -72,6 +73,14 @@
   function removeTool(id){
     registered.get(id)?.remove();
     registered.delete(id);
+  }
+
+  function toggleBetwixtContent(button){
+    const world=globalThis.vestibule;
+    if(!world?.toggleContentRaised)return;
+    const raised=world.toggleContentRaised();
+    button?.classList.toggle("active",raised);
+    button?.setAttribute("aria-pressed",raised?"true":"false");
   }
 
   function spinPresences(){

@@ -12,12 +12,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: bonoj/Crucible
+          ref: d1c5e437197e72b16624c0b7104c6e9d9cbb0d0f
+          path: vendor/crucible
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: package.json
       - run: npm install --no-audit --no-fund --package-lock=false
+      - name: Build pinned Crucible donor
+        working-directory: vendor/crucible
+        env:
+          GITHUB_SHA: d1c5e437197e72b16624c0b7104c6e9d9cbb0d0f
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
       - run: npm test
       - name: Verify executable artifact
         run: test -s dist/index.html

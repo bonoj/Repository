@@ -1784,15 +1784,9 @@ controls.push(['control-candidate-kit-09',makeKitThing(8)]);
 controls.push(['control-candidate-kit-13',makeKitThing(12)]);
 for(const [,obj] of controls.slice(-2))obj.visible=false;
 
+// Generated 25-piece field retired after the grammar handoff probe.
+// Controls and the two explicitly retained candidates remain source evidence.
 const specimens=[];
-for(let i=0;i<25;i++)specimens.push(['kit-'+String(i+1).padStart(2,'0'),makeKitThing(i)]);
-const grid=5,spacing=2.15;
-for(let i=0;i<specimens.length;i++){
-  const row=Math.floor(i/grid),col=i%grid,[name,obj]=specimens[i];
-  obj.name='workshop:'+name;
-  obj.position.set((col-2)*spacing,0,(row-2)*spacing);
-  workshopField.add(obj);floorWorkshopObject(obj);
-}
 let focusedWorkshopObject=null,workshopFocusMotion=null,workshopObserverReturn=null;
 function floorWorkshopObject(obj){
   obj.updateMatrixWorld(true);

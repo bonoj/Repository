@@ -17,7 +17,7 @@ const mirrorInline=mirror
   .replace('import {createWorld} from "../core/ecs.js";',"")
   .replace("export function attachBetwixtMirror","function attachBetwixtMirror");
 const shallowWaterInline=shallowWater.replace("export function createShallowWaterSystem","function createShallowWaterSystem");
-const bridge=`<script>${shallowWaterInline}\n${ecsInline}\n${mirrorInline}\naddEventListener("load",()=>attachBetwixtMirror(),{once:true});<\/script>`;
+const bridge=`<script>${shallowWaterInline}\n${ecsInline}\n${mirrorInline}\n(function attachMirrorWhenReady(){if(globalThis.vestibuleReady&&globalThis.vestibule?.presences?.length){attachBetwixtMirror();return}addEventListener("vestibule-ready",attachMirrorWhenReady,{once:true})})();<\/script>`;
 const injection=`<script>globalThis.__REPOSITORY_SHA__=${JSON.stringify(sha)};globalThis.__REPOSITORY_BUILD__=${JSON.stringify(build)};<\/script><script>${shell}<\/script>`;
 const executable=donor.replace("<body>",`<body data-repository-build="${build}" data-repository-sha="${sha}">${injection}`).replace("</body>",`${bridge}</body>`);
 if(executable===donor)throw new Error("Repository shell injection point missing");

@@ -1,15 +1,22 @@
 (()=>{
   const place={sigil:"🌀",title:"BETWIXT"};
-  const spellbook=[
-    {id:"refresh",text:"🔄",label:"Reload",onClick:()=>location.reload()}
-  ];
+  const spells={
+    temporary:[
+      {id:"spin",text:"🪄",label:"Spin presences",onClick:spinPresences}
+    ],
+    resident:[
+      {id:"refresh",text:"🔄",label:"Reload",onClick:()=>location.reload()}
+    ]
+  };
   const build=globalThis.__REPOSITORY_BUILD__||"local";
   const sha=globalThis.__REPOSITORY_SHA__||null;
 
   const style=document.createElement("style");
   style.textContent=`
     #repository-status{position:fixed;z-index:90;left:max(.7rem,env(safe-area-inset-left));top:max(.7rem,env(safe-area-inset-top));padding:.45rem .6rem;border:1px solid #77736b40;border-radius:.45rem;background:#e7e2d8df;color:#4d4d49;font:600 11px/1.25 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;letter-spacing:.04em;pointer-events:none;box-shadow:0 3px 12px #5a514314;backdrop-filter:blur(4px)}
-    #repository-devtools{position:fixed;z-index:90;right:max(.6rem,env(safe-area-inset-right));bottom:max(.6rem,env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(2,2.65rem);grid-auto-rows:2.65rem;gap:.28rem}
+    #repository-devtools{position:fixed;z-index:90;right:max(.6rem,env(safe-area-inset-right));bottom:max(.6rem,env(safe-area-inset-bottom));display:grid;grid-template-columns:2.65rem 2.65rem;grid-auto-rows:2.65rem;gap:.28rem}
+    #repository-devtools .temporary{grid-column:1}
+    #repository-devtools .resident{grid-column:2}
     #repository-devtools button{box-sizing:border-box;width:2.65rem;height:2.65rem;min-height:0;padding:0;border:1px solid #77736b55;border-radius:.45rem;background:#d9d6cf;color:#343638;font:1.25rem/1 system-ui,-apple-system,Segoe UI Emoji,sans-serif;touch-action:manipulation}
     #repository-devtools button.active{outline:1px solid #555;background:#cbc7be}
     #repository-devtools button.wide{grid-column:span 2;width:auto}
@@ -41,7 +48,7 @@
   requestAnimationFrame(sample);
 
   const registered=new Map();
-  function registerTool({id,text,label,onClick,active=false,size}){
+  function registerTool({id,text,label,onClick,active=false,size,lane="temporary"}){
     if(!id||registered.has(id))throw new Error(`Repository tool already registered: ${id}`);
     const button=document.createElement("button");
     button.type="button";
@@ -49,6 +56,7 @@
     button.setAttribute("aria-label",label||id);
     button.classList.toggle("active",!!active);
     if(size)button.classList.add(size);
+    button.classList.add(lane);
     button.addEventListener("click",()=>onClick?.(button));
     registered.set(id,button);
     tools.append(button);
@@ -59,11 +67,27 @@
     registered.delete(id);
   }
 
-  for(const spell of spellbook)registerTool(spell);
+  function spinPresences(){
+    const world=globalThis.vestibule;
+    if(!world?.presences?.length)return;
+    const start=performance.now(),duration=1800,turns=2;
+    const base=world.presences.map(o=>o.rotation.y);
+    const tick=now=>{
+      const raw=Math.min(1,(now-start)/duration);
+      const t=1-Math.pow(1-raw,3);
+      world.presences.forEach((o,i)=>{o.rotation.y=base[i]+Math.PI*2*turns*t});
+      world.invalidate?.();
+      if(raw<1)requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  for(const spell of spells.temporary)registerTool({...spell,lane:"temporary"});
+  for(const spell of spells.resident)registerTool({...spell,lane:"resident"});
 
   globalThis.RepositoryShell={
     place,
-    spellbook,
+    spells,
     build,
     sha,
     status,

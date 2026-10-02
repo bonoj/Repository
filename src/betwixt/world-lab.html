@@ -1999,9 +1999,50 @@ const localGravitySatellite=new THREE.Mesh(
 localGravitySatellite.name='local-gravity-orb:satellite';localGravitySatellite.position.set(1.65,.34,0);localGravityOrb.add(localGravitySatellite);
 let localGravityVelocity=new THREE.Vector3(0,0,1.35),localGravityLast=performance.now();
 
+/* Grimoire lava — the transported Crucible solver remains authoritative.
+   Only its presentation/support coordinates are adapted here: planar solver x/z
+   map to longitude/latitude and wet-cell depth maps to radial thickness. */
+let grimoireLava=null,grimoireLavaReady=false,grimoireLavaRefreshAt=0,nextGrimoireLavaPopAt=0;
+const grimoireLavaGeo=new THREE.BufferGeometry();
+const grimoireLavaMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.46,metalness:0,emissive:0x5a0900,emissiveIntensity:.55,side:THREE.DoubleSide});
+const grimoireLavaMesh=new THREE.Mesh(grimoireLavaGeo,grimoireLavaMat);grimoireLavaMesh.name='grimoire:lava-wet-cell-projection';localGravityOrb.add(grimoireLavaMesh);
+const grimoireBearingGeo=new THREE.SphereGeometry(.055,8,6),grimoireBearingMat=new THREE.MeshStandardMaterial({color:0xb8bdc2,roughness:.38,metalness:.72}),grimoireBearings=[];
+const grimoireSolverScene={add(o){localGravityOrb.add(o)}};
+const grimoireSolverTerrain={materialBoundary(x,z){const d=8.85-Math.max(Math.abs(x),Math.abs(z));return{inside:d>=0,distance:Math.abs(d),nx:Math.sign(x||1),nz:Math.sign(z||1)}},groundHeightExact(){return 0},groundHeight(){return 0}};
+const GRIMOIRE_R=.82,GRIMOIRE_DOMAIN_TO_RAD=(Math.PI*2)/18;
+function grimoireSurfacePoint(x,z,depth=0,out=new THREE.Vector3()){
+  const lon=x*GRIMOIRE_DOMAIN_TO_RAD,lat=THREE.MathUtils.clamp(z*GRIMOIRE_DOMAIN_TO_RAD,-Math.PI*.5,Math.PI*.5),r=GRIMOIRE_R+Math.min(.12,Math.max(.008,depth*.045)),cl=Math.cos(lat);
+  return out.set(Math.sin(lon)*cl,Math.sin(lat),Math.cos(lon)*cl).multiplyScalar(r);
+}
+function ensureGrimoireLava(){
+  if(grimoireLavaReady)return true;const factory=globalThis.createShallowWaterSystem;if(typeof factory!=='function')return false;
+  grimoireLava=factory({THREE,scene:grimoireSolverScene,terrain:grimoireSolverTerrain,kind:'lava',look:{color:0xffffff,opacity:.82,sideColor:0x4b0903,sideOpacity:.78,depthAccents:true,deepColor:0x260300,hotColor:0xff9a24},initialViscosity:26});
+  grimoireLava.object.visible=false;grimoireLava.sideObject.visible=false;grimoireLava.setEnabled(true);grimoireLava.fillRegion({x:0,z:0,radius:8.5,amount:82});grimoireLavaReady=true;return true;
+}
+function refreshGrimoireLava(){
+  const pos=[],col=[],ind=[];let vi=0;const cold=new THREE.Color(0x6e1004),hot=new THREE.Color(0xff9a24);
+  grimoireLava.forEachWetCell(q=>{const dx=.14,dz=.14,b=vi,cc=cold.clone().lerp(hot,THREE.MathUtils.clamp(.35+q.depth*.45,0,1));
+    for(const [x,z] of [[q.x-dx,q.z-dz],[q.x+dx,q.z-dz],[q.x+dx,q.z+dz],[q.x-dx,q.z+dz]]){const p=grimoireSurfacePoint(x,z,q.depth);pos.push(p.x,p.y,p.z);col.push(cc.r,cc.g,cc.b);vi++}
+    ind.push(b,b+1,b+2,b,b+2,b+3);
+  });
+  grimoireLavaGeo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));grimoireLavaGeo.setAttribute('color',new THREE.Float32BufferAttribute(col,3));grimoireLavaGeo.setIndex(ind);if(pos.length)grimoireLavaGeo.computeVertexNormals();grimoireLavaGeo.computeBoundingSphere();
+}
+function spawnGrimoireLavaBearing(){
+  const wet=[];grimoireLava.forEachWetCell(q=>wet.push(q));if(!wet.length)return;const q=wet[(Math.random()*wet.length)|0],n=grimoireSurfacePoint(q.x,q.z,0,new THREE.Vector3()).normalize(),mesh=new THREE.Mesh(grimoireBearingGeo,grimoireBearingMat);mesh.position.copy(n).multiplyScalar(GRIMOIRE_R+.09);localGravityOrb.add(mesh);
+  const tangent=new THREE.Vector3().randomDirection();tangent.addScaledVector(n,-tangent.dot(n)).normalize(),speed=.28+Math.random()*.52,lift=.65+Math.random()*.8;
+  grimoireBearings.push({mesh,velocity:tangent.multiplyScalar(speed).addScaledVector(n,lift)});
+}
+function updateGrimoireLava(now,dt){
+  if(!ensureGrimoireLava())return;grimoireLava.update(now);grimoireLava.object.visible=false;grimoireLava.sideObject.visible=false;
+  if(now>=grimoireLavaRefreshAt){refreshGrimoireLava();grimoireLavaRefreshAt=now+40}
+  if(now>=nextGrimoireLavaPopAt){nextGrimoireLavaPopAt=now+260+Math.random()*620;const n=1+((Math.random()*3)|0);for(let i=0;i<n;i++)spawnGrimoireLavaBearing()}
+  for(let i=grimoireBearings.length-1;i>=0;i--){const b=grimoireBearings[i],p=b.mesh.position,r=Math.max(.2,p.length());b.velocity.addScaledVector(p,-2.35*dt/(r*r*r));p.addScaledVector(b.velocity,dt);const surface=GRIMOIRE_R+.065;if(p.length()<surface){const n=p.clone().normalize();p.copy(n).multiplyScalar(surface);const inward=b.velocity.dot(n);if(inward<0)b.velocity.addScaledVector(n,-1.28*inward);b.velocity.multiplyScalar(.992)}if(p.length()>5.5){b.mesh.removeFromParent();grimoireBearings.splice(i,1)}}
+}
+
 function updateLocalGravityOrb(now){
   const dt=Math.min(.035,Math.max(0,(now-localGravityLast)/1000));localGravityLast=now;
   if(!dt)return;
+  updateGrimoireLava(now,dt);
   const p=localGravitySatellite.position,r=Math.max(.35,p.length());
   const accel=p.clone().multiplyScalar(-2.35/(r*r*r));
   localGravityVelocity.addScaledVector(accel,dt);

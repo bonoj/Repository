@@ -2954,6 +2954,23 @@ function workshopTap(x,y){
   // Construction-first Betwixtables are focusable by contract, not by bespoke tap wiring.
   const builtBetwixtables=[];
   scene.traverse(o=>{if(o.userData?.betwixtable?.target&&o.userData.betwixtable.focus)builtBetwixtables.push(o)});
+
+  // Foreground is modal. Resolve the focused shell before exposing anything behind it
+  // to the dispatcher. A miss dismisses focus and consumes the tap.
+  if(focusedWorkshopObject){
+    const spatial=focusedWorkshopObject.userData?.betwixtable;
+    if(spatial?.target){
+      spatial.target.visible=true;
+      const focusedHit=raycaster.intersectObject(spatial.target,false).length>0;
+      spatial.target.visible=false;
+      if(focusedHit){
+        if(focusedWorkshopObject===relationalInspectionBetwixtable&&!workshopFocusMotion){cycleMolecule();return true;}
+        return true;
+      }
+    }
+    dismissWorkshopFocus();return true;
+  }
+
   for(const b of builtBetwixtables){
     const t=b.userData.betwixtable.target;t.visible=true;
     const hit=raycaster.intersectObject(t,false).length>0;t.visible=false;
@@ -2989,10 +3006,6 @@ function workshopTap(x,y){
   const hits=raycaster.intersectObjects(focusables,true);
   let obj=hits[0]?.object||null;
   while(obj&&obj.parent&&obj.parent!==workshopField&&obj.parent!==scene)obj=obj.parent;
-  if(focusedWorkshopObject){
-    if(obj===focusedWorkshopObject)return true;
-    dismissWorkshopFocus();return true;
-  }
   if(obj?.parent===workshopField){beginWorkshopFocus(obj,true);return true}
   return false;
 }

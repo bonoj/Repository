@@ -2139,6 +2139,30 @@ const workshopTabletopBetwixtable=buildBetwixtable({
   }
 });
 
+// Temporary Chemlab glance board: only the element/color vocabulary earned by
+// accepted specimens so far. This is presentation residue, not chemistry authority.
+const chemlabGlanceBoard=new THREE.Group();chemlabGlanceBoard.name='temporary:chemlab-glance-board';
+chemlabGlanceBoard.position.set(0,GROUND_Y+6.62,-1.25);scene.add(chemlabGlanceBoard);
+const boardMat=new THREE.MeshStandardMaterial({color:0xf2f1eb,roughness:.88,metalness:0});
+const board=new THREE.Mesh(new THREE.BoxGeometry(2.45,1.08,.055),boardMat);board.castShadow=true;chemlabGlanceBoard.add(board);
+const cardSpecs=[
+  {symbol:'H',name:'HYDROGEN',color:'#f1eee6',ink:'#252525'},
+  {symbol:'C',name:'CARBON',color:'#303437',ink:'#f5f3eb'},
+  {symbol:'O',name:'OXYGEN',color:'#c83d32',ink:'#fff7ef'}
+];
+cardSpecs.forEach((spec,i)=>{
+  const canvas=document.createElement('canvas');canvas.width=256;canvas.height=320;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle=spec.color;ctx.fillRect(0,0,256,320);
+  ctx.strokeStyle='rgba(30,30,30,.35)';ctx.lineWidth=8;ctx.strokeRect(4,4,248,312);
+  ctx.fillStyle=spec.ink;ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font='bold 148px sans-serif';ctx.fillText(spec.symbol,128,137);
+  ctx.font='bold 27px sans-serif';ctx.fillText(spec.name,128,263);
+  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+  const card=new THREE.Mesh(new THREE.PlaneGeometry(.55,.69),new THREE.MeshBasicMaterial({map:texture}));
+  card.position.set((i-1)*.72,0,.032);chemlabGlanceBoard.add(card);
+});
+
 // Reusable relational inspection stage. It is its own Betwixtable so specimens can be
 // replaced freely without changing the brass/glass work surface beneath it.
 const relationalInspectionBetwixtable=buildBetwixtable({

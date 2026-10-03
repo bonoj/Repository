@@ -57,6 +57,8 @@ select{width:100%;padding:0 12px;appearance:auto}
   background:#e7e2d8;font-weight:500;color:#343638;
 }
 #labActions button:active{background:#ded8cd}
+#moleculeCard{position:fixed;left:50%;bottom:24px;z-index:60;transform:translateX(-50%);width:min(360px,calc(100% - 32px));padding:14px 16px;border:1px solid rgba(30,34,36,.78);background:#e7e2d8;color:#17191a;box-shadow:0 5px 18px rgba(40,36,30,.08);font:500 14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .14s}
+#moleculeCard.visible{opacity:1;visibility:visible}#moleculeCard strong{display:block;font-size:15px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}#moleculeCard span{display:block;color:#343638}
 #ink{position:fixed;inset:0;z-index:61;pointer-events:none;touch-action:none}
 #ink.active{pointer-events:auto}
 </style>
@@ -2404,7 +2406,8 @@ const board=new THREE.Mesh(new THREE.BoxGeometry(2.45,1.08,.055),boardMat);board
 const cardSpecs=[
   {symbol:'H',name:'HYDROGEN',color:'#f1eee6',ink:'#252525'},
   {symbol:'C',name:'CARBON',color:'#303437',ink:'#f5f3eb'},
-  {symbol:'O',name:'OXYGEN',color:'#c83d32',ink:'#fff7ef'}
+  {symbol:'O',name:'OXYGEN',color:'#c83d32',ink:'#fff7ef'},
+  {symbol:'N',name:'NITROGEN',color:'#3568b8',ink:'#fff7ef'}
 ];
 cardSpecs.forEach((spec,i)=>{
   const canvas=document.createElement('canvas');canvas.width=256;canvas.height=320;
@@ -2416,7 +2419,7 @@ cardSpecs.forEach((spec,i)=>{
   ctx.font='bold 27px sans-serif';ctx.fillText(spec.name,128,263);
   const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
   const card=new THREE.Mesh(new THREE.PlaneGeometry(.55,.69),new THREE.MeshBasicMaterial({map:texture}));
-  card.position.set((i-1)*.72,0,.032);chemlabGlanceBoard.add(card);
+  card.position.set((i-1.5)*.58,0,.032);chemlabGlanceBoard.add(card);
 });
 
 // Reusable relational inspection stage. It is its own Betwixtable so specimens can be
@@ -2445,7 +2448,20 @@ const relationalInspectionBetwixtable=buildBetwixtable({
     };
   }
 });
-relationalInspectionBetwixtable.userData.betwixtable.flash(ammoniaGraph);
+const moleculeDeck=Object.freeze([
+  {name:'Methane · CH₄',info:'Tetrahedral carbon with four equivalent C–H bonds. Bond angle 109.47°.',graph:methaneGraph},
+  {name:'Water · H₂O',info:'Bent molecule. Two O–H bonds and two lone-pair domains give a 104.5° angle.',graph:waterGraph},
+  {name:'Carbon dioxide · CO₂',info:'Linear molecule with two C=O double bonds and a 180° O–C–O angle.',graph:carbonDioxideGraph},
+  {name:'Ethane · C₂H₆',info:'Two tetrahedral carbons joined by a single bond; shown in a staggered conformation.',graph:ethaneGraph},
+  {name:'Ethylene · C₂H₄',info:'Planar around the C=C double bond; each carbon is trigonal planar.',graph:ethyleneGraph},
+  {name:'Acetylene · C₂H₂',info:'Linear carbon skeleton with a C≡C triple bond.',graph:acetyleneGraph},
+  {name:'Ammonia · NH₃',info:'Trigonal pyramidal nitrogen with one lone pair; H–N–H angle about 106.7°.',graph:ammoniaGraph}
+]);
+let moleculeIndex=moleculeDeck.length-1;
+const moleculeCard=document.createElement('div');moleculeCard.id='moleculeCard';moleculeCard.setAttribute('aria-live','polite');document.body.appendChild(moleculeCard);
+function showMoleculeCard(show=true){const m=moleculeDeck[moleculeIndex];moleculeCard.innerHTML='<strong>'+m.name+'</strong><span>'+m.info+'</span>';moleculeCard.classList.toggle('visible',show);}
+function cycleMolecule(){moleculeIndex=(moleculeIndex+1)%moleculeDeck.length;relationalInspectionBetwixtable.userData.betwixtable.flash(moleculeDeck[moleculeIndex].graph);showMoleculeCard(true);}
+relationalInspectionBetwixtable.userData.betwixtable.flash(moleculeDeck[moleculeIndex].graph);
 
 function mesh(g,m,p=[0,0,0],r=[0,0,0],s=[1,1,1],parent=octo){
   const x=new THREE.Mesh(g,m);x.position.set(...p);x.rotation.set(...r);x.scale.set(...s);parent.add(x);return x;
@@ -2796,7 +2812,7 @@ function beginWorkshopFocus(obj,toForeground){
   };
   window.vestibuleDirty=true;
 }
-function dismissWorkshopFocus(){if(focusedWorkshopObject&&!workshopFocusMotion)beginWorkshopFocus(focusedWorkshopObject,false)}
+function dismissWorkshopFocus(){if(focusedWorkshopObject&&!workshopFocusMotion){if(focusedWorkshopObject===relationalInspectionBetwixtable)showMoleculeCard(false);beginWorkshopFocus(focusedWorkshopObject,false)}}
 function resetWorkshopGlass(){}
 function updateWorkshop(now){
   if(workshopFocusMotion){
@@ -2836,7 +2852,10 @@ function workshopTap(x,y){
   for(const b of builtBetwixtables){
     const t=b.userData.betwixtable.target;t.visible=true;
     const hit=raycaster.intersectObject(t,false).length>0;t.visible=false;
-    if(hit){b.userData.betwixtable.focus();window.vestibuleDirty=true;return true}
+    if(hit){
+      if(b===relationalInspectionBetwixtable&&focusedWorkshopObject===b&&!workshopFocusMotion){cycleMolecule();return true;}
+      b.userData.betwixtable.focus();if(b===relationalInspectionBetwixtable)showMoleculeCard(true);window.vestibuleDirty=true;return true
+    }
   }
   chemTapTarget.visible=true;
   const chemHit=raycaster.intersectObject(chemTapTarget,false).length>0;

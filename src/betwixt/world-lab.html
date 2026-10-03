@@ -3794,8 +3794,7 @@ addEventListener('pageshow',e=>{
 // userData, parentage, materials, object IDs, source coordinates, or semantic components.
 // A cold caller owns its pose and a finite action budget outside this implementation.
 function createBoundedWitness({parent=scene,position=[0,1.6,0],forward=[0,0,-1],budget=12,maxDistance=18}={}){
-  // Pose is expressed in the chosen parent frame. Only the ray boundary converts
-  // to world space, so a whole experiment can move as one rigid transform.
+  // Observer pose is parent-local. World conversion happens once, at the ray boundary.
   const p=new THREE.Vector3(...position),f=new THREE.Vector3(...forward);
   if(!Number.isFinite(budget)||budget<1)throw new Error('Witness budget must be positive');
   if(f.lengthSq()<1e-8)throw new Error('Witness forward vector must be nonzero');
@@ -3805,129 +3804,96 @@ function createBoundedWitness({parent=scene,position=[0,1.6,0],forward=[0,0,-1],
   const shell=new THREE.Mesh(new THREE.SphereGeometry(.12,12,8),brassDark);shell.scale.set(1,.72,1.18);body.add(shell);
   const nose=new THREE.Mesh(new THREE.ConeGeometry(.065,.30,8),warm);nose.rotation.x=-Math.PI/2;nose.position.z=-.22;body.add(nose);
   const tail=new THREE.Mesh(new THREE.BoxGeometry(.18,.045,.06),steel);tail.position.z=.15;body.add(tail);
-  // Human-only sensor-axis witness: a faint needle from the nose through the
-  // full sensing range. It is a descendant of witnessBody, so the Witness is
-  // rigorously blind to it while an observer can read pointing geometry.
-  const sensorNeedle=new THREE.Line(
-    new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(0,0,-.37),
-      new THREE.Vector3(0,0,-maxDistance)
-    ]),
-    new THREE.LineBasicMaterial({color:0xffd7a0,transparent:true,opacity:.22,depthWrite:false})
-  );
-  body.add(sensorNeedle);
-  const syncBody=()=>{
-    body.position.copy(p);
-    body.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1),f);
-    window.vestibuleDirty=true;
-  };
-  const worldRay=direction=>{
-    parent.updateWorldMatrix(true,false);
-    const origin=parent.localToWorld(p.clone());
-    const q=new THREE.Quaternion();parent.getWorldQuaternion(q);
-    return {origin,direction:direction.clone().applyQuaternion(q).normalize()};
-  };
-  // Idle locomotion is environmental, deterministic, and free: the Witness rides a
-  // slowly precessing spherical orbit around the experiment and continuously faces
-  // its Betwixtable's presentation center. Deliberate sensing remains budgeted.
+  const sensorNeedleGeometry=new THREE.BufferGeometry();
+  const sensorNeedle=new THREE.Line(sensorNeedleGeometry,new THREE.LineBasicMaterial({color:0xffd7a0,transparent:true,opacity:.22,depthWrite:false}));
+  sensorNeedle.userData.witnessBody=true;parent.add(sensorNeedle);
+
   const orbitCenter=new THREE.Vector3();
   {
     const box=parent.userData?.betwixtable?.bounds?.();
-    if(box&&!box.isEmpty()){
-      box.getCenter(orbitCenter);
-      parent.worldToLocal(orbitCenter);
-    }
+    if(box&&!box.isEmpty()){box.getCenter(orbitCenter);parent.worldToLocal(orbitCenter);}
   }
-  const orbitRadius=Math.max(2.85,p.clone().sub(orbitCenter).length());
-  const orbitTracePoints=[];
-  const orbitTraceGeometry=new THREE.BufferGeometry();
-  const orbitTrace=new THREE.Line(
-    orbitTraceGeometry,
-    new THREE.LineBasicMaterial({color:0xd2a86b,transparent:true,opacity:.22,depthWrite:false})
-  );
+  const scanRadius=Math.max(2.85,p.clone().sub(orbitCenter).length());
+  const orbitTracePoints=[],orbitTraceGeometry=new THREE.BufferGeometry();
+  const orbitTrace=new THREE.Line(orbitTraceGeometry,new THREE.LineBasicMaterial({color:0xd2a86b,transparent:true,opacity:.22,depthWrite:false}));
   orbitTrace.userData.witnessBody=true;parent.add(orbitTrace);
-  let orbitStarted=null,lastTraceAt=0;
-  function updateIdle(now){
-    if(orbitStarted==null)orbitStarted=now;
-    const t=(now-orbitStarted)/1000;
-    const phase=t*.34;
-    const inclination=Math.sin(t*.031)*Math.PI*.49;
-    const node=t*.047;
-    p.set(Math.cos(phase)*orbitRadius,0,Math.sin(phase)*orbitRadius);
-    p.applyAxisAngle(new THREE.Vector3(1,0,0),inclination);
-    p.applyAxisAngle(new THREE.Vector3(0,1,0),node);
-    p.add(orbitCenter);
-    f.copy(orbitCenter).sub(p).normalize();
-    syncBody();
-    if(now-lastTraceAt>95){
-      lastTraceAt=now;orbitTracePoints.push(p.clone());
-      if(orbitTracePoints.length>4200)orbitTracePoints.shift();
-      orbitTraceGeometry.setFromPoints(orbitTracePoints);
-    }
-  }
-  syncBody();
-  let remaining=Math.floor(budget),step=0;
+
+  let idle=true,orbitStarted=null,lastTraceAt=0,remaining=Math.floor(budget),step=0;
   const history=[];
   function finite3(a){return Array.isArray(a)&&a.length===3&&a.every(Number.isFinite)}
-  function spend(kind,input,fn){
-    if(remaining<=0)return Object.freeze({ok:false,error:'budget-exhausted',remaining:0});
-    remaining--;step++;
-    const result=fn(),record=Object.freeze({step,kind,input:Object.freeze({...input}),result,remaining});
-    history.push(record);return record;
+  function canonicalWorldRay(localDirection=f){
+    parent.updateWorldMatrix(true,false);
+    const origin=parent.localToWorld(p.clone());
+    const q=new THREE.Quaternion();parent.getWorldQuaternion(q);
+    return Object.freeze({origin,direction:localDirection.clone().applyQuaternion(q).normalize()});
+  }
+  function syncBody(){
+    body.position.copy(p);
+    body.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1),f);
+    const ray=canonicalWorldRay(f);
+    const localOrigin=parent.worldToLocal(ray.origin.clone());
+    const localEnd=parent.worldToLocal(ray.origin.clone().addScaledVector(ray.direction,maxDistance));
+    sensorNeedleGeometry.setFromPoints([localOrigin,localEnd]);
+    window.vestibuleDirty=true;
   }
   function anonymousHit(hit){
     if(!hit)return null;
-    const normal=hit.face?.normal?.clone();
-    if(normal)normal.transformDirection(hit.object.matrixWorld);
-    return Object.freeze({
-      distance:+hit.distance.toFixed(4),
-      point:Object.freeze(hit.point.toArray().map(v=>+v.toFixed(4))),
-      normal:normal?Object.freeze(normal.toArray().map(v=>+v.toFixed(4))):null
-    });
+    const normal=hit.face?.normal?.clone();if(normal)normal.transformDirection(hit.object.matrixWorld);
+    return Object.freeze({distance:+hit.distance.toFixed(4),point:Object.freeze(hit.point.toArray().map(v=>+v.toFixed(4))),normal:normal?Object.freeze(normal.toArray().map(v=>+v.toFixed(4))):null});
   }
-  function isWitnessSurface(o){
-    for(let n=o;n;n=n.parent)if(n.userData?.witnessBody)return true;
-    return false;
-  }
-  function cast(localOrigin,localDirection){
-    const ray=worldRay(localDirection);
-    if(localOrigin!==p){
-      parent.updateWorldMatrix(true,false);
-      ray.origin.copy(parent.localToWorld(localOrigin.clone()));
-    }
+  function isWitnessSurface(o){for(let n=o;n;n=n.parent)if(n.userData?.witnessBody)return true;return false}
+  function cast(){
+    const ray=canonicalWorldRay();
     probe.set(ray.origin,ray.direction);probe.far=maxDistance;
-    const surfaces=[];
-    scene.traverse(o=>{if(o.visible&&o.isMesh&&o.material?.visible!==false&&!o.userData?.betwixtable&&!isWitnessSurface(o))surfaces.push(o)});
-    const hits=probe.intersectObjects(surfaces,false);
-    return anonymousHit(hits[0]||null);
+    const surfaces=[];scene.traverse(o=>{if(o.visible&&o.isMesh&&o.material?.visible!==false&&!o.userData?.betwixtable&&!isWitnessSurface(o))surfaces.push(o)});
+    return anonymousHit(probe.intersectObjects(surfaces,false)[0]||null);
   }
-  const api={
-    sense(direction=f.toArray()){
-      if(!finite3(direction))throw new Error('sense direction must be [x,y,z]');
-      const d=new THREE.Vector3(...direction);if(d.lengthSq()<1e-8)throw new Error('sense direction must be nonzero');d.normalize();
-      return spend('sense',{direction:d.toArray()},()=>cast(p,d));
-    },
-    look(direction){
-      if(!finite3(direction))throw new Error('look direction must be [x,y,z]');
-      const d=new THREE.Vector3(...direction);if(d.lengthSq()<1e-8)throw new Error('look direction must be nonzero');d.normalize();
-      return spend('look',{direction:d.toArray()},()=>{f.copy(d);syncBody();return Object.freeze({forward:Object.freeze(f.toArray())})});
-    },
-    move(distance){
-      if(!Number.isFinite(distance))throw new Error('move distance must be finite');
-      const d=THREE.MathUtils.clamp(distance,-3,3);
-      return spend('move',{distance:d},()=>{
-        const next=p.clone().addScaledVector(f,d);
-        next.y=THREE.MathUtils.clamp(next.y,.08,12);
-        const travel=next.clone().sub(p),len=travel.length();
-        if(len>1e-6){const hit=cast(p,travel.clone().normalize());if(hit&&hit.distance<len+.04)next.copy(p).addScaledVector(travel.normalize(),Math.max(0,hit.distance-.06));}
-        p.copy(next);syncBody();return Object.freeze({position:Object.freeze(p.toArray())});
-      });
-    },
-    pose(){return Object.freeze({position:Object.freeze(p.toArray()),forward:Object.freeze(f.toArray()),remaining})},
+  function spendSense(){
+    if(remaining<=0)return Object.freeze({ok:false,error:'budget-exhausted',remaining:0});
+    remaining--;step++;const result=cast(),record=Object.freeze({step,kind:'sense',result,remaining});history.push(record);return record;
+  }
+  function place(direction){
+    if(!finite3(direction))throw new Error('place direction must be [x,y,z]');
+    const d=new THREE.Vector3(...direction);if(d.lengthSq()<1e-8)throw new Error('place direction must be nonzero');d.normalize();
+    idle=false;p.copy(orbitCenter).addScaledVector(d,scanRadius);f.copy(orbitCenter).sub(p).normalize();syncBody();
+    return Object.freeze({position:Object.freeze(p.toArray()),forward:Object.freeze(f.toArray())});
+  }
+  function aim(direction){
+    if(!finite3(direction))throw new Error('aim direction must be [x,y,z]');
+    const d=new THREE.Vector3(...direction);if(d.lengthSq()<1e-8)throw new Error('aim direction must be nonzero');
+    idle=false;f.copy(d.normalize());syncBody();return Object.freeze({forward:Object.freeze(f.toArray())});
+  }
+  function updateIdle(now){
+    if(!idle)return;
+    if(orbitStarted==null)orbitStarted=now;
+    const t=(now-orbitStarted)/1000,phase=t*.34,inclination=Math.sin(t*.031)*Math.PI*.49,node=t*.047;
+    p.set(Math.cos(phase)*scanRadius,0,Math.sin(phase)*scanRadius);
+    p.applyAxisAngle(new THREE.Vector3(1,0,0),inclination);p.applyAxisAngle(new THREE.Vector3(0,1,0),node);p.add(orbitCenter);
+    f.copy(orbitCenter).sub(p).normalize();syncBody();
+    if(now-lastTraceAt>95){lastTraceAt=now;orbitTracePoints.push(p.clone());if(orbitTracePoints.length>4200)orbitTracePoints.shift();orbitTraceGeometry.setFromPoints(orbitTracePoints);}
+  }
+  function selfTest(){
+    const savedP=p.clone(),savedF=f.clone(),savedIdle=idle;
+    const axes=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+    const checks=axes.map(axis=>{
+      const d=new THREE.Vector3(...axis);p.copy(orbitCenter).addScaledVector(d,scanRadius);f.copy(orbitCenter).sub(p).normalize();
+      const ray=canonicalWorldRay(),worldCenter=parent.localToWorld(orbitCenter.clone());
+      const toCenter=worldCenter.sub(ray.origin).normalize();
+      return Object.freeze({axis:Object.freeze(axis.slice()),radiusError:+Math.abs(p.distanceTo(orbitCenter)-scanRadius).toExponential(2),centerAlignment:+ray.direction.dot(toCenter).toFixed(8),pass:Math.abs(p.distanceTo(orbitCenter)-scanRadius)<1e-6&&ray.direction.dot(toCenter)>.999999});
+    });
+    p.copy(savedP);f.copy(savedF);idle=savedIdle;syncBody();
+    return Object.freeze({frame:'parent-local -> world at ray boundary',radius:scanRadius,checks:Object.freeze(checks),pass:checks.every(c=>c.pass)});
+  }
+  syncBody();
+  return Object.freeze({
+    place,aim,
+    sense(){return spendSense()},
+    resume(){idle=true;return Object.freeze({idle:true})},
+    pause(){idle=false;return Object.freeze({idle:false})},
+    pose(){return Object.freeze({frame:'parent-local',position:Object.freeze(p.toArray()),forward:Object.freeze(f.toArray()),center:Object.freeze(orbitCenter.toArray()),radius:scanRadius,idle,remaining})},
     transcript(){return Object.freeze(history.slice())},
-    updateIdle
-  };
-  return Object.freeze(api);
+    selfTest,updateIdle
+  });
 }
 globalThis.createBoundedWitness=createBoundedWitness;
 // Crossing 001 is one rigid experimental frame: specimen and Witness share the

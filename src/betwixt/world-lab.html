@@ -1700,69 +1700,30 @@ const microGlass=new THREE.MeshPhysicalMaterial({color:0x8fb8ba,roughness:.12,me
 // Tiny model-forward construction helper: define simple forms in elevation-like
 // coordinates, then derive their 3D placement from named anchors. The same spec can
 // emit diagnostic front/side/top projections without hand-maintaining 3D coordinates.
-function makeSimpleSpatial(spec,parent){
-  const anchors={...(spec.anchors||{})},parts={};
-  const materialOf=k=>({dark:microDark,brass:microBrass,glass:microGlass})[k]||microDark;
-  for(const p of spec.parts){
-    const a=anchors[p.at]||{x:0,y:0,z:0};let g;
-    if(p.kind==='box')g=new THREE.BoxGeometry(...p.size);
-    else if(p.kind==='cylinder')g=new THREE.CylinderGeometry(p.rTop??p.r,p.rBottom??p.r,p.h,p.segments||10);
-    else if(p.kind==='torus')g=new THREE.TorusGeometry(p.r,p.tube,p.radial||7,p.tubular||18,p.arc??Math.PI*2);
-    const m=new THREE.Mesh(g,materialOf(p.material));m.name='spatial:'+p.name;
-    m.position.set(a.x+(p.offset?.[0]||0),a.y+(p.offset?.[1]||0),a.z+(p.offset?.[2]||0));
-    if(p.rotation)m.rotation.set(...p.rotation);parent.add(m);parts[p.name]=m;
-  }
-  function sheet(){
-    // Human/model-readable orthographic construction sheet: extents and relationships,
-    // not just anchor coordinates.
-    const box=new THREE.Box3(),views={front:{u:'x',v:'y'},side:{u:'z',v:'y'},top:{u:'x',v:'z'}},out={};
-    for(const [view,ax] of Object.entries(views)){
-      out[view]={};
-      for(const [name,m] of Object.entries(parts)){
-        m.updateWorldMatrix(true,false);box.setFromObject(m);
-        out[view][name]={u:[+box.min[ax.u].toFixed(3),+box.max[ax.u].toFixed(3)],v:[+box.min[ax.v].toFixed(3),+box.max[ax.v].toFixed(3)]};
-      }
-    }
-    return out;
-  }
-  return {anchors,parts,sheet};
+// Workshop silhouette lift: simple objects are authored as readable 2D profiles,
+// then mechanically given depth. The profile is the design authority.
+function extrudedProfile(points,depth,material){
+  const s=new THREE.Shape();s.moveTo(points[0][0],points[0][1]);
+  for(let i=1;i<points.length;i++)s.lineTo(points[i][0],points[i][1]);
+  s.closePath();
+  const m=new THREE.Mesh(new THREE.ExtrudeGeometry(s,{depth,bevelEnabled:false}),material);
+  m.position.z=-depth/2;return m;
 }
-// Microscope is authored from a side elevation first: optics occupy the front,
-// arm lives behind them, stage bridges the two, and every functional gap is explicit.
-const microscopeSpec={
-  anchors:{
-    base:{x:0,y:.05,z:0},
-    stage:{x:.12,y:.28,z:0},
-    slide:{x:.12,y:.325,z:0},
-    optical:{x:.12,y:.62,z:0},
-    objective:{x:.12,y:.43,z:0},
-    eyepiece:{x:.12,y:.875,z:0},
-    arm:{x:-.20,y:.48,z:0}
-  },
-  parts:[
-    {name:'base',kind:'cylinder',at:'base',rTop:.34,rBottom:.42,h:.10,material:'dark'},
-    {name:'arm',kind:'torus',at:'arm',r:.30,tube:.045,arc:Math.PI*.98,material:'brass',rotation:[0,Math.PI/2,0]},
-    {name:'tube',kind:'cylinder',at:'optical',rTop:.068,rBottom:.078,h:.34,material:'dark'},
-    {name:'eyepiece',kind:'cylinder',at:'eyepiece',rTop:.105,rBottom:.080,h:.10,material:'dark'},
-    {name:'objective',kind:'cylinder',at:'objective',rTop:.042,rBottom:.055,h:.075,material:'dark'},
-    {name:'stage',kind:'box',at:'stage',size:[.50,.055,.34],material:'brass'},
-    {name:'slide',kind:'box',at:'slide',size:[.28,.014,.13],material:'glass'},
-    {name:'lens',kind:'cylinder',at:'slide',r:.040,h:.012,segments:12,material:'glass',offset:[0,.014,0]}
-  ]
+const microscopeProfile={
+  base:[[-.62,0],[-.52,.10],[-.18,.14],[.36,.14],[.58,.08],[.62,0]],
+  arm:[[-.35,.12],[-.48,.22],[-.50,.52],[-.43,.88],[-.28,1.17],[-.08,1.36],[.03,1.28],[-.13,1.08],[-.24,.82],[-.28,.55],[-.23,.32],[-.12,.18]]
 };
-const microscopeSpatial=makeSimpleSpatial(microscopeSpec,microscope);
-globalThis.BetwixtSpatial={microscope:microscopeSpatial};
-// Construction diagnostics must never brick Betwixt. They report failed spatial
-// relationships to the model-facing surface; executable life remains authoritative.
-{
-  const s=microscopeSpatial.sheet(),F=s.front,failures=[];
-  const gap=F.objective.v[0]-F.slide.v[1];
-  if(gap<.035)failures.push('objective/slide breathing room');
-  if(F.tube.u[0]>F.objective.u[0]||F.tube.u[1]<F.objective.u[1])failures.push('objective under tube');
-  if(F.stage.v[0]<=F.base.v[1])failures.push('stage clears base');
-  microscopeSpatial.diagnostics={ok:failures.length===0,failures,gap:+gap.toFixed(3)};
-  if(failures.length)console.warn('Microscope construction diagnostics:',microscopeSpatial.diagnostics);
-}
+const microBase=extrudedProfile(microscopeProfile.base,.34,microDark);microBase.name='spatial:base';microscope.add(microBase);
+const microArm=extrudedProfile(microscopeProfile.arm,.14,microBrass);microArm.name='spatial:arm';microscope.add(microArm);
+// Optical train is a vertical axis copied directly from the accepted side silhouette.
+const microTube=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.48,10),microDark);microTube.position.set(.28,1.12,0);microscope.add(microTube);
+const microEyepiece=new THREE.Mesh(new THREE.CylinderGeometry(.15,.12,.12,10),microDark);microEyepiece.position.set(.28,1.42,0);microscope.add(microEyepiece);
+const microObjective=new THREE.Mesh(new THREE.CylinderGeometry(.05,.065,.12,10),microDark);microObjective.position.set(.28,.82,0);microscope.add(microObjective);
+const microStage=new THREE.Mesh(new THREE.BoxGeometry(.68,.10,.42),microBrass);microStage.position.set(.22,.60,0);microscope.add(microStage);
+const microSlide=new THREE.Mesh(new THREE.BoxGeometry(.36,.035,.16),microGlass);microSlide.position.set(.23,.68,0);microscope.add(microSlide);
+const microFocus=new THREE.Mesh(new THREE.CylinderGeometry(.10,.10,.16,10),microDark);microFocus.rotation.x=Math.PI/2;microFocus.position.set(-.02,1.02,0);microscope.add(microFocus);
+// Keep the private construction evidence inspectable without making it runtime authority.
+globalThis.BetwixtSpatial={microscope:{profile:microscopeProfile}};
 const microscopeTapTarget=makeBetwixtable(microscope);
 
 const chemBurstGroup=new THREE.Group();chemBurstGroup.name='effect:chem-discovery';scene.add(chemBurstGroup);

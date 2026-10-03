@@ -1603,7 +1603,12 @@ function buildBetwixtable({name='betwixtable',parent=scene,at=null,padding=.18,b
     node.worldToLocal(center);target.position.copy(center);
     target.scale.set(Math.max(.45,size.x+padding*2),Math.max(.45,size.y+padding*2),Math.max(.45,size.z+padding*2));
   }
-  const spatial={node,presentation,target,seat,fit};
+  function focus(){
+    if(focusedWorkshopObject===node)return true;
+    if(focusedWorkshopObject)dismissWorkshopFocus();else beginWorkshopFocus(node,true);
+    return true;
+  }
+  const spatial={node,presentation,target,seat,fit,focus};
   node.userData.betwixtable=spatial;
   if(build)build(presentation,spatial);
   seat();fit();
@@ -2369,6 +2374,14 @@ function workshopTap(x,y){
   const r=canvas.getBoundingClientRect();
   pointerNDC.set(((x-r.left)/r.width)*2-1,-((y-r.top)/r.height)*2+1);
   raycaster.setFromCamera(pointerNDC,camera);
+  // Construction-first Betwixtables are focusable by contract, not by bespoke tap wiring.
+  const builtBetwixtables=[];
+  scene.traverse(o=>{if(o.userData?.betwixtable?.target&&o.userData.betwixtable.focus)builtBetwixtables.push(o)});
+  for(const b of builtBetwixtables){
+    const t=b.userData.betwixtable.target;t.visible=true;
+    const hit=raycaster.intersectObject(t,false).length>0;t.visible=false;
+    if(hit){b.userData.betwixtable.focus();window.vestibuleDirty=true;return true}
+  }
   chemTapTarget.visible=true;
   const chemHit=raycaster.intersectObject(chemTapTarget,false).length>0;
   chemTapTarget.visible=false;

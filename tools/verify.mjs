@@ -106,3 +106,27 @@ if(normalizeChemlab(html.slice(browserStart,browserEnd))!==chemlabSource.slice(c
   throw new Error("Browser CHEMLAB geometry source drifted from CI verifier");
 }
 console.log("Browser and CI CHEMLAB geometry source agree.");
+
+// Parse every executable inline script from the source shell before the browser ever sees it.
+// Classic scripts are checked as functions; module scripts are checked by esbuild so imports
+// and top-level module syntax remain legal. text/plain semantics and importmaps are data, not JS.
+const sourceHtml=await readFile("src/betwixt/world-lab.html","utf8");
+const scriptPattern=/<script([^>]*)>([\s\S]*?)<\/script>/gi;
+let scriptMatch,scriptIndex=0,checkedScripts=0;
+while((scriptMatch=scriptPattern.exec(sourceHtml))){
+  const attrs=scriptMatch[1]||"",source=scriptMatch[2];
+  const type=(attrs.match(/\btype\s*=\s*["']([^"']+)["']/i)||[])[1]?.toLowerCase()||"text/javascript";
+  if(type==="text/plain"||type==="importmap"||type==="application/json"){scriptIndex++;continue;}
+  if(type==="module"){
+    const {transform}=await import("esbuild");
+    try{await transform(source,{loader:"js",format:"esm",sourcefile:`world-lab.inline-${scriptIndex}.mjs`});}
+    catch(error){throw new Error(`World Lab module script ${scriptIndex} does not parse:\n${error.message}`);}
+  }else{
+    try{new Function(source);}
+    catch(error){throw new Error(`World Lab classic script ${scriptIndex} does not parse: ${error.message}`);}
+  }
+  checkedScripts++;scriptIndex++;
+}
+if(!checkedScripts)throw new Error("World Lab syntax gate found no executable inline scripts");
+console.log(`World Lab inline syntax verified: ${checkedScripts} executable scripts.`);
+

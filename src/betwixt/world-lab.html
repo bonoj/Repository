@@ -1625,12 +1625,31 @@ const workshopCrucibleOrbRing=new THREE.Mesh(
 workshopCrucibleOrbRing.rotation.x=Math.PI/2;
 workshopCrucibleOrbRing.position.y=-.50;
 workshopCrucibleOrb.add(workshopCrucibleOrbRing);
+// Tiny warm brass tripod: the orb is now a little instrument, not a loose marble.
+const workshopCrucibleStandMat=new THREE.MeshStandardMaterial({color:0x9b6638,roughness:.34,metalness:.62});
+const workshopCrucibleStandRing=new THREE.Mesh(new THREE.TorusGeometry(.39,.035,8,32),workshopCrucibleStandMat);
+workshopCrucibleStandRing.rotation.x=Math.PI/2;workshopCrucibleStandRing.position.y=-.39;workshopCrucibleStandRing.castShadow=true;workshopCrucibleOrb.add(workshopCrucibleStandRing);
+for(let i=0;i<3;i++){
+  const a=i*Math.PI*2/3;
+  const top=new THREE.Vector3(Math.cos(a)*.32,-.41,Math.sin(a)*.32);
+  const foot=new THREE.Vector3(Math.cos(a)*.47,-.68,Math.sin(a)*.47);
+  const d=foot.clone().sub(top),leg=new THREE.Mesh(new THREE.CylinderGeometry(.026,.034,d.length(),8),workshopCrucibleStandMat);
+  leg.position.copy(top).add(foot).multiplyScalar(.5);leg.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());leg.castShadow=true;workshopCrucibleOrb.add(leg);
+}
 // Share Jupurn's world-space XZ. The orb remains on the Workshop floor.
 const workshopJupurnXZ=C.Transform.get(jupurnEntity).position;
-workshopCrucibleOrb.position.set(workshopJupurnXZ.x,GROUND_Y+.52,workshopJupurnXZ.z);
+workshopCrucibleOrb.position.set(workshopJupurnXZ.x,GROUND_Y+.70,workshopJupurnXZ.z);
 workshopCrucibleOrb.visible=false;
 scene.add(workshopCrucibleOrb);
 function tapWorkshopCrucibleOrb(){
+  // First touch uses Betwixt's existing foreground grammar. Once present,
+  // the same physical object casts its Crucible spell.
+  if(focusedWorkshopObject!==workshopCrucibleOrb){
+    if(focusedWorkshopObject)dismissWorkshopFocus();
+    else beginWorkshopFocus(workshopCrucibleOrb,true);
+    return true;
+  }
+  if(workshopFocusMotion)return true;
   const button=globalThis.RepositoryShell?.button('crucible-container')||null;
   return toggleWorkshopCrucible(button);
 }

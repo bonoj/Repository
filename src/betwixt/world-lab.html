@@ -1593,47 +1593,47 @@ workshopCrucibleBearingPositions.forEach((p,i)=>{
 });
 const workshopCrucibleBearingSeeds=workshopCrucibleOrbBearings.map((_,i)=>({
   phase:i*2.3999632297,
-  radius:.17+(i%5)*.037,
-  lift:-.05+((i*7)%11)/11*.12,
-  speed:.78+(i%4)*.17
+  radius:.13+(i%5)*.026,
+  lift:-.03+((i*7)%11)/11*.07,
+  speed:.74+(i%4)*.16
 }));
 function updateWorkshopCrucibleOrb(now){
   if(!workshopCrucibleOrb.visible)return;
   const t=now*.001;
-  // A slow deterministic breath between turbulent possibility and temporary order.
-  // The high exponent makes coherent intervals occasional rather than constant.
-  const coherence=Math.pow(Math.max(0,Math.sin(t*.31)),7);
+  // Elastic tempo: the cloud visibly winds up and relaxes without teleporting.
+  const elasticSpeed=.62+.58*(.5+.5*Math.sin(t*.83+Math.sin(t*.19)*1.7));
+  // Two rare attractors emerge from the same noisy cloud: lattice and double helix.
+  const lattice=Math.pow(Math.max(0,Math.sin(t*.27)),9);
+  const helix=Math.pow(Math.max(0,Math.sin(t*.193+2.1)),11)*(1-lattice);
   for(let i=0;i<workshopCrucibleOrbBearings.length;i++){
-    const b=workshopCrucibleOrbBearings[i],s=workshopCrucibleBearingSeeds[i];
-    const a=s.phase+t*s.speed;
+    const bearing=workshopCrucibleOrbBearings[i],s=workshopCrucibleBearingSeeds[i];
+    const a=s.phase+t*s.speed*elasticSpeed;
     const chaos=new THREE.Vector3(
       Math.cos(a*1.31+s.phase)*s.radius,
-      s.lift+Math.sin(a*1.73+s.phase*.7)*.19,
+      s.lift+Math.sin(a*1.73+s.phase*.7)*.145,
       Math.sin(a*.93+s.phase)*s.radius
     );
     const row=Math.floor(i/6),col=i%6;
-    const ordered=new THREE.Vector3((col-2.5)*.105,(row-1)*.115,Math.sin(col*.9+row)*.025);
-    b.position.lerpVectors(chaos,ordered,coherence);
-    b.rotation.set(a*.7,a*1.1,a*.4);
+    const ordered=new THREE.Vector3((col-2.5)*.078,(row-1)*.095,Math.sin(col*.9+row)*.018);
+    const strand=i&1,hi=Math.floor(i/2),ha=hi*.92+strand*Math.PI+t*.22;
+    const helixPos=new THREE.Vector3(Math.cos(ha)*.18,-.30+hi*.072,Math.sin(ha)*.18);
+    bearing.position.copy(chaos).lerp(ordered,lattice).lerp(helixPos,helix);
+    // Hard geometric truth: bearing centers stay inside the glass by their own radius.
+    const maxCenter=.50-.072-.018;
+    const len=bearing.position.length();if(len>maxCenter)bearing.position.multiplyScalar(maxCenter/len);
+    bearing.rotation.set(a*.7,a*1.1,a*.4);
   }
   window.vestibuleDirty=true;
 }
-const workshopCrucibleOrbRing=new THREE.Mesh(
-  new THREE.TorusGeometry(.58,.025,8,36),
-  new THREE.MeshStandardMaterial({color:0x5f625d,roughness:.62,metalness:.28})
-);
-workshopCrucibleOrbRing.rotation.x=Math.PI/2;
-workshopCrucibleOrbRing.position.y=-.50;
-workshopCrucibleOrb.add(workshopCrucibleOrbRing);
-// Tiny warm brass tripod: the orb is now a little instrument, not a loose marble.
+// Warm brass support ring and three legs share exact endpoints: one continuous stand.
 const workshopCrucibleStandMat=new THREE.MeshStandardMaterial({color:0x9b6638,roughness:.34,metalness:.62});
 const workshopCrucibleStandRing=new THREE.Mesh(new THREE.TorusGeometry(.39,.035,8,32),workshopCrucibleStandMat);
 workshopCrucibleStandRing.rotation.x=Math.PI/2;workshopCrucibleStandRing.position.y=-.39;workshopCrucibleStandRing.castShadow=true;workshopCrucibleOrb.add(workshopCrucibleStandRing);
 for(let i=0;i<3;i++){
   const a=i*Math.PI*2/3;
-  const top=new THREE.Vector3(Math.cos(a)*.32,-.41,Math.sin(a)*.32);
-  const foot=new THREE.Vector3(Math.cos(a)*.47,-.68,Math.sin(a)*.47);
-  const d=foot.clone().sub(top),leg=new THREE.Mesh(new THREE.CylinderGeometry(.026,.034,d.length(),8),workshopCrucibleStandMat);
+  const top=new THREE.Vector3(Math.cos(a)*.39,-.39,Math.sin(a)*.39);
+  const foot=new THREE.Vector3(Math.cos(a)*.49,-.68,Math.sin(a)*.49);
+  const d=foot.clone().sub(top),leg=new THREE.Mesh(new THREE.CylinderGeometry(.027,.034,d.length(),8),workshopCrucibleStandMat);
   leg.position.copy(top).add(foot).multiplyScalar(.5);leg.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());leg.castShadow=true;workshopCrucibleOrb.add(leg);
 }
 // Share Jupurn's world-space XZ. The orb remains on the Workshop floor.

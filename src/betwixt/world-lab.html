@@ -1680,14 +1680,14 @@ const dynFuse=new THREE.MeshStandardMaterial({color:0x443a2d,roughness:1});
 const dynStickGeo=new THREE.CylinderGeometry(.085,.085,.62,10);
 const dynStickPositions=[[0,0]];
 for(let i=0;i<6;i++){const a=i*Math.PI/3;dynStickPositions.push([Math.cos(a)*.155,Math.sin(a)*.155])}
-const dynOutlineMat=new THREE.LineBasicMaterial({color:0x090909,transparent:true,opacity:.92});
+// Cheap illustrated contour: slightly inflated backfaces behind the real form.
+// This outlines silhouette rather than exposing mesh topology.
+const dynInk=new THREE.MeshBasicMaterial({color:0x090909,side:THREE.BackSide});
 for(const [x,z] of dynStickPositions){
+  const ink=new THREE.Mesh(dynStickGeo,dynInk);
+  ink.position.set(x,0,z);ink.scale.set(1.09,1.025,1.09);dynamite.add(ink);
   const stick=new THREE.Mesh(dynStickGeo,dynRed);
   stick.position.set(x,0,z);stick.castShadow=true;dynamite.add(stick);
-  const topEdge=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(
-    Array.from({length:10},(_,i)=>{const a=i*Math.PI*2/10;return new THREE.Vector3(x+Math.cos(a)*.086,.312,z+Math.sin(a)*.086)})
-  ),dynOutlineMat);
-  dynamite.add(topEdge);
 }
 for(const y of [-.17,.17]){
   const band=new THREE.Mesh(new THREE.TorusGeometry(.255,.025,6,18),dynDark);

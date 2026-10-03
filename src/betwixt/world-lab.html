@@ -2109,6 +2109,25 @@ const carbonDioxideGraph=Object.freeze({
   assertions:Object.freeze({molecularGeometry:'linear',angleDegrees:180,bondOrders:Object.freeze([2,2])})
 });
 
+const ethaneGraph=Object.freeze({
+  name:'ethane-t0',root:'C1',
+  nodes:Object.freeze([
+    Object.freeze({id:'C1',kind:'carbon',projection:'tetrahedral',ports:4,radius:1.18}),
+    Object.freeze({id:'C2',kind:'carbon',projection:'tetrahedral-local',torsionDegrees:60,ports:4,radius:1.18}),
+    ...['H1','H2','H3','H4','H5','H6'].map(id=>Object.freeze({id,kind:'hydrogen',ports:1,radius:.72}))
+  ]),
+  edges:Object.freeze([
+    Object.freeze({from:'C1',to:'C2',kind:'bond',order:1,port:0}),
+    Object.freeze({from:'C1',to:'H1',kind:'bond',order:1,port:1}),
+    Object.freeze({from:'C1',to:'H2',kind:'bond',order:1,port:2}),
+    Object.freeze({from:'C1',to:'H3',kind:'bond',order:1,port:3}),
+    Object.freeze({from:'C2',to:'H4',kind:'bond',order:1,port:1}),
+    Object.freeze({from:'C2',to:'H5',kind:'bond',order:1,port:2}),
+    Object.freeze({from:'C2',to:'H6',kind:'bond',order:1,port:3})
+  ]),
+  assertions:Object.freeze({formula:'C2H6',localGeometry:'tetrahedral',carbonCarbonBondOrder:1,conformer:'staggered'})
+});
+
 const workshopTabletopBetwixtable=buildBetwixtable({
   name:'brass-glass-tabletop',
   parent:scene,
@@ -2204,7 +2223,7 @@ const relationalInspectionBetwixtable=buildBetwixtable({
     };
   }
 });
-relationalInspectionBetwixtable.userData.betwixtable.flash(carbonDioxideGraph);
+relationalInspectionBetwixtable.userData.betwixtable.flash(ethaneGraph);
 
 function mesh(g,m,p=[0,0,0],r=[0,0,0],s=[1,1,1],parent=octo){
   const x=new THREE.Mesh(g,m);x.position.set(...p);x.rotation.set(...r);x.scale.set(...s);parent.add(x);return x;

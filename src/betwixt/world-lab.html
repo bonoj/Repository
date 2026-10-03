@@ -1677,9 +1677,12 @@ const dynFuse=new THREE.MeshStandardMaterial({color:0x443a2d,roughness:1});
 const dynStickGeo=new THREE.CylinderGeometry(.085,.085,.62,10);
 const dynStickPositions=[[0,0]];
 for(let i=0;i<6;i++){const a=i*Math.PI/3;dynStickPositions.push([Math.cos(a)*.155,Math.sin(a)*.155])}
+const dynOutlineMat=new THREE.LineBasicMaterial({color:0x090909,transparent:true,opacity:.92});
 for(const [x,z] of dynStickPositions){
   const stick=new THREE.Mesh(dynStickGeo,dynRed);
   stick.position.set(x,0,z);stick.castShadow=true;dynamite.add(stick);
+  const outline=new THREE.LineSegments(new THREE.EdgesGeometry(dynStickGeo),dynOutlineMat);
+  outline.position.copy(stick.position);dynamite.add(outline);
 }
 for(const y of [-.17,.17]){
   const band=new THREE.Mesh(new THREE.TorusGeometry(.255,.025,6,18),dynDark);

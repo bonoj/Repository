@@ -1578,6 +1578,39 @@ function makeBetwixtable(content,{name=content.name||'betwixtable',padding=.18}=
   fit();node.userData.betwixtable={content,target,fit};return node;
 }
 
+
+function buildBetwixtable({name='betwixtable',parent=scene,at=null,padding=.18,build}={}){
+  // Construction-first path: the shell exists before its presentation. Builders author
+  // only local geometry; the shell owns world placement and all later spatial behavior.
+  const node=new THREE.Group();node.name='betwixtable:'+name;parent.add(node);
+  if(at)node.position.copy(at);
+  const presentation=new THREE.Group();presentation.name='presentation:'+name;node.add(presentation);
+  const target=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));
+  target.visible=false;target.userData.betwixtable=true;node.add(target);
+  function seat(obj=presentation){
+    obj.updateMatrixWorld(true);
+    const box=new THREE.Box3().setFromObject(obj);
+    if(box.isEmpty())return obj;
+    const parentWorldY=new THREE.Vector3();obj.parent.getWorldPosition(parentWorldY);
+    obj.position.y-=box.min.y-parentWorldY.y;
+    obj.updateMatrixWorld(true);return obj;
+  }
+  function fit(){
+    node.updateMatrixWorld(true);
+    const box=new THREE.Box3().setFromObject(presentation);
+    if(box.isEmpty()){target.position.set(0,0,0);target.scale.setScalar(.45);return}
+    const size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
+    node.worldToLocal(center);target.position.copy(center);
+    target.scale.set(Math.max(.45,size.x+padding*2),Math.max(.45,size.y+padding*2),Math.max(.45,size.z+padding*2));
+  }
+  const spatial={node,presentation,target,seat,fit};
+  node.userData.betwixtable=spatial;
+  if(build)build(presentation,spatial);
+  seat();fit();
+  return node;
+}
+globalThis.Betwixtable=buildBetwixtable;
+
 const workshopCrucibleOrb=new THREE.Group();
 workshopCrucibleOrb.name='spell-orb:crucible';
 const workshopCrucibleOrbGlass=new THREE.MeshPhysicalMaterial({

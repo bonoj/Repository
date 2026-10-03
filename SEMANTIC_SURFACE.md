@@ -142,6 +142,18 @@ Spells are model-mediated working controls. Temporary spells may appear and disa
 
 Current shell still declares Betwixt's place identity and spell arrays directly in `src/shell/repository-shell.js`. The stronger generic-shell/place-config separation has not yet been implemented.
 
+## Workshop material vocabulary
+
+Construction treats material names as semantic intent, not requests for material parameters.
+
+**Reuse the existing Workshop material vocabulary whenever it expresses the requested matter. If it does not, exercise model judgment and create the smallest new material needed. A newly created material joins the shared Workshop vocabulary only after repeated usefulness earns reuse.**
+
+The human should be able to ask for brass, glass, steel, rubber, or other matter in ordinary language. Implementation owns lookup, reuse, and material parameters. Do not ask the human to restate known material constants or choose among equivalent implementation details.
+
+Shared Workshop materials must live at an initialization seam that exists before any artifact or Betwixtable can consume them. Artifact construction must not depend on incidental declaration order inside older Workshop specimens.
+
+An explicit request for novelty overrides reuse naturally: e.g. new brass, alien glass, filthy copper. Otherwise semantic match prefers existing earned material.
+
 ## Earned material: glass
 
 Betwixt has one visually accepted glass baseline, earned by the communicating-tanks Workshop specimen.

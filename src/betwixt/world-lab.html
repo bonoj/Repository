@@ -2161,6 +2161,73 @@ const ethyleneGraph=Object.freeze({
   assertions:Object.freeze({formula:'C2H4',geometry:'planar',symmetry:'D2h',carbonCarbonBondOrder:2,cchAngleDegrees:121.55})
 });
 
+const GeometryVerifier=Object.freeze({
+  angle(projected,a,center,b){
+    const p=projected.positions;
+    const u=p.get(a).clone().sub(p.get(center)).normalize();
+    const v=p.get(b).clone().sub(p.get(center)).normalize();
+    return THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(u.dot(v),-1,1)));
+  },
+  bondOrder(graph,a,b){
+    return graph.edges.find(e=>(e.from===a&&e.to===b)||(e.from===b&&e.to===a))?.order??0;
+  },
+  coplanar(projected,ids,tolerance=1e-6){
+    const p=projected.positions,origin=p.get(ids[0]);
+    let normal=null;
+    for(let i=1;i<ids.length-1&&!normal;i++)for(let j=i+1;j<ids.length&&!normal;j++){
+      const n=p.get(ids[i]).clone().sub(origin).cross(p.get(ids[j]).clone().sub(origin));
+      if(n.lengthSq()>1e-12)normal=n.normalize();
+    }
+    if(!normal)return true;
+    return ids.every(id=>Math.abs(p.get(id).clone().sub(origin).dot(normal))<=tolerance);
+  },
+  run(graph,checks){
+    const projected=RelationalBuild.project(graph),results=[];
+    const near=(actual,expected,tolerance)=>Math.abs(actual-expected)<=tolerance;
+    for(const check of checks){
+      let actual,pass=false;
+      if(check.kind==='angle'){actual=this.angle(projected,check.a,check.center,check.b);pass=near(actual,check.expected,check.tolerance??.1);}
+      else if(check.kind==='bondOrder'){actual=this.bondOrder(graph,check.a,check.b);pass=actual===check.expected;}
+      else if(check.kind==='coplanar'){actual=this.coplanar(projected,check.ids,check.tolerance);pass=actual===check.expected;}
+      results.push({...check,actual,pass});
+    }
+    return {name:graph.name,pass:results.every(r=>r.pass),results,projected};
+  }
+});
+
+const geometryRegressionSuite=Object.freeze([
+  Object.freeze({graph:methaneGraph,expect:true,checks:Object.freeze([
+    Object.freeze({kind:'angle',a:'H1',center:'C1',b:'H2',expected:109.4712,tolerance:.01})
+  ])}),
+  Object.freeze({graph:waterGraph,expect:true,checks:Object.freeze([
+    Object.freeze({kind:'angle',a:'H1',center:'O1',b:'H2',expected:104.5,tolerance:.01})
+  ])}),
+  Object.freeze({graph:carbonDioxideGraph,expect:true,checks:Object.freeze([
+    Object.freeze({kind:'angle',a:'O1',center:'C1',b:'O2',expected:180,tolerance:.01}),
+    Object.freeze({kind:'bondOrder',a:'C1',b:'O1',expected:2}),
+    Object.freeze({kind:'bondOrder',a:'C1',b:'O2',expected:2})
+  ])}),
+  Object.freeze({graph:ethaneGraph,expect:true,checks:Object.freeze([
+    Object.freeze({kind:'angle',a:'H1',center:'C1',b:'H2',expected:109.4712,tolerance:.01}),
+    Object.freeze({kind:'angle',a:'H4',center:'C2',b:'H5',expected:109.4712,tolerance:.01}),
+    Object.freeze({kind:'bondOrder',a:'C1',b:'C2',expected:1})
+  ])}),
+  // Known-bad candidate: must fail the scientific C-C-H angle before we repair it.
+  Object.freeze({graph:ethyleneGraph,expect:false,checks:Object.freeze([
+    Object.freeze({kind:'angle',a:'C2',center:'C1',b:'H1',expected:121.55,tolerance:.05}),
+    Object.freeze({kind:'angle',a:'C1',center:'C2',b:'H3',expected:121.55,tolerance:.05}),
+    Object.freeze({kind:'coplanar',ids:Object.freeze(['C1','C2','H1','H2','H3','H4']),expected:true}),
+    Object.freeze({kind:'bondOrder',a:'C1',b:'C2',expected:2})
+  ])})
+]);
+const geometryRegressionReport=geometryRegressionSuite.map(test=>{
+  const report=GeometryVerifier.run(test.graph,test.checks);
+  return {name:report.name,expectedPass:test.expect,actualPass:report.pass,matchedExpectation:report.pass===test.expect,results:report.results};
+});
+const geometryRegressionHealthy=geometryRegressionReport.every(r=>r.matchedExpectation);
+console.info('CHEMLAB geometry regression',geometryRegressionHealthy,geometryRegressionReport);
+if(!geometryRegressionHealthy)throw new Error('CHEMLAB geometry regression expectation mismatch');
+
 const workshopTabletopBetwixtable=buildBetwixtable({
   name:'brass-glass-tabletop',
   parent:scene,

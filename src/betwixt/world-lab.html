@@ -1698,10 +1698,23 @@ const microBrass=new THREE.MeshStandardMaterial({color:0xb4772e,roughness:.28,me
 const microDark=new THREE.MeshStandardMaterial({color:0x303331,roughness:.42,metalness:.58});
 const microGlass=new THREE.MeshPhysicalMaterial({color:0x8fb8ba,roughness:.12,metalness:0,transparent:true,opacity:.38,transmission:.45,depthWrite:false});
 const microBase=new THREE.Mesh(new THREE.CylinderGeometry(.34,.42,.10,10),microDark);microBase.position.y=.05;microscope.add(microBase);
-const microArm=new THREE.Mesh(new THREE.TorusGeometry(.25,.055,7,18,Math.PI*1.25),microBrass);microArm.rotation.set(0,Math.PI/2,.35);microArm.position.set(.02,.34,0);microscope.add(microArm);
-const microTube=new THREE.Mesh(new THREE.CylinderGeometry(.075,.095,.48,10),microDark);microTube.rotation.z=-.42;microTube.position.set(-.04,.52,0);microscope.add(microTube);
-const microLens=new THREE.Mesh(new THREE.CylinderGeometry(.085,.085,.055,12),microGlass);microLens.rotation.z=-.42;microLens.position.set(.055,.31,0);microscope.add(microLens);
-const microStage=new THREE.Mesh(new THREE.BoxGeometry(.42,.045,.32),microBrass);microStage.position.set(.02,.23,0);microscope.add(microStage);
+// Keep the brass arm as the structural gesture, but open the working space around the optics.
+const microArm=new THREE.Mesh(new THREE.TorusGeometry(.27,.050,7,18,Math.PI*1.12),microBrass);
+microArm.rotation.set(0,Math.PI/2,.18);microArm.position.set(-.08,.40,0);microscope.add(microArm);
+// The optical train is deliberately vertical: eyepiece -> tube -> objective -> slide.
+const microTube=new THREE.Mesh(new THREE.CylinderGeometry(.075,.095,.42,10),microDark);
+microTube.position.set(.08,.59,0);microscope.add(microTube);
+const microEyepiece=new THREE.Mesh(new THREE.CylinderGeometry(.105,.085,.11,10),microDark);
+microEyepiece.position.set(.08,.855,0);microscope.add(microEyepiece);
+const microObjective=new THREE.Mesh(new THREE.CylinderGeometry(.052,.065,.12,10),microDark);
+microObjective.position.set(.08,.32,0);microscope.add(microObjective);
+// A thicker stage with a pale glass slide and clear air beneath the objective.
+const microStage=new THREE.Mesh(new THREE.BoxGeometry(.48,.060,.34),microBrass);
+microStage.position.set(.08,.205,0);microscope.add(microStage);
+const microSlide=new THREE.Mesh(new THREE.BoxGeometry(.30,.018,.14),microGlass);
+microSlide.position.set(.08,.245,0);microscope.add(microSlide);
+const microLens=new THREE.Mesh(new THREE.CylinderGeometry(.047,.047,.018,12),microGlass);
+microLens.position.set(.08,.252,0);microscope.add(microLens);
 const microscopeTapTarget=makeBetwixtable(microscope);
 
 const chemBurstGroup=new THREE.Group();chemBurstGroup.name='effect:chem-discovery';scene.add(chemBurstGroup);

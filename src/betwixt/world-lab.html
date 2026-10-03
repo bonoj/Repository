@@ -1661,6 +1661,113 @@ function tapWorkshopCrucibleOrb(){
   return toggleWorkshopCrucible(button);
 }
 
+// Chem Lab: one page-local discovery. Dynamite is consumed once; the microscope survives.
+// Both the spatial handle and resident glyph delegate to the same phase.
+const chemLab=new THREE.Group();chemLab.name='presence:chem-lab';chemLab.visible=false;scene.add(chemLab);
+const chemSpell=new THREE.Group();chemSpell.name='spell:chem-lab';scene.add(chemSpell);
+const chemHome=new THREE.Vector3(2.15,GROUND_Y+.28,1.15);
+let chemPhase='dynamite',chemFall=null,chemBurst=null;
+
+const dynamite=new THREE.Group();dynamite.name='spell:dynamite';chemSpell.add(dynamite);
+const dynRed=new THREE.MeshStandardMaterial({color:0x8d2f24,roughness:.82,metalness:.03});
+const dynDark=new THREE.MeshStandardMaterial({color:0x282521,roughness:.9});
+const dynFuse=new THREE.MeshStandardMaterial({color:0x443a2d,roughness:1});
+for(let i=-1;i<=1;i++){
+  const stick=new THREE.Mesh(new THREE.CylinderGeometry(.085,.085,.62,10),dynRed);
+  stick.rotation.z=Math.PI/2;stick.position.set(0,i*.13,0);stick.castShadow=true;dynamite.add(stick);
+}
+for(const x of [-.16,.16]){
+  const band=new THREE.Mesh(new THREE.BoxGeometry(.055,.43,.19),dynDark);band.position.x=x;dynamite.add(band);
+}
+const fuseCurve=new THREE.CatmullRomCurve3([new THREE.Vector3(.31,.12,0),new THREE.Vector3(.40,.23,0),new THREE.Vector3(.36,.36,.02)]);
+const fuse=new THREE.Mesh(new THREE.TubeGeometry(fuseCurve,8,.018,5,false),dynFuse);dynamite.add(fuse);
+dynamite.position.copy(chemHome);
+const dynamiteTapTarget=new THREE.Mesh(new THREE.SphereGeometry(.52,10,7),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));
+dynamiteTapTarget.visible=false;dynamite.add(dynamiteTapTarget);
+
+const microscope=new THREE.Group();microscope.name='spell:microscope';microscope.visible=false;chemSpell.add(microscope);
+const microBrass=new THREE.MeshStandardMaterial({color:0xb4772e,roughness:.28,metalness:.76});
+const microDark=new THREE.MeshStandardMaterial({color:0x303331,roughness:.42,metalness:.58});
+const microGlass=new THREE.MeshPhysicalMaterial({color:0x8fb8ba,roughness:.12,metalness:0,transparent:true,opacity:.38,transmission:.45,depthWrite:false});
+const microBase=new THREE.Mesh(new THREE.CylinderGeometry(.34,.42,.10,10),microDark);microBase.position.y=.05;microscope.add(microBase);
+const microArm=new THREE.Mesh(new THREE.TorusGeometry(.25,.055,7,18,Math.PI*1.25),microBrass);microArm.rotation.set(0,Math.PI/2,.35);microArm.position.set(.02,.34,0);microscope.add(microArm);
+const microTube=new THREE.Mesh(new THREE.CylinderGeometry(.075,.095,.48,10),microDark);microTube.rotation.z=-.42;microTube.position.set(-.04,.52,0);microscope.add(microTube);
+const microLens=new THREE.Mesh(new THREE.CylinderGeometry(.085,.085,.055,12),microGlass);microLens.rotation.z=-.42;microLens.position.set(.055,.31,0);microscope.add(microLens);
+const microStage=new THREE.Mesh(new THREE.BoxGeometry(.42,.045,.32),microBrass);microStage.position.set(.02,.23,0);microscope.add(microStage);
+const microscopeTapTarget=new THREE.Mesh(new THREE.SphereGeometry(.58,10,7),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));
+microscopeTapTarget.visible=false;microscope.add(microscopeTapTarget);
+
+const chemBurstGroup=new THREE.Group();chemBurstGroup.name='effect:chem-discovery';scene.add(chemBurstGroup);
+const chemBurstGeo=new THREE.SphereGeometry(.055,6,4);
+const chemBurstMats=[
+  new THREE.MeshBasicMaterial({color:0xffb14a}),
+  new THREE.MeshBasicMaterial({color:0xff6418}),
+  new THREE.MeshBasicMaterial({color:0xb9b7aa})
+];
+function installChemResident(){
+  const shell=globalThis.RepositoryShell;if(!shell)return;
+  shell.removeTool('chem-lab');
+  shell.registerTool({
+    id:'chem-lab',text:chemPhase==='dynamite'?'🧨':'🔬',
+    label:chemPhase==='dynamite'?'Dynamite':'Chem Lab',lane:'resident',
+    onClick:()=>chemPhase==='dynamite'?detonateChemSpell():openChemLab()
+  });
+}
+queueMicrotask(installChemResident);
+function restoreWorkshopObserverAfterChem(){
+  if(focusedWorkshopObject!==dynamite&&!workshopFocusMotion)return;
+  workshopFocusMotion=null;
+  if(workshopObserverReturn){
+    camera.position.copy(workshopObserverReturn.cameraPosition);target.copy(workshopObserverReturn.target);
+    radius=workshopObserverReturn.radius;theta=workshopObserverReturn.theta;phi=workshopObserverReturn.phi;camera.lookAt(target);
+  }
+  focusedWorkshopObject=null;workshopObserverReturn=null;
+}
+function detonateChemSpell(){
+  if(chemPhase!=='dynamite')return openChemLab();
+  const burstAt=new THREE.Vector3();dynamite.getWorldPosition(burstAt);
+  restoreWorkshopObserverAfterChem();
+  chemPhase='microscope';dynamite.visible=false;
+  chemBurst={started:performance.now(),particles:[]};
+  for(let i=0;i<30;i++){
+    const p=new THREE.Mesh(chemBurstGeo,chemBurstMats[i%chemBurstMats.length]);
+    p.position.copy(burstAt);chemBurstGroup.add(p);
+    const a=i*2.3999632297,e=.18+((i*7)%13)/13*.78,s=.9+(i%7)*.24;
+    chemBurst.particles.push({mesh:p,v:new THREE.Vector3(Math.cos(a)*Math.cos(e)*s,Math.sin(e)*s,Math.sin(a)*Math.cos(e)*s)});
+  }
+  microscope.visible=true;microscope.position.set(chemHome.x,chemHome.y+5.2,chemHome.z);
+  chemFall={started:performance.now(),from:microscope.position.y,to:chemHome.y};
+  installChemResident();window.vestibuleDirty=true;return true;
+}
+function openChemLab(){
+  chemLab.visible=true;
+  // Deliberately empty first container: the microscope has crossed the boundary.
+  window.vestibuleDirty=true;return true;
+}
+function tapChemSpell(){
+  const obj=chemPhase==='dynamite'?dynamite:microscope;
+  if(focusedWorkshopObject!==obj){
+    if(focusedWorkshopObject)dismissWorkshopFocus();else beginWorkshopFocus(obj,true);
+    return true;
+  }
+  if(workshopFocusMotion)return true;
+  return chemPhase==='dynamite'?detonateChemSpell():openChemLab();
+}
+function updateChemSpell(now){
+  if(chemFall){
+    const raw=Math.min(1,(now-chemFall.started)/820),t=1-Math.pow(1-raw,3);
+    microscope.position.y=THREE.MathUtils.lerp(chemFall.from,chemFall.to,t);
+    if(raw>=1){microscope.position.y=chemFall.to;chemFall=null}
+    window.vestibuleDirty=true;
+  }
+  if(chemBurst){
+    const dt=.016,age=(now-chemBurst.started)/1000;
+    for(const q of chemBurst.particles){q.v.y-=2.8*dt;q.mesh.position.addScaledVector(q.v,dt);q.mesh.scale.setScalar(Math.max(0,1-age/1.05))}
+    if(age>1.05){for(const q of chemBurst.particles)q.mesh.removeFromParent();chemBurst=null}
+    window.vestibuleDirty=true;
+  }
+}
+
 // First Workshop pressure: one semantic request becomes a visible 7x7 possibility field.
 // This is deliberately local evidence, not a generalized fabrication protocol.
 const workshopField=new THREE.Group();
@@ -2161,6 +2268,11 @@ function workshopTap(x,y){
   const r=canvas.getBoundingClientRect();
   pointerNDC.set(((x-r.left)/r.width)*2-1,-((y-r.top)/r.height)*2+1);
   raycaster.setFromCamera(pointerNDC,camera);
+  const chemTarget=chemPhase==='dynamite'?dynamiteTapTarget:microscopeTapTarget;
+  chemTarget.visible=true;
+  const chemHit=raycaster.intersectObject(chemTarget,false).length>0;
+  chemTarget.visible=false;
+  if(chemHit){tapChemSpell();window.vestibuleDirty=true;return true}
   // Raycast the larger invisible volume explicitly; invisible objects are skipped by normal rendering.
   workshopCrucibleOrbTapTarget.visible=true;
   const crucibleOrbHit=raycaster.intersectObject(workshopCrucibleOrbTapTarget,false).length>0;
@@ -2835,6 +2947,8 @@ addEventListener('resize',()=>{
 
 renderer.setAnimationLoop((now)=>{
   updateWorkshopCrucibleOrb(now);
+  chemSpell.visible=contentWorkshopHidden;
+  updateChemSpell(now);
   if(contentWorkshopHidden){
     updateWorkshop(now);
     if(!workshopCrucibleEnabled){renderer.render(scene,camera);window.vestibuleDirty=false;return;}

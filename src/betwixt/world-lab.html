@@ -1599,7 +1599,14 @@ function buildBetwixtable({name='betwixtable',parent=scene,at=null,padding=.18,b
   }
   function fit(){
     node.updateMatrixWorld(true);
-    const box=new THREE.Box3().setFromObject(presentation);
+    // Fit rendered presentation geometry, but not human-only Witness embodiment or
+    // instrumentation. A sensor needle must never turn into a giant tap volume.
+    const box=new THREE.Box3(),part=new THREE.Box3();
+    presentation.traverse(o=>{
+      if(!o.visible||(!o.isMesh&&!o.isLine&&!o.isPoints))return;
+      for(let n=o;n&&n!==presentation;n=n.parent)if(n.userData?.witnessBody)return;
+      part.setFromObject(o);if(!part.isEmpty())box.union(part);
+    });
     if(box.isEmpty()){target.position.set(0,0,0);target.scale.setScalar(.45);return}
     const size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
     node.worldToLocal(center);target.position.copy(center);
@@ -3859,6 +3866,8 @@ globalThis.boundedWitness=createBoundedWitness({
   position:[-1.72,1.05,1.28],
   forward:[0,0,-1]
 });
+// Late experiment members must not leave the Betwixtable focus shell stale.
+neptunianCrossing001Betwixtable.userData.betwixtable.fit();
 
 window.vestibule={
   scene,camera,renderer,presences,betwixtContent,

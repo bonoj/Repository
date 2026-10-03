@@ -1988,6 +1988,30 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     glass.position.y=-.015;root.add(glass);
     const edge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.CylinderGeometry(1.31,1.31,.045,48)),glassEdge);
     edge.position.copy(glass.position);root.add(edge);
+
+    // Thoughtform: embodied possibility, deliberately not a ticket or interaction target.
+    // It hangs in shared view and carries enough semantic residue to recover the idea later.
+    const thoughtform=new THREE.Group();thoughtform.name='thoughtform:semantic-snapping-primitives';
+    thoughtform.position.set(1.38,-.52,0);root.add(thoughtform);
+    thoughtform.userData.thoughtform=Object.freeze({
+      kind:'thoughtform',
+      plan:'Semantic snapping-point LEGO primitives for model-forward prototyping: reason cheaply in 2D/node relationships, compose simple semantic parts through named snapping points, project/integrate into 3D, and use A-Z possibility fields to explore many forms before reality collapses onto one.',
+      interaction:'none'
+    });
+
+    // Thin brass hanger from the underside of the tabletop rim.
+    const stem=new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,.72,10),brass);
+    stem.position.y=.16;stem.castShadow=true;thoughtform.add(stem);
+
+    // Three-axis brass gimbal cage around an accepted Workshop-glass UV sphere.
+    const sphere=new THREE.Mesh(new THREE.SphereGeometry(.25,20,14),glassFace);
+    sphere.position.y=-.30;thoughtform.add(sphere);
+    const sphereEdge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(.25,12,8)),glassEdge);
+    sphereEdge.position.copy(sphere.position);thoughtform.add(sphereEdge);
+    for(const rotation of [[Math.PI/2,0,0],[0,Math.PI/2,0],[0,0,0]]){
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(.32,.025,8,28),brass);
+      ring.position.copy(sphere.position);ring.rotation.set(...rotation);ring.castShadow=true;thoughtform.add(ring);
+    }
   }
 });
 

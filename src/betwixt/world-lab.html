@@ -1999,18 +1999,21 @@ const workshopTabletopBetwixtable=buildBetwixtable({
       interaction:'none'
     });
 
-    // Thin brass hanger from the underside of the tabletop rim.
-    const stem=new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,.72,10),brass);
-    stem.position.y=.16;stem.castShadow=true;thoughtform.add(stem);
+    // Short brass hanger; the cage begins visibly below the cylinder rather than intersecting it.
+    const stem=new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,.38,10),brass);
+    stem.position.y=.28;stem.castShadow=true;thoughtform.add(stem);
 
     // Three-axis brass gimbal cage around an accepted Workshop-glass UV sphere.
+    // The cage is one child so it can turn slowly as a single quiet physical presence.
+    const cage=new THREE.Group();cage.name='thoughtform:gimbal-cage';cage.position.y=-.20;thoughtform.add(cage);
+    thoughtform.userData.gimbalCage=cage;
     const sphere=new THREE.Mesh(new THREE.SphereGeometry(.25,20,14),glassFace);
-    sphere.position.y=-.30;thoughtform.add(sphere);
+    cage.add(sphere);
     const sphereEdge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(.25,12,8)),glassEdge);
-    sphereEdge.position.copy(sphere.position);thoughtform.add(sphereEdge);
+    cage.add(sphereEdge);
     for(const rotation of [[Math.PI/2,0,0],[0,Math.PI/2,0],[0,0,0]]){
       const ring=new THREE.Mesh(new THREE.TorusGeometry(.32,.025,8,28),brass);
-      ring.position.copy(sphere.position);ring.rotation.set(...rotation);ring.castShadow=true;thoughtform.add(ring);
+      ring.rotation.set(...rotation);ring.castShadow=true;cage.add(ring);
     }
   }
 });
@@ -3083,6 +3086,8 @@ addEventListener('resize',()=>{
 });
 
 renderer.setAnimationLoop((now)=>{
+  const thoughtformCage=workshopTabletopBetwixtable.getObjectByName('thoughtform:semantic-snapping-primitives')?.userData.gimbalCage;
+  if(thoughtformCage){thoughtformCage.rotation.y=now*.00018;thoughtformCage.rotation.x=Math.sin(now*.00007)*.10;window.vestibuleDirty=true;}
   updateWorkshopCrucibleOrb(now);
   chemBetwixtable.visible=contentWorkshopHidden;
   updateChemSpell(now);

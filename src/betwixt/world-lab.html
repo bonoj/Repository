@@ -1697,24 +1697,55 @@ const microscope=new THREE.Group();microscope.name='spell:microscope';microscope
 const microBrass=new THREE.MeshStandardMaterial({color:0xb4772e,roughness:.28,metalness:.76});
 const microDark=new THREE.MeshStandardMaterial({color:0x303331,roughness:.42,metalness:.58});
 const microGlass=new THREE.MeshPhysicalMaterial({color:0x8fb8ba,roughness:.12,metalness:0,transparent:true,opacity:.38,transmission:.45,depthWrite:false});
-const microBase=new THREE.Mesh(new THREE.CylinderGeometry(.34,.42,.10,10),microDark);microBase.position.y=.05;microscope.add(microBase);
-// Keep the brass arm as the structural gesture, but open the working space around the optics.
-const microArm=new THREE.Mesh(new THREE.TorusGeometry(.27,.050,7,18,Math.PI*1.12),microBrass);
-microArm.rotation.set(0,Math.PI/2,.18);microArm.position.set(-.08,.40,0);microscope.add(microArm);
-// The optical train is deliberately vertical: eyepiece -> tube -> objective -> slide.
-const microTube=new THREE.Mesh(new THREE.CylinderGeometry(.075,.095,.42,10),microDark);
-microTube.position.set(.08,.59,0);microscope.add(microTube);
-const microEyepiece=new THREE.Mesh(new THREE.CylinderGeometry(.105,.085,.11,10),microDark);
-microEyepiece.position.set(.08,.855,0);microscope.add(microEyepiece);
-const microObjective=new THREE.Mesh(new THREE.CylinderGeometry(.052,.065,.12,10),microDark);
-microObjective.position.set(.08,.32,0);microscope.add(microObjective);
-// A thicker stage with a pale glass slide and clear air beneath the objective.
-const microStage=new THREE.Mesh(new THREE.BoxGeometry(.48,.060,.34),microBrass);
-microStage.position.set(.08,.205,0);microscope.add(microStage);
-const microSlide=new THREE.Mesh(new THREE.BoxGeometry(.30,.018,.14),microGlass);
-microSlide.position.set(.08,.245,0);microscope.add(microSlide);
-const microLens=new THREE.Mesh(new THREE.CylinderGeometry(.047,.047,.018,12),microGlass);
-microLens.position.set(.08,.252,0);microscope.add(microLens);
+// Tiny model-forward construction helper: define simple forms in elevation-like
+// coordinates, then derive their 3D placement from named anchors. The same spec can
+// emit diagnostic front/side/top projections without hand-maintaining 3D coordinates.
+function makeSimpleSpatial(spec,parent){
+  const anchors={...(spec.anchors||{})},parts={};
+  const materialOf=k=>({dark:microDark,brass:microBrass,glass:microGlass})[k]||microDark;
+  for(const p of spec.parts){
+    const a=anchors[p.at]||{x:0,y:0,z:0};let g;
+    if(p.kind==='box')g=new THREE.BoxGeometry(p.size[0],p.size[1],p.size[2]);
+    else if(p.kind==='cylinder')g=new THREE.CylinderGeometry(p.rTop??p.r,p.rBottom??p.r,p.h,p.segments||10);
+    else if(p.kind==='torus')g=new THREE.TorusGeometry(p.r,p.tube,p.radial||7,p.tubular||18,p.arc??Math.PI*2);
+    else throw Error('Unknown simple spatial primitive: '+p.kind);
+    const m=new THREE.Mesh(g,materialOf(p.material));m.name='spatial:'+p.name;
+    m.position.set(a.x+(p.offset?.[0]||0),a.y+(p.offset?.[1]||0),a.z+(p.offset?.[2]||0));
+    if(p.rotation)m.rotation.set(...p.rotation);parent.add(m);parts[p.name]=m;
+  }
+  return {
+    anchors,parts,
+    project(view){
+      const axes=view==='front'?['x','y']:view==='side'?['z','y']:['x','z'];
+      return Object.fromEntries(Object.entries(anchors).map(([k,a])=>[k,[a[axes[0]],a[axes[1]]]]));
+    }
+  };
+}
+const microscopeSpec={
+  anchors:{
+    base:{x:0,y:.05,z:0},
+    stage:{x:.08,y:.23,z:0},
+    slide:{x:.08,y:.27,z:0},
+    optical:{x:.08,y:.54,z:0},
+    objective:{x:.08,y:.34,z:0},
+    eyepiece:{x:.08,y:.82,z:0},
+    arm:{x:-.12,y:.42,z:0}
+  },
+  parts:[
+    {name:'base',kind:'cylinder',at:'base',rTop:.34,rBottom:.42,h:.10,material:'dark'},
+    {name:'arm',kind:'torus',at:'arm',r:.27,tube:.05,arc:Math.PI*1.12,material:'brass',rotation:[0,Math.PI/2,.18]},
+    {name:'tube',kind:'cylinder',at:'optical',rTop:.075,rBottom:.095,h:.38,material:'dark'},
+    {name:'eyepiece',kind:'cylinder',at:'eyepiece',rTop:.105,rBottom:.085,h:.11,material:'dark'},
+    {name:'objective',kind:'cylinder',at:'objective',rTop:.052,rBottom:.065,h:.10,material:'dark'},
+    {name:'stage',kind:'box',at:'stage',size:[.48,.06,.34],material:'brass'},
+    {name:'slide',kind:'box',at:'slide',size:[.30,.018,.14],material:'glass'},
+    {name:'lens',kind:'cylinder',at:'slide',r:.047,h:.018,segments:12,material:'glass',offset:[0,.015,0]}
+  ]
+};
+const microscopeSpatial=makeSimpleSpatial(microscopeSpec,microscope);
+// Executable diagnostic surface for model-led construction. Call from DevTools or
+// temporary probes: microscopeSpatial.project('front'|'side'|'top').
+globalThis.BetwixtSpatial={microscope:microscopeSpatial};
 const microscopeTapTarget=makeBetwixtable(microscope);
 
 const chemBurstGroup=new THREE.Group();chemBurstGroup.name='effect:chem-discovery';scene.add(chemBurstGroup);

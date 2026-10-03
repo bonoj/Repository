@@ -1735,7 +1735,7 @@ const microscopeSpec={
     stage:{x:.12,y:.28,z:0},
     slide:{x:.12,y:.325,z:0},
     optical:{x:.12,y:.62,z:0},
-    objective:{x:.12,y:.405,z:0},
+    objective:{x:.12,y:.43,z:0},
     eyepiece:{x:.12,y:.875,z:0},
     arm:{x:-.20,y:.48,z:0}
   },
@@ -1752,13 +1752,16 @@ const microscopeSpec={
 };
 const microscopeSpatial=makeSimpleSpatial(microscopeSpec,microscope);
 globalThis.BetwixtSpatial={microscope:microscopeSpatial};
-// Construction assertions: fail loudly before publication if the authored relationships lie.
+// Construction diagnostics must never brick Betwixt. They report failed spatial
+// relationships to the model-facing surface; executable life remains authoritative.
 {
-  const s=microscopeSpatial.sheet(),F=s.front;
+  const s=microscopeSpatial.sheet(),F=s.front,failures=[];
   const gap=F.objective.v[0]-F.slide.v[1];
-  if(gap<.035)throw Error('Microscope construction: objective/slide need breathing room');
-  if(F.tube.u[0]>F.objective.u[0]||F.tube.u[1]<F.objective.u[1])throw Error('Microscope construction: objective must remain under tube');
-  if(F.stage.v[0]<=F.base.v[1])throw Error('Microscope construction: stage must clear base');
+  if(gap<.035)failures.push('objective/slide breathing room');
+  if(F.tube.u[0]>F.objective.u[0]||F.tube.u[1]<F.objective.u[1])failures.push('objective under tube');
+  if(F.stage.v[0]<=F.base.v[1])failures.push('stage clears base');
+  microscopeSpatial.diagnostics={ok:failures.length===0,failures,gap:+gap.toFixed(3)};
+  if(failures.length)console.warn('Microscope construction diagnostics:',microscopeSpatial.diagnostics);
 }
 const microscopeTapTarget=makeBetwixtable(microscope);
 

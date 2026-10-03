@@ -2504,7 +2504,6 @@ const jovianBetwixtable=buildBetwixtable({name:'neptunian-jovian-system',parent:
 const chemlabGlanceBoard=new THREE.Group();chemlabGlanceBoard.name='temporary:chemlab-glance-board';
 chemlabGlanceBoard.position.set(0,GROUND_Y+6.62,-1.25);scene.add(chemlabGlanceBoard);
 const boardMat=new THREE.MeshStandardMaterial({color:0xf2f1eb,roughness:.88,metalness:0});
-const board=new THREE.Mesh(new THREE.BoxGeometry(2.45,1.08,.055),boardMat);board.castShadow=true;chemlabGlanceBoard.add(board);
 const cardSpecs=[
   {symbol:'H',name:'HYDROGEN',color:'#f1eee6',ink:'#252525'},
   {symbol:'C',name:'CARBON',color:'#303437',ink:'#f5f3eb'},
@@ -2512,6 +2511,11 @@ const cardSpecs=[
   {symbol:'N',name:'NITROGEN',color:'#3568b8',ink:'#fff7ef'},
   {symbol:'Pt',name:'PLATINUM',color:'#d4d7d8',ink:'#252525'}
 ];
+const chemlabCardWidth=.55,chemlabCardHeight=.69,chemlabCardGap=.04,chemlabBoardPadX=.15,chemlabBoardPadY=.195;
+const chemlabCardPitch=chemlabCardWidth+chemlabCardGap;
+const chemlabBoardWidth=cardSpecs.length*chemlabCardWidth+Math.max(0,cardSpecs.length-1)*chemlabCardGap+chemlabBoardPadX*2;
+const chemlabBoardHeight=chemlabCardHeight+chemlabBoardPadY*2;
+const board=new THREE.Mesh(new THREE.BoxGeometry(chemlabBoardWidth,chemlabBoardHeight,.055),boardMat);board.castShadow=true;chemlabGlanceBoard.add(board);
 cardSpecs.forEach((spec,i)=>{
   const canvas=document.createElement('canvas');canvas.width=256;canvas.height=320;
   const ctx=canvas.getContext('2d');
@@ -2521,8 +2525,8 @@ cardSpecs.forEach((spec,i)=>{
   ctx.font='bold 148px sans-serif';ctx.fillText(spec.symbol,128,137);
   ctx.font='bold 27px sans-serif';ctx.fillText(spec.name,128,263);
   const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
-  const card=new THREE.Mesh(new THREE.PlaneGeometry(.55,.69),new THREE.MeshBasicMaterial({map:texture}));
-  card.position.set((i-(cardSpecs.length-1)/2)*.46,0,.032);chemlabGlanceBoard.add(card);
+  const card=new THREE.Mesh(new THREE.PlaneGeometry(chemlabCardWidth,chemlabCardHeight),new THREE.MeshBasicMaterial({map:texture}));
+  card.position.set((i-(cardSpecs.length-1)/2)*chemlabCardPitch,0,.032);chemlabGlanceBoard.add(card);
 });
 
 // Reusable relational inspection stage. It is its own Betwixtable so specimens can be

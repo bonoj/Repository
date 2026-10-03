@@ -1973,6 +1973,75 @@ const WorkshopMats=globalThis.WorkshopMats||=Object.freeze({
 });
 const {brass,brassDark,steel,rubber,warm,glassFace,glassEdge}=WorkshopMats;
 
+
+/* Relational construction T0
+   Authoritative representation is a tiny semantic graph. Three.js is only projection.
+   Chemistry is the first consumer, not the owner of this grammar. */
+const RelationalBuild=Object.freeze({
+  tetrahedral:Object.freeze([
+    new THREE.Vector3( 1, 1, 1).normalize(),
+    new THREE.Vector3( 1,-1,-1).normalize(),
+    new THREE.Vector3(-1, 1,-1).normalize(),
+    new THREE.Vector3(-1,-1, 1).normalize()
+  ]),
+  project(graph,{bondLength=.48}={}){
+    const positions=new Map(),rootId=graph.root||graph.nodes[0]?.id;
+    positions.set(rootId,new THREE.Vector3());
+    const outgoing=new Map();
+    for(const edge of graph.edges){
+      if(!outgoing.has(edge.from))outgoing.set(edge.from,[]);
+      outgoing.get(edge.from).push(edge);
+    }
+    const visit=(id,heading=new THREE.Vector3(0,1,0))=>{
+      const base=positions.get(id),edges=outgoing.get(id)||[];
+      const node=graph.nodes.find(n=>n.id===id);
+      const dirs=node?.projection==='tetrahedral'
+        ? this.tetrahedral
+        : edges.map((_,i)=>new THREE.Vector3(Math.cos(i*Math.PI*2/Math.max(1,edges.length)),0,Math.sin(i*Math.PI*2/Math.max(1,edges.length))));
+      edges.forEach((edge,i)=>{
+        if(positions.has(edge.to))return;
+        const dir=(dirs[i]||heading).clone().normalize();
+        positions.set(edge.to,base.clone().addScaledVector(dir,edge.length||bondLength));
+        visit(edge.to,dir);
+      });
+    };
+    visit(rootId);
+    return {graph,positions};
+  },
+  materialize(projected,parent,{atomRadius=.115,bondRadius=.025}={}){
+    const group=new THREE.Group();group.name='relational-build:'+projected.graph.name;parent.add(group);
+    const nodeById=new Map(projected.graph.nodes.map(n=>[n.id,n]));
+    const mats={
+      carbon:new THREE.MeshStandardMaterial({color:0x303437,roughness:.42,metalness:.08}),
+      hydrogen:new THREE.MeshStandardMaterial({color:0xf1eee6,roughness:.52,metalness:.02}),
+      neutral:new THREE.MeshStandardMaterial({color:0xb7b8b4,roughness:.48,metalness:.04}),
+      bond:new THREE.MeshStandardMaterial({color:0x747b7d,roughness:.40,metalness:.18})
+    };
+    for(const [id,p] of projected.positions){
+      const node=nodeById.get(id),r=(node?.radius||1)*atomRadius;
+      const m=new THREE.Mesh(new THREE.SphereGeometry(r,16,10),mats[node?.kind]||mats.neutral);
+      m.position.copy(p);m.castShadow=true;m.userData.relationalNode=id;group.add(m);
+    }
+    for(const edge of projected.graph.edges){
+      const a=projected.positions.get(edge.from),b=projected.positions.get(edge.to);if(!a||!b)continue;
+      const d=b.clone().sub(a),len=d.length(),m=new THREE.Mesh(new THREE.CylinderGeometry(bondRadius,bondRadius,len,8),mats.bond);
+      m.position.copy(a).add(b).multiplyScalar(.5);
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());
+      m.userData.relationalConnection=edge.kind||'connection';group.add(m);
+    }
+    group.userData.relational=projected.graph;return group;
+  }
+});
+
+const methaneGraph=Object.freeze({
+  name:'methane-t0',root:'C1',
+  nodes:Object.freeze([
+    Object.freeze({id:'C1',kind:'carbon',projection:'tetrahedral',ports:4,radius:1.18}),
+    ...['H1','H2','H3','H4'].map(id=>Object.freeze({id,kind:'hydrogen',ports:1,radius:.72}))
+  ]),
+  edges:Object.freeze(['H1','H2','H3','H4'].map((to,i)=>Object.freeze({from:'C1',to,kind:'bond',order:1,port:i})))
+});
+
 const workshopTabletopBetwixtable=buildBetwixtable({
   name:'brass-glass-tabletop',
   parent:scene,
@@ -1988,6 +2057,12 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     glass.position.y=-.015;root.add(glass);
     const edge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.CylinderGeometry(1.31,1.31,.045,48)),glassEdge);
     edge.position.copy(glass.position);root.add(edge);
+
+    // First executable consumer of the internal relational construction language.
+    // The graph says only C connected to four H nodes; tetrahedral projection owns 3D.
+    const chemScratch=new THREE.Group();chemScratch.name='chemlab:scratch';chemScratch.position.set(0,.14,0);root.add(chemScratch);
+    const methane=RelationalBuild.materialize(RelationalBuild.project(methaneGraph),chemScratch);
+    methane.rotation.y=Math.PI/4;
 
     // Thoughtform: embodied possibility, deliberately not a ticket or interaction target.
     // It hangs in shared view and carries enough semantic residue to recover the idea later.

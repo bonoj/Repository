@@ -1978,11 +1978,14 @@ const {brass,brassDark,steel,rubber,warm,glassFace,glassEdge}=WorkshopMats;
    Authoritative representation is a tiny semantic graph. Three.js is only projection.
    Chemistry is the first consumer, not the owner of this grammar. */
 const RelationalBuild=Object.freeze({
+  // Canonical presentation frame: one tetrahedral port is +Y ("point up"),
+  // the other three form the equivalent lower tripod. Orientation is deterministic
+  // presentation grammar, not chemistry semantics.
   tetrahedral:Object.freeze([
-    new THREE.Vector3( 1, 1, 1).normalize(),
-    new THREE.Vector3( 1,-1,-1).normalize(),
-    new THREE.Vector3(-1, 1,-1).normalize(),
-    new THREE.Vector3(-1,-1, 1).normalize()
+    new THREE.Vector3(0,1,0),
+    new THREE.Vector3(Math.sqrt(8/9),-1/3,0),
+    new THREE.Vector3(-Math.sqrt(2/9),-1/3, Math.sqrt(2/3)),
+    new THREE.Vector3(-Math.sqrt(2/9),-1/3,-Math.sqrt(2/3))
   ]),
   project(graph,{bondLength=.48}={}){
     const positions=new Map(),rootId=graph.root||graph.nodes[0]?.id;
@@ -2058,12 +2061,6 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     const edge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.CylinderGeometry(1.31,1.31,.045,48)),glassEdge);
     edge.position.copy(glass.position);root.add(edge);
 
-    // First executable consumer of the internal relational construction language.
-    // The graph says only C connected to four H nodes; tetrahedral projection owns 3D.
-    const chemScratch=new THREE.Group();chemScratch.name='chemlab:scratch';chemScratch.position.set(0,.14,0);root.add(chemScratch);
-    const methane=RelationalBuild.materialize(RelationalBuild.project(methaneGraph),chemScratch);
-    methane.rotation.y=Math.PI/4;
-
     // Thoughtform: embodied possibility, deliberately not a ticket or interaction target.
     // It hangs in shared view and carries enough semantic residue to recover the idea later.
     const thoughtform=new THREE.Group();thoughtform.name='thoughtform:semantic-snapping-primitives';
@@ -2092,6 +2089,34 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     }
   }
 });
+
+// Reusable relational inspection stage. It is its own Betwixtable so specimens can be
+// replaced freely without changing the brass/glass work surface beneath it.
+const relationalInspectionBetwixtable=buildBetwixtable({
+  name:'relational-inspection',
+  parent:scene,
+  at:new THREE.Vector3(0,GROUND_Y+6.15,0),
+  padding:.30,
+  build(root,spatial){
+    const specimen=new THREE.Group();specimen.name='relational-inspection:specimen';root.add(specimen);
+    spatial.flash=(graph,options={})=>{
+      specimen.clear();
+      const view=RelationalBuild.materialize(RelationalBuild.project(graph,options.project),specimen,options.materialize);
+      // Normalize the disposable view to the stage floor. Projection owns orientation;
+      // the stage owns clearance, so no specimen is allowed to clip the table below.
+      specimen.updateMatrixWorld(true);
+      const box=new THREE.Box3().setFromObject(specimen);
+      if(!box.isEmpty()){
+        const worldOrigin=new THREE.Vector3();root.getWorldPosition(worldOrigin);
+        specimen.position.y-=box.min.y-worldOrigin.y;
+      }
+      spatial.fit();
+      window.vestibuleDirty=true;
+      return view;
+    };
+  }
+});
+relationalInspectionBetwixtable.userData.betwixtable.flash(methaneGraph);
 
 function mesh(g,m,p=[0,0,0],r=[0,0,0],s=[1,1,1],parent=octo){
   const x=new THREE.Mesh(g,m);x.position.set(...p);x.rotation.set(...r);x.scale.set(...s);parent.add(x);return x;

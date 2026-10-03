@@ -2365,6 +2365,60 @@ const workshopTabletopBetwixtable=buildBetwixtable({
   }
 });
 
+// Fleet pressure table: deliberately empty brass/glass Betwixtable whose contents are
+// generated from relational frames. Twenty-five ships, zero hand-authored ship xyz layouts.
+const fleetTableBetwixtable=buildBetwixtable({
+  name:'relational-fleet-table', parent:scene,
+  at:new THREE.Vector3(0,GROUND_Y+8.15,0), padding:.34,
+  build(root){
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(2.18,.09,10,64),brass);rim.rotation.x=Math.PI/2;root.add(rim);
+    const glass=new THREE.Mesh(new THREE.CylinderGeometry(2.08,2.08,.04,64),glassFace);root.add(glass);
+    root.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.CylinderGeometry(2.08,2.08,.04,64)),glassEdge));
+
+    // A relation carries a complete local frame. Children inherit position AND orientation;
+    // this is the Roci/Serenity pressure test, not a composition/snapping API.
+    const frame=(forward=[0,1,0],up=[0,0,1])=>{
+      const y=new THREE.Vector3(...forward).normalize(),z=new THREE.Vector3(...up).addScaledVector(y,-new THREE.Vector3(...up).dot(y)).normalize();
+      const x=new THREE.Vector3().crossVectors(y,z).normalize();z.crossVectors(x,y).normalize();
+      return new THREE.Matrix4().makeBasis(x,y,z);
+    };
+    const relate=(parent,{along=0,radial=0,azimuth=0,roll=0}={})=>{
+      const q=new THREE.Quaternion().setFromRotationMatrix(parent.matrix),p=new THREE.Vector3().setFromMatrixPosition(parent.matrix);
+      const axis=new THREE.Vector3(0,1,0).applyQuaternion(q),u=new THREE.Vector3(1,0,0).applyQuaternion(q),v=new THREE.Vector3(0,0,1).applyQuaternion(q);
+      const radialDir=u.multiplyScalar(Math.cos(azimuth)).add(v.multiplyScalar(Math.sin(azimuth)));
+      const childQ=q.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),roll));
+      return {matrix:new THREE.Matrix4().compose(p.addScaledVector(axis,along).addScaledVector(radialDir,radial),childQ,new THREE.Vector3(1,1,1))};
+    };
+    const rootFrame=(p,q=new THREE.Quaternion())=>({matrix:new THREE.Matrix4().compose(p,q,new THREE.Vector3(1,1,1))});
+    const place=(obj,F)=>{obj.applyMatrix4(F.matrix);root.add(obj);return obj};
+    const matA=new THREE.MeshStandardMaterial({color:0x72787b,roughness:.52,metalness:.62}),matB=steel,drive=warm;
+    const cyl=(r,l,m=matA)=>new THREE.Mesh(new THREE.CylinderGeometry(r,r,l,8),m);
+    const box=(x,y,z,m=matA)=>new THREE.Mesh(new THREE.BoxGeometry(x,y,z),m);
+    const cone=(r,l,m=brassDark)=>new THREE.Mesh(new THREE.CylinderGeometry(r*.58,r,l,10),m);
+    const shipRoot=(x,z,heading)=>rootFrame(new THREE.Vector3(x,.13,z),new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),heading));
+
+    function roci(F,variant){
+      place(cyl(.075,.50),F); place(cone(.12,.16),relate(F,{along:-.31})); place(cyl(.052,.18,brassDark),relate(F,{along:.34}));
+      for(let i=0;i<4;i++){const a=i*Math.PI/2+(variant%3)*.13;place(box(.035,.15,.035,brass),relate(F,{along:-.05,radial:.11,azimuth:a}));}
+      place(box(.16,.08,.12,steel),relate(F,{along:.13,roll:(variant%5-2)*.06}));
+    }
+    function serenity(F,variant){
+      place(box(.16,.38,.11),F);place(cone(.15,.15,brassDark),relate(F,{along:-.25}));
+      const neck=relate(F,{along:.24});place(cyl(.045,.18,steel),neck);place(box(.22,.13,.16,matA),relate(neck,{along:.15}));
+      for(const side of [-1,1]){const wing=relate(F,{along:-.02,radial:.15,azimuth:side<0?Math.PI:0,roll:side*.10});place(box(.22,.12,.045,brassDark),wing);place(cyl(.055,.13,drive),relate(wing,{along:-.08,radial:.10}));}
+      place(box(.08,.12,.07,brass),relate(F,{along:.38,roll:(variant%4-1.5)*.08}));
+    }
+    function dealer(F){
+      // Dealer's choice: a tiny torchship built from the same relations, with a radial crown.
+      place(cyl(.085,.44,brassDark),F);place(cone(.14,.17,drive),relate(F,{along:-.29}));place(new THREE.Mesh(new THREE.SphereGeometry(.10,10,7),glassFace),relate(F,{along:.27}));
+      for(let i=0;i<6;i++)place(box(.025,.22,.025,brass),relate(F,{along:.02,radial:.13,azimuth:i*Math.PI/3,roll:i*.07}));
+    }
+    const spots=[];for(let r=0;r<5;r++)for(let c=0;c<5;c++)spots.push([(c-2)*.72,(r-2)*.72]);
+    spots.forEach(([x,z],i)=>{const F=shipRoot(x,z,(i%5-2)*.16);if(i<12)roci(F,i);else if(i<24)serenity(F,i-12);else dealer(F);});
+    root.userData.relationalFleet=Object.freeze({roci:12,serenity:12,dealerChoice:1,layout:'table grid only; every ship interior transform derives from relational frames'});
+  }
+});
+
 // Temporary Chemlab glance board: only the element/color vocabulary earned by
 // accepted specimens so far. This is presentation residue, not chemistry authority.
 const chemlabGlanceBoard=new THREE.Group();chemlabGlanceBoard.name='temporary:chemlab-glance-board';

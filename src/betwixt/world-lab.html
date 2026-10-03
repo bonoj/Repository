@@ -2887,10 +2887,17 @@ function floorWorkshopObject(obj){
   if(Math.abs(check.min.y-GROUND_Y)>1e-5)throw Error('Workshop floor invariant failed: '+obj.name);
 }
 function workshopPresentationPosition(obj){
-  const center=new THREE.Box3().setFromObject(obj).getCenter(new THREE.Vector3());
+  // Desired foreground center is world-space, but Object3D.position is parent-space.
+  // Compute the world translation first, then express the resulting origin in the
+  // object's parent frame. This keeps focus correct for every Betwixtable parent.
+  obj.updateWorldMatrix(true,true);
+  const centerWorld=new THREE.Box3().setFromObject(obj).getCenter(new THREE.Vector3());
+  const originWorld=obj.getWorldPosition(new THREE.Vector3());
   const forward=new THREE.Vector3();camera.getWorldDirection(forward);
   const up=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1).normalize();
-  return camera.position.clone().addScaledVector(forward,8.5).addScaledVector(up,.35).sub(center);
+  const desiredCenterWorld=camera.position.clone().addScaledVector(forward,8.5).addScaledVector(up,.35);
+  const desiredOriginWorld=originWorld.clone().add(desiredCenterWorld).sub(centerWorld);
+  return obj.parent?obj.parent.worldToLocal(desiredOriginWorld):desiredOriginWorld;
 }
 function beginWorkshopFocus(obj,toForeground){
   if(workshopFocusMotion)return;
@@ -2900,11 +2907,10 @@ function beginWorkshopFocus(obj,toForeground){
   }
   const saved=workshopObserverReturn;
   const from=obj.position.clone();
-  const delta=toForeground?workshopPresentationPosition(obj):saved.position.clone().sub(obj.position);
-  const to=toForeground?obj.position.clone().add(delta):saved.position.clone();
+  const to=toForeground?workshopPresentationPosition(obj):saved.position.clone();
   workshopFocusMotion={
     obj,from,to,toForeground,fromTarget:target.clone(),
-    toTarget:toForeground?new THREE.Box3().setFromObject(obj).getCenter(new THREE.Vector3()).add(delta):saved.target.clone(),
+    toTarget:toForeground?camera.position.clone().addScaledVector(new THREE.Vector3().set(0,0,-1).applyQuaternion(camera.quaternion),8.5).addScaledVector(new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1).normalize(),.35):saved.target.clone(),
     fromCameraPosition:camera.position.clone(),
     toCameraPosition:toForeground?camera.position.clone():saved.cameraPosition.clone(),
     started:performance.now(),duration:THREE.MathUtils.clamp(390+from.distanceTo(to)*22,430,610)

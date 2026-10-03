@@ -1672,14 +1672,20 @@ const dynamite=new THREE.Group();dynamite.name='spell:dynamite';chemSpell.add(dy
 const dynRed=new THREE.MeshStandardMaterial({color:0x8d2f24,roughness:.82,metalness:.03});
 const dynDark=new THREE.MeshStandardMaterial({color:0x282521,roughness:.9});
 const dynFuse=new THREE.MeshStandardMaterial({color:0x443a2d,roughness:1});
-for(let i=-1;i<=1;i++){
-  const stick=new THREE.Mesh(new THREE.CylinderGeometry(.085,.085,.62,10),dynRed);
-  stick.rotation.z=Math.PI/2;stick.position.set(0,i*.13,0);stick.castShadow=true;dynamite.add(stick);
+// Upright seven-stick blasting bundle: one center stick with a six-stick ring,
+// cinched by two dark straps. Compact enough to read immediately as a cluster.
+const dynStickGeo=new THREE.CylinderGeometry(.085,.085,.62,10);
+const dynStickPositions=[[0,0]];
+for(let i=0;i<6;i++){const a=i*Math.PI/3;dynStickPositions.push([Math.cos(a)*.155,Math.sin(a)*.155])}
+for(const [x,z] of dynStickPositions){
+  const stick=new THREE.Mesh(dynStickGeo,dynRed);
+  stick.position.set(x,0,z);stick.castShadow=true;dynamite.add(stick);
 }
-for(const x of [-.16,.16]){
-  const band=new THREE.Mesh(new THREE.BoxGeometry(.055,.43,.19),dynDark);band.position.x=x;dynamite.add(band);
+for(const y of [-.17,.17]){
+  const band=new THREE.Mesh(new THREE.TorusGeometry(.255,.025,6,18),dynDark);
+  band.rotation.x=Math.PI/2;band.position.y=y;dynamite.add(band);
 }
-const fuseCurve=new THREE.CatmullRomCurve3([new THREE.Vector3(.31,.12,0),new THREE.Vector3(.40,.23,0),new THREE.Vector3(.36,.36,.02)]);
+const fuseCurve=new THREE.CatmullRomCurve3([new THREE.Vector3(0,.31,0),new THREE.Vector3(.07,.40,0),new THREE.Vector3(.04,.52,.03)]);
 const fuse=new THREE.Mesh(new THREE.TubeGeometry(fuseCurve,8,.018,5,false),dynFuse);dynamite.add(fuse);
 dynamite.position.copy(chemHome);
 const dynamiteTapTarget=new THREE.Mesh(new THREE.SphereGeometry(.52,10,7),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));

@@ -2319,6 +2319,16 @@ const workshopTabletopBetwixtable=buildBetwixtable({
       const ring=new THREE.Mesh(new THREE.TorusGeometry(.32,.025,8,28),brass);
       ring.rotation.set(...rotation);ring.castShadow=true;cage.add(ring);
     }
+    // Tiny dealer's-choice torchship retained as physical residue of the A-Z fleet pressure test.
+    // It is memory, not a new authority or modeling primitive.
+    const azTorch=new THREE.Group();azTorch.name='thoughtform:az-torchship';azTorch.scale.setScalar(.34);azTorch.position.set(0,-.015,0);cage.add(azTorch);
+    const azHull=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.30,8),brassDark);azTorch.add(azHull);
+    const azDrive=new THREE.Mesh(new THREE.CylinderGeometry(.095,.045,.10,10),warm);azDrive.position.y=-.20;azTorch.add(azDrive);
+    const azGlass=new THREE.Mesh(new THREE.SphereGeometry(.065,10,7),glassFace);azGlass.position.y=.20;azTorch.add(azGlass);
+    for(let i=0;i<6;i++){
+      const a=i*Math.PI/3,rail=new THREE.Mesh(new THREE.BoxGeometry(.018,.16,.018),brass);
+      rail.position.set(Math.cos(a)*.085,0,Math.sin(a)*.085);rail.rotation.y=a;azTorch.add(rail);
+    }
 
     // Second Thoughtform: a cold-boot capsule for the earned Chemlab crossing.
     // It is deliberately downstream residue: enough to resume instantly, never authority over code/science.
@@ -2362,74 +2372,6 @@ const workshopTabletopBetwixtable=buildBetwixtable({
         atom.position.set(x,y,z);molecule.add(atom);
       }
     });
-  }
-});
-
-// Fleet pressure table: deliberately empty brass/glass Betwixtable whose contents are
-// generated from relational frames. Twenty-five ships, zero hand-authored ship xyz layouts.
-const fleetTableBetwixtable=buildBetwixtable({
-  name:'relational-fleet-table', parent:scene,
-  at:new THREE.Vector3(0,GROUND_Y+8.15,0), padding:.34,
-  build(root){
-    const rim=new THREE.Mesh(new THREE.TorusGeometry(2.18,.09,10,64),brass);rim.rotation.x=Math.PI/2;root.add(rim);
-    const glass=new THREE.Mesh(new THREE.CylinderGeometry(2.08,2.08,.04,64),glassFace);root.add(glass);
-    root.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.CylinderGeometry(2.08,2.08,.04,64)),glassEdge));
-
-    // A relation carries a complete local frame. Children inherit position AND orientation;
-    // this is the Roci/Serenity pressure test, not a composition/snapping API.
-    const frame=(forward=[0,1,0],up=[0,0,1])=>{
-      const y=new THREE.Vector3(...forward).normalize(),z=new THREE.Vector3(...up).addScaledVector(y,-new THREE.Vector3(...up).dot(y)).normalize();
-      const x=new THREE.Vector3().crossVectors(y,z).normalize();z.crossVectors(x,y).normalize();
-      return new THREE.Matrix4().makeBasis(x,y,z);
-    };
-    const relate=(parent,{along=0,radial=0,azimuth=0,roll=0}={})=>{
-      const q=new THREE.Quaternion().setFromRotationMatrix(parent.matrix),p=new THREE.Vector3().setFromMatrixPosition(parent.matrix);
-      const axis=new THREE.Vector3(0,1,0).applyQuaternion(q),u=new THREE.Vector3(1,0,0).applyQuaternion(q),v=new THREE.Vector3(0,0,1).applyQuaternion(q);
-      const radialDir=u.multiplyScalar(Math.cos(azimuth)).add(v.multiplyScalar(Math.sin(azimuth)));
-      const childQ=q.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),roll));
-      return {matrix:new THREE.Matrix4().compose(p.addScaledVector(axis,along).addScaledVector(radialDir,radial),childQ,new THREE.Vector3(1,1,1))};
-    };
-    const rootFrame=(p,q=new THREE.Quaternion())=>({matrix:new THREE.Matrix4().compose(p,q,new THREE.Vector3(1,1,1))});
-    const place=(obj,F)=>{obj.applyMatrix4(F.matrix);root.add(obj);return obj};
-    const matA=new THREE.MeshStandardMaterial({color:0x72787b,roughness:.52,metalness:.62}),matB=steel,drive=warm;
-    const cyl=(r,l,m=matA)=>new THREE.Mesh(new THREE.CylinderGeometry(r,r,l,8),m);
-    const box=(x,y,z,m=matA)=>new THREE.Mesh(new THREE.BoxGeometry(x,y,z),m);
-    const cone=(r,l,m=brassDark)=>new THREE.Mesh(new THREE.CylinderGeometry(r*.58,r,l,10),m);
-    const shipRoot=(x,z,heading)=>rootFrame(new THREE.Vector3(x,.13,z),new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),heading));
-
-    const wave=(i,a,b,phase=0)=>a+(b-a)*(.5+.5*Math.sin((i+1)*1.618+phase));
-    function roci(F,variant){
-      const hullL=wave(variant,.42,.62),hullR=wave(variant,.062,.092,1.1),driveR=wave(variant,.10,.145,2.2);
-      const noseL=wave(variant,.14,.24,.6),equipment=3+(variant%4),radial=wave(variant,.095,.135,1.7);
-      place(cyl(hullR,hullL),F);
-      place(cone(driveR,wave(variant,.13,.21,2.8)),relate(F,{along:-hullL*.5-.09}));
-      place(cyl(hullR*.68,noseL,brassDark),relate(F,{along:hullL*.5+noseL*.45}));
-      for(let i=0;i<equipment;i++){const a=i*Math.PI*2/equipment+wave(variant,-.22,.22,.4);place(box(.03,wave(variant,.11,.19,i),.03,brass),relate(F,{along:wave(variant,-.11,.07,i*.7),radial,azimuth:a}));}
-      place(box(wave(variant,.13,.20,.3),wave(variant,.065,.11,1.4),wave(variant,.09,.15,2.5),steel),relate(F,{along:wave(variant,.06,.18,.8),roll:wave(variant,-.22,.22,1.9)}));
-    }
-    function serenity(F,variant){
-      const bodyL=wave(variant,.31,.46),bodyW=wave(variant,.13,.20,.8),neckL=wave(variant,.14,.24,1.6);
-      const wingReach=wave(variant,.18,.30,2.1),wingAlong=wave(variant,-.08,.045,.2),sweep=wave(variant,-.28,.28,1.1);
-      place(box(bodyW,bodyL,wave(variant,.09,.14,2.7)),F);place(cone(wave(variant,.12,.17,.4),wave(variant,.12,.19,1.3),brassDark),relate(F,{along:-bodyL*.5-.075}));
-      const neck=relate(F,{along:bodyL*.5+neckL*.38});place(cyl(.04,neckL,steel),neck);place(box(wave(variant,.18,.27,.5),wave(variant,.10,.16,2.3),wave(variant,.13,.19,1.7),matA),relate(neck,{along:neckL*.72}));
-      for(const side of [-1,1]){
-        const az=side<0?Math.PI:0,wing=relate(F,{along:wingAlong,radial:bodyW*.5+wingReach*.38,azimuth:az,roll:side*sweep});
-        place(box(wingReach,.10,.045,brassDark),wing);
-        // VTOL is a child of the ship frame at the wing's relational station. Its axis
-        // remains ship-vertical; wing sweep changes attachment location, not engine attitude.
-        const engineStation=relate(F,{along:wingAlong-.045,radial:bodyW*.5+wingReach*.82,azimuth:az});
-        place(cyl(wave(variant,.045,.065,side),wave(variant,.11,.17,variant+side),drive),engineStation);
-      }
-      place(box(.08,wave(variant,.09,.15,.9),.07,brass),relate(F,{along:bodyL*.5+neckL+wave(variant,.08,.14,2.2),roll:wave(variant,-.18,.18,.5)}));
-    }
-    function dealer(F){
-      // Dealer's choice: a tiny torchship built from the same relations, with a radial crown.
-      place(cyl(.085,.44,brassDark),F);place(cone(.14,.17,drive),relate(F,{along:-.29}));place(new THREE.Mesh(new THREE.SphereGeometry(.10,10,7),glassFace),relate(F,{along:.27}));
-      for(let i=0;i<6;i++)place(box(.025,.22,.025,brass),relate(F,{along:.02,radial:.13,azimuth:i*Math.PI/3,roll:i*.07}));
-    }
-    const spots=[];for(let r=0;r<5;r++)for(let c=0;c<5;c++)spots.push([(c-2)*.72,(r-2)*.72]);
-    spots.forEach(([x,z],i)=>{const F=shipRoot(x,z,(i%5-2)*.16);if(i<12)roci(F,i);else if(i<24)serenity(F,i-12);else dealer(F);});
-    root.userData.relationalFleet=Object.freeze({roci:12,serenity:12,dealerChoice:1,layout:'table grid only; every ship interior transform derives from relational frames'});
   }
 });
 

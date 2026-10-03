@@ -10,6 +10,11 @@ const RelationalBuild=Object.freeze({
     new THREE.Vector3(-Math.sqrt(2/9),-1/3, Math.sqrt(2/3)),
     new THREE.Vector3(-Math.sqrt(2/9),-1/3,-Math.sqrt(2/3))
   ]),
+  pyramidal(angleDegrees=106.7){
+    const dot=Math.cos(THREE.MathUtils.degToRad(angleDegrees));
+    const y=Math.sqrt((1+2*dot)/3),r=Math.sqrt(1-y*y);
+    return [0,1,2].map(i=>new THREE.Vector3(r*Math.cos(i*Math.PI*2/3),-y,r*Math.sin(i*Math.PI*2/3)));
+  },
   bent(angleDegrees=104.5){
     const half=THREE.MathUtils.degToRad(angleDegrees*.5);
     return [
@@ -68,6 +73,8 @@ const RelationalBuild=Object.freeze({
           ? this.trigonalChildren(heading,node.planeAxis?new THREE.Vector3(...node.planeAxis):null)
           : node?.projection==='tetrahedral-local'
           ? this.tetrahedralChildren(heading,node.torsionDegrees??0)
+          : node?.projection==='pyramidal'
+          ? this.pyramidal(node.angleDegrees??106.7)
           : node?.projection==='bent'
           ? this.bent(node.angleDegrees??104.5)
           : node?.projection==='linear-local'
@@ -91,6 +98,7 @@ const RelationalBuild=Object.freeze({
     const mats={
       carbon:new THREE.MeshStandardMaterial({color:0x303437,roughness:.42,metalness:.08}),
       oxygen:new THREE.MeshStandardMaterial({color:0xc83d32,roughness:.42,metalness:.04}),
+      nitrogen:new THREE.MeshStandardMaterial({color:0x3659b8,roughness:.42,metalness:.04}),
       hydrogen:new THREE.MeshStandardMaterial({color:0xf1eee6,roughness:.52,metalness:.02}),
       neutral:new THREE.MeshStandardMaterial({color:0xb7b8b4,roughness:.48,metalness:.04}),
       bond:new THREE.MeshStandardMaterial({color:0x747b7d,roughness:.40,metalness:.18})
@@ -189,6 +197,16 @@ const ethyleneGraph=Object.freeze({
   assertions:Object.freeze({formula:'C2H4',geometry:'planar',symmetry:'D2h',carbonCarbonBondOrder:2,cchAngleDegrees:121.55})
 });
 
+const ammoniaGraph=Object.freeze({
+  name:'ammonia-t0',root:'N1',
+  nodes:Object.freeze([
+    Object.freeze({id:'N1',kind:'nitrogen',projection:'pyramidal',angleDegrees:106.7,ports:3,electronDomains:4,lonePairs:1,radius:1.12}),
+    ...['H1','H2','H3'].map(id=>Object.freeze({id,kind:'hydrogen',ports:1,radius:.72}))
+  ]),
+  edges:Object.freeze(['H1','H2','H3'].map((to,i)=>Object.freeze({from:'N1',to,kind:'bond',order:1,port:i}))),
+  assertions:Object.freeze({formula:'NH3',geometry:'trigonal-pyramidal',electronDomains:4,lonePairs:1,hnhAngleDegrees:106.7})
+});
+
 const acetyleneGraph=Object.freeze({
   name:'acetylene-t0',root:'C1',
   nodes:Object.freeze([
@@ -257,6 +275,11 @@ const geometryRegressionSuite=Object.freeze([
     Object.freeze({kind:'bondOrder',a:'C1',b:'C2',expected:1})
   ])}),
   // Known-bad candidate: must fail the scientific C-C-H angle before we repair it.
+  Object.freeze({graph:ammoniaGraph,expect:true,checks:Object.freeze([
+    Object.freeze({kind:'angle',a:'H1',center:'N1',b:'H2',expected:106.7,tolerance:.01}),
+    Object.freeze({kind:'angle',a:'H2',center:'N1',b:'H3',expected:106.7,tolerance:.01}),
+    Object.freeze({kind:'angle',a:'H3',center:'N1',b:'H1',expected:106.7,tolerance:.01})
+  ])}),
   Object.freeze({graph:acetyleneGraph,expect:true,checks:Object.freeze([
     Object.freeze({kind:'angle',a:'H1',center:'C1',b:'C2',expected:180,tolerance:.01}),
     Object.freeze({kind:'angle',a:'C1',center:'C2',b:'H2',expected:180,tolerance:.01}),

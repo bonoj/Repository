@@ -81,6 +81,21 @@ Workshop context does not own Crucible's fluids merely because the fluid machine
 
 Do not build a fabrication framework merely because the bench is empty. Let construction pressure earn operations.
 
+
+## Betwixtable spatial boundary
+
+Repeated Workshop pressure has earned one small spatial contract.
+
+A **Betwixtable** is the persistent spatial identity of manipulable content in Betwixt. Camera focus, home/foreground motion, return state, visibility ownership, interaction volume, world placement, and grounding belong to the Betwixtable shell rather than to presentation geometry inside it.
+
+Presentation geometry is authored in the shell's local coordinates. Its rendered bottom may be seated to the shell's local floor, but presentation children do not know GROUND_Y and are not re-grounded in world space. Replacing one presentation with another must be spatially inert.
+
+The Chem discovery object currently demonstrates this boundary: one persistent betwixtable:chem-discovery contains a presentation that changes from dynamite to microscope. Both forms are locally seated against the same shell; detonation changes presentation without changing spatial identity, focus, or world placement.
+
+The physical Crucible geoglass is likewise manipulated through its Betwixtable shell. The substantial Crucible simulation it invokes remains separately owned by the ⚗️ container; it is not presentation geometry inside the geoglass.
+
+Treat the Betwixtable shell as the current geometry encapsulation and spatial snapping point. This does not yet establish a generalized fabrication, layout, or semantic-port framework.
+
 ## Simulation and persistence
 
 The donor contains its own ECS and simulation systems for the inherited presences and their local machinery.

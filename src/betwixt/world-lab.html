@@ -1705,47 +1705,61 @@ function makeSimpleSpatial(spec,parent){
   const materialOf=k=>({dark:microDark,brass:microBrass,glass:microGlass})[k]||microDark;
   for(const p of spec.parts){
     const a=anchors[p.at]||{x:0,y:0,z:0};let g;
-    if(p.kind==='box')g=new THREE.BoxGeometry(p.size[0],p.size[1],p.size[2]);
+    if(p.kind==='box')g=new THREE.BoxGeometry(...p.size);
     else if(p.kind==='cylinder')g=new THREE.CylinderGeometry(p.rTop??p.r,p.rBottom??p.r,p.h,p.segments||10);
     else if(p.kind==='torus')g=new THREE.TorusGeometry(p.r,p.tube,p.radial||7,p.tubular||18,p.arc??Math.PI*2);
-    else throw Error('Unknown simple spatial primitive: '+p.kind);
     const m=new THREE.Mesh(g,materialOf(p.material));m.name='spatial:'+p.name;
     m.position.set(a.x+(p.offset?.[0]||0),a.y+(p.offset?.[1]||0),a.z+(p.offset?.[2]||0));
     if(p.rotation)m.rotation.set(...p.rotation);parent.add(m);parts[p.name]=m;
   }
-  return {
-    anchors,parts,
-    project(view){
-      const axes=view==='front'?['x','y']:view==='side'?['z','y']:['x','z'];
-      return Object.fromEntries(Object.entries(anchors).map(([k,a])=>[k,[a[axes[0]],a[axes[1]]]]));
+  function sheet(){
+    // Human/model-readable orthographic construction sheet: extents and relationships,
+    // not just anchor coordinates.
+    const box=new THREE.Box3(),views={front:{u:'x',v:'y'},side:{u:'z',v:'y'},top:{u:'x',v:'z'}},out={};
+    for(const [view,ax] of Object.entries(views)){
+      out[view]={};
+      for(const [name,m] of Object.entries(parts)){
+        m.updateWorldMatrix(true,false);box.setFromObject(m);
+        out[view][name]={u:[+box.min[ax.u].toFixed(3),+box.max[ax.u].toFixed(3)],v:[+box.min[ax.v].toFixed(3),+box.max[ax.v].toFixed(3)]};
+      }
     }
-  };
+    return out;
+  }
+  return {anchors,parts,sheet};
 }
+// Microscope is authored from a side elevation first: optics occupy the front,
+// arm lives behind them, stage bridges the two, and every functional gap is explicit.
 const microscopeSpec={
   anchors:{
     base:{x:0,y:.05,z:0},
-    stage:{x:.08,y:.23,z:0},
-    slide:{x:.08,y:.27,z:0},
-    optical:{x:.08,y:.54,z:0},
-    objective:{x:.08,y:.34,z:0},
-    eyepiece:{x:.08,y:.82,z:0},
-    arm:{x:-.12,y:.42,z:0}
+    stage:{x:.12,y:.28,z:0},
+    slide:{x:.12,y:.325,z:0},
+    optical:{x:.12,y:.62,z:0},
+    objective:{x:.12,y:.405,z:0},
+    eyepiece:{x:.12,y:.875,z:0},
+    arm:{x:-.20,y:.48,z:0}
   },
   parts:[
     {name:'base',kind:'cylinder',at:'base',rTop:.34,rBottom:.42,h:.10,material:'dark'},
-    {name:'arm',kind:'torus',at:'arm',r:.27,tube:.05,arc:Math.PI*1.12,material:'brass',rotation:[0,Math.PI/2,.18]},
-    {name:'tube',kind:'cylinder',at:'optical',rTop:.075,rBottom:.095,h:.38,material:'dark'},
-    {name:'eyepiece',kind:'cylinder',at:'eyepiece',rTop:.105,rBottom:.085,h:.11,material:'dark'},
-    {name:'objective',kind:'cylinder',at:'objective',rTop:.052,rBottom:.065,h:.10,material:'dark'},
-    {name:'stage',kind:'box',at:'stage',size:[.48,.06,.34],material:'brass'},
-    {name:'slide',kind:'box',at:'slide',size:[.30,.018,.14],material:'glass'},
-    {name:'lens',kind:'cylinder',at:'slide',r:.047,h:.018,segments:12,material:'glass',offset:[0,.015,0]}
+    {name:'arm',kind:'torus',at:'arm',r:.30,tube:.045,arc:Math.PI*.98,material:'brass',rotation:[0,Math.PI/2,0]},
+    {name:'tube',kind:'cylinder',at:'optical',rTop:.068,rBottom:.078,h:.34,material:'dark'},
+    {name:'eyepiece',kind:'cylinder',at:'eyepiece',rTop:.105,rBottom:.080,h:.10,material:'dark'},
+    {name:'objective',kind:'cylinder',at:'objective',rTop:.042,rBottom:.055,h:.075,material:'dark'},
+    {name:'stage',kind:'box',at:'stage',size:[.50,.055,.34],material:'brass'},
+    {name:'slide',kind:'box',at:'slide',size:[.28,.014,.13],material:'glass'},
+    {name:'lens',kind:'cylinder',at:'slide',r:.040,h:.012,segments:12,material:'glass',offset:[0,.014,0]}
   ]
 };
 const microscopeSpatial=makeSimpleSpatial(microscopeSpec,microscope);
-// Executable diagnostic surface for model-led construction. Call from DevTools or
-// temporary probes: microscopeSpatial.project('front'|'side'|'top').
 globalThis.BetwixtSpatial={microscope:microscopeSpatial};
+// Construction assertions: fail loudly before publication if the authored relationships lie.
+{
+  const s=microscopeSpatial.sheet(),F=s.front;
+  const gap=F.objective.v[0]-F.slide.v[1];
+  if(gap<.035)throw Error('Microscope construction: objective/slide need breathing room');
+  if(F.tube.u[0]>F.objective.u[0]||F.tube.u[1]<F.objective.u[1])throw Error('Microscope construction: objective must remain under tube');
+  if(F.stage.v[0]<=F.base.v[1])throw Error('Microscope construction: stage must clear base');
+}
 const microscopeTapTarget=makeBetwixtable(microscope);
 
 const chemBurstGroup=new THREE.Group();chemBurstGroup.name='effect:chem-discovery';scene.add(chemBurstGroup);

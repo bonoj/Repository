@@ -1994,6 +1994,10 @@ const RelationalBuild=Object.freeze({
       new THREE.Vector3( Math.sin(half),Math.cos(half),0)
     ];
   },
+  linear:Object.freeze([
+    new THREE.Vector3(-1,0,0),
+    new THREE.Vector3( 1,0,0)
+  ]),
   project(graph,{bondLength=.48}={}){
     const positions=new Map(),rootId=graph.root||graph.nodes[0]?.id;
     positions.set(rootId,new THREE.Vector3());
@@ -2009,7 +2013,9 @@ const RelationalBuild=Object.freeze({
         ? this.tetrahedral
         : node?.projection==='bent'
           ? this.bent(node.angleDegrees??104.5)
-          : edges.map((_,i)=>new THREE.Vector3(Math.cos(i*Math.PI*2/Math.max(1,edges.length)),0,Math.sin(i*Math.PI*2/Math.max(1,edges.length))));
+          : node?.projection==='linear'
+            ? this.linear
+            : edges.map((_,i)=>new THREE.Vector3(Math.cos(i*Math.PI*2/Math.max(1,edges.length)),0,Math.sin(i*Math.PI*2/Math.max(1,edges.length))));
       edges.forEach((edge,i)=>{
         if(positions.has(edge.to))return;
         const dir=(dirs[i]||heading).clone().normalize();
@@ -2070,6 +2076,22 @@ const waterGraph=Object.freeze({
     Object.freeze({from:'O1',to:'H2',kind:'bond',order:1,port:1})
   ]),
   assertions:Object.freeze({molecularGeometry:'bent',angleDegrees:104.5})
+});
+
+const carbonDioxideGraph=Object.freeze({
+  name:'carbon-dioxide-t0',root:'C1',
+  // CO2 is linear despite having the same visible neighbor count as H2O.
+  // Two C=O double bonds form two electron domains around carbon: 180 degrees.
+  nodes:Object.freeze([
+    Object.freeze({id:'C1',kind:'carbon',projection:'linear',ports:2,radius:1.18,electronDomains:2}),
+    Object.freeze({id:'O1',kind:'oxygen',ports:1,radius:1.12}),
+    Object.freeze({id:'O2',kind:'oxygen',ports:1,radius:1.12})
+  ]),
+  edges:Object.freeze([
+    Object.freeze({from:'C1',to:'O1',kind:'bond',order:2,port:0}),
+    Object.freeze({from:'C1',to:'O2',kind:'bond',order:2,port:1})
+  ]),
+  assertions:Object.freeze({molecularGeometry:'linear',angleDegrees:180,bondOrders:Object.freeze([2,2])})
 });
 
 const workshopTabletopBetwixtable=buildBetwixtable({
@@ -2143,7 +2165,7 @@ const relationalInspectionBetwixtable=buildBetwixtable({
     };
   }
 });
-relationalInspectionBetwixtable.userData.betwixtable.flash(waterGraph);
+relationalInspectionBetwixtable.userData.betwixtable.flash(carbonDioxideGraph);
 
 function mesh(g,m,p=[0,0,0],r=[0,0,0],s=[1,1,1],parent=octo){
   const x=new THREE.Mesh(g,m);x.position.set(...p);x.rotation.set(...r);x.scale.set(...s);parent.add(x);return x;

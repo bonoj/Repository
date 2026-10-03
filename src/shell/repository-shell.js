@@ -155,7 +155,9 @@
     // will independently boot to the same home pose.
     globalThis.vestibule?.home?.();
     const url=new URL(location.href);
-    for(const key of [...url.searchParams.keys()])if(key!=="build")url.searchParams.delete(key);
+    // Never preserve a build cache key across a requested fresh arrival.
+    // A stale document must not be able to make its own provenance sticky.
+    url.search="";
     url.searchParams.set("fresh",Date.now().toString(36));
     url.hash="";
     location.replace(url);

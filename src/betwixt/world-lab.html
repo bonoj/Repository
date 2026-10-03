@@ -3756,21 +3756,28 @@ addEventListener('pageshow',e=>{
 // This deliberately exposes geometric consequence rather than scene identity: no names,
 // userData, parentage, materials, object IDs, source coordinates, or semantic components.
 // A cold caller owns its pose and a finite action budget outside this implementation.
-function createBoundedWitness({position=[0,1.6,0],forward=[0,0,-1],budget=12,maxDistance=18}={}){
+function createBoundedWitness({parent=scene,position=[0,1.6,0],forward=[0,0,-1],budget=12,maxDistance=18}={}){
+  // Pose is expressed in the chosen parent frame. Only the ray boundary converts
+  // to world space, so a whole experiment can move as one rigid transform.
   const p=new THREE.Vector3(...position),f=new THREE.Vector3(...forward);
   if(!Number.isFinite(budget)||budget<1)throw new Error('Witness budget must be positive');
   if(f.lengthSq()<1e-8)throw new Error('Witness forward vector must be nonzero');
   f.normalize();
-  const up=new THREE.Vector3(0,1,0),probe=new THREE.Raycaster();
-  // Human-visible embodiment only. The Witness never receives this group and raycasts explicitly ignore it.
-  const body=new THREE.Group();body.userData.witnessBody=true;scene.add(body);
+  const probe=new THREE.Raycaster();
+  const body=new THREE.Group();body.userData.witnessBody=true;parent.add(body);
   const shell=new THREE.Mesh(new THREE.SphereGeometry(.12,12,8),brassDark);shell.scale.set(1,.72,1.18);body.add(shell);
   const nose=new THREE.Mesh(new THREE.ConeGeometry(.065,.30,8),warm);nose.rotation.x=-Math.PI/2;nose.position.z=-.22;body.add(nose);
   const tail=new THREE.Mesh(new THREE.BoxGeometry(.18,.045,.06),steel);tail.position.z=.15;body.add(tail);
   const syncBody=()=>{
     body.position.copy(p);
-    const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,-1),f);
-    body.quaternion.copy(q);window.vestibuleDirty=true;
+    body.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1),f);
+    window.vestibuleDirty=true;
+  };
+  const worldRay=direction=>{
+    parent.updateWorldMatrix(true,false);
+    const origin=parent.localToWorld(p.clone());
+    const q=new THREE.Quaternion();parent.getWorldQuaternion(q);
+    return {origin,direction:direction.clone().applyQuaternion(q).normalize()};
   };
   syncBody();
   let remaining=Math.floor(budget),step=0;
@@ -3792,11 +3799,19 @@ function createBoundedWitness({position=[0,1.6,0],forward=[0,0,-1],budget=12,max
       normal:normal?Object.freeze(normal.toArray().map(v=>+v.toFixed(4))):null
     });
   }
-  function cast(origin,direction){
-    probe.set(origin,direction);probe.far=maxDistance;
-    // Rendered Mesh surfaces are evidence. Invisible selection shells and Lines/Points are excluded.
+  function isWitnessSurface(o){
+    for(let n=o;n;n=n.parent)if(n.userData?.witnessBody)return true;
+    return false;
+  }
+  function cast(localOrigin,localDirection){
+    const ray=worldRay(localDirection);
+    if(localOrigin!==p){
+      parent.updateWorldMatrix(true,false);
+      ray.origin.copy(parent.localToWorld(localOrigin.clone()));
+    }
+    probe.set(ray.origin,ray.direction);probe.far=maxDistance;
     const surfaces=[];
-    scene.traverse(o=>{if(o.visible&&o.isMesh&&o.material?.visible!==false&&!o.userData?.betwixtable&&!o.userData?.witnessBody&&!o.parent?.userData?.witnessBody)surfaces.push(o)});
+    scene.traverse(o=>{if(o.visible&&o.isMesh&&o.material?.visible!==false&&!o.userData?.betwixtable&&!isWitnessSurface(o))surfaces.push(o)});
     const hits=probe.intersectObjects(surfaces,false);
     return anonymousHit(hits[0]||null);
   }
@@ -3816,10 +3831,7 @@ function createBoundedWitness({position=[0,1.6,0],forward=[0,0,-1],budget=12,max
       const d=THREE.MathUtils.clamp(distance,-3,3);
       return spend('move',{distance:d},()=>{
         const next=p.clone().addScaledVector(f,d);
-        const radial=Math.hypot(next.x,next.z);
-        if(radial>CAMERA_BOUNDARY)next.multiplyScalar(CAMERA_BOUNDARY/radial);
-        next.y=THREE.MathUtils.clamp(next.y,GROUND_Y+.08,GROUND_Y+12);
-        // Movement cannot pass through the first rendered surface along its travel ray.
+        next.y=THREE.MathUtils.clamp(next.y,.08,12);
         const travel=next.clone().sub(p),len=travel.length();
         if(len>1e-6){const hit=cast(p,travel.clone().normalize());if(hit&&hit.distance<len+.04)next.copy(p).addScaledVector(travel.normalize(),Math.max(0,hit.distance-.06));}
         p.copy(next);syncBody();return Object.freeze({position:Object.freeze(p.toArray())});
@@ -3831,10 +3843,13 @@ function createBoundedWitness({position=[0,1.6,0],forward=[0,0,-1],budget=12,max
   return Object.freeze(api);
 }
 globalThis.createBoundedWitness=createBoundedWitness;
-// The first crossing has one canonical Witness. Its experimental start is
-// laterally clear of the laboratory stack; this is initial condition, not motion,
-// so manifestation spends no attention. Forward remains neutral world -Z.
-globalThis.boundedWitness=createBoundedWitness({position:[-5.4,1.6,1.8]});
+// Crossing 001 is one rigid experimental frame: specimen and Witness share the
+// Betwixtable parent. Local start is fixture placement, not an action.
+globalThis.boundedWitness=createBoundedWitness({
+  parent:neptunianCrossing001Betwixtable,
+  position:[-1.72,1.05,1.28],
+  forward:[0,0,-1]
+});
 
 window.vestibule={
   scene,camera,renderer,presences,betwixtContent,

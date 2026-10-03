@@ -1764,9 +1764,16 @@ function detonateChemSpell(){
     const a=i*2.3999632297,e=.18+((i*7)%13)/13*.78,s=.9+(i%7)*.24;
     chemBurst.particles.push({mesh:p,v:new THREE.Vector3(Math.cos(a)*Math.cos(e)*s,Math.sin(e)*s,Math.sin(a)*Math.cos(e)*s)});
   }
-  // Replace presentation inside the persistent focused Betwixtable.
+  // Replace presentation inside the persistent focused Betwixtable. Grounding is
+  // local to the presentation; never compare a foregrounded child's world Y to the
+  // home floor, because the Betwixtable itself owns that temporary displacement.
   microscope.position.copy(dynamite.position);microscope.visible=true;
-  floorWorkshopObject(microscope);chemBetwixtable.userData.betwixtable.fit();
+  microscope.updateMatrixWorld(true);
+  const localBox=new THREE.Box3().setFromObject(microscope);
+  const parentY=new THREE.Vector3();microscope.parent.getWorldPosition(parentY);
+  microscope.position.y-=localBox.min.y-parentY.y;
+  microscope.updateMatrixWorld(true);
+  chemBetwixtable.userData.betwixtable.fit();
   installChemResident();window.vestibuleDirty=true;return true;
 }
 function openChemLab(){

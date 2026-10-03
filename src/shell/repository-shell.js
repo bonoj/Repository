@@ -10,29 +10,9 @@
   const build=globalThis.__REPOSITORY_BUILD__||"local";
   const sha=globalThis.__REPOSITORY_SHA__||null;
 
-  // A successful Pages deployment is not the same thing as a visitor receiving
-  // the current document: browsers/CDNs may still reuse an older index.html.
-  // Compare this executable's embedded provenance with the independently
-  // published marker. If they disagree, force one SHA-keyed navigation so the
-  // stale document cannot remain silently authoritative.
-  async function reconcilePublishedBuild(){
-    if(!sha||sha==="local"||location.protocol==="file:")return;
-    try{
-      const markerUrl=new URL(".repository-sha",location.href);
-      markerUrl.searchParams.set("probe",Date.now().toString(36));
-      const response=await fetch(markerUrl,{cache:"no-store"});
-      if(!response.ok)return;
-      const published=(await response.text()).trim();
-      if(!/^[0-9a-f]{40}$/i.test(published)||published===sha)return;
-      const current=new URL(location.href);
-      if(current.searchParams.get("build")===published.slice(0,8))return;
-      current.searchParams.set("build",published.slice(0,8));
-      location.replace(current);
-    }catch(error){
-      console.warn("Repository provenance probe failed",error);
-    }
-  }
-  reconcilePublishedBuild();
+  // Build identity is the executable's own immutable provenance. Publication
+  // freshness is a deployment concern; the page must not try to infer or repair
+  // it by fetching another potentially stale Pages resource.
 
   const style=document.createElement("style");
   style.textContent=`

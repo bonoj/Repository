@@ -1998,6 +1998,18 @@ const RelationalBuild=Object.freeze({
     new THREE.Vector3(-1,0,0),
     new THREE.Vector3( 1,0,0)
   ]),
+  trigonalChildren(parentDirection){
+    const back=parentDirection.clone().negate().normalize();
+    const helper=Math.abs(back.y)<.9?new THREE.Vector3(0,1,0):new THREE.Vector3(1,0,0);
+    const u=new THREE.Vector3().crossVectors(helper,back).normalize();
+    // Experimental ethylene is slightly opened at C-C-H (~121.5 deg), so the
+    // two C-H directions are symmetric in the same plane around the C-C axis.
+    const a=THREE.MathUtils.degToRad(121.55);
+    return [
+      back.clone().multiplyScalar(Math.cos(a)).addScaledVector(u, Math.sin(a)).normalize(),
+      back.clone().multiplyScalar(Math.cos(a)).addScaledVector(u,-Math.sin(a)).normalize()
+    ];
+  },
   tetrahedralChildren(parentDirection,torsionDegrees=0){
     const back=parentDirection.clone().negate().normalize();
     const helper=Math.abs(back.y)<.9?new THREE.Vector3(0,1,0):new THREE.Vector3(1,0,0);
@@ -2022,9 +2034,13 @@ const RelationalBuild=Object.freeze({
     const visit=(id,heading=new THREE.Vector3(0,1,0))=>{
       const base=positions.get(id),edges=outgoing.get(id)||[];
       const node=graph.nodes.find(n=>n.id===id);
-      const dirs=node?.projection==='tetrahedral'
+      const dirs=node?.projection==='trigonal-root'
+        ? [new THREE.Vector3(0,1,0),...this.trigonalChildren(new THREE.Vector3(0,1,0))]
+        : node?.projection==='tetrahedral'
         ? this.tetrahedral
-        : node?.projection==='tetrahedral-local'
+        : node?.projection==='trigonal-local'
+          ? this.trigonalChildren(heading)
+          : node?.projection==='tetrahedral-local'
           ? this.tetrahedralChildren(heading,node.torsionDegrees??0)
           : node?.projection==='bent'
           ? this.bent(node.angleDegrees??104.5)
@@ -2128,6 +2144,23 @@ const ethaneGraph=Object.freeze({
   assertions:Object.freeze({formula:'C2H6',localGeometry:'tetrahedral',carbonCarbonBondOrder:1,conformer:'staggered'})
 });
 
+const ethyleneGraph=Object.freeze({
+  name:'ethylene-t0',root:'C1',
+  nodes:Object.freeze([
+    Object.freeze({id:'C1',kind:'carbon',projection:'trigonal-root',ports:3,radius:1.18}),
+    Object.freeze({id:'C2',kind:'carbon',projection:'trigonal-local',ports:3,radius:1.18}),
+    ...['H1','H2','H3','H4'].map(id=>Object.freeze({id,kind:'hydrogen',ports:1,radius:.72}))
+  ]),
+  edges:Object.freeze([
+    Object.freeze({from:'C1',to:'C2',kind:'bond',order:2,port:0}),
+    Object.freeze({from:'C1',to:'H1',kind:'bond',order:1,port:1}),
+    Object.freeze({from:'C1',to:'H2',kind:'bond',order:1,port:2}),
+    Object.freeze({from:'C2',to:'H3',kind:'bond',order:1,port:1}),
+    Object.freeze({from:'C2',to:'H4',kind:'bond',order:1,port:2})
+  ]),
+  assertions:Object.freeze({formula:'C2H4',geometry:'planar',symmetry:'D2h',carbonCarbonBondOrder:2,cchAngleDegrees:121.55})
+});
+
 const workshopTabletopBetwixtable=buildBetwixtable({
   name:'brass-glass-tabletop',
   parent:scene,
@@ -2223,7 +2256,7 @@ const relationalInspectionBetwixtable=buildBetwixtable({
     };
   }
 });
-relationalInspectionBetwixtable.userData.betwixtable.flash(ethaneGraph);
+relationalInspectionBetwixtable.userData.betwixtable.flash(ethyleneGraph);
 
 function mesh(g,m,p=[0,0,0],r=[0,0,0],s=[1,1,1],parent=octo){
   const x=new THREE.Mesh(g,m);x.position.set(...p);x.rotation.set(...r);x.scale.set(...s);parent.add(x);return x;

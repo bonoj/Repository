@@ -3751,6 +3751,75 @@ addEventListener('pageshow',e=>{
   restoreWorldState();
 });
 
+// Generic bounded machine-perception aperture.
+// This deliberately exposes geometric consequence rather than scene identity: no names,
+// userData, parentage, materials, object IDs, source coordinates, or semantic components.
+// A cold caller owns its pose and a finite action budget outside this implementation.
+function createBoundedWitness({position=[0,1.6,0],forward=[0,0,-1],budget=12,maxDistance=18}={}){
+  const p=new THREE.Vector3(...position),f=new THREE.Vector3(...forward);
+  if(!Number.isFinite(budget)||budget<1)throw new Error('Witness budget must be positive');
+  if(f.lengthSq()<1e-8)throw new Error('Witness forward vector must be nonzero');
+  f.normalize();
+  const up=new THREE.Vector3(0,1,0),probe=new THREE.Raycaster();
+  let remaining=Math.floor(budget),step=0;
+  const history=[];
+  function finite3(a){return Array.isArray(a)&&a.length===3&&a.every(Number.isFinite)}
+  function spend(kind,input,fn){
+    if(remaining<=0)return Object.freeze({ok:false,error:'budget-exhausted',remaining:0});
+    remaining--;step++;
+    const result=fn(),record=Object.freeze({step,kind,input:Object.freeze({...input}),result,remaining});
+    history.push(record);return record;
+  }
+  function anonymousHit(hit){
+    if(!hit)return null;
+    const normal=hit.face?.normal?.clone();
+    if(normal)normal.transformDirection(hit.object.matrixWorld);
+    return Object.freeze({
+      distance:+hit.distance.toFixed(4),
+      point:Object.freeze(hit.point.toArray().map(v=>+v.toFixed(4))),
+      normal:normal?Object.freeze(normal.toArray().map(v=>+v.toFixed(4))):null
+    });
+  }
+  function cast(origin,direction){
+    probe.set(origin,direction);probe.far=maxDistance;
+    // Rendered Mesh surfaces are evidence. Invisible selection shells and Lines/Points are excluded.
+    const surfaces=[];
+    scene.traverse(o=>{if(o.visible&&o.isMesh&&o.material?.visible!==false&&!o.userData?.betwixtable)surfaces.push(o)});
+    const hits=probe.intersectObjects(surfaces,false);
+    return anonymousHit(hits[0]||null);
+  }
+  const api={
+    sense(direction=f.toArray()){
+      if(!finite3(direction))throw new Error('sense direction must be [x,y,z]');
+      const d=new THREE.Vector3(...direction);if(d.lengthSq()<1e-8)throw new Error('sense direction must be nonzero');d.normalize();
+      return spend('sense',{direction:d.toArray()},()=>cast(p,d));
+    },
+    look(direction){
+      if(!finite3(direction))throw new Error('look direction must be [x,y,z]');
+      const d=new THREE.Vector3(...direction);if(d.lengthSq()<1e-8)throw new Error('look direction must be nonzero');d.normalize();
+      return spend('look',{direction:d.toArray()},()=>{f.copy(d);return Object.freeze({forward:Object.freeze(f.toArray())})});
+    },
+    move(distance){
+      if(!Number.isFinite(distance))throw new Error('move distance must be finite');
+      const d=THREE.MathUtils.clamp(distance,-3,3);
+      return spend('move',{distance:d},()=>{
+        const next=p.clone().addScaledVector(f,d);
+        const radial=Math.hypot(next.x,next.z);
+        if(radial>CAMERA_BOUNDARY)next.multiplyScalar(CAMERA_BOUNDARY/radial);
+        next.y=THREE.MathUtils.clamp(next.y,GROUND_Y+.08,GROUND_Y+12);
+        // Movement cannot pass through the first rendered surface along its travel ray.
+        const travel=next.clone().sub(p),len=travel.length();
+        if(len>1e-6){const hit=cast(p,travel.clone().normalize());if(hit&&hit.distance<len+.04)next.copy(p).addScaledVector(travel.normalize(),Math.max(0,hit.distance-.06));}
+        p.copy(next);return Object.freeze({position:Object.freeze(p.toArray())});
+      });
+    },
+    pose(){return Object.freeze({position:Object.freeze(p.toArray()),forward:Object.freeze(f.toArray()),remaining})},
+    transcript(){return Object.freeze(history.slice())}
+  };
+  return Object.freeze(api);
+}
+globalThis.createBoundedWitness=createBoundedWitness;
+
 window.vestibule={
   scene,camera,renderer,presences,betwixtContent,
   get contentRaised(){return contentRaised},

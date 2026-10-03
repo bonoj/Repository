@@ -3664,6 +3664,7 @@ addEventListener('resize',()=>{
 });
 
 renderer.setAnimationLoop((now)=>{
+  globalThis.boundedWitness?.updateIdle?.(now);
   workshopTabletopBetwixtable.userData.betwixtable.presentation.children.find(o=>o.name==='thoughtform:neptunian-caretaker-carrier')?.userData.animate?.(now);
   jovianBetwixtable.userData.betwixtable.presentation.userData.jovian?.update(now);
   jovianBetwixtable.userData.betwixtable.presentation.userData.jovian?.updateBearings(now);
@@ -3826,6 +3827,44 @@ function createBoundedWitness({parent=scene,position=[0,1.6,0],forward=[0,0,-1],
     const q=new THREE.Quaternion();parent.getWorldQuaternion(q);
     return {origin,direction:direction.clone().applyQuaternion(q).normalize()};
   };
+  // Idle locomotion is environmental, deterministic, and free: the Witness rides a
+  // slowly precessing spherical orbit around the experiment and continuously faces
+  // its Betwixtable's presentation center. Deliberate sensing remains budgeted.
+  const orbitCenter=new THREE.Vector3();
+  {
+    const box=parent.userData?.betwixtable?.bounds?.();
+    if(box&&!box.isEmpty()){
+      box.getCenter(orbitCenter);
+      parent.worldToLocal(orbitCenter);
+    }
+  }
+  const orbitRadius=Math.max(2.85,p.clone().sub(orbitCenter).length());
+  const orbitTracePoints=[];
+  const orbitTraceGeometry=new THREE.BufferGeometry();
+  const orbitTrace=new THREE.Line(
+    orbitTraceGeometry,
+    new THREE.LineBasicMaterial({color:0xd2a86b,transparent:true,opacity:.22,depthWrite:false})
+  );
+  orbitTrace.userData.witnessBody=true;parent.add(orbitTrace);
+  let orbitStarted=null,lastTraceAt=0;
+  function updateIdle(now){
+    if(orbitStarted==null)orbitStarted=now;
+    const t=(now-orbitStarted)/1000;
+    const phase=t*.34;
+    const inclination=Math.sin(t*.031)*Math.PI*.49;
+    const node=t*.047;
+    p.set(Math.cos(phase)*orbitRadius,0,Math.sin(phase)*orbitRadius);
+    p.applyAxisAngle(new THREE.Vector3(1,0,0),inclination);
+    p.applyAxisAngle(new THREE.Vector3(0,1,0),node);
+    p.add(orbitCenter);
+    f.copy(orbitCenter).sub(p).normalize();
+    syncBody();
+    if(now-lastTraceAt>95){
+      lastTraceAt=now;orbitTracePoints.push(p.clone());
+      if(orbitTracePoints.length>4200)orbitTracePoints.shift();
+      orbitTraceGeometry.setFromPoints(orbitTracePoints);
+    }
+  }
   syncBody();
   let remaining=Math.floor(budget),step=0;
   const history=[];
@@ -3885,7 +3924,8 @@ function createBoundedWitness({parent=scene,position=[0,1.6,0],forward=[0,0,-1],
       });
     },
     pose(){return Object.freeze({position:Object.freeze(p.toArray()),forward:Object.freeze(f.toArray()),remaining})},
-    transcript(){return Object.freeze(history.slice())}
+    transcript(){return Object.freeze(history.slice())},
+    updateIdle
   };
   return Object.freeze(api);
 }

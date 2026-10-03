@@ -1572,6 +1572,12 @@ const workshopCrucibleOrbMesh=new THREE.Mesh(
 workshopCrucibleOrbMesh.castShadow=true;
 workshopCrucibleOrbMesh.userData.workshopCrucibleOrb=true;
 workshopCrucibleOrb.add(workshopCrucibleOrbMesh);
+// Workshop geoglass specification: translucent face with restrained semi-hard facets.
+const workshopCrucibleOrbEdges=new THREE.LineSegments(
+  new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(.502,3),24),
+  new THREE.LineBasicMaterial({color:0x667879,transparent:true,opacity:.42})
+);
+workshopCrucibleOrb.add(workshopCrucibleOrbEdges);
 
 const workshopCrucibleBearingGeo=new THREE.SphereGeometry(.072,10,7);
 const workshopCrucibleBearingMats=[

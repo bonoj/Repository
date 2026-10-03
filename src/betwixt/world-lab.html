@@ -3762,6 +3762,17 @@ function createBoundedWitness({position=[0,1.6,0],forward=[0,0,-1],budget=12,max
   if(f.lengthSq()<1e-8)throw new Error('Witness forward vector must be nonzero');
   f.normalize();
   const up=new THREE.Vector3(0,1,0),probe=new THREE.Raycaster();
+  // Human-visible embodiment only. The Witness never receives this group and raycasts explicitly ignore it.
+  const body=new THREE.Group();body.userData.witnessBody=true;scene.add(body);
+  const shell=new THREE.Mesh(new THREE.SphereGeometry(.12,12,8),brassDark);shell.scale.set(1,.72,1.18);body.add(shell);
+  const nose=new THREE.Mesh(new THREE.ConeGeometry(.065,.30,8),warm);nose.rotation.x=-Math.PI/2;nose.position.z=-.22;body.add(nose);
+  const tail=new THREE.Mesh(new THREE.BoxGeometry(.18,.045,.06),steel);tail.position.z=.15;body.add(tail);
+  const syncBody=()=>{
+    body.position.copy(p);
+    const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,-1),f);
+    body.quaternion.copy(q);window.vestibuleDirty=true;
+  };
+  syncBody();
   let remaining=Math.floor(budget),step=0;
   const history=[];
   function finite3(a){return Array.isArray(a)&&a.length===3&&a.every(Number.isFinite)}
@@ -3785,7 +3796,7 @@ function createBoundedWitness({position=[0,1.6,0],forward=[0,0,-1],budget=12,max
     probe.set(origin,direction);probe.far=maxDistance;
     // Rendered Mesh surfaces are evidence. Invisible selection shells and Lines/Points are excluded.
     const surfaces=[];
-    scene.traverse(o=>{if(o.visible&&o.isMesh&&o.material?.visible!==false&&!o.userData?.betwixtable)surfaces.push(o)});
+    scene.traverse(o=>{if(o.visible&&o.isMesh&&o.material?.visible!==false&&!o.userData?.betwixtable&&!o.userData?.witnessBody&&!o.parent?.userData?.witnessBody)surfaces.push(o)});
     const hits=probe.intersectObjects(surfaces,false);
     return anonymousHit(hits[0]||null);
   }
@@ -3798,7 +3809,7 @@ function createBoundedWitness({position=[0,1.6,0],forward=[0,0,-1],budget=12,max
     look(direction){
       if(!finite3(direction))throw new Error('look direction must be [x,y,z]');
       const d=new THREE.Vector3(...direction);if(d.lengthSq()<1e-8)throw new Error('look direction must be nonzero');d.normalize();
-      return spend('look',{direction:d.toArray()},()=>{f.copy(d);return Object.freeze({forward:Object.freeze(f.toArray())})});
+      return spend('look',{direction:d.toArray()},()=>{f.copy(d);syncBody();return Object.freeze({forward:Object.freeze(f.toArray())})});
     },
     move(distance){
       if(!Number.isFinite(distance))throw new Error('move distance must be finite');
@@ -3811,7 +3822,7 @@ function createBoundedWitness({position=[0,1.6,0],forward=[0,0,-1],budget=12,max
         // Movement cannot pass through the first rendered surface along its travel ray.
         const travel=next.clone().sub(p),len=travel.length();
         if(len>1e-6){const hit=cast(p,travel.clone().normalize());if(hit&&hit.distance<len+.04)next.copy(p).addScaledVector(travel.normalize(),Math.max(0,hit.distance-.06));}
-        p.copy(next);return Object.freeze({position:Object.freeze(p.toArray())});
+        p.copy(next);syncBody();return Object.freeze({position:Object.freeze(p.toArray())});
       });
     },
     pose(){return Object.freeze({position:Object.freeze(p.toArray()),forward:Object.freeze(f.toArray()),remaining})},

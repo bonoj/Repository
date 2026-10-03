@@ -2375,6 +2375,21 @@ const workshopTabletopBetwixtable=buildBetwixtable({
   }
 });
 
+// Neptunian Jovian Betwixtable: presentation-compressed, orbital ratios preserved.
+const jovianBetwixtable=buildBetwixtable({name:'neptunian-jovian-system',parent:scene,at:new THREE.Vector3(0,GROUND_Y+9.45,0),padding:.38,build(root){
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(2.05,.075,10,64),brass);rim.rotation.x=Math.PI/2;root.add(rim);
+  root.add(new THREE.Mesh(new THREE.CylinderGeometry(1.96,1.96,.035,64),glassFace));
+  const jupiter=new THREE.Mesh(new THREE.SphereGeometry(.25,24,16),new THREE.MeshStandardMaterial({color:0xc99a6b,roughness:.66}));jupiter.position.y=.30;root.add(jupiter);
+  const data=[['Io',421800,.004,0,0,1.762732,.15],['Europa',671100,.009,.5,184,3.525463,2.20],['Ganymede',1070400,.001,.2,58.5,7.155588,4.05],['Callisto',1882700,.007,.3,309.1,16.690440,5.25]],maxA=1882700,moons=[];
+  data.forEach((d,i)=>{const [name,a,e,inc,node,period,phase]=d,r=a/maxA*1.68;
+    const pts=Array.from({length:96},(_,k)=>new THREE.Vector3(r*Math.cos(k*Math.PI*2/96),.305,r*Math.sin(k*Math.PI*2/96)));
+    const orbit=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x667879,transparent:true,opacity:.28}));orbit.rotation.order='YXZ';orbit.rotation.y=THREE.MathUtils.degToRad(node);orbit.rotation.x=THREE.MathUtils.degToRad(inc);root.add(orbit);
+    const moon=new THREE.Mesh(new THREE.SphereGeometry([.045,.042,.055,.052][i],12,8),new THREE.MeshStandardMaterial({color:[0xd7b66e,0xc7b997,0x9d8d78,0x77736e][i],roughness:.72}));root.add(moon);moon.userData.o={name,a,e,inc,node,period,phase,r};moons.push(moon);
+  });
+  root.userData.jovian={last:null,tDays:0,moons,update(now){if(this.last==null)this.last=now;this.tDays+=Math.min(.05,(now-this.last)/1000)*.42;this.last=now;for(const moon of moons){const o=moon.userData.o,t=o.phase+this.tDays*Math.PI*2/o.period,rr=o.r*(1-o.e*o.e)/(1+o.e*Math.cos(t));const p=new THREE.Vector3(rr*Math.cos(t),.305,rr*Math.sin(t));p.applyAxisAngle(new THREE.Vector3(1,0,0),THREE.MathUtils.degToRad(o.inc));p.applyAxisAngle(new THREE.Vector3(0,1,0),THREE.MathUtils.degToRad(o.node));moon.position.copy(p);}}};
+  root.userData.science=Object.freeze({source:'JPL JUP365 mean elements',epoch:'2000-01-01.5 TDB',laplace:'Io-Europa-Ganymede near 4:2:1; Callisto outside',presentation:'orbital radii compressed; body radii exaggerated'});
+}});
+
 // Temporary Chemlab glance board: only the element/color vocabulary earned by
 // accepted specimens so far. This is presentation residue, not chemistry authority.
 const chemlabGlanceBoard=new THREE.Group();chemlabGlanceBoard.name='temporary:chemlab-glance-board';
@@ -3494,7 +3509,7 @@ addEventListener('resize',()=>{
   window.vestibuleDirty=true;
 });
 
-renderer.setAnimationLoop((now)=>{
+renderer.setAnimationLoop((now)=>{\n  jovianBetwixtable.userData.jovian?.update(now);
   const thoughtformCage=workshopTabletopBetwixtable.getObjectByName('thoughtform:semantic-snapping-primitives')?.userData.gimbalCage;
   if(thoughtformCage){thoughtformCage.rotation.y=now*.00018;thoughtformCage.rotation.x=Math.sin(now*.00007)*.10;window.vestibuleDirty=true;}
   const chemThoughtform=workshopTabletopBetwixtable.getObjectByName('thoughtform:chemlab-cold-boot');

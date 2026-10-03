@@ -2398,6 +2398,76 @@ const workshopTabletopBetwixtable=buildBetwixtable({
   }
 });
 
+// Neptunian Crossing 001 — Builder pass only.
+// Two ordinary independent forms in existing Betwixt noise. No Witness semantics are attached.
+// Workshop materials are reused directly; whatever imperfections this fast passage contains are natural evidence.
+const neptunianCrossing001Betwixtable=buildBetwixtable({
+  name:'neptunian-crossing-001',
+  parent:scene,
+  // Deliberately off-axis from the vertical laboratory stack: nearby Betwixt remains perceptual noise.
+  at:new THREE.Vector3(6.8,GROUND_Y+.03,-4.9),
+  padding:.34,
+  build(root){
+    // Quiet brass/glass ground: spatial support, not a semantic relationship between its occupants.
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(2.35,.07,10,64),brass);
+    rim.rotation.x=Math.PI/2;rim.castShadow=true;root.add(rim);
+    const tableGlass=new THREE.Mesh(new THREE.CylinderGeometry(2.27,2.27,.035,64),glassFace);
+    tableGlass.receiveShadow=true;root.add(tableGlass);
+
+    // Bridge: archetypal span, supports, slight camber, and simple repeated rails.
+    // It owns no label or machine-facing identity beyond ordinary Three.js structure.
+    const bridge=new THREE.Group();bridge.position.set(-.62,.04,.05);bridge.rotation.y=-.13;root.add(bridge);
+    const stone=workshopPale,wood=workshopWood,metal=workshopDark;
+    for(const x of [-1.03,1.03]){
+      const pier=new THREE.Mesh(new THREE.BoxGeometry(.24,.48,.82),stone);
+      pier.position.set(x,.24,0);pier.castShadow=true;pier.receiveShadow=true;bridge.add(pier);
+      const cap=new THREE.Mesh(new THREE.BoxGeometry(.42,.10,.94),stone);
+      cap.position.set(x,.53,0);cap.castShadow=true;bridge.add(cap);
+    }
+    const deckSegments=9;
+    for(let n=0;n<deckSegments;n++){
+      const u=n/(deckSegments-1),x=THREE.MathUtils.lerp(-1.12,1.12,u);
+      const camber=.54+.13*(1-Math.pow(u*2-1,2));
+      const plank=new THREE.Mesh(new THREE.BoxGeometry(.29,.10,.72),wood);
+      plank.position.set(x,camber,0);plank.rotation.z=(u-.5)*-.105;plank.castShadow=true;plank.receiveShadow=true;bridge.add(plank);
+    }
+    for(const z of [-.43,.43]){
+      const posts=[];
+      for(let n=0;n<6;n++){
+        const u=n/5,x=THREE.MathUtils.lerp(-1.12,1.12,u),y=.67+.13*(1-Math.pow(u*2-1,2));
+        const post=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,.43,8),metal);
+        post.position.set(x,y+.19,z);post.castShadow=true;bridge.add(post);posts.push(new THREE.Vector3(x,y+.38,z));
+      }
+      for(let n=0;n<posts.length-1;n++){
+        const a=posts[n],b=posts[n+1],d=b.clone().sub(a),rail=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,d.length(),8),metal);
+        rail.position.copy(a).add(b).multiplyScalar(.5);rail.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());rail.castShadow=true;bridge.add(rail);
+      }
+    }
+
+    // Beacon: independent compact vertical form with actual local illumination.
+    const beacon=new THREE.Group();beacon.position.set(1.33,.035,-.74);root.add(beacon);
+    const foot=new THREE.Mesh(new THREE.CylinderGeometry(.34,.42,.22,10),brassDark);
+    foot.position.y=.11;foot.castShadow=true;beacon.add(foot);
+    const body=new THREE.Mesh(new THREE.CylinderGeometry(.19,.27,.78,10),brass);
+    body.position.y=.60;body.castShadow=true;beacon.add(body);
+    const collar=new THREE.Mesh(new THREE.TorusGeometry(.23,.035,8,24),brassDark);
+    collar.rotation.x=Math.PI/2;collar.position.y=1.00;collar.castShadow=true;beacon.add(collar);
+    const lampGlass=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,.38,12),glassFace);
+    lampGlass.position.y=1.20;beacon.add(lampGlass);
+    const core=new THREE.Mesh(new THREE.SphereGeometry(.085,12,8),warm);
+    core.position.y=1.20;beacon.add(core);
+    for(let n=0;n<4;n++){
+      const a=n*Math.PI/2,bar=new THREE.Mesh(new THREE.CylinderGeometry(.022,.022,.43,8),brassDark);
+      bar.position.set(Math.cos(a)*.20,1.20,Math.sin(a)*.20);bar.castShadow=true;beacon.add(bar);
+    }
+    const cap=new THREE.Mesh(new THREE.ConeGeometry(.34,.24,10),brass);
+    cap.position.y=1.51;cap.castShadow=true;beacon.add(cap);
+    const beaconLight=new THREE.PointLight(0xffb35a,2.2,4.2,2);
+    beaconLight.position.set(0,1.20,0);beaconLight.castShadow=true;
+    beaconLight.shadow.mapSize.set(256,256);beaconLight.shadow.bias=-.001;beacon.add(beaconLight);
+  }
+});
+
 // Neptunian Jovian Betwixtable: presentation-compressed, orbital ratios preserved.
 const jovianBetwixtable=buildBetwixtable({name:'neptunian-jovian-system',parent:scene,at:new THREE.Vector3(0,GROUND_Y+9.45,0),padding:.38,build(root){
   const rim=new THREE.Mesh(new THREE.TorusGeometry(2.05,.075,10,64),brass);rim.rotation.x=Math.PI/2;root.add(rim);

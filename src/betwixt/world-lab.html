@@ -1557,26 +1557,49 @@ function installWorkshopCrucibleContainerSpell(){
 queueMicrotask(installWorkshopCrucibleContainerSpell);
 
 // First spatial spell: the Crucible container has a physical handle in quiet
-// Betwixt. It delegates to the exact same toggle as the resident ⚗️ spell.
+// Betwixt. Geoglass uses the Workshop material vocabulary; the bearings inside
+// borrow Crucible's dark/warm/cyan feel. It still delegates to the resident ⚗️.
 const workshopCrucibleOrb=new THREE.Group();
 workshopCrucibleOrb.name='spell-orb:crucible';
+const workshopCrucibleOrbGlass=new THREE.MeshPhysicalMaterial({
+  color:0xb9b7aa,roughness:.12,metalness:.04,transparent:true,opacity:.28,
+  transmission:.72,thickness:.08,ior:1.2,depthWrite:false,side:THREE.DoubleSide
+});
 const workshopCrucibleOrbMesh=new THREE.Mesh(
-  new THREE.SphereGeometry(.46,24,16),
-  new THREE.MeshStandardMaterial({color:0xd7e3df,roughness:.16,metalness:.08,transparent:true,opacity:.82})
+  new THREE.IcosahedronGeometry(.50,3),
+  workshopCrucibleOrbGlass
 );
 workshopCrucibleOrbMesh.castShadow=true;
 workshopCrucibleOrbMesh.userData.workshopCrucibleOrb=true;
 workshopCrucibleOrb.add(workshopCrucibleOrbMesh);
+
+const workshopCrucibleBearingGeo=new THREE.SphereGeometry(.072,10,7);
+const workshopCrucibleBearingMats=[
+  new THREE.MeshStandardMaterial({color:0x252724,roughness:.34,metalness:.58}),
+  new THREE.MeshStandardMaterial({color:0x9b6638,roughness:.30,metalness:.50}),
+  new THREE.MeshStandardMaterial({color:0x62aeb4,roughness:.26,metalness:.46}),
+  new THREE.MeshStandardMaterial({color:0xb9b7aa,roughness:.38,metalness:.36})
+];
+const workshopCrucibleBearingPositions=[
+  [-.23,-.30,-.10],[-.08,-.34,.18],[.11,-.31,-.18],[.25,-.27,.08],
+  [-.28,-.17,.14],[-.13,-.18,-.22],[.03,-.20,.03],[.19,-.15,.22],[.29,-.12,-.09],
+  [-.20,-.04,-.18],[-.07,-.06,.24],[.09,-.02,-.08],[.24,.01,.13],
+  [-.16,.11,.11],[.02,.09,-.23],[.18,.14,-.02],[.07,.23,.15]
+];
+workshopCrucibleBearingPositions.forEach((p,i)=>{
+  const bearing=new THREE.Mesh(workshopCrucibleBearingGeo,workshopCrucibleBearingMats[i%workshopCrucibleBearingMats.length]);
+  bearing.position.set(...p);bearing.castShadow=true;workshopCrucibleOrb.add(bearing);
+});
 const workshopCrucibleOrbRing=new THREE.Mesh(
   new THREE.TorusGeometry(.58,.025,8,36),
-  new THREE.MeshStandardMaterial({color:0x879b99,roughness:.62,metalness:.18})
+  new THREE.MeshStandardMaterial({color:0x5f625d,roughness:.62,metalness:.28})
 );
 workshopCrucibleOrbRing.rotation.x=Math.PI/2;
-workshopCrucibleOrbRing.position.y=-.46;
+workshopCrucibleOrbRing.position.y=-.50;
 workshopCrucibleOrb.add(workshopCrucibleOrbRing);
 // Share Jupurn's world-space XZ. The orb remains on the Workshop floor.
 const workshopJupurnXZ=C.Transform.get(jupurnEntity).position;
-workshopCrucibleOrb.position.set(workshopJupurnXZ.x,GROUND_Y+.48,workshopJupurnXZ.z);
+workshopCrucibleOrb.position.set(workshopJupurnXZ.x,GROUND_Y+.52,workshopJupurnXZ.z);
 workshopCrucibleOrb.visible=false;
 scene.add(workshopCrucibleOrb);
 function tapWorkshopCrucibleOrb(){

@@ -1597,16 +1597,19 @@ function buildBetwixtable({name='betwixtable',parent=scene,at=null,padding=.18,b
     obj.position.y-=box.min.y-parentWorldY.y;
     obj.updateMatrixWorld(true);return obj;
   }
-  function fit(){
+  function bounds(){
     node.updateMatrixWorld(true);
-    // Fit rendered presentation geometry, but not human-only Witness embodiment or
-    // instrumentation. A sensor needle must never turn into a giant tap volume.
+    // A Betwixtable's spatial contract is its presentation, not later shell attachments
+    // such as observers, instrumentation, selection affordances, or semantic residue.
     const box=new THREE.Box3(),part=new THREE.Box3();
     presentation.traverse(o=>{
       if(!o.visible||(!o.isMesh&&!o.isLine&&!o.isPoints))return;
-      for(let n=o;n&&n!==presentation;n=n.parent)if(n.userData?.witnessBody)return;
       part.setFromObject(o);if(!part.isEmpty())box.union(part);
     });
+    return box;
+  }
+  function fit(){
+    const box=bounds();
     if(box.isEmpty()){target.position.set(0,0,0);target.scale.setScalar(.45);return}
     const size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
     node.worldToLocal(center);target.position.copy(center);
@@ -1617,7 +1620,7 @@ function buildBetwixtable({name='betwixtable',parent=scene,at=null,padding=.18,b
     if(focusedWorkshopObject)dismissWorkshopFocus();else beginWorkshopFocus(node,true);
     return true;
   }
-  const spatial={node,presentation,target,seat,fit,focus};
+  const spatial={node,presentation,target,seat,bounds,fit,focus};
   node.userData.betwixtable=spatial;
   if(build)build(presentation,spatial);
   seat();fit();
@@ -2891,7 +2894,9 @@ function workshopPresentationPosition(obj){
   // Compute the world translation first, then express the resulting origin in the
   // object's parent frame. This keeps focus correct for every Betwixtable parent.
   obj.updateWorldMatrix(true,true);
-  const centerWorld=new THREE.Box3().setFromObject(obj).getCenter(new THREE.Vector3());
+  const spatial=obj.userData?.betwixtable;
+  const box=spatial?.bounds?spatial.bounds():new THREE.Box3().setFromObject(obj);
+  const centerWorld=box.getCenter(new THREE.Vector3());
   const originWorld=obj.getWorldPosition(new THREE.Vector3());
   const forward=new THREE.Vector3();camera.getWorldDirection(forward);
   const up=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1).normalize();

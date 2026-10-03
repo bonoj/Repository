@@ -2408,6 +2408,106 @@ const workshopTabletopBetwixtable=buildBetwixtable({
   }
 });
 
+// Neptunian JIT construction pressure: semantic-node articulated desk lamp.
+// The graph is construction authority; Workshop materials and endpoint primitives do the physical work.
+// This is intentionally an ordinary Betwixtable, placed forward of the vertical work stack.
+const deskLampGraph=Object.freeze({
+  name:'articulated-desk-lamp-t0',
+  nodes:Object.freeze([
+    Object.freeze({id:'base',kind:'support',at:[0,.10,0]}),
+    Object.freeze({id:'lowerPivot',kind:'pivot',at:[0,.28,0]}),
+    Object.freeze({id:'elbow',kind:'pivot',at:[.48,1.02,0]}),
+    Object.freeze({id:'headPivot',kind:'pivot',at:[1.02,1.48,0]}),
+    Object.freeze({id:'shadeAxis',kind:'axis',at:[1.34,1.25,0]}),
+    Object.freeze({id:'bulb',kind:'contained-light',at:[1.42,1.19,0]})
+  ]),
+  edges:Object.freeze([
+    Object.freeze({from:'base',to:'lowerPivot',relation:'supports'}),
+    Object.freeze({from:'lowerPivot',to:'elbow',relation:'paired-arm'}),
+    Object.freeze({from:'elbow',to:'headPivot',relation:'paired-arm'}),
+    Object.freeze({from:'headPivot',to:'shadeAxis',relation:'aims'}),
+    Object.freeze({from:'shadeAxis',to:'bulb',relation:'contains'})
+  ])
+});
+const deskLampBetwixtable=buildBetwixtable({
+  name:'semantic-desk-lamp',
+  parent:scene,
+  at:new THREE.Vector3(0,GROUND_Y+.03,3.55),
+  padding:.30,
+  build(root,spatial){
+    const points=new Map(deskLampGraph.nodes.map(n=>[n.id,new THREE.Vector3(...n.at)]));
+    const P=id=>points.get(id);
+    const part=(name,obj)=>{obj.name='lamp:'+name;obj.userData.relationalPart=name;return obj};
+
+    // Workshop mats first. No lamp-local material vocabulary.
+    const base=part('base',new THREE.Mesh(new THREE.CylinderGeometry(.48,.54,.18,24),brassDark));
+    base.position.copy(P('base'));base.castShadow=true;base.receiveShadow=true;root.add(base);
+    const baseTop=part('base-top',new THREE.Mesh(new THREE.CylinderGeometry(.39,.43,.055,24),brass));
+    baseTop.position.set(P('base').x,.217,P('base').z);baseTop.castShadow=true;root.add(baseTop);
+
+    const pivotGeo=new THREE.CylinderGeometry(.12,.12,.28,16);
+    function pivot(name,p){
+      const q=part(name,new THREE.Mesh(pivotGeo,steel));q.position.copy(p);q.rotation.x=Math.PI/2;q.castShadow=true;root.add(q);
+      const capA=part(name+'-cap-a',new THREE.Mesh(new THREE.CylinderGeometry(.145,.145,.035,16),brass));
+      capA.position.copy(p).add(new THREE.Vector3(0,0,.157));capA.rotation.x=Math.PI/2;root.add(capA);
+      const capB=part(name+'-cap-b',capA.clone());capB.position.copy(p).add(new THREE.Vector3(0,0,-.157));root.add(capB);
+    }
+    pivot('lower-pivot',P('lowerPivot'));pivot('elbow',P('elbow'));pivot('head-pivot',P('headPivot'));
+
+    // Paired members are generated from semantic endpoints rather than hand-placed transforms.
+    for(const z of [-.075,.075]){
+      workshopCyl(root,P('lowerPivot').clone().add(new THREE.Vector3(0,0,z)),P('elbow').clone().add(new THREE.Vector3(0,0,z)),.042,brass,12).name='lamp:lower-arm';
+      workshopCyl(root,P('elbow').clone().add(new THREE.Vector3(0,0,z)),P('headPivot').clone().add(new THREE.Vector3(0,0,z)),.042,brass,12).name='lamp:upper-arm';
+    }
+
+    // Head axis is itself a snapped relationship from headPivot -> shadeAxis.
+    const neck=workshopCyl(root,P('headPivot'),P('shadeAxis'),.055,brassDark,12);neck.name='lamp:head-neck';
+
+    // Shade axis follows the semantic head relation. ConeGeometry's local Y is aligned to that axis.
+    const axis=P('shadeAxis').clone().sub(P('headPivot')).normalize();
+    const shadeCenter=P('shadeAxis').clone().addScaledVector(axis,.11);
+    const shade=part('shade',new THREE.Mesh(new THREE.ConeGeometry(.31,.46,24,1,true),brass));
+    shade.position.copy(shadeCenter);
+    shade.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),axis);
+    shade.castShadow=true;shade.material.side=THREE.DoubleSide;root.add(shade);
+
+    const bulb=part('bulb',new THREE.Mesh(new THREE.SphereGeometry(.105,18,12),warm));
+    bulb.position.copy(P('bulb'));root.add(bulb);
+    const light=new THREE.PointLight(0xffb35a,1.7,3.4,2);light.position.copy(P('bulb'));root.add(light);
+
+    root.userData.relational=deskLampGraph;
+
+    // JIT spatial audit: verify the semantic relationships against the actual assembled geometry.
+    // This is evidence, not a second builder. Corrections below are derived from these measurements.
+    const audit=[];
+    const dist=(a,b)=>a.distanceTo(b);
+    for(const edge of deskLampGraph.edges){
+      const a=P(edge.from),b=P(edge.to);
+      audit.push(Object.freeze({relation:edge.relation,from:edge.from,to:edge.to,distance:+dist(a,b).toFixed(4)}));
+    }
+    // Containment check is deliberately geometric: bulb center must sit inside the shade's axial envelope
+    // and leave positive radial clearance from the open cone.
+    const bulbDelta=P('bulb').clone().sub(shadeCenter);
+    const axial=bulbDelta.dot(axis),radial=bulbDelta.clone().addScaledVector(axis,-axial).length();
+    const half=.23,localFromBase=axial+half;
+    const allowedRadius=THREE.MathUtils.clamp((localFromBase/.46)*.31,0,.31);
+    const bulbContained=axial>=-half&&axial<=half&&radial+.105<=allowedRadius;
+    audit.push(Object.freeze({relation:'contains',subject:'bulb',axial:+axial.toFixed(4),radial:+radial.toFixed(4),allowedRadius:+allowedRadius.toFixed(4),radius:.105,pass:bulbContained}));
+
+    // First JIT diagnosis: if the semantic bulb point does not actually fit the generated shade,
+    // repair along the already-authoritative shade axis rather than patching an arbitrary XYZ transform.
+    if(!bulbContained){
+      const repaired=shadeCenter.clone().addScaledVector(axis,.07);
+      points.set('bulb',repaired);bulb.position.copy(repaired);light.position.copy(repaired);
+      audit.push(Object.freeze({correction:'bulb->shade containment',method:'move along shade semantic axis',to:Object.freeze(repaired.toArray().map(v=>+v.toFixed(4)))}));
+    }
+    root.userData.neptunianAudit=Object.freeze(audit);
+    spatial.jitAudit=()=>root.userData.neptunianAudit;
+  }
+});
+globalThis.deskLampGraph=deskLampGraph;
+globalThis.deskLampBetwixtable=deskLampBetwixtable;
+
 // Neptunian Crossing 001 — Builder pass only.
 // Two ordinary independent forms in existing Betwixt noise. No Witness semantics are attached.
 // Workshop materials are reused directly; whatever imperfections this fast passage contains are natural evidence.

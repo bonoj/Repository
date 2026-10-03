@@ -71,7 +71,7 @@ const RelationalBuild=Object.freeze({
           : node?.projection==='bent'
           ? this.bent(node.angleDegrees??104.5)
           : node?.projection==='linear-local'
-            ? [heading.clone().negate()]
+            ? [heading.clone()]
           : node?.projection==='linear'
             ? this.linear
             : edges.map((_,i)=>new THREE.Vector3(Math.cos(i*Math.PI*2/Math.max(1,edges.length)),0,Math.sin(i*Math.PI*2/Math.max(1,edges.length))));

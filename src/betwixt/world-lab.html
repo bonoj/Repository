@@ -3509,7 +3509,8 @@ addEventListener('resize',()=>{
   window.vestibuleDirty=true;
 });
 
-renderer.setAnimationLoop((now)=>{\n  jovianBetwixtable.userData.jovian?.update(now);
+renderer.setAnimationLoop((now)=>{
+  jovianBetwixtable.userData.jovian?.update(now);
   const thoughtformCage=workshopTabletopBetwixtable.getObjectByName('thoughtform:semantic-snapping-primitives')?.userData.gimbalCage;
   if(thoughtformCage){thoughtformCage.rotation.y=now*.00018;thoughtformCage.rotation.x=Math.sin(now*.00007)*.10;window.vestibuleDirty=true;}
   const chemThoughtform=workshopTabletopBetwixtable.getObjectByName('thoughtform:chemlab-cold-boot');

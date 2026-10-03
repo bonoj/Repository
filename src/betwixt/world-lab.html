@@ -1711,17 +1711,17 @@ function extrudedProfile(points,depth,material){
 }
 const microscopeProfile={
   base:[[-.62,0],[-.52,.10],[-.18,.14],[.36,.14],[.58,.08],[.62,0]],
-  arm:[[-.35,.12],[-.48,.22],[-.50,.52],[-.43,.88],[-.28,1.17],[-.08,1.36],[.03,1.28],[-.13,1.08],[-.24,.82],[-.28,.55],[-.23,.32],[-.12,.18]]
+  arm:[[-.31,.10],[-.43,.18],[-.48,.48],[-.42,.82],[-.28,1.08],[-.08,1.25],[.18,1.25],[.18,1.15],[-.02,1.15],[-.16,1.00],[-.27,.76],[-.30,.50],[-.24,.28],[-.08,.14]]
 };
 const microBase=extrudedProfile(microscopeProfile.base,.34,microDark);microBase.name='spatial:base';microscope.add(microBase);
 const microArm=extrudedProfile(microscopeProfile.arm,.14,microBrass);microArm.name='spatial:arm';microscope.add(microArm);
 // Optical train is a vertical axis copied directly from the accepted side silhouette.
-const microTube=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.48,10),microDark);microTube.position.set(.28,1.12,0);microscope.add(microTube);
-const microEyepiece=new THREE.Mesh(new THREE.CylinderGeometry(.15,.12,.12,10),microDark);microEyepiece.position.set(.28,1.42,0);microscope.add(microEyepiece);
-const microObjective=new THREE.Mesh(new THREE.CylinderGeometry(.05,.065,.12,10),microDark);microObjective.position.set(.28,.82,0);microscope.add(microObjective);
-const microStage=new THREE.Mesh(new THREE.BoxGeometry(.68,.10,.42),microBrass);microStage.position.set(.22,.60,0);microscope.add(microStage);
-const microSlide=new THREE.Mesh(new THREE.BoxGeometry(.36,.035,.16),microGlass);microSlide.position.set(.23,.68,0);microscope.add(microSlide);
-const microFocus=new THREE.Mesh(new THREE.CylinderGeometry(.10,.10,.16,10),microDark);microFocus.rotation.x=Math.PI/2;microFocus.position.set(-.02,1.02,0);microscope.add(microFocus);
+const microTube=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.48,10),microDark);microTube.position.set(.18,1.04,0);microscope.add(microTube);
+const microEyepiece=new THREE.Mesh(new THREE.CylinderGeometry(.15,.12,.12,10),microDark);microEyepiece.position.set(.18,1.34,0);microscope.add(microEyepiece);
+const microObjective=new THREE.Mesh(new THREE.CylinderGeometry(.05,.065,.12,10),microDark);microObjective.position.set(.18,.74,0);microscope.add(microObjective);
+const microStage=new THREE.Mesh(new THREE.BoxGeometry(.68,.10,.42),microBrass);microStage.position.set(.08,.55,0);microscope.add(microStage);
+const microSlide=new THREE.Mesh(new THREE.BoxGeometry(.36,.035,.16),microGlass);microSlide.position.set(.18,.62,0);microscope.add(microSlide);
+const microFocus=new THREE.Mesh(new THREE.CylinderGeometry(.10,.10,.16,10),microDark);microFocus.rotation.x=Math.PI/2;microFocus.position.set(-.04,.98,0);microscope.add(microFocus);
 // Keep the private construction evidence inspectable without making it runtime authority.
 globalThis.BetwixtSpatial={microscope:{profile:microscopeProfile}};
 const microscopeTapTarget=makeBetwixtable(microscope);

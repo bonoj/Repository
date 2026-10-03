@@ -1766,7 +1766,7 @@ function detonateChemSpell(){
   }
   // Replace presentation inside the persistent focused Betwixtable.
   microscope.position.copy(dynamite.position);microscope.visible=true;
-  chemBetwixtable.userData.betwixtable.fit();
+  floorWorkshopObject(microscope);chemBetwixtable.userData.betwixtable.fit();
   installChemResident();window.vestibuleDirty=true;return true;
 }
 function openChemLab(){
@@ -2234,12 +2234,14 @@ for(const [,obj] of controls.slice(-2))obj.visible=false;
 const specimens=[];
 let focusedWorkshopObject=null,workshopFocusMotion=null,workshopObserverReturn=null;
 function floorWorkshopObject(obj){
-  obj.updateMatrixWorld(true);
+  // Ground by the object's actual rendered bounds, in parent space. Always correct
+  // both floating and penetration; callers never hand-author a Y offset.
+  obj.updateWorldMatrix(true,true);
   const box=new THREE.Box3().setFromObject(obj);
-  if(box.min.y<GROUND_Y)obj.position.y+=GROUND_Y-box.min.y;
-  obj.updateMatrixWorld(true);
+  obj.position.y+=GROUND_Y-box.min.y;
+  obj.updateWorldMatrix(true,true);
   const check=new THREE.Box3().setFromObject(obj);
-  if(check.min.y<GROUND_Y-1e-6)throw Error('Workshop floor invariant failed: '+obj.name);
+  if(Math.abs(check.min.y-GROUND_Y)>1e-5)throw Error('Workshop floor invariant failed: '+obj.name);
 }
 function workshopPresentationPosition(obj){
   const center=new THREE.Box3().setFromObject(obj).getCenter(new THREE.Vector3());

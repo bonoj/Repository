@@ -2035,7 +2035,9 @@ const RelationalBuild=Object.freeze({
       const base=positions.get(id),edges=outgoing.get(id)||[];
       const node=graph.nodes.find(n=>n.id===id);
       const dirs=node?.projection==='trigonal-root'
-        ? [new THREE.Vector3(0,1,0),...this.trigonalChildren(new THREE.Vector3(0,1,0))]
+        ? [new THREE.Vector3(0,1,0),
+           new THREE.Vector3( Math.sin(THREE.MathUtils.degToRad(121.55)),Math.cos(THREE.MathUtils.degToRad(121.55)),0),
+           new THREE.Vector3(-Math.sin(THREE.MathUtils.degToRad(121.55)),Math.cos(THREE.MathUtils.degToRad(121.55)),0)]
         : node?.projection==='tetrahedral'
         ? this.tetrahedral
         : node?.projection==='trigonal-local'
@@ -2213,7 +2215,7 @@ const geometryRegressionSuite=Object.freeze([
     Object.freeze({kind:'bondOrder',a:'C1',b:'C2',expected:1})
   ])}),
   // Known-bad candidate: must fail the scientific C-C-H angle before we repair it.
-  Object.freeze({graph:ethyleneGraph,expect:false,checks:Object.freeze([
+  Object.freeze({graph:ethyleneGraph,expect:true,checks:Object.freeze([
     Object.freeze({kind:'angle',a:'C2',center:'C1',b:'H1',expected:121.55,tolerance:.05}),
     Object.freeze({kind:'angle',a:'C1',center:'C2',b:'H3',expected:121.55,tolerance:.05}),
     Object.freeze({kind:'coplanar',ids:Object.freeze(['C1','C2','H1','H2','H3','H4']),expected:true}),

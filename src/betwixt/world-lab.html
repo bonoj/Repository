@@ -3831,9 +3831,10 @@ function createBoundedWitness({position=[0,1.6,0],forward=[0,0,-1],budget=12,max
   return Object.freeze(api);
 }
 globalThis.createBoundedWitness=createBoundedWitness;
-// The first crossing has one canonical Witness. Instantiation manifests its
-// human-visible/self-blind chassis but spends no attention; pose() remains 12.
-globalThis.boundedWitness=createBoundedWitness();
+// The first crossing has one canonical Witness. Its experimental start is
+// laterally clear of the laboratory stack; this is initial condition, not motion,
+// so manifestation spends no attention. Forward remains neutral world -Z.
+globalThis.boundedWitness=createBoundedWitness({position:[-5.4,1.6,1.8]});
 
 window.vestibule={
   scene,camera,renderer,presences,betwixtContent,

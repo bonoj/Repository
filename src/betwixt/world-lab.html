@@ -1586,10 +1586,38 @@ const workshopCrucibleBearingPositions=[
   [-.20,-.04,-.18],[-.07,-.06,.24],[.09,-.02,-.08],[.24,.01,.13],
   [-.16,.11,.11],[.02,.09,-.23],[.18,.14,-.02],[.07,.23,.15]
 ];
+const workshopCrucibleOrbBearings=[];
 workshopCrucibleBearingPositions.forEach((p,i)=>{
   const bearing=new THREE.Mesh(workshopCrucibleBearingGeo,workshopCrucibleBearingMats[i%workshopCrucibleBearingMats.length]);
-  bearing.position.set(...p);bearing.castShadow=true;workshopCrucibleOrb.add(bearing);
+  bearing.position.set(...p);bearing.castShadow=true;workshopCrucibleOrb.add(bearing);workshopCrucibleOrbBearings.push(bearing);
 });
+const workshopCrucibleBearingSeeds=workshopCrucibleOrbBearings.map((_,i)=>({
+  phase:i*2.3999632297,
+  radius:.17+(i%5)*.037,
+  lift:-.05+((i*7)%11)/11*.12,
+  speed:.78+(i%4)*.17
+}));
+function updateWorkshopCrucibleOrb(now){
+  if(!workshopCrucibleOrb.visible)return;
+  const t=now*.001;
+  // A slow deterministic breath between turbulent possibility and temporary order.
+  // The high exponent makes coherent intervals occasional rather than constant.
+  const coherence=Math.pow(Math.max(0,Math.sin(t*.31)),7);
+  for(let i=0;i<workshopCrucibleOrbBearings.length;i++){
+    const b=workshopCrucibleOrbBearings[i],s=workshopCrucibleBearingSeeds[i];
+    const a=s.phase+t*s.speed;
+    const chaos=new THREE.Vector3(
+      Math.cos(a*1.31+s.phase)*s.radius,
+      s.lift+Math.sin(a*1.73+s.phase*.7)*.19,
+      Math.sin(a*.93+s.phase)*s.radius
+    );
+    const row=Math.floor(i/6),col=i%6;
+    const ordered=new THREE.Vector3((col-2.5)*.105,(row-1)*.115,Math.sin(col*.9+row)*.025);
+    b.position.lerpVectors(chaos,ordered,coherence);
+    b.rotation.set(a*.7,a*1.1,a*.4);
+  }
+  window.vestibuleDirty=true;
+}
 const workshopCrucibleOrbRing=new THREE.Mesh(
   new THREE.TorusGeometry(.58,.025,8,36),
   new THREE.MeshStandardMaterial({color:0x5f625d,roughness:.62,metalness:.28})
@@ -2776,6 +2804,7 @@ addEventListener('resize',()=>{
 });
 
 renderer.setAnimationLoop((now)=>{
+  updateWorkshopCrucibleOrb(now);
   if(contentWorkshopHidden){
     updateWorkshop(now);
     if(!workshopCrucibleEnabled){renderer.render(scene,camera);window.vestibuleDirty=false;return;}

@@ -88,3 +88,21 @@ for(const result of chemlab.geometryRegressionReport){
   if(!result.actualPass)throw new Error("CHEMLAB accepted fixture failed in CI: "+JSON.stringify(result));
 }
 console.log("CHEMLAB projected geometry verified:",chemlab.geometryRegressionReport.map(r=>r.name).join(", "));
+
+
+const chemlabSource=await readFile("src/betwixt/chemlab-geometry.mjs","utf8");
+const chemlabStart=chemlabSource.indexOf("const RelationalBuild=Object.freeze");
+const chemlabEnd=chemlabSource.indexOf("\nexport {RelationalBuild");
+const browserStart=html.indexOf("const RelationalBuild=Object.freeze");
+const browserEnd=html.indexOf("const workshopTabletopBetwixtable",browserStart);
+if(chemlabStart<0||chemlabEnd<0||browserStart<0||browserEnd<0)throw new Error("CHEMLAB verifier source boundary missing");
+const normalizeChemlab=s=>s
+  .replace(/console\.info\('CHEMLAB geometry regression'[\s\S]*?if\(!geometryRegressionHealthy\)throw new Error\('CHEMLAB geometry regression expectation mismatch'\);/, `if(!geometryRegressionHealthy){
+  const failures=geometryRegressionReport.filter(r=>!r.matchedExpectation);
+  throw new Error('CHEMLAB geometry regression expectation mismatch '+JSON.stringify(failures));
+}`)
+  .trim();
+if(normalizeChemlab(html.slice(browserStart,browserEnd))!==chemlabSource.slice(chemlabStart,chemlabEnd).trim()){
+  throw new Error("Browser CHEMLAB geometry source drifted from CI verifier");
+}
+console.log("Browser and CI CHEMLAB geometry source agree.");

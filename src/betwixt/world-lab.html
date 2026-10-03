@@ -1998,6 +1998,19 @@ const RelationalBuild=Object.freeze({
     new THREE.Vector3(-1,0,0),
     new THREE.Vector3( 1,0,0)
   ]),
+  tetrahedralChildren(parentDirection,torsionDegrees=0){
+    const back=parentDirection.clone().negate().normalize();
+    const helper=Math.abs(back.y)<.9?new THREE.Vector3(0,1,0):new THREE.Vector3(1,0,0);
+    const u=new THREE.Vector3().crossVectors(helper,back).normalize();
+    const v=new THREE.Vector3().crossVectors(back,u).normalize();
+    const phase=THREE.MathUtils.degToRad(torsionDegrees);
+    return [0,1,2].map(i=>{
+      const a=phase+i*Math.PI*2/3;
+      return back.clone().multiplyScalar(-1/3)
+        .addScaledVector(u,Math.sqrt(8/9)*Math.cos(a))
+        .addScaledVector(v,Math.sqrt(8/9)*Math.sin(a)).normalize();
+    });
+  },
   project(graph,{bondLength=.48}={}){
     const positions=new Map(),rootId=graph.root||graph.nodes[0]?.id;
     positions.set(rootId,new THREE.Vector3());
@@ -2011,7 +2024,9 @@ const RelationalBuild=Object.freeze({
       const node=graph.nodes.find(n=>n.id===id);
       const dirs=node?.projection==='tetrahedral'
         ? this.tetrahedral
-        : node?.projection==='bent'
+        : node?.projection==='tetrahedral-local'
+          ? this.tetrahedralChildren(heading,node.torsionDegrees??0)
+          : node?.projection==='bent'
           ? this.bent(node.angleDegrees??104.5)
           : node?.projection==='linear'
             ? this.linear

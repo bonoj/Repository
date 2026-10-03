@@ -78,3 +78,13 @@ for(const boundaryEvidence of [
 }
 if(/scene\.add\((orbitRoot|g|mesh)\)/.test(html))throw new Error("Organism-owned dynamic content escaped betwixtContent");
 console.log("Intact Betwixt donor and intact Crucible cargo verified.");
+
+
+const chemlab=await import("../src/betwixt/chemlab-geometry.mjs");
+if(!chemlab.geometryRegressionHealthy){
+  throw new Error("CHEMLAB geometry regression failed in CI: "+JSON.stringify(chemlab.geometryRegressionReport.filter(r=>!r.matchedExpectation)));
+}
+for(const result of chemlab.geometryRegressionReport){
+  if(!result.actualPass)throw new Error("CHEMLAB accepted fixture failed in CI: "+JSON.stringify(result));
+}
+console.log("CHEMLAB projected geometry verified:",chemlab.geometryRegressionReport.map(r=>r.name).join(", "));

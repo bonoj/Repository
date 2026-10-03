@@ -2408,9 +2408,7 @@ const neptunianCrossing001Betwixtable=buildBetwixtable({
   at:new THREE.Vector3(6.8,GROUND_Y+.03,-4.9),
   padding:.34,
   build(root){
-    // Quiet brass/glass ground: spatial support, not a semantic relationship between its occupants.
-    const rim=new THREE.Mesh(new THREE.TorusGeometry(2.35,.07,10,64),brass);
-    rim.rotation.x=Math.PI/2;rim.castShadow=true;root.add(rim);
+    // Quiet glass ground: shared experimental support, deliberately without a salient rim.
     const tableGlass=new THREE.Mesh(new THREE.CylinderGeometry(2.27,2.27,.035,64),glassFace);
     tableGlass.receiveShadow=true;root.add(tableGlass);
 
@@ -3768,6 +3766,17 @@ function createBoundedWitness({parent=scene,position=[0,1.6,0],forward=[0,0,-1],
   const shell=new THREE.Mesh(new THREE.SphereGeometry(.12,12,8),brassDark);shell.scale.set(1,.72,1.18);body.add(shell);
   const nose=new THREE.Mesh(new THREE.ConeGeometry(.065,.30,8),warm);nose.rotation.x=-Math.PI/2;nose.position.z=-.22;body.add(nose);
   const tail=new THREE.Mesh(new THREE.BoxGeometry(.18,.045,.06),steel);tail.position.z=.15;body.add(tail);
+  // Human-only sensor-axis witness: a faint needle from the nose through the
+  // full sensing range. It is a descendant of witnessBody, so the Witness is
+  // rigorously blind to it while an observer can read pointing geometry.
+  const sensorNeedle=new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0,0,-.37),
+      new THREE.Vector3(0,0,-maxDistance)
+    ]),
+    new THREE.LineBasicMaterial({color:0xffd7a0,transparent:true,opacity:.22,depthWrite:false})
+  );
+  body.add(sensorNeedle);
   const syncBody=()=>{
     body.position.copy(p);
     body.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1),f);

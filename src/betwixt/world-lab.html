@@ -1700,7 +1700,7 @@ for(const y of [-.17,.17]){
 }
 const fuseCurve=new THREE.CatmullRomCurve3([new THREE.Vector3(0,.31,0),new THREE.Vector3(.07,.40,0),new THREE.Vector3(.04,.52,.03)]);
 const fuse=new THREE.Mesh(new THREE.TubeGeometry(fuseCurve,8,.018,5,false),dynFuse);dynamite.add(fuse);
-dynamite.scale.setScalar(1.28);floorWorkshopObject(dynamite);
+dynamite.scale.setScalar(1.28);
 
 const microscope=new THREE.Group();microscope.name='spell:microscope';microscope.visible=false;microscope.scale.setScalar(.82);chemPresentation.add(microscope);
 const microBrass=new THREE.MeshStandardMaterial({color:0xb4772e,roughness:.28,metalness:.76});
@@ -1733,6 +1733,15 @@ const microSlide=new THREE.Mesh(new THREE.BoxGeometry(.36,.035,.16),microGlass);
 const microFocus=new THREE.Mesh(new THREE.CylinderGeometry(.10,.10,.16,10),microDark);microFocus.rotation.x=Math.PI/2;microFocus.position.set(-.04,.98,0);microscope.add(microFocus);
 // Keep the private construction evidence inspectable without making it runtime authority.
 globalThis.BetwixtSpatial={microscope:{profile:microscopeProfile}};
+// Normalize every presentation to the shell's local floor once. The Betwixtable shell
+// alone is then placed in world space; phase swaps never move presentation geometry.
+function seatBetwixtPresentation(obj){
+  const wasVisible=obj.visible;obj.visible=true;obj.updateMatrixWorld(true);
+  const box=new THREE.Box3().setFromObject(obj);
+  obj.position.y-=box.min.y;
+  obj.updateMatrixWorld(true);obj.visible=wasVisible;
+}
+seatBetwixtPresentation(dynamite);seatBetwixtPresentation(microscope);
 // Presentation geometry is local to its Betwixtable. The shell is the sole spatial snapping/grounding boundary.
 const chemBetwixtable=makeBetwixtable(chemPresentation,{name:'chem-discovery'});chemBetwixtable.position.copy(chemHome);floorWorkshopObject(chemBetwixtable);const chemTapTarget=chemBetwixtable.userData.betwixtable.target;
 
@@ -1766,7 +1775,7 @@ function detonateChemSpell(){
   }
   // Replace only the presentation. The persistent Betwixtable owns all spatial
   // displacement (home or foreground), so a phase change must never re-ground in world space.
-  microscope.position.copy(dynamite.position);microscope.visible=true;
+  microscope.visible=true;
   chemBetwixtable.userData.betwixtable.fit();
   installChemResident();window.vestibuleDirty=true;return true;
 }

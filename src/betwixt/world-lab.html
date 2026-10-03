@@ -3818,8 +3818,36 @@ function createBoundedWitness({parent=scene,position=[0,1.6,0],forward=[0,0,-1],
   const orbitTrace=new THREE.Line(orbitTraceGeometry,new THREE.LineBasicMaterial({color:0xd2a86b,transparent:true,opacity:.22,depthWrite:false}));
   orbitTrace.userData.witnessBody=true;parent.add(orbitTrace);
 
-  let idle=true,orbitStarted=null,lastTraceAt=0,remaining=Math.floor(budget),step=0;
+  // Human-only telemetry theater. Canvas pixels are downstream instrumentation:
+  // the Observer cannot raycast them and receives no additional API surface.
+  const telemetryCanvas=document.createElement('canvas');telemetryCanvas.width=512;telemetryCanvas.height=192;
+  const telemetryTexture=new THREE.CanvasTexture(telemetryCanvas);telemetryTexture.colorSpace=THREE.SRGBColorSpace;
+  const telemetry=new THREE.Mesh(new THREE.PlaneGeometry(2.9,1.09),new THREE.MeshBasicMaterial({map:telemetryTexture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
+  telemetry.userData.witnessBody=true;parent.add(telemetry);
+  {
+    const box=parent.userData?.betwixtable?.bounds?.();
+    if(box&&!box.isEmpty()){
+      const top=new THREE.Vector3();box.getCenter(top);top.y=box.max.y+.72;parent.worldToLocal(top);telemetry.position.copy(top);
+    }else telemetry.position.copy(orbitCenter).add(new THREE.Vector3(0,scanRadius+.72,0));
+  }
+  let idle=true,orbitStarted=null,lastTraceAt=0,remaining=Math.floor(budget),step=0,lastReading=null,lastAction='IDLE';
   const history=[];
+  const fmt3=a=>a?'['+a.map(v=>Number(v).toFixed(2)).join('  ')+']':'—';
+  function updateTelemetry(){
+    const ctx=telemetryCanvas.getContext('2d');ctx.clearRect(0,0,512,192);
+    ctx.fillStyle='rgba(9,12,14,.82)';ctx.fillRect(0,0,512,192);
+    ctx.strokeStyle='rgba(210,168,107,.72)';ctx.lineWidth=2;ctx.strokeRect(1,1,510,190);
+    ctx.font='600 24px monospace';ctx.fillStyle='#f0c98c';ctx.fillText('OBSERVER 001  '+lastAction,18,34);
+    ctx.font='18px monospace';ctx.fillStyle='#d9dde0';
+    ctx.fillText('SENSE '+step+'/'+Math.floor(budget)+'   LEFT '+remaining,18,65);
+    ctx.fillText('POS   '+fmt3(p.toArray()),18,94);
+    ctx.fillText('AIM   '+fmt3(f.toArray()),18,123);
+    const hit=lastReading?.result;
+    ctx.fillStyle=hit?'#d9dde0':'#8f979c';
+    ctx.fillText(hit?'HIT   d='+hit.distance.toFixed(3):lastReading?'MISS':'READ  —',18,152);
+    ctx.fillText(hit?'N     '+fmt3(hit.normal):'',18,181);
+    telemetryTexture.needsUpdate=true;window.vestibuleDirty=true;
+  }
   function finite3(a){return Array.isArray(a)&&a.length===3&&a.every(Number.isFinite)}
   function canonicalWorldRay(localDirection=f){
     parent.updateWorldMatrix(true,false);
@@ -3850,18 +3878,18 @@ function createBoundedWitness({parent=scene,position=[0,1.6,0],forward=[0,0,-1],
   }
   function spendSense(){
     if(remaining<=0)return Object.freeze({ok:false,error:'budget-exhausted',remaining:0});
-    remaining--;step++;const result=cast(),record=Object.freeze({step,kind:'sense',result,remaining});history.push(record);return record;
+    remaining--;step++;const result=cast(),record=Object.freeze({step,kind:'sense',result,remaining});history.push(record);lastReading=record;lastAction=result?'HIT':'MISS';updateTelemetry();return record;
   }
   function place(direction){
     if(!finite3(direction))throw new Error('place direction must be [x,y,z]');
     const d=new THREE.Vector3(...direction);if(d.lengthSq()<1e-8)throw new Error('place direction must be nonzero');d.normalize();
-    idle=false;p.copy(orbitCenter).addScaledVector(d,scanRadius);f.copy(orbitCenter).sub(p).normalize();syncBody();
+    idle=false;p.copy(orbitCenter).addScaledVector(d,scanRadius);f.copy(orbitCenter).sub(p).normalize();lastAction='PLACED';syncBody();updateTelemetry();
     return Object.freeze({position:Object.freeze(p.toArray()),forward:Object.freeze(f.toArray())});
   }
   function aim(direction){
     if(!finite3(direction))throw new Error('aim direction must be [x,y,z]');
     const d=new THREE.Vector3(...direction);if(d.lengthSq()<1e-8)throw new Error('aim direction must be nonzero');
-    idle=false;f.copy(d.normalize());syncBody();return Object.freeze({forward:Object.freeze(f.toArray())});
+    idle=false;f.copy(d.normalize());lastAction='AIMED';syncBody();updateTelemetry();return Object.freeze({forward:Object.freeze(f.toArray())});
   }
   function updateIdle(now){
     if(!idle)return;
@@ -3884,12 +3912,12 @@ function createBoundedWitness({parent=scene,position=[0,1.6,0],forward=[0,0,-1],
     p.copy(savedP);f.copy(savedF);idle=savedIdle;syncBody();
     return Object.freeze({frame:'parent-local -> world at ray boundary',radius:scanRadius,checks:Object.freeze(checks),pass:checks.every(c=>c.pass)});
   }
-  syncBody();
+  syncBody();updateTelemetry();
   return Object.freeze({
     place,aim,
     sense(){return spendSense()},
-    resume(){idle=true;return Object.freeze({idle:true})},
-    pause(){idle=false;return Object.freeze({idle:false})},
+    resume(){idle=true;lastAction='IDLE';updateTelemetry();return Object.freeze({idle:true})},
+    pause(){idle=false;lastAction='PAUSED';updateTelemetry();return Object.freeze({idle:false})},
     pose(){return Object.freeze({frame:'parent-local',position:Object.freeze(p.toArray()),forward:Object.freeze(f.toArray()),center:Object.freeze(orbitCenter.toArray()),radius:scanRadius,idle,remaining})},
     transcript(){return Object.freeze(history.slice())},
     selfTest,updateIdle

@@ -2397,16 +2397,30 @@ const fleetTableBetwixtable=buildBetwixtable({
     const cone=(r,l,m=brassDark)=>new THREE.Mesh(new THREE.CylinderGeometry(r*.58,r,l,10),m);
     const shipRoot=(x,z,heading)=>rootFrame(new THREE.Vector3(x,.13,z),new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),heading));
 
+    const wave=(i,a,b,phase=0)=>a+(b-a)*(.5+.5*Math.sin((i+1)*1.618+phase));
     function roci(F,variant){
-      place(cyl(.075,.50),F); place(cone(.12,.16),relate(F,{along:-.31})); place(cyl(.052,.18,brassDark),relate(F,{along:.34}));
-      for(let i=0;i<4;i++){const a=i*Math.PI/2+(variant%3)*.13;place(box(.035,.15,.035,brass),relate(F,{along:-.05,radial:.11,azimuth:a}));}
-      place(box(.16,.08,.12,steel),relate(F,{along:.13,roll:(variant%5-2)*.06}));
+      const hullL=wave(variant,.42,.62),hullR=wave(variant,.062,.092,1.1),driveR=wave(variant,.10,.145,2.2);
+      const noseL=wave(variant,.14,.24,.6),equipment=3+(variant%4),radial=wave(variant,.095,.135,1.7);
+      place(cyl(hullR,hullL),F);
+      place(cone(driveR,wave(variant,.13,.21,2.8)),relate(F,{along:-hullL*.5-.09}));
+      place(cyl(hullR*.68,noseL,brassDark),relate(F,{along:hullL*.5+noseL*.45}));
+      for(let i=0;i<equipment;i++){const a=i*Math.PI*2/equipment+wave(variant,-.22,.22,.4);place(box(.03,wave(variant,.11,.19,i),.03,brass),relate(F,{along:wave(variant,-.11,.07,i*.7),radial,azimuth:a}));}
+      place(box(wave(variant,.13,.20,.3),wave(variant,.065,.11,1.4),wave(variant,.09,.15,2.5),steel),relate(F,{along:wave(variant,.06,.18,.8),roll:wave(variant,-.22,.22,1.9)}));
     }
     function serenity(F,variant){
-      place(box(.16,.38,.11),F);place(cone(.15,.15,brassDark),relate(F,{along:-.25}));
-      const neck=relate(F,{along:.24});place(cyl(.045,.18,steel),neck);place(box(.22,.13,.16,matA),relate(neck,{along:.15}));
-      for(const side of [-1,1]){const wing=relate(F,{along:-.02,radial:.15,azimuth:side<0?Math.PI:0,roll:side*.10});place(box(.22,.12,.045,brassDark),wing);place(cyl(.055,.13,drive),relate(wing,{along:-.08,radial:.10}));}
-      place(box(.08,.12,.07,brass),relate(F,{along:.38,roll:(variant%4-1.5)*.08}));
+      const bodyL=wave(variant,.31,.46),bodyW=wave(variant,.13,.20,.8),neckL=wave(variant,.14,.24,1.6);
+      const wingReach=wave(variant,.18,.30,2.1),wingAlong=wave(variant,-.08,.045,.2),sweep=wave(variant,-.28,.28,1.1);
+      place(box(bodyW,bodyL,wave(variant,.09,.14,2.7)),F);place(cone(wave(variant,.12,.17,.4),wave(variant,.12,.19,1.3),brassDark),relate(F,{along:-bodyL*.5-.075}));
+      const neck=relate(F,{along:bodyL*.5+neckL*.38});place(cyl(.04,neckL,steel),neck);place(box(wave(variant,.18,.27,.5),wave(variant,.10,.16,2.3),wave(variant,.13,.19,1.7),matA),relate(neck,{along:neckL*.72}));
+      for(const side of [-1,1]){
+        const az=side<0?Math.PI:0,wing=relate(F,{along:wingAlong,radial:bodyW*.5+wingReach*.38,azimuth:az,roll:side*sweep});
+        place(box(wingReach,.10,.045,brassDark),wing);
+        // VTOL is a child of the ship frame at the wing's relational station. Its axis
+        // remains ship-vertical; wing sweep changes attachment location, not engine attitude.
+        const engineStation=relate(F,{along:wingAlong-.045,radial:bodyW*.5+wingReach*.82,azimuth:az});
+        place(cyl(wave(variant,.045,.065,side),wave(variant,.11,.17,variant+side),drive),engineStation);
+      }
+      place(box(.08,wave(variant,.09,.15,.9),.07,brass),relate(F,{along:bodyL*.5+neckL+wave(variant,.08,.14,2.2),roll:wave(variant,-.18,.18,.5)}));
     }
     function dealer(F){
       // Dealer's choice: a tiny torchship built from the same relations, with a radial crown.

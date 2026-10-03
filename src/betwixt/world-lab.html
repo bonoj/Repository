@@ -1690,12 +1690,12 @@ for(const y of [-.17,.17]){
 }
 const fuseCurve=new THREE.CatmullRomCurve3([new THREE.Vector3(0,.31,0),new THREE.Vector3(.07,.40,0),new THREE.Vector3(.04,.52,.03)]);
 const fuse=new THREE.Mesh(new THREE.TubeGeometry(fuseCurve,8,.018,5,false),dynFuse);dynamite.add(fuse);
-dynamite.position.copy(chemHome);
+dynamite.scale.setScalar(1.28);dynamite.position.copy(chemHome);
 const dynamiteTapTarget=makeBetwixtable(dynamite);
 
-const microscope=new THREE.Group();microscope.name='spell:microscope';microscope.visible=false;chemSpell.add(microscope);
+const microscope=new THREE.Group();microscope.name='spell:microscope';microscope.visible=false;microscope.scale.setScalar(.82);chemSpell.add(microscope);
 const microBrass=new THREE.MeshStandardMaterial({color:0xb4772e,roughness:.28,metalness:.76});
-const microDark=new THREE.MeshStandardMaterial({color:0x303331,roughness:.42,metalness:.58});
+const microDark=new THREE.MeshStandardMaterial({color:0x777b7a,roughness:.34,metalness:.68});
 const microGlass=new THREE.MeshPhysicalMaterial({color:0x8fb8ba,roughness:.12,metalness:0,transparent:true,opacity:.38,transmission:.45,depthWrite:false});
 // Tiny model-forward construction helper: define simple forms in elevation-like
 // coordinates, then derive their 3D placement from named anchors. The same spec can

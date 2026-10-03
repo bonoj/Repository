@@ -1600,14 +1600,15 @@ const workshopCrucibleBearingSeeds=workshopCrucibleOrbBearings.map((_,i)=>({
 function updateWorkshopCrucibleOrb(now){
   if(!workshopCrucibleOrb.visible)return;
   const t=now*.001;
-  // Elastic tempo: the cloud visibly winds up and relaxes without teleporting.
-  const elasticSpeed=.62+.58*(.5+.5*Math.sin(t*.83+Math.sin(t*.19)*1.7));
+  // Elastic tempo is a bounded phase warp, not an absolute-time multiplier.
+  // Multiplying t by a changing speed makes the phase derivative grow with uptime.
+  const elasticPhase=t*.91+.35*Math.sin(t*.83+Math.sin(t*.19)*1.7);
   // Two rare attractors emerge from the same noisy cloud: lattice and double helix.
   const lattice=Math.pow(Math.max(0,Math.sin(t*.27)),9);
   const helix=Math.pow(Math.max(0,Math.sin(t*.193+2.1)),11)*(1-lattice);
   for(let i=0;i<workshopCrucibleOrbBearings.length;i++){
     const bearing=workshopCrucibleOrbBearings[i],s=workshopCrucibleBearingSeeds[i];
-    const a=s.phase+t*s.speed*elasticSpeed;
+    const a=s.phase+elasticPhase*s.speed;
     const chaos=new THREE.Vector3(
       Math.cos(a*1.31+s.phase)*s.radius,
       s.lift+Math.sin(a*1.73+s.phase*.7)*.145,

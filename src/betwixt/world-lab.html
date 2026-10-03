@@ -1733,8 +1733,8 @@ const microSlide=new THREE.Mesh(new THREE.BoxGeometry(.36,.035,.16),microGlass);
 const microFocus=new THREE.Mesh(new THREE.CylinderGeometry(.10,.10,.16,10),microDark);microFocus.rotation.x=Math.PI/2;microFocus.position.set(-.04,.98,0);microscope.add(microFocus);
 // Keep the private construction evidence inspectable without making it runtime authority.
 globalThis.BetwixtSpatial={microscope:{profile:microscopeProfile}};
-floorWorkshopObject(microscope);
-const chemBetwixtable=makeBetwixtable(chemPresentation,{name:'chem-discovery'});chemBetwixtable.position.copy(chemHome);const chemTapTarget=chemBetwixtable.userData.betwixtable.target;
+// Presentation geometry is local to its Betwixtable. The shell is the sole spatial snapping/grounding boundary.
+const chemBetwixtable=makeBetwixtable(chemPresentation,{name:'chem-discovery'});chemBetwixtable.position.copy(chemHome);floorWorkshopObject(chemBetwixtable);const chemTapTarget=chemBetwixtable.userData.betwixtable.target;
 
 const chemBurstGroup=new THREE.Group();chemBurstGroup.name='effect:chem-discovery';scene.add(chemBurstGroup);
 const chemBurstGeo=new THREE.SphereGeometry(.055,6,4);

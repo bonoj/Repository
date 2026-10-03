@@ -1338,7 +1338,7 @@ function setContentWorkshopHidden(hidden){
     contentFrozenAt=performance.now();
     betwixtContent.visible=false;
     workshopField.visible=true;
-    workshopCrucibleOrb.visible=true;
+    workshopCrucibleBetwixtable.visible=true;
     // Workshop context does not own Crucible state. The resident ⚗️ container
     // alone decides whether its parented organism is present here.
     if(workshopCrucibleEnabled)workshopCrucible.visible=true;
@@ -1359,7 +1359,7 @@ function setContentWorkshopHidden(hidden){
     for(const st of descentStates.values())st.nextAt+=pause;
     betwixtContent.visible=true;
     workshopField.visible=false;
-    workshopCrucibleOrb.visible=false;
+    workshopCrucibleBetwixtable.visible=false;
     workshopCrucible.visible=false;
 
     contentFrozenAt=0;
@@ -1562,11 +1562,11 @@ queueMicrotask(installWorkshopCrucibleContainerSpell);
 function makeBetwixtable(content,{name=content.name||'betwixtable',padding=.18}={}){
   // Persistent spatial identity. Camera and input know only this wrapper; presentation
   // inside may be replaced freely without invalidating focus or return state.
-  const parent=content.parent,worldPosition=new THREE.Vector3(),worldQuaternion=new THREE.Quaternion(),worldScale=new THREE.Vector3();
-  content.updateWorldMatrix(true,false);content.matrixWorld.decompose(worldPosition,worldQuaternion,worldScale);
+  const parent=content.parent;
+  const localPosition=content.position.clone(),localQuaternion=content.quaternion.clone(),localScale=content.scale.clone();
   const node=new THREE.Group();node.name='betwixtable:'+name;
   if(parent)parent.add(node);else scene.add(node);
-  node.position.copy(worldPosition);node.quaternion.copy(worldQuaternion);node.scale.copy(worldScale);
+  node.position.copy(localPosition);node.quaternion.copy(localQuaternion);node.scale.copy(localScale);
   content.position.set(0,0,0);content.quaternion.identity();content.scale.set(1,1,1);node.add(content);
   const target=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));
   target.visible=false;target.userData.betwixtable=true;node.add(target);
@@ -1618,7 +1618,7 @@ const workshopCrucibleBearingSeeds=workshopCrucibleOrbBearings.map((_,i)=>({
   speed:.74+(i%4)*.16
 }));
 function updateWorkshopCrucibleOrb(now){
-  if(!workshopCrucibleOrb.visible)return;
+  if(!workshopCrucibleBetwixtable.visible)return;
   const t=now*.001;
   // Elastic tempo is a bounded phase warp, not an absolute-time multiplier.
   // Multiplying t by a changing speed makes the phase derivative grow with uptime.
@@ -2978,7 +2978,7 @@ addEventListener('resize',()=>{
 
 renderer.setAnimationLoop((now)=>{
   updateWorkshopCrucibleOrb(now);
-  chemLab.visible=contentWorkshopHidden;
+  chemBetwixtable.visible=contentWorkshopHidden;
   updateChemSpell(now);
   if(contentWorkshopHidden){
     updateWorkshop(now);

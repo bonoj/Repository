@@ -1612,23 +1612,7 @@ function buildBetwixtable({name='betwixtable',parent=scene,at=null,padding=.18,b
 globalThis.Betwixtable=buildBetwixtable;
 
 
-const workshopTabletopBetwixtable=buildBetwixtable({
-  name:'brass-glass-tabletop',
-  parent:scene,
-  // Deliberately airborne: a clean third spatial specimen with generous clearance
-  // above the floor-bound Crucible and Chem discovery objects.
-  at:new THREE.Vector3(0,GROUND_Y+4.6,0),
-  padding:.28,
-  build(root){
-    // Workshop materials first: existing brass and accepted translucent glass.
-    const rim=new THREE.Mesh(new THREE.TorusGeometry(1.42,.105,10,48),brass);
-    rim.rotation.x=Math.PI/2;rim.castShadow=true;root.add(rim);
-    const glass=new THREE.Mesh(new THREE.CylinderGeometry(1.31,1.31,.045,48),glassFace);
-    glass.position.y=-.015;root.add(glass);
-    const edge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.CylinderGeometry(1.31,1.31,.045,48)),glassEdge);
-    edge.position.copy(glass.position);root.add(edge);
-  }
-});
+
 
 const workshopCrucibleOrb=new THREE.Group();
 workshopCrucibleOrb.name='spell-orb:crucible';
@@ -1973,13 +1957,34 @@ const octo=new THREE.Group();octo.name='workshop:brass-glass-octocopter';worksho
 octo.position.y=1.65;
 octo.visible=false; // Drone v1 retained as source evidence; hidden from the current bench.
 
-const brass=new THREE.MeshStandardMaterial({color:0xb4772e,roughness:.24,metalness:.82});
-const brassDark=new THREE.MeshStandardMaterial({color:0x5d3b1d,roughness:.34,metalness:.72});
-const steel=new THREE.MeshStandardMaterial({color:0x34383a,roughness:.28,metalness:.78});
-const rubber=new THREE.MeshStandardMaterial({color:0x171817,roughness:.86,metalness:.04});
-const warm=new THREE.MeshStandardMaterial({color:0xffb14a,emissive:0xff7a18,emissiveIntensity:1.8,roughness:.35});
-const glassFace=new THREE.MeshStandardMaterial({color:0xc8e2e3,transparent:true,opacity:.16,roughness:.08,metalness:0,depthWrite:false,side:THREE.DoubleSide});
-const glassEdge=new THREE.LineBasicMaterial({color:0x667879,transparent:true,opacity:.62});
+const WorkshopMats=globalThis.WorkshopMats||=Object.freeze({
+  brass:new THREE.MeshStandardMaterial({color:0xb4772e,roughness:.24,metalness:.82}),
+  brassDark:new THREE.MeshStandardMaterial({color:0x5d3b1d,roughness:.34,metalness:.72}),
+  steel:new THREE.MeshStandardMaterial({color:0x34383a,roughness:.28,metalness:.78}),
+  rubber:new THREE.MeshStandardMaterial({color:0x171817,roughness:.86,metalness:.04}),
+  warm:new THREE.MeshStandardMaterial({color:0xffb14a,emissive:0xff7a18,emissiveIntensity:1.8,roughness:.35}),
+  glassFace:new THREE.MeshStandardMaterial({color:0xc8e2e3,transparent:true,opacity:.16,roughness:.08,metalness:0,depthWrite:false,side:THREE.DoubleSide}),
+  glassEdge:new THREE.LineBasicMaterial({color:0x667879,transparent:true,opacity:.62})
+});
+const {brass,brassDark,steel,rubber,warm,glassFace,glassEdge}=WorkshopMats;
+
+const workshopTabletopBetwixtable=buildBetwixtable({
+  name:'brass-glass-tabletop',
+  parent:scene,
+  // Deliberately airborne: a clean third spatial specimen with generous clearance
+  // above the floor-bound Crucible and Chem discovery objects.
+  at:new THREE.Vector3(0,GROUND_Y+4.6,0),
+  padding:.28,
+  build(root){
+    // Workshop materials first: existing brass and accepted translucent glass.
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(1.42,.105,10,48),brass);
+    rim.rotation.x=Math.PI/2;rim.castShadow=true;root.add(rim);
+    const glass=new THREE.Mesh(new THREE.CylinderGeometry(1.31,1.31,.045,48),glassFace);
+    glass.position.y=-.015;root.add(glass);
+    const edge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.CylinderGeometry(1.31,1.31,.045,48)),glassEdge);
+    edge.position.copy(glass.position);root.add(edge);
+  }
+});
 
 function mesh(g,m,p=[0,0,0],r=[0,0,0],s=[1,1,1],parent=octo){
   const x=new THREE.Mesh(g,m);x.position.set(...p);x.rotation.set(...r);x.scale.set(...s);parent.add(x);return x;

@@ -2375,6 +2375,28 @@ const workshopTabletopBetwixtable=buildBetwixtable({
       }
     });
   }
+
+    // Third Thoughtform: Neptunian caretaker-carrier proposition. The miniature is
+    // deliberately active: a tiny carrier holds a three-drone deterministic patrol.
+    const nepThoughtform=new THREE.Group();nepThoughtform.name='thoughtform:neptunian-caretaker-carrier';
+    nepThoughtform.position.set(0,-.52,1.38);root.add(nepThoughtform);
+    nepThoughtform.userData.thoughtform=Object.freeze({
+      kind:'thoughtform',title:'Neptunian caretaker carrier',
+      plan:'A central laboratory caretaker carrier owns a deterministic drone swarm. Experiments expose only the interfaces they earn. The carrier dispatches small agents to deliver stimuli, run protocols, observe outcomes, record evidence, and return. Their ordinary activity continuously exercises the laboratory as a living regression suite while repeated deterministic workloads make long-term FPS drift observable.',
+      firstConsumer:'Jovian gravity: dispatch deterministic bearing packets, retain trajectories/evidence, vary one approach condition at a time, and report before the next trial.',
+      emergence:'Do not prebuild one agent per experiment. Jupiter earns the first protocol; a second real consumer earns shared carrier/dispatch semantics.',interaction:'none'
+    });
+    const nepStem=new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,.38,10),brass);nepStem.position.y=.28;nepThoughtform.add(nepStem);
+    const nepCage=new THREE.Group();nepCage.name='thoughtform:neptunian-gimbal-cage';nepCage.position.y=-.20;nepThoughtform.add(nepCage);nepThoughtform.userData.gimbalCage=nepCage;
+    nepCage.add(new THREE.Mesh(new THREE.SphereGeometry(.27,20,14),glassFace));
+    nepCage.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(.27,12,8)),glassEdge));
+    for(const rotation of [[Math.PI/2,0,0],[0,Math.PI/2,0],[0,0,0]]){const ring=new THREE.Mesh(new THREE.TorusGeometry(.34,.025,8,28),brass);ring.rotation.set(...rotation);nepCage.add(ring);}
+    const carrier=new THREE.Group();carrier.name='thoughtform:caretaker-carrier-mini';nepCage.add(carrier);
+    const carrierBody=new THREE.Mesh(new THREE.CylinderGeometry(.075,.105,.18,8),brassDark);carrierBody.rotation.z=Math.PI/2;carrier.add(carrierBody);
+    const carrierCore=new THREE.Mesh(new THREE.SphereGeometry(.055,10,7),warm);carrier.add(carrierCore);
+    for(let i=0;i<3;i++){const drone=new THREE.Mesh(new THREE.OctahedronGeometry(.025,0),steel);drone.name='thoughtform:caretaker-drone:'+i;drone.userData.phase=i*Math.PI*2/3;carrier.add(drone);}
+    nepThoughtform.userData.animate=(t)=>{carrier.rotation.y=t*.00022;for(let i=0;i<3;i++){const d=carrier.children[i+2],a=t*.0011+d.userData.phase;d.position.set(Math.cos(a)*.16,Math.sin(a*1.7)*.045,Math.sin(a)*.16);}}
+  }
 });
 
 // Neptunian Jovian Betwixtable: presentation-compressed, orbital ratios preserved.
@@ -3537,6 +3559,7 @@ addEventListener('resize',()=>{
 });
 
 renderer.setAnimationLoop((now)=>{
+  workshopTabletopBetwixtable.userData.betwixtable.presentation.children.find(o=>o.name==='thoughtform:neptunian-caretaker-carrier')?.userData.animate?.(now);
   jovianBetwixtable.userData.betwixtable.presentation.userData.jovian?.update(now);
   jovianBetwixtable.userData.betwixtable.presentation.userData.jovian?.updateBearings(now);
   const thoughtformCage=workshopTabletopBetwixtable.getObjectByName('thoughtform:semantic-snapping-primitives')?.userData.gimbalCage;

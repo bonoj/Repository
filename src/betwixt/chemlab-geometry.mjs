@@ -70,6 +70,8 @@ const RelationalBuild=Object.freeze({
           ? this.tetrahedralChildren(heading,node.torsionDegrees??0)
           : node?.projection==='bent'
           ? this.bent(node.angleDegrees??104.5)
+          : node?.projection==='linear-local'
+            ? [heading.clone().negate()]
           : node?.projection==='linear'
             ? this.linear
             : edges.map((_,i)=>new THREE.Vector3(Math.cos(i*Math.PI*2/Math.max(1,edges.length)),0,Math.sin(i*Math.PI*2/Math.max(1,edges.length))));
@@ -187,6 +189,22 @@ const ethyleneGraph=Object.freeze({
   assertions:Object.freeze({formula:'C2H4',geometry:'planar',symmetry:'D2h',carbonCarbonBondOrder:2,cchAngleDegrees:121.55})
 });
 
+const acetyleneGraph=Object.freeze({
+  name:'acetylene-t0',root:'C1',
+  nodes:Object.freeze([
+    Object.freeze({id:'C1',kind:'carbon',projection:'linear',ports:2,radius:1.18}),
+    Object.freeze({id:'C2',kind:'carbon',projection:'linear-local',ports:2,radius:1.18}),
+    Object.freeze({id:'H1',kind:'hydrogen',ports:1,radius:.72}),
+    Object.freeze({id:'H2',kind:'hydrogen',ports:1,radius:.72})
+  ]),
+  edges:Object.freeze([
+    Object.freeze({from:'C1',to:'C2',kind:'bond',order:3,port:0}),
+    Object.freeze({from:'C1',to:'H1',kind:'bond',order:1,port:1}),
+    Object.freeze({from:'C2',to:'H2',kind:'bond',order:1,port:1})
+  ]),
+  assertions:Object.freeze({formula:'C2H2',geometry:'linear',symmetry:'Dinfh',carbonCarbonBondOrder:3,hccAngleDegrees:180})
+});
+
 const GeometryVerifier=Object.freeze({
   angle(projected,a,center,b){
     const p=projected.positions;
@@ -239,6 +257,11 @@ const geometryRegressionSuite=Object.freeze([
     Object.freeze({kind:'bondOrder',a:'C1',b:'C2',expected:1})
   ])}),
   // Known-bad candidate: must fail the scientific C-C-H angle before we repair it.
+  Object.freeze({graph:acetyleneGraph,expect:true,checks:Object.freeze([
+    Object.freeze({kind:'angle',a:'H1',center:'C1',b:'C2',expected:180,tolerance:.01}),
+    Object.freeze({kind:'angle',a:'C1',center:'C2',b:'H2',expected:180,tolerance:.01}),
+    Object.freeze({kind:'bondOrder',a:'C1',b:'C2',expected:3})
+  ])}),
   Object.freeze({graph:ethyleneGraph,expect:true,checks:Object.freeze([
     Object.freeze({kind:'angle',a:'C2',center:'C1',b:'H1',expected:121.55,tolerance:.05}),
     Object.freeze({kind:'angle',a:'C1',center:'C2',b:'H3',expected:121.55,tolerance:.05}),

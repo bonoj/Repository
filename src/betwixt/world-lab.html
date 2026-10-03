@@ -1561,25 +1561,24 @@ queueMicrotask(installWorkshopCrucibleContainerSpell);
 // borrow Crucible's dark/warm/cyan feel. It still delegates to the resident ⚗️.
 const workshopCrucibleOrb=new THREE.Group();
 workshopCrucibleOrb.name='spell-orb:crucible';
-// Exact Workshop geoglass vocabulary, scaled to this spell handle:
-// translucent UV shell plus a slightly proud, deliberately coarser UV edge cage.
-const workshopCrucibleOrbGlass=new THREE.MeshStandardMaterial({
-  color:0xc8e2e3,transparent:true,opacity:.18,roughness:.08,metalness:0,
-  depthWrite:false,side:THREE.DoubleSide
+const workshopCrucibleOrbGlass=new THREE.MeshPhysicalMaterial({
+  color:0xb9b7aa,roughness:.12,metalness:.04,transparent:true,opacity:.28,
+  transmission:.72,thickness:.08,ior:1.2,depthWrite:false,side:THREE.DoubleSide
 });
 const workshopCrucibleOrbMesh=new THREE.Mesh(
-  new THREE.SphereGeometry(.50,16,10),
+  new THREE.IcosahedronGeometry(.50,3),
   workshopCrucibleOrbGlass
 );
 workshopCrucibleOrbMesh.castShadow=true;
 workshopCrucibleOrbMesh.userData.workshopCrucibleOrb=true;
 workshopCrucibleOrb.add(workshopCrucibleOrbMesh);
-const workshopCrucibleOrbEdges=new THREE.LineSegments(
-  new THREE.EdgesGeometry(new THREE.SphereGeometry(.5025,12,7)),
-  new THREE.LineBasicMaterial({color:0x667879,transparent:true,opacity:.62})
+// Invisible forgiving touch volume; visual geometry remains exactly .50.
+const workshopCrucibleOrbTapTarget=new THREE.Mesh(
+  new THREE.SphereGeometry(.64,12,8),
+  new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false})
 );
-workshopCrucibleOrb.add(workshopCrucibleOrbEdges);
-
+workshopCrucibleOrbTapTarget.visible=false;
+workshopCrucibleOrb.add(workshopCrucibleOrbTapTarget);
 const workshopCrucibleBearingGeo=new THREE.SphereGeometry(.072,10,7);
 const workshopCrucibleBearingMats=[
   new THREE.MeshStandardMaterial({color:0x252724,roughness:.34,metalness:.58}),
@@ -2162,7 +2161,11 @@ function workshopTap(x,y){
   const r=canvas.getBoundingClientRect();
   pointerNDC.set(((x-r.left)/r.width)*2-1,-((y-r.top)/r.height)*2+1);
   raycaster.setFromCamera(pointerNDC,camera);
-  if(raycaster.intersectObject(workshopCrucibleOrbMesh,false).length){
+  // Raycast the larger invisible volume explicitly; invisible objects are skipped by normal rendering.
+  workshopCrucibleOrbTapTarget.visible=true;
+  const crucibleOrbHit=raycaster.intersectObject(workshopCrucibleOrbTapTarget,false).length>0;
+  workshopCrucibleOrbTapTarget.visible=false;
+  if(crucibleOrbHit){
     tapWorkshopCrucibleOrb();window.vestibuleDirty=true;return true;
   }
   if(workshopCrucibleTool&&workshopTerrain){

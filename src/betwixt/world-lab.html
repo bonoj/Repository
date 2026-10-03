@@ -1987,6 +1987,13 @@ const RelationalBuild=Object.freeze({
     new THREE.Vector3(-Math.sqrt(2/9),-1/3, Math.sqrt(2/3)),
     new THREE.Vector3(-Math.sqrt(2/9),-1/3,-Math.sqrt(2/3))
   ]),
+  bent(angleDegrees=104.5){
+    const half=THREE.MathUtils.degToRad(angleDegrees*.5);
+    return [
+      new THREE.Vector3(-Math.sin(half),Math.cos(half),0),
+      new THREE.Vector3( Math.sin(half),Math.cos(half),0)
+    ];
+  },
   project(graph,{bondLength=.48}={}){
     const positions=new Map(),rootId=graph.root||graph.nodes[0]?.id;
     positions.set(rootId,new THREE.Vector3());
@@ -2000,7 +2007,9 @@ const RelationalBuild=Object.freeze({
       const node=graph.nodes.find(n=>n.id===id);
       const dirs=node?.projection==='tetrahedral'
         ? this.tetrahedral
-        : edges.map((_,i)=>new THREE.Vector3(Math.cos(i*Math.PI*2/Math.max(1,edges.length)),0,Math.sin(i*Math.PI*2/Math.max(1,edges.length))));
+        : node?.projection==='bent'
+          ? this.bent(node.angleDegrees??104.5)
+          : edges.map((_,i)=>new THREE.Vector3(Math.cos(i*Math.PI*2/Math.max(1,edges.length)),0,Math.sin(i*Math.PI*2/Math.max(1,edges.length))));
       edges.forEach((edge,i)=>{
         if(positions.has(edge.to))return;
         const dir=(dirs[i]||heading).clone().normalize();
@@ -2016,6 +2025,7 @@ const RelationalBuild=Object.freeze({
     const nodeById=new Map(projected.graph.nodes.map(n=>[n.id,n]));
     const mats={
       carbon:new THREE.MeshStandardMaterial({color:0x303437,roughness:.42,metalness:.08}),
+      oxygen:new THREE.MeshStandardMaterial({color:0xc83d32,roughness:.42,metalness:.04}),
       hydrogen:new THREE.MeshStandardMaterial({color:0xf1eee6,roughness:.52,metalness:.02}),
       neutral:new THREE.MeshStandardMaterial({color:0xb7b8b4,roughness:.48,metalness:.04}),
       bond:new THREE.MeshStandardMaterial({color:0x747b7d,roughness:.40,metalness:.18})
@@ -2043,6 +2053,23 @@ const methaneGraph=Object.freeze({
     ...['H1','H2','H3','H4'].map(id=>Object.freeze({id,kind:'hydrogen',ports:1,radius:.72}))
   ]),
   edges:Object.freeze(['H1','H2','H3','H4'].map((to,i)=>Object.freeze({from:'C1',to,kind:'bond',order:1,port:i})))
+});
+
+const waterGraph=Object.freeze({
+  name:'water-t0',root:'O1',
+  // Molecular geometry is an observed chemistry constraint, not inferred merely
+  // from visible neighbor count: two O-H bonds plus two lone-pair regions yield
+  // a bent molecule with an H-O-H angle near 104.5 degrees.
+  nodes:Object.freeze([
+    Object.freeze({id:'O1',kind:'oxygen',projection:'bent',angleDegrees:104.5,ports:2,radius:1.12,electronDomains:4,lonePairs:2}),
+    Object.freeze({id:'H1',kind:'hydrogen',ports:1,radius:.72}),
+    Object.freeze({id:'H2',kind:'hydrogen',ports:1,radius:.72})
+  ]),
+  edges:Object.freeze([
+    Object.freeze({from:'O1',to:'H1',kind:'bond',order:1,port:0}),
+    Object.freeze({from:'O1',to:'H2',kind:'bond',order:1,port:1})
+  ]),
+  assertions:Object.freeze({molecularGeometry:'bent',angleDegrees:104.5})
 });
 
 const workshopTabletopBetwixtable=buildBetwixtable({
@@ -2116,7 +2143,7 @@ const relationalInspectionBetwixtable=buildBetwixtable({
     };
   }
 });
-relationalInspectionBetwixtable.userData.betwixtable.flash(methaneGraph);
+relationalInspectionBetwixtable.userData.betwixtable.flash(waterGraph);
 
 function mesh(g,m,p=[0,0,0],r=[0,0,0],s=[1,1,1],parent=octo){
   const x=new THREE.Mesh(g,m);x.position.set(...p);x.rotation.set(...r);x.scale.set(...s);parent.add(x);return x;

@@ -1611,6 +1611,25 @@ function buildBetwixtable({name='betwixtable',parent=scene,at=null,padding=.18,b
 }
 globalThis.Betwixtable=buildBetwixtable;
 
+
+const workshopTabletopBetwixtable=buildBetwixtable({
+  name:'brass-glass-tabletop',
+  parent:scene,
+  // Deliberately airborne: a clean third spatial specimen with generous clearance
+  // above the floor-bound Crucible and Chem discovery objects.
+  at:new THREE.Vector3(0,GROUND_Y+4.6,0),
+  padding:.28,
+  build(root){
+    // Workshop materials first: existing brass and accepted translucent glass.
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(1.42,.105,10,48),brass);
+    rim.rotation.x=Math.PI/2;rim.castShadow=true;root.add(rim);
+    const glass=new THREE.Mesh(new THREE.CylinderGeometry(1.31,1.31,.045,48),glassFace);
+    glass.position.y=-.015;root.add(glass);
+    const edge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.CylinderGeometry(1.31,1.31,.045,48)),glassEdge);
+    edge.position.copy(glass.position);root.add(edge);
+  }
+});
+
 const workshopCrucibleOrb=new THREE.Group();
 workshopCrucibleOrb.name='spell-orb:crucible';
 const workshopCrucibleOrbGlass=new THREE.MeshPhysicalMaterial({

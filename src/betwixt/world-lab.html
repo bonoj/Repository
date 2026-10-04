@@ -1585,7 +1585,8 @@ function collapseWorldToBead(){
   collapseBeadVelocity=0;collapseLastNow=performance.now();collapseSettledAt=null;collapseBead.visible=true;
   const shell=globalThis.RepositoryShell;
   if(shell){
-    for(const id of shell.inspect().tools) shell.removeTool(id);
+    // Retire only world-owned spells. Host/substrate controls such as Refresh survive collapse.
+    for(const id of ['collapse-world','crucible-container','crucible-meteor','crucible-terrain-next','crucible-bearings','crucible-water','crucible-lava','crucible-carve','crucible-raise']) shell.removeTool(id);
   }
   window.vestibuleDirty=true;return true;
 }

@@ -2666,7 +2666,6 @@ function cairnProject(){
   window.vestibuleDirty=true;
 }
 function cairnRenderStatus(){
-  cairnRenderPanel();
   if(!cairnStatusCanvas)return;
   const ctx=cairnStatusCanvas.getContext('2d');ctx.clearRect(0,0,768,420);
   ctx.fillStyle='rgba(7,9,10,.91)';ctx.fillRect(0,0,768,420);ctx.strokeStyle='rgba(180,119,46,.88)';ctx.lineWidth=3;ctx.strokeRect(2,2,764,416);

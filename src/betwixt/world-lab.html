@@ -2752,62 +2752,97 @@ const neptunianCrossing001Betwixtable=buildBetwixtable({
   }
 });
 
-// Neptunian Jovian Betwixtable: presentation-compressed, orbital ratios preserved.
+// Neptunian Jovian Betwixtable: Janus turns the old ice-pusher toy into a deterministic N-body encounter.
 const jovianBetwixtable=buildBetwixtable({name:'neptunian-jovian-system',parent:scene,at:new THREE.Vector3(0,GROUND_Y+9.45,0),padding:.38,build(root){
   const rim=new THREE.Mesh(new THREE.TorusGeometry(2.05,.075,10,64),brass);rim.rotation.x=Math.PI/2;root.add(rim);
   root.add(new THREE.Mesh(new THREE.CylinderGeometry(1.96,1.96,.035,64),glassFace));
-  const jupiter=new THREE.Mesh(new THREE.SphereGeometry(.25,24,16),new THREE.MeshStandardMaterial({color:0xc99a6b,roughness:.66}));jupiter.position.y=.30;root.add(jupiter);
-  const data=[['Io',421800,.004,0,0,1.762732,.15],['Europa',671100,.009,.5,184,3.525463,2.20],['Ganymede',1070400,.001,.2,58.5,7.155588,4.05],['Callisto',1882700,.007,.3,309.1,16.690440,5.25]],maxA=1882700,moons=[];
-  data.forEach((d,i)=>{const [name,a,e,inc,node,period,phase]=d,r=a/maxA*1.68;
-    const pts=Array.from({length:96},(_,k)=>new THREE.Vector3(r*Math.cos(k*Math.PI*2/96),.305,r*Math.sin(k*Math.PI*2/96)));
-    const orbit=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x667879,transparent:true,opacity:.28}));orbit.rotation.order='YXZ';orbit.rotation.y=THREE.MathUtils.degToRad(node);orbit.rotation.x=THREE.MathUtils.degToRad(inc);root.add(orbit);
-    const moon=new THREE.Mesh(new THREE.SphereGeometry([.045,.042,.055,.052][i],12,8),new THREE.MeshStandardMaterial({color:[0xd7b66e,0xc7b997,0x9d8d78,0x77736e][i],roughness:.72}));root.add(moon);moon.userData.o={name,a,e,inc,node,period,phase,r};moons.push(moon);
+  const center=new THREE.Vector3(0,.305,0),mu=.19;
+  const jupiter=new THREE.Mesh(new THREE.SphereGeometry(.25,24,16),new THREE.MeshStandardMaterial({color:0xc99a6b,roughness:.66}));jupiter.position.copy(center);root.add(jupiter);
+
+  // Measured Galilean/Jupiter mass ratios, presentation-compressed radii. These are now integrated bodies:
+  // Janus can actually perturb them instead of merely crossing prescribed display ellipses.
+  const data=[['Io',421800,.004,0,0,.15,.00004704],['Europa',671100,.009,.5,184,2.20,.00002528],['Ganymede',1070400,.001,.2,58.5,4.05,.00007805],['Callisto',1882700,.007,.3,309.1,5.25,.00005667]],maxA=1882700,moons=[];
+  data.forEach((d,i)=>{
+    const [name,a,e,inc,node,phase,mass]=d,r=a/maxA*1.68,u=phase,rr=r*(1-e*e)/(1+e*Math.cos(u));
+    const p=new THREE.Vector3(rr*Math.cos(u),0,rr*Math.sin(u));
+    const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(THREE.MathUtils.degToRad(inc),THREE.MathUtils.degToRad(node),0,'YXZ'));p.applyQuaternion(q).add(center);
+    const radial=p.clone().sub(center).normalize(),normal=new THREE.Vector3(0,1,0).applyQuaternion(q),tangent=new THREE.Vector3().crossVectors(normal,radial).normalize();
+    const v=tangent.multiplyScalar(Math.sqrt(mu/Math.max(.02,rr)));
+    const mesh=new THREE.Mesh(new THREE.SphereGeometry([.045,.042,.055,.052][i],12,8),new THREE.MeshStandardMaterial({color:[0xd7b66e,0xc7b997,0x9d8d78,0x77736e][i],roughness:.72}));mesh.position.copy(p);root.add(mesh);
+    const trail=new THREE.Line(new THREE.BufferGeometry().setFromPoints([p.clone()]),new THREE.LineBasicMaterial({color:0x667879,transparent:true,opacity:.34}));trail.frustumCulled=false;root.add(trail);
+    moons.push({name,mass,mesh,p,v,trail,history:[p.clone()],sampleClock:0,active:true});
   });
-  root.userData.jovian={last:null,tDays:0,moons,update(now){if(this.last==null)this.last=now;this.tDays+=Math.min(.05,(now-this.last)/1000)*.42;this.last=now;for(const moon of moons){const o=moon.userData.o,t=o.phase+this.tDays*Math.PI*2/o.period,rr=o.r*(1-o.e*o.e)/(1+o.e*Math.cos(t));const p=new THREE.Vector3(rr*Math.cos(t),.305,rr*Math.sin(t));p.applyAxisAngle(new THREE.Vector3(1,0,0),THREE.MathUtils.degToRad(o.inc));p.applyAxisAngle(new THREE.Vector3(0,1,0),THREE.MathUtils.degToRad(o.node));moon.position.copy(p);}}};
-  // Protected experimental bodies: individually persistent, unlike the packed particulate bearing substrate.
+
+  // Existing ice pushers survive as tiny test masses. Janus shepherds the two packets through the encounter.
   const bearingGeo=new THREE.SphereGeometry(.018,8,6),bearings=[],trailMaterial=new THREE.LineBasicMaterial({color:0x71858c,transparent:true,opacity:.82});
-  function addPacket({speed=1,offsetZ=-.62,kind='fast'}){for(let i=0;i<32;i++){const row=(i%8)-3.5,layer=Math.floor(i/8)-1.5,p=new THREE.Vector3(1.78+layer*.025,.305+((i%3)-1)*.012,offsetZ+row*.028),v=new THREE.Vector3((-0.20-layer*.006)*speed,0,(.235+row*.004)*speed),mesh=new THREE.Mesh(bearingGeo,steel);mesh.position.copy(p);mesh.userData.protectedJovianBody=true;mesh.userData.packet=kind;root.add(mesh);const history=[p.clone()],trail=new THREE.Line(new THREE.BufferGeometry().setFromPoints(history),trailMaterial);trail.frustumCulled=false;root.add(trail);bearings.push({mesh,p,v,history,trail,sampleClock:0,active:true,kind});}}
-  addPacket({speed:1,offsetZ:-.62,kind:'fast'});
-  addPacket({speed:.72,offsetZ:-.84,kind:'slow'});
-  root.userData.jovian.bearings=bearings;
-  root.userData.jovian.bearingLast=null;
-  root.userData.jovian.updateBearings=function(now){if(this.bearingLast==null)this.bearingLast=now;const realDt=Math.min(.04,(now-this.bearingLast)/1000),dt=realDt*.55;this.bearingLast=now;const center=new THREE.Vector3(0,.305,0);for(const b of bearings){if(!b.active)continue;const d=new THREE.Vector3().subVectors(center,b.p),r2=Math.max(.0035,d.lengthSq());b.v.addScaledVector(d,.19*dt/(r2*Math.sqrt(r2)));for(let mi=0;mi<moons.length;mi++){const m=moons[mi],q=new THREE.Vector3().subVectors(m.position,b.p),q2=Math.max(.0035,q.lengthSq()),ratio=[.00004704,.00002528,.00007805,.00005667][mi];b.v.addScaledVector(q,.19*ratio*dt/(q2*Math.sqrt(q2)));}b.p.addScaledVector(b.v,dt);b.mesh.position.copy(b.p);b.sampleClock+=realDt*.42;if(b.sampleClock>=.025){b.sampleClock=0;b.history.push(b.p.clone());if(b.history.length>180)b.history.shift();b.trail.geometry.setFromPoints(b.history);}if(b.p.distanceTo(center)<.245){b.active=false;b.mesh.visible=false;}}};
-  // Observer carrier: first earned physical home for Neptunian perception work.
-  // The fireship is free of the brass presentation ring: it roams a wide, slow
-  // spherical shell around Jupiter, with independently drifting longitude/latitude.
-  const carrierOrbit=new THREE.Group();carrierOrbit.name='observer-carrier:orbit';carrierOrbit.position.y=.305;root.add(carrierOrbit);
-  const carrier=new THREE.Group();carrier.name='observer-carrier:fireship';
+  function addPacket({offset=0,kind='fast'}){for(let i=0;i<32;i++){
+    const row=(i%8)-3.5,layer=Math.floor(i/8)-1.5;
+    const rel=new THREE.Vector3(-.72+layer*.026,((i%3)-1)*.014,offset+row*.030);
+    const mesh=new THREE.Mesh(bearingGeo,steel);mesh.userData.protectedJovianBody=true;mesh.userData.packet=kind;root.add(mesh);
+    const history=[],trail=new THREE.Line(new THREE.BufferGeometry(),trailMaterial);trail.frustumCulled=false;root.add(trail);
+    bearings.push({mesh,rel,trail,history,sampleClock:0,active:true,kind});
+  }}
+  addPacket({offset:-.18,kind:'fast'});addPacket({offset:.18,kind:'slow'});
+
+  // Observer carrier becomes Janus: a massive long-period intruder. Jupiter still dominates,
+  // but Janus is deliberately much heavier than every Galilean so its periapsis passage matters.
+  const carrierOrbit=new THREE.Group();carrierOrbit.name='observer-carrier:janus-frame';carrierOrbit.position.copy(center);root.add(carrierOrbit);
+  const carrier=new THREE.Group();carrier.name='observer-carrier:janus';
   const hull=new THREE.Mesh(new THREE.CylinderGeometry(.055,.09,.34,8),brassDark);hull.rotation.z=Math.PI/2;hull.castShadow=true;carrier.add(hull);
   const core=new THREE.Mesh(new THREE.SphereGeometry(.052,10,7),warm);carrier.add(core);
-  for(const z of [-.105,.105]){
-    const rail=new THREE.Mesh(new THREE.BoxGeometry(.30,.018,.026),brass);rail.position.z=z;carrier.add(rail);
-  }
+  for(const z of [-.105,.105]){const rail=new THREE.Mesh(new THREE.BoxGeometry(.30,.018,.026),brass);rail.position.z=z;carrier.add(rail);}
   const prow=new THREE.Mesh(new THREE.ConeGeometry(.075,.16,8),brass);prow.rotation.z=-Math.PI/2;prow.position.x=.24;carrier.add(prow);
-  const carrierBetwixtable=makeBetwixtable(carrier,{name:'observer-carrier',padding:.34,interact:()=>downloadObserverCarrierReport()});
-  carrierOrbit.add(carrierBetwixtable);
-  carrierBetwixtable.position.set(2.42,0,0);
-  carrierBetwixtable.userData.observerCarrier={status:'orbiting',mission:'lamp-head',report:null};
-  root.userData.jovian.carrier={node:carrierBetwixtable,orbit:carrierOrbit,phase:1.15,radius:2.42,started:null,update(now){
-    if(this.started==null)this.started=now;
-    // Wide inclined orbit with nodal precession: the orbital plane keeps its tilt
-    // while its ascending node walks slowly around Jupiter. The ship's +X axis
-    // follows the instantaneous travel vector.
-    const t=(now-this.started)/1000,phase=this.phase+t*.055,inclination=1.02,node=t*.009;
-    const orbitPoint=(at)=>{
-      const u=this.phase+at*.055,n=at*.009;
-      const p=new THREE.Vector3(Math.cos(u)*this.radius,0,Math.sin(u)*this.radius);
-      p.applyAxisAngle(new THREE.Vector3(1,0,0),inclination);
-      p.applyAxisAngle(new THREE.Vector3(0,1,0),n);
-      return p;
-    };
-    if(!betwixtFocusOwns(this.node)){
-      const p=orbitPoint(t),next=orbitPoint(t+.20);
-      this.node.position.copy(p);
-      const travel=next.sub(p);
-      if(travel.lengthSq()>1e-8)this.node.quaternion.setFromUnitVectors(new THREE.Vector3(1,0,0),travel.normalize());
+  const carrierBetwixtable=makeBetwixtable(carrier,{name:'observer-carrier',padding:.34,interact:()=>downloadObserverCarrierReport()});carrierOrbit.add(carrierBetwixtable);
+  carrierBetwixtable.userData.observerCarrier={status:'janus-inbound',mission:'lamp-head',report:null};
+
+  const janus={node:carrierBetwixtable,mass:.0048,p:new THREE.Vector3(-5.8,1.35,-1.15),v:new THREE.Vector3(.285,-.035,.055),trail:null,history:[],sampleClock:0,last:null,cycle:0};
+  carrierBetwixtable.position.copy(janus.p);
+  janus.trail=new THREE.Line(new THREE.BufferGeometry().setFromPoints([janus.p.clone()]),new THREE.LineBasicMaterial({color:0xb4772e,transparent:true,opacity:.52}));janus.trail.frustumCulled=false;carrierOrbit.add(janus.trail);
+
+  root.userData.jovian={last:null,moons,bearings,carrier:janus,update(now){
+    if(this.last==null){this.last=now;janus.last=now;return;}
+    const realDt=Math.min(.04,Math.max(.001,(now-this.last)/1000));this.last=now;
+    // Several small deterministic substeps keep the close encounter stable while compressing dead astronomical time.
+    const steps=4,dt=realDt*2.25/steps;
+    for(let step=0;step<steps;step++){
+      const jp=janus.p.clone(),jr=jp.length(),ja=jp.clone().multiplyScalar(-mu/Math.pow(Math.max(.12,jr),3));
+      janus.v.addScaledVector(ja,dt);janus.p.addScaledVector(janus.v,dt);
+      for(const m of moons){if(!m.active)continue;
+        const rel=m.p.clone().sub(center),r=Math.max(.08,rel.length()),a=rel.multiplyScalar(-mu/(r*r*r));
+        const toJ=janus.p.clone().sub(m.p),d=Math.max(.055,toJ.length());a.addScaledVector(toJ,mu*janus.mass/(d*d*d));
+        // Small mutual Galilean terms preserve their earned dynamical status without dominating cost.
+        for(const o of moons)if(o!==m&&o.active){const q=o.p.clone().sub(m.p),qd=Math.max(.045,q.length());a.addScaledVector(q,mu*o.mass/(qd*qd*qd));}
+        m.v.addScaledVector(a,dt);m.p.addScaledVector(m.v,dt);
+      }
     }
-  }};
-  root.userData.science=Object.freeze({source:'JPL JUP365 mean elements',epoch:'2000-01-01.5 TDB',laplace:'Io-Europa-Ganymede near 4:2:1; Callisto outside',bearingModel:'64 protected persistent bodies in two approach-energy packets; restricted dimensionless gravity toy; measured Galilean/Jupiter mass ratios; no bearing-bearing gravity; Jupiter impacts terminate bodies; escapes persist',presentation:'orbital radii compressed; body radii exaggerated'});
+    if(!betwixtFocusOwns(janus.node)){
+      janus.node.position.copy(janus.p);
+      if(janus.v.lengthSq()>1e-8)janus.node.quaternion.setFromUnitVectors(new THREE.Vector3(1,0,0),janus.v.clone().normalize());
+    }
+    for(const m of moons){m.mesh.position.copy(m.p);m.sampleClock+=realDt;if(m.sampleClock>.09){m.sampleClock=0;m.history.push(m.p.clone());if(m.history.length>240)m.history.shift();m.trail.geometry.setFromPoints(m.history);}}
+    // Ice is shepherded by Janus until the packet is stripped away near Jupiter, then becomes ballistic test mass.
+    for(const b of bearings){if(!b.active)continue;
+      if(!b.released){
+        b.p=janus.p.clone().add(b.rel);b.v=janus.v.clone();if(janus.p.length()<2.35)b.released=true;
+      }else{
+        const r=b.p.length(),a=b.p.clone().multiplyScalar(-mu/Math.pow(Math.max(.06,r),3));
+        const toJ=janus.p.clone().sub(b.p),d=Math.max(.045,toJ.length());a.addScaledVector(toJ,mu*janus.mass/(d*d*d));
+        for(const m of moons){const q=m.p.clone().sub(b.p),qd=Math.max(.04,q.length());a.addScaledVector(q,mu*m.mass/(qd*qd*qd));}
+        b.v.addScaledVector(a,realDt*2.25);b.p.addScaledVector(b.v,realDt*2.25);
+      }
+      b.mesh.position.copy(b.p);b.sampleClock+=realDt;if(b.sampleClock>.07){b.sampleClock=0;b.history.push(b.p.clone());if(b.history.length>180)b.history.shift();b.trail.geometry.setFromPoints(b.history);}
+      if(b.p.length()<.245){b.active=false;b.mesh.visible=false;}
+    }
+    janus.sampleClock+=realDt;if(janus.sampleClock>.06){janus.sampleClock=0;janus.history.push(janus.p.clone());if(janus.history.length>320)janus.history.shift();janus.trail.geometry.setFromPoints(janus.history);}
+    // Long-period return without simulating centuries of empty screen: after Janus has truly departed,
+    // reset only Janus and its ice packet for another deterministic passage. The battered moons are NOT reset.
+    if(janus.p.length()>6.4&&janus.p.x>0){
+      janus.cycle++;janus.p.set(-5.8,1.35,-1.15);janus.v.set(.285,-.035,.055);janus.history.length=0;
+      for(const b of bearings){b.active=true;b.mesh.visible=true;b.released=false;b.history.length=0;}
+    }
+    window.vestibuleDirty=true;
+  },updateBearings(){/* Janus update owns the integrated encounter now. */}};
+  root.userData.science=Object.freeze({source:'JPL JUP365 mean elements for Galilean starting ratios; deterministic dimensionless encounter toy',janusMassRatio:.0048,massHierarchy:'Jupiter >> Janus >> Galileans >> ice test masses',model:'integrated Jupiter + Galileans + Janus perturbation; ice test masses; accelerated long-period reset preserves accumulated moon consequences',presentation:'orbital distances compressed; body radii exaggerated'});
 }});
 
 

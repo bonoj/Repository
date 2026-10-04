@@ -2676,7 +2676,7 @@ const cairnLabBetwixtable=buildBetwixtable({
     };
 
     cairnRock=new THREE.Mesh(new THREE.DodecahedronGeometry(.24,0),brass);cairnRock.position.set(-.72,.38,-.60);root.add(cairnRock);
-    const rockB=buildBetwixtable({name:'cairn-rock',parent:root,at:new THREE.Vector3(-.72,.18,-.60),padding:.12,interact:()=>{cairnPublish('MOVE',1);return true},build(p){const q=new THREE.Mesh(new THREE.DodecahedronGeometry(.25,0),brass);q.position.y=.22;p.add(q)}});
+    const rockB=buildBetwixtable({name:'cairn-rock',parent:root,at:new THREE.Vector3(-.72,.18,-.60),padding:.12,interact:()=>{cairnPublish('MOVE',1);return true},build(p){const q=new THREE.Mesh(new THREE.DodecahedronGeometry(.25,0),brass);q.position.y=.22;p.add(q)}});rockB.userData.cairnControl='rock';
     cairnRock.visible=false; // the interactive Betwixtable projection is authoritative
     cairnRock=rockB.userData.betwixtable.presentation.children[0];
 
@@ -3587,6 +3587,10 @@ function workshopTap(x,y){
     if(workshopFocusMotion)return true;
     const scoped=hitBetwixtables(focusedWorkshopObject),winner=scoped[0]?.b||null;
     if(winner&&winner!==focusedWorkshopObject){
+      // Cairn controls are controls, not finer operable resolutions. Once their table
+      // is in scope, touching one should cause consequence rather than telescope again.
+      const spatial=winner.userData.betwixtable;
+      if(winner.userData.cairnControl&&typeof spatial?.interact==='function'){spatial.interact({x,y,raycaster,object:winner});return true}
       telescopeWorkshopFocus(winner);return true;
     }
     if(winner===focusedWorkshopObject){
@@ -3600,7 +3604,14 @@ function workshopTap(x,y){
 
   const betwixtHits=hitBetwixtables(null);
   if(betwixtHits.length){
-    const b=betwixtHits[0].b;b.userData.betwixtable.focus();
+    const b=betwixtHits[0].b;
+    // A direct cairn control hit from world view first establishes the laboratory as
+    // the operable scope. The same physical control becomes active once the table is focused.
+    if(b.userData.cairnControl){
+      let p=b.parent,lab=null;while(p){if(p===cairnLabBetwixtable){lab=p;break}p=p.parent}
+      if(lab){lab.userData.betwixtable.focus();window.vestibuleDirty=true;return true}
+    }
+    b.userData.betwixtable.focus();
     if(b===relationalInspectionBetwixtable)showMoleculeCard(true);
     window.vestibuleDirty=true;return true;
   }

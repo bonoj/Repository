@@ -3175,35 +3175,47 @@ function workshopTap(x,y){
   const r=canvas.getBoundingClientRect();
   pointerNDC.set(((x-r.left)/r.width)*2-1,-((y-r.top)/r.height)*2+1);
   raycaster.setFromCamera(pointerNDC,camera);
-  // Construction-first Betwixtables are focusable by contract, not by bespoke tap wiring.
+  // Betwixtables form operable resolutions. Shells do not occlude descendant shells:
+  // collect every hit first, then let the deepest embedded Betwixtable own the tap.
   const builtBetwixtables=[];
   scene.traverse(o=>{if(o.userData?.betwixtable?.target&&o.userData.betwixtable.focus)builtBetwixtables.push(o)});
+  const betwixtDepth=o=>{let d=0,p=o.parent;while(p){if(p.userData?.betwixtable)d++;p=p.parent}return d};
+  const hitBetwixtables=scope=>{
+    const hits=[];
+    for(const b of builtBetwixtables){
+      if(scope&&b!==scope){let p=b.parent,inside=false;while(p){if(p===scope){inside=true;break}p=p.parent}if(!inside)continue}
+      const t=b.userData.betwixtable.target;t.visible=true;
+      const h=raycaster.intersectObject(t,false)[0]||null;t.visible=false;
+      if(h)hits.push({b,depth:betwixtDepth(b),distance:h.distance});
+    }
+    return hits.sort((a,b)=>b.depth-a.depth||a.distance-b.distance);
+  };
 
-  // Foreground is modal. Resolve the focused shell before exposing anything behind it
-  // to the dispatcher. A miss dismisses focus and consumes the tap.
+  // Focus is a scope, not a modal dead end. Descendant Betwixtables remain eligible.
   if(focusedWorkshopObject){
-    const spatial=focusedWorkshopObject.userData?.betwixtable;
-    if(spatial?.target){
-      spatial.target.visible=true;
-      const focusedHit=raycaster.intersectObject(spatial.target,false).length>0;
-      spatial.target.visible=false;
-      if(focusedHit){
-        if(workshopFocusMotion)return true;
-        if(typeof spatial.interact==='function'){spatial.interact({x,y,raycaster,object:focusedWorkshopObject});return true;}
-        if(focusedWorkshopObject===relationalInspectionBetwixtable){cycleMolecule();return true;}
-        return true;
-      }
+    if(workshopFocusMotion)return true;
+    const scoped=hitBetwixtables(focusedWorkshopObject),winner=scoped[0]?.b||null;
+    if(winner&&winner!==focusedWorkshopObject){
+      // First telescoping cut: return the parent resolution, then summon the child.
+      // This avoids two focus owners fighting over transforms.
+      const child=winner;dismissWorkshopFocus();
+      const descend=()=>{if(workshopFocusMotion)return requestAnimationFrame(descend);child.userData.betwixtable.focus()};
+      requestAnimationFrame(descend);return true;
+    }
+    if(winner===focusedWorkshopObject){
+      const spatial=winner.userData.betwixtable;
+      if(typeof spatial.interact==='function'){spatial.interact({x,y,raycaster,object:winner});return true}
+      if(winner===relationalInspectionBetwixtable){cycleMolecule();return true}
+      return true;
     }
     dismissWorkshopFocus();return true;
   }
 
-  for(const b of builtBetwixtables){
-    const t=b.userData.betwixtable.target;t.visible=true;
-    const hit=raycaster.intersectObject(t,false).length>0;t.visible=false;
-    if(hit){
-      if(b===relationalInspectionBetwixtable&&focusedWorkshopObject===b&&!workshopFocusMotion){cycleMolecule();return true;}
-      b.userData.betwixtable.focus();if(b===relationalInspectionBetwixtable)showMoleculeCard(true);window.vestibuleDirty=true;return true
-    }
+  const betwixtHits=hitBetwixtables(null);
+  if(betwixtHits.length){
+    const b=betwixtHits[0].b;b.userData.betwixtable.focus();
+    if(b===relationalInspectionBetwixtable)showMoleculeCard(true);
+    window.vestibuleDirty=true;return true;
   }
   chemTapTarget.visible=true;
   const chemHit=raycaster.intersectObject(chemTapTarget,false).length>0;

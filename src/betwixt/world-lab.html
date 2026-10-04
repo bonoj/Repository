@@ -3175,7 +3175,7 @@ function telescopeWorkshopFocus(incoming){
     incomingFromWorld,seatWorld:seatOriginWorld,incomingHome,
     fromTarget:target.clone(),toTarget:target.clone(),
     fromCameraPosition:camera.position.clone(),toCameraPosition:camera.position.clone(),
-    started:performance.now(),duration:THREE.MathUtils.clamp(390+incomingFromWorld.distanceTo(seatWorld)*22,430,610)
+    started:performance.now(),duration:THREE.MathUtils.clamp(390+incomingFromWorld.distanceTo(seatOriginWorld)*22,430,610)
   };
   saved.position=incomingHome;
   focusedWorkshopObject=incoming;

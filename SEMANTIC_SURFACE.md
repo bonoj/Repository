@@ -39,7 +39,7 @@ That file is the finished World Lab organism transplanted intact and then modifi
 
 Betwixt currently owns the world-space context: renderer, camera/observer, floor, dome, lighting, fog, interaction surface, Repository status, and spell trays.
 
-The current six-toy arrangement is content *in* Betwixt, not Betwixt itself.
+The current resident organisms, Workshop specimens, and experimental apparatus are content *in* Betwixt, not Betwixt itself.
 
 That distinction is executable as `betwixtContent`, a Three.js parent group. It currently contains:
 
@@ -96,6 +96,53 @@ The physical Crucible geoglass is likewise manipulated through its Betwixtable s
 
 Treat the Betwixtable shell as the current geometry encapsulation and spatial snapping point. This does not yet establish a generalized fabrication, layout, or semantic-port framework.
 
+
+### Nested operable resolution
+
+Repeated nested interaction has earned one extension to the Betwixtable contract.
+
+A Betwixtable establishes an operable spatial resolution. A Betwixtable nested inside another may establish a finer operable resolution. When multiple eligible Betwixtables lie under one tap, the deepest eligible descendant owns that tap.
+
+Focusing a parent does not make its descendants unreachable. Focus establishes the currently presented scope; a more specific descendant may telescope into the same presentation seat. The accepted telescope keeps the camera/target seat stable and uses presented bounds rather than object origins to place the focused content.
+
+Current working law:
+
+**Containment establishes context. Specificity establishes tap ownership. Focus temporarily owns presentation.**
+
+Do not infer a generalized focus stack, arbitrary scene graph loan protocol, or back-navigation system. Those have not been earned.
+
+### Construction and spatial verification
+
+Workshop construction and Neptunian observation now establish a useful separation of responsibilities:
+
+**Use semantic relationships to construct. Use spatial evidence to verify.**
+
+Semantic graphs, named materials, and relational intent may author geometry. Spatial observation is evidence about what execution actually produced; it is not a replacement authoring ontology.
+
+The model remains the corrector. There is no separate Corrector subsystem.
+
+## Neptunian spatial observation
+
+Neptunian is a small runtime sensory apparatus for inspecting executable geometry after construction. Its purpose is to let a model receive spatial evidence about what its authored geometry became before deciding whether ordinary source edits are required.
+
+The current Observer can place and orient a sensor around a target, raycast the running Three.js presentation, and return structured anonymous readings. Repeated failures have earned only the following additional faculties:
+
+- target-scoped hits, separated from nearer world occluders;
+- target bounds as spatial proprioception;
+- anonymous continuity handles that allow repeated hits on the same target surface to be recognized within the Observer's current continuity context.
+
+Continuity is deliberately weaker than semantic identity. A continuity ordinal does not mean “lampshade,” a permanent object ID, or a guaranteed topological component. The current implementation derives anonymous persistence from target presentation surfaces.
+
+The governing rule is:
+
+**Confusion earns senses.**
+
+Do not add semantic labels, topology oracles, vision systems, or richer sensing merely because they might be useful. Add a faculty only when executable evidence exposes a specific ambiguity the existing apparatus cannot resolve.
+
+The Observer does not correct geometry. The model interprets returned evidence and edits ordinary source when warranted.
+
+An Observer carrier currently provides a physical interaction point for retrieving a structured report. The present download path is transport plumbing, not part of the perceptual contract and not an earned general messaging architecture.
+
 ## Simulation and persistence
 
 The donor contains its own ECS and simulation systems for the inherited presences and their local machinery.
@@ -141,6 +188,14 @@ Build is the first eight characters of the exact Repository commit used to build
 Spells are model-mediated working controls. Temporary spells may appear and disappear without ceremony. Resident spells have survived enough local use to remain useful. Repetition across contexts may earn shared vocabulary; it does not presume it.
 
 Current shell still declares Betwixt's place identity and spell arrays directly in `src/shell/repository-shell.js`. The stronger generic-shell/place-config separation has not yet been implemented.
+
+## Thoughtforms
+
+Thoughtforms have repeated enough to establish one small shared convention.
+
+A thoughtform is embodied executable memory: a compact resident form may preserve an accepted idea, experiment, or reusable asset vocabulary while its internal activity remains locally owned. Current thoughtforms share a gimbal-cage presentation behavior with independent deterministic phase rather than coordinated motion.
+
+This does not make thoughtforms a general agent framework, persistence layer, networking substrate, or required architecture for experiments. Their internal toys and questions are lower-authority content. Reuse the embodied vocabulary when useful; do not promote the metaphor beyond executable pressure.
 
 ## Workshop material vocabulary
 
@@ -190,6 +245,9 @@ Do not create import/export machinery merely to move an entity between contexts 
 Do not promote a temporary spell, representation, component, or runtime seam into universal architecture before repetition earns it.
 
 When prose and executable evidence disagree, update or delete the prose.
+
+
+Do not promote an experimental toy into semantic law before its behavior has been observed. In particular, current Jovian/Janus encounter work and the Rendezvous transport question remain experiments until executable evidence earns stronger claims.
 
 ## Crucible Workshop stability snapshot
 

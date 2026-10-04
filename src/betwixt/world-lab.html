@@ -1558,6 +1558,45 @@ function installWorkshopCrucibleContainerSpell(){
 }
 queueMicrotask(installWorkshopCrucibleContainerSpell);
 
+// Resident cleanup spell: collapse the visible lab into one inert white bead.
+// The bead is not a Betwixtable and has no interaction. After collapse only gravity
+// and the floor collision remain.
+const collapseBead=new THREE.Mesh(
+  new THREE.SphereGeometry(.16,16,10),
+  new THREE.MeshStandardMaterial({color:0xffffff,roughness:.72,metalness:0})
+);
+collapseBead.name='residue:collapsed-world';collapseBead.castShadow=true;collapseBead.visible=false;scene.add(collapseBead);
+let collapseWorldState=null,collapseBeadVelocity=0,collapseLastNow=null;
+function collapseWorldToBead(){
+  if(collapseWorldState)return true;
+  const preserved=new Set([floor,dome,collapseBead]);
+  const box=new THREE.Box3();
+  for(const child of scene.children){
+    if(preserved.has(child)||child.isLight)continue;
+    if(child.visible)box.expandByObject(child);
+  }
+  const center=box.isEmpty()?new THREE.Vector3(0,GROUND_Y+3,0):box.getCenter(new THREE.Vector3());
+  collapseWorldState=scene.children.filter(child=>!preserved.has(child)&&!child.isLight).map(child=>({child,visible:child.visible}));
+  for(const q of collapseWorldState)q.child.visible=false;
+  collapseBead.position.set(center.x,Math.max(GROUND_Y+.17,center.y),center.z);
+  collapseBeadVelocity=0;collapseLastNow=performance.now();collapseBead.visible=true;
+  globalThis.RepositoryShell?.removeTool?.('collapse-world');
+  window.vestibuleDirty=true;return true;
+}
+function installCollapseWorldSpell(){
+  const shell=globalThis.RepositoryShell;if(!shell||shell.inspect().tools.includes('collapse-world'))return;
+  shell.registerTool({id:'collapse-world',text:'⚪️',label:'Collapse world',lane:'resident',onClick:()=>collapseWorldToBead()});
+}
+queueMicrotask(installCollapseWorldSpell);
+function updateCollapseBead(now){
+  if(!collapseBead.visible)return;
+  const dt=Math.min(.05,Math.max(0,(now-(collapseLastNow??now))/1000));collapseLastNow=now;
+  collapseBeadVelocity-=5.4*dt;collapseBead.position.y+=collapseBeadVelocity*dt;
+  const floorY=GROUND_Y+.16;
+  if(collapseBead.position.y<floorY){collapseBead.position.y=floorY;if(collapseBeadVelocity<0)collapseBeadVelocity*=-.24;if(Math.abs(collapseBeadVelocity)<.08)collapseBeadVelocity=0;}
+  window.vestibuleDirty=true;
+}
+
 // First spatial spell: the Crucible container has a physical handle in quiet
 // Betwixt. Geoglass uses the Workshop material vocabulary; the bearings inside
 // borrow Crucible's dark/warm/cyan feel. It still delegates to the resident ⚗️.
@@ -4016,6 +4055,7 @@ addEventListener('resize',()=>{
 });
 
 renderer.setAnimationLoop((now)=>{
+  updateCollapseBead(now);
   globalThis.boundedWitness?.updateIdle?.(now);
   workshopTabletopBetwixtable.userData.betwixtable.presentation.children.find(o=>o.name==='thoughtform:neptunian-caretaker-carrier')?.userData.animate?.(now);
   jovianBetwixtable.userData.betwixtable.presentation.userData.jovian?.update(now);

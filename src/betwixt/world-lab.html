@@ -1805,7 +1805,7 @@ function seatBetwixtPresentation(obj){
 }
 seatBetwixtPresentation(dynamite);seatBetwixtPresentation(microscope);
 // Presentation geometry is local to its Betwixtable. The shell is the sole spatial snapping/grounding boundary.
-const chemBetwixtable=makeBetwixtable(chemPresentation,{name:'chem-discovery'});chemBetwixtable.position.copy(chemHome);floorWorkshopObject(chemBetwixtable);const chemTapTarget=chemBetwixtable.userData.betwixtable.target;
+const chemBetwixtable=makeBetwixtable(chemPresentation,{name:'chem-discovery',interact:()=>tapChemSpell()});chemBetwixtable.position.copy(chemHome);floorWorkshopObject(chemBetwixtable);
 
 const chemBurstGroup=new THREE.Group();chemBurstGroup.name='effect:chem-discovery';scene.add(chemBurstGroup);
 const chemBurstGeo=new THREE.SphereGeometry(.055,6,4);
@@ -3264,10 +3264,6 @@ function workshopTap(x,y){
     if(b===relationalInspectionBetwixtable)showMoleculeCard(true);
     window.vestibuleDirty=true;return true;
   }
-  chemTapTarget.visible=true;
-  const chemHit=raycaster.intersectObject(chemTapTarget,false).length>0;
-  chemTapTarget.visible=false;
-  if(chemHit){tapChemSpell();window.vestibuleDirty=true;return true}
   // Raycast the larger invisible volume explicitly; invisible objects are skipped by normal rendering.
   workshopCrucibleOrbTapTarget.visible=true;
   const crucibleOrbHit=raycaster.intersectObject(workshopCrucibleOrbTapTarget,false).length>0;

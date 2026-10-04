@@ -2411,8 +2411,7 @@ const workshopTabletopBetwixtable=buildBetwixtable({
 // Neptunian JIT construction pressure: semantic-node articulated desk lamp.
 // The graph is construction authority; Workshop materials and endpoint primitives do the physical work.
 // This is intentionally an ordinary Betwixtable, placed forward of the vertical work stack.
-const deskLampGraph=Object.freeze({
-  name:'articulated-desk-lamp-t0',
+// Accepted Workshop specimen: Ozymandias, the Brass Spear Fisher.\n// Preserve this graph as the named source form; descendants may reinterpret it without erasing it.\nconst ozymandiasGraph=Object.freeze({\n  name:'ozymandias-brass-spear-fisher',
   nodes:Object.freeze([
     Object.freeze({id:'base',kind:'support',at:[0,.10,0]}),
     Object.freeze({id:'lowerPivot',kind:'pivot',at:[0,.28,0]}),
@@ -2429,7 +2428,7 @@ const deskLampGraph=Object.freeze({
     Object.freeze({from:'shadeAxis',to:'bulb',relation:'contains'})
   ])
 });
-const deskLampBetwixtable=buildBetwixtable({
+const deskLampGraph=Object.freeze({\n  ...ozymandiasGraph,\n  name:'ozymandias-derived-desk-lamp',\n  nodes:Object.freeze(ozymandiasGraph.nodes.map(n=>n.id==='shadeAxis'\n    ? Object.freeze({...n,at:[1.27,1.20,0]})\n    : n.id==='bulb' ? Object.freeze({...n,at:[1.42,1.09,0]}) : n))\n});\n\nconst deskLampBetwixtable=buildBetwixtable({
   name:'semantic-desk-lamp',
   parent:scene,
   at:new THREE.Vector3(0,GROUND_Y+.03,3.55),
@@ -2465,8 +2464,8 @@ const deskLampBetwixtable=buildBetwixtable({
 
     // Shade axis follows the semantic head relation. ConeGeometry's local Y is aligned to that axis.
     const axis=P('shadeAxis').clone().sub(P('headPivot')).normalize();
-    const shadeCenter=P('shadeAxis').clone().addScaledVector(axis,.11);
-    const shade=part('shade',new THREE.Mesh(new THREE.ConeGeometry(.31,.46,24,1,true),brass));
+    // Lamp mutation of Ozymandias: a broad, shallow reflector replaces the spear-fisher head silhouette.\n    // Open mouth faces along the semantic aim axis; bulb sits visibly within that mouth.\n    const shadeCenter=P('shadeAxis').clone().addScaledVector(axis,.03);
+    const shade=part('shade',new THREE.Mesh(new THREE.ConeGeometry(.38,.24,32,1,true),brass));
     shade.position.copy(shadeCenter);
     shade.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),axis);
     shade.castShadow=true;shade.material.side=THREE.DoubleSide;root.add(shade);
@@ -2505,7 +2504,7 @@ const deskLampBetwixtable=buildBetwixtable({
     spatial.jitAudit=()=>root.userData.neptunianAudit;
   }
 });
-globalThis.deskLampGraph=deskLampGraph;
+globalThis.ozymandiasGraph=ozymandiasGraph;\nglobalThis.WorkshopSpecimens||=Object.create(null);\nglobalThis.WorkshopSpecimens.Ozymandias=Object.freeze({name:'Ozymandias',kind:'Brass Spear Fisher',graph:ozymandiasGraph,acceptedFrom:'f7ea17bd'});\nglobalThis.deskLampGraph=deskLampGraph;
 globalThis.deskLampBetwixtable=deskLampBetwixtable;
 
 // Neptunian Crossing 001 — Builder pass only.

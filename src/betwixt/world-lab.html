@@ -2557,6 +2557,151 @@ const workshopTabletopBetwixtable=buildBetwixtable({
   }
 });
 
+
+/* Rendezvous cairn laboratory — disposable transport pressure.
+   This is intentionally a physical Betwixtable rather than a networking framework.
+   The browser owns ntfy transport; the reconstructed scar log owns apparent shared state. */
+const CAIRN_TOPIC='worldlab-cairn-741-rendezvous-a3f9c2e7';
+const CAIRN_URL='https://ntfy.sh/'+CAIRN_TOPIC;
+const cairnSeen=new Set(),cairnEvents=[];
+let cairnLastId='',cairnSource=null,cairnStatus='BOOT',cairnError='',cairnLocalSeq=0;
+const cairnState={rock:0,beacon:false,spawned:false,destroyed:false,hammers:0,malformed:0,rejected:0};
+let cairnRock=null,cairnBeacon=null,cairnSpawn=null,cairnStatusTexture=null,cairnStatusCanvas=null;
+
+function cairnEventId(){
+  cairnLocalSeq++;
+  const entropy=crypto?.randomUUID?.()||Math.random().toString(36).slice(2);
+  return Date.now().toString(36)+'-'+cairnLocalSeq.toString(36)+'-'+entropy;
+}
+function cairnNormalize(raw){
+  if(!raw||raw.event!=='message'||typeof raw.message!=='string')return null;
+  let body;
+  try{body=JSON.parse(raw.message)}catch{return {id:raw.id||'',time:raw.time||0,valid:false,reason:'json'}}
+  if(!body||body.v!==1||typeof body.id!=='string'||typeof body.op!=='string')return {id:raw.id||body?.id||'',time:raw.time||0,valid:false,reason:'schema'};
+  return {id:body.id,time:raw.time||0,valid:true,op:body.op,n:Number(body.n)||0};
+}
+function cairnApply(ev){
+  if(!ev||!ev.id||cairnSeen.has(ev.id))return false;
+  cairnSeen.add(ev.id);cairnEvents.push(ev);
+  if(!ev.valid){cairnState.malformed++;cairnState.rejected++;cairnRenderStatus();return true}
+  switch(ev.op){
+    case 'MOVE':cairnState.rock=((cairnState.rock+Math.sign(ev.n||1)+5)%5);break;
+    case 'TOGGLE':cairnState.beacon=!cairnState.beacon;break;
+    case 'SPAWN':cairnState.spawned=true;cairnState.destroyed=false;break;
+    case 'DESTROY':if(cairnState.spawned)cairnState.destroyed=true;break;
+    case 'HAMMER':cairnState.hammers++;break;
+    default:cairnState.rejected++;
+  }
+  cairnProject();cairnRenderStatus();return true;
+}
+function cairnResetFold(){
+  cairnSeen.clear();cairnEvents.length=0;
+  Object.assign(cairnState,{rock:0,beacon:false,spawned:false,destroyed:false,hammers:0,malformed:0,rejected:0});
+  cairnProject();cairnRenderStatus();
+}
+async function cairnReplay(){
+  cairnStatus='REPLAY';cairnError='';cairnRenderStatus();
+  try{
+    const r=await fetch(CAIRN_URL+'/json?poll=1');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const text=await r.text();
+    const rows=text.split(/\n+/).filter(Boolean).map(line=>{try{return JSON.parse(line)}catch{return null}}).filter(Boolean);
+    cairnResetFold();
+    for(const row of rows){const ev=cairnNormalize(row);if(ev)cairnApply(ev);if(row.id)cairnLastId=row.id}
+    cairnStatus='REPLAY '+cairnEvents.length;cairnRenderStatus();cairnConnectLive();
+    return cairnEvents.length;
+  }catch(err){cairnStatus='REPLAY FAIL';cairnError=String(err?.message||err);cairnRenderStatus();return -1}
+}
+function cairnConnectLive(){
+  cairnSource?.close?.();
+  try{
+    const since=cairnLastId?('?since='+encodeURIComponent(cairnLastId)):'';
+    cairnSource=new EventSource(CAIRN_URL+'/sse'+since);
+    cairnSource.onopen=()=>{cairnStatus='LIVE';cairnError='';cairnRenderStatus()};
+    cairnSource.onmessage=e=>{
+      try{const row=JSON.parse(e.data);if(row.id)cairnLastId=row.id;const ev=cairnNormalize(row);if(ev)cairnApply(ev)}
+      catch{cairnState.malformed++;cairnRenderStatus()}
+    };
+    cairnSource.onerror=()=>{cairnStatus='RECONNECT';cairnRenderStatus()};
+  }catch(err){cairnStatus='SSE FAIL';cairnError=String(err?.message||err);cairnRenderStatus()}
+}
+async function cairnPublish(op,n=0,{duplicateId=null,raw=null}={}){
+  const id=duplicateId||cairnEventId();
+  const message=raw??JSON.stringify({v:1,id,op,n});
+  cairnStatus='SEND '+op;cairnRenderStatus();
+  try{
+    const r=await fetch(CAIRN_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:message});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    cairnStatus='SENT '+op;cairnError='';cairnRenderStatus();return id;
+  }catch(err){cairnStatus='SEND FAIL';cairnError=String(err?.message||err);cairnRenderStatus();return null}
+}
+async function cairnDuplicate(){
+  const id=cairnEventId(),message=JSON.stringify({v:1,id,op:'HAMMER',n:1});
+  await cairnPublish('HAMMER',1,{duplicateId:id,raw:message});
+  await cairnPublish('HAMMER',1,{duplicateId:id,raw:message});
+}
+function cairnProject(){
+  if(cairnRock)cairnRock.position.x=-.72+cairnState.rock*.36;
+  if(cairnBeacon){cairnBeacon.material.emissiveIntensity=cairnState.beacon?2.4:.08;cairnBeacon.scale.setScalar(cairnState.beacon?1.12:1)}
+  if(cairnSpawn)cairnSpawn.visible=cairnState.spawned&&!cairnState.destroyed;
+  window.vestibuleDirty=true;
+}
+function cairnRenderStatus(){
+  if(!cairnStatusCanvas)return;
+  const ctx=cairnStatusCanvas.getContext('2d');ctx.clearRect(0,0,768,320);
+  ctx.fillStyle='rgba(7,9,10,.91)';ctx.fillRect(0,0,768,320);ctx.strokeStyle='rgba(180,119,46,.88)';ctx.lineWidth=3;ctx.strokeRect(2,2,764,316);
+  ctx.font='700 34px monospace';ctx.fillStyle='#f0c98c';ctx.fillText('RENDEZVOUS / CAIRN',26,48);
+  ctx.font='24px monospace';ctx.fillStyle='#d9dde0';ctx.fillText(cairnStatus,26,88);
+  ctx.fillText('SCARS '+cairnEvents.length+'   UNIQUE '+cairnSeen.size+'   REJECT '+cairnState.rejected,26,126);
+  ctx.fillText('ROCK '+cairnState.rock+'   BEACON '+(cairnState.beacon?'ON':'OFF')+'   HAMMER '+cairnState.hammers,26,164);
+  ctx.fillText('THING '+(!cairnState.spawned?'ABSENT':cairnState.destroyed?'TOMBSTONE':'PRESENT'),26,202);
+  ctx.fillStyle='#8f979c';ctx.font='19px monospace';ctx.fillText('tap objects · ↻ page = archaeological replay',26,244);
+  ctx.fillText('same URL on another phone = stranger',26,274);
+  if(cairnError){ctx.fillStyle='#ffb14a';ctx.fillText(cairnError.slice(0,68),26,304)}
+  cairnStatusTexture.needsUpdate=true;window.vestibuleDirty=true;
+}
+const cairnLabBetwixtable=buildBetwixtable({
+  name:'rendezvous-cairn-laboratory',parent:scene,at:new THREE.Vector3(-3.8,GROUND_Y+2.35,-2.5),padding:.32,
+  build(root){
+    const table=new THREE.Mesh(new THREE.CylinderGeometry(2.05,2.05,.12,48),brassDark);table.position.y=.06;table.castShadow=true;root.add(table);
+    const glass=new THREE.Mesh(new THREE.CylinderGeometry(1.92,1.92,.035,48),glassFace);glass.position.y=.135;root.add(glass);
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(1.98,.07,8,48),brass);rim.rotation.x=Math.PI/2;rim.position.y=.15;root.add(rim);
+
+    const makeButton=(name,x,z,material,op,n=0,handler=null)=>{
+      const g=new THREE.Group();g.position.set(x,.25,z);root.add(g);
+      const base=new THREE.Mesh(new THREE.CylinderGeometry(.29,.33,.13,18),steel);base.position.y=.065;g.add(base);
+      const cap=new THREE.Mesh(new THREE.SphereGeometry(.23,16,10),material);cap.position.y=.20;g.add(cap);
+      const b=buildBetwixtable({name:'cairn-'+name,parent:g,padding:.10,interact:()=>{(handler||(()=>cairnPublish(op,n)))();return true},build(p){const proxy=new THREE.Mesh(new THREE.SphereGeometry(.24,12,8),material);proxy.position.y=.20;p.add(proxy)}});
+      b.userData.cairnControl=name;return {g,b,cap};
+    };
+
+    cairnRock=new THREE.Mesh(new THREE.DodecahedronGeometry(.24,0),brass);cairnRock.position.set(-.72,.38,-.60);root.add(cairnRock);
+    const rockB=buildBetwixtable({name:'cairn-rock',parent:root,at:new THREE.Vector3(-.72,.18,-.60),padding:.12,interact:()=>{cairnPublish('MOVE',1);return true},build(p){const q=new THREE.Mesh(new THREE.DodecahedronGeometry(.25,0),brass);q.position.y=.22;p.add(q)}});
+    cairnRock.visible=false; // the interactive Betwixtable projection is authoritative
+    cairnRock=rockB.userData.betwixtable.presentation.children[0];
+
+    const beacon=makeButton('beacon',.82,-.58,warm,'TOGGLE');cairnBeacon=beacon.cap;
+    makeButton('spawn',-.78,.18,brass,'SPAWN');
+    makeButton('destroy',-.12,.18,brassDark,'DESTROY');
+    makeButton('duplicate',.56,.18,steel,'HAMMER',1,()=>cairnDuplicate());
+    makeButton('malformed',1.20,.18,rubber,'BAD',0,()=>cairnPublish('BAD',0,{raw:'this is deliberately not json'}));
+    makeButton('replay',-.72,.92,glassFace,'REPLAY',0,()=>cairnReplay());
+
+    cairnSpawn=new THREE.Mesh(new THREE.IcosahedronGeometry(.22,1),warm);cairnSpawn.position.set(.30,.48,.92);cairnSpawn.visible=false;root.add(cairnSpawn);
+
+    cairnStatusCanvas=document.createElement('canvas');cairnStatusCanvas.width=768;cairnStatusCanvas.height=320;
+    cairnStatusTexture=new THREE.CanvasTexture(cairnStatusCanvas);cairnStatusTexture.colorSpace=THREE.SRGBColorSpace;
+    const display=new THREE.Mesh(new THREE.PlaneGeometry(2.85,1.19),new THREE.MeshBasicMaterial({map:cairnStatusTexture,transparent:true,side:THREE.DoubleSide}));
+    display.position.set(.15,1.18,-1.38);display.rotation.x=-.48;root.add(display);
+  }
+});
+cairnLabBetwixtable.userData.cairn=Object.freeze({
+  topic:CAIRN_TOPIC,replay:cairnReplay,publish:cairnPublish,
+  evidence:()=>({status:cairnStatus,error:cairnError,events:cairnEvents.slice(),state:{...cairnState},lastId:cairnLastId})
+});
+globalThis.CairnLab=cairnLabBetwixtable.userData.cairn;
+cairnProject();cairnRenderStatus();queueMicrotask(()=>cairnReplay());
+
 // Neptunian JIT construction pressure: semantic-node articulated desk lamp.
 // The graph is construction authority; Workshop materials and endpoint primitives do the physical work.
 // This is intentionally an ordinary Betwixtable, placed forward of the vertical work stack.

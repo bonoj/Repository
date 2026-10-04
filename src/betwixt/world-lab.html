@@ -1606,9 +1606,68 @@ function updateCollapseBead(now){
     else {collapseBeadVelocity=0;collapseSettledAt??=now;}
   }
   if(collapseSettledAt!=null&&now-collapseSettledAt>420){
-    collapseBead.visible=false;collapseBead.removeFromParent();
+    collapseBead.visible=false;collapseBead.removeFromParent();beginWorldseed();
   }
   window.vestibuleDirty=true;
+}
+
+// Worldseed: a post-collapse deterministic organism. Authority is four scalar fields;
+// the mesh is only a projection. Genesis begins only after the collapse marble winks out.
+const WORLDSEED_N=40,WORLDSEED_TURNS=1000,WORLDSEED_SEED=741;
+let worldseed=null;
+function worldseedRand(i){let x=(i+WORLDSEED_SEED)|0;x=Math.imul(x^(x>>>16),0x45d9f3b);x=Math.imul(x^(x>>>16),0x45d9f3b);return ((x^(x>>>16))>>>0)/4294967296}
+function createWorldseed(){
+  const n=WORLDSEED_N,N=n*n,potential=new Float32Array(N),resistance=new Float32Array(N),trace=new Float32Array(N),disturbance=new Float32Array(N),next=new Float32Array(N);
+  for(let i=0;i<N;i++){potential[i]=.03*worldseedRand(i*3+1);resistance[i]=.08+.08*worldseedRand(i*3+2)}
+  const geo=new THREE.PlaneGeometry(11,11,n-1,n-1);geo.rotateX(-Math.PI/2);
+  const colors=new Float32Array(N*3);geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
+  const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.88,metalness:0,side:THREE.DoubleSide});
+  const mesh=new THREE.Mesh(geo,mat);mesh.name='worldseed:projection';mesh.position.y=GROUND_Y+.018;mesh.receiveShadow=true;scene.add(mesh);
+  const handles=new THREE.Group();handles.name='worldseed:anonymous-distinctions';scene.add(handles);
+  worldseed={n,N,potential,resistance,trace,disturbance,next,mesh,handles,turn:0,lastStep:performance.now(),done:false,history:[],distinctions:new Map(),nextHandle:1};
+  projectWorldseed();
+}
+function worldseedForcing(t){
+  const w=worldseed,n=w.n;
+  const sources=[
+    [Math.floor(n*(.22+.08*Math.sin(t*.017))),Math.floor(n*(.25+.07*Math.cos(t*.011))),.46+.18*Math.sin(t*.031)],
+    [Math.floor(n*(.73+.06*Math.cos(t*.013))),Math.floor(n*(.68+.09*Math.sin(t*.019))),.40+.16*Math.cos(t*.023)]
+  ];
+  for(const [x,z,a] of sources){const i=z*n+x;w.potential[i]+=Math.max(.08,a)}
+  const sx=Math.floor(n*(.5+.32*Math.sin(t*.0073))),sz=Math.floor(n*(.5+.31*Math.cos(t*.0091)));w.potential[sz*n+sx]*=.18;
+  if(t>0&&t%137===0){const cx=3+Math.floor(worldseedRand(t)* (n-6)),cz=3+Math.floor(worldseedRand(t+17)*(n-6));for(let dz=-3;dz<=3;dz++)for(let dx=-3;dx<=3;dx++){const i=(cz+dz)*n+cx+dx,d=Math.hypot(dx,dz);if(d<=3){w.disturbance[i]=Math.max(w.disturbance[i],1-d/4);w.resistance[i]=Math.max(.015,w.resistance[i]*(.55+.12*d));}}}
+}
+function stepWorldseed(){
+  const w=worldseed,n=w.n,N=w.N,t=w.turn;worldseedForcing(t);w.next.set(w.potential);
+  let throughput=0;
+  for(let z=1;z<n-1;z++)for(let x=1;x<n-1;x++){const i=z*n+x,p=w.potential[i],ns=[i-1,i+1,i-n,i+n];let best=i,bestCost=p+w.resistance[i]*.55;for(const j of ns){const c=w.potential[j]+w.resistance[j]*.55;if(c<bestCost){bestCost=c;best=j}}if(best!==i){const amt=Math.min(p*.24,Math.max(0,(p-bestCost)*.18));w.next[i]-=amt;w.next[best]+=amt;w.trace[i]=Math.min(1,w.trace[i]+amt*.08);w.trace[best]=Math.min(1,w.trace[best]+amt*.11);throughput+=amt}}
+  for(let i=0;i<N;i++){w.potential[i]=Math.max(0,w.next[i]*.996);w.disturbance[i]*=.91;w.resistance[i]=Math.max(.012,Math.min(1.2,w.resistance[i]+w.disturbance[i]*.003-w.trace[i]*.00018));w.trace[i]*=.9997}
+  if(t%25===0)detectWorldseedDistinctions();
+  if(t%50===0)w.history.push({turn:t,throughput:+throughput.toFixed(4),trace:+w.trace.reduce((a,b)=>a+b,0).toFixed(3),handles:w.distinctions.size});
+  w.turn++;if(w.turn>=WORLDSEED_TURNS){w.done=true;worldseedEvidence()}
+}
+function detectWorldseedDistinctions(){
+  const w=worldseed,n=w.n,seen=new Uint8Array(w.N),regions=[];
+  for(let i=0;i<w.N;i++){if(seen[i]||w.trace[i]<.18)continue;const q=[i],cells=[];seen[i]=1;while(q.length){const k=q.pop();cells.push(k);const x=k%n,z=(k/n)|0;for(const j of [k-1,k+1,k-n,k+n])if(j>=0&&j<w.N&&!seen[j]&&Math.abs((j%n)-x)<=1&&w.trace[j]>=.18){seen[j]=1;q.push(j)}}if(cells.length>=8)regions.push(cells)}
+  const alive=new Set();
+  for(const cells of regions){let cx=0,cz=0,str=0;for(const i of cells){cx+=i%n;cz+=(i/n)|0;str+=w.trace[i]}cx/=cells.length;cz/=cells.length;str/=cells.length;let best=null,bd=5;for(const [id,h] of w.distinctions){const d=Math.hypot(cx-h.cx,cz-h.cz);if(d<bd){bd=d;best=id}}const id=best??w.nextHandle++;const h=w.distinctions.get(id)??{id,born:w.turn,age:0};Object.assign(h,{cx,cz,str,size:cells.length,age:h.age+25,last:w.turn});w.distinctions.set(id,h);alive.add(id)}
+  for(const [id,h] of [...w.distinctions])if(!alive.has(id)&&w.turn-h.last>100)w.distinctions.delete(id);
+  while(w.handles.children.length)w.handles.remove(w.handles.children[0]);
+  for(const h of w.distinctions.values()){if(h.age<75)continue;const g=new THREE.Mesh(new THREE.SphereGeometry(.055,8,6),new THREE.MeshStandardMaterial({color:0xf4f1e8,roughness:.7}));g.position.set((h.cx/(n-1)-.5)*11,GROUND_Y+.09,(h.cz/(n-1)-.5)*11);g.name='worldseed:handle:'+h.id;w.handles.add(g)}
+}
+function projectWorldseed(){
+  if(!worldseed)return;const w=worldseed,pos=w.mesh.geometry.attributes.position,col=w.mesh.geometry.attributes.color;
+  for(let i=0;i<w.N;i++){const tr=w.trace[i],p=Math.min(1,w.potential[i]*.65),d=w.disturbance[i],r=w.resistance[i];pos.setY(i,(p*.32-tr*.16+d*.12));const v=Math.max(.055,Math.min(.48,.10+p*.18+tr*.22));col.setXYZ(i,v*.78+tr*.08,v*.82+p*.08,v*.88+d*.08)}
+  pos.needsUpdate=true;col.needsUpdate=true;w.mesh.geometry.computeVertexNormals();window.vestibuleDirty=true;
+}
+function worldseedEvidence(){
+  const w=worldseed;if(!w)return;let trace=0,res=0,pot=0;for(let i=0;i<w.N;i++){trace+=w.trace[i];res+=w.resistance[i];pot+=w.potential[i]}
+  globalThis.WorldseedEvidence={seed:WORLDSEED_SEED,turns:w.turn,lattice:w.n,trace:+trace.toFixed(4),meanResistance:+(res/w.N).toFixed(5),potential:+pot.toFixed(4),distinctions:[...w.distinctions.values()].map(h=>({id:h.id,born:h.born,age:h.age,size:h.size,strength:+h.str.toFixed(3)})),history:w.history};
+}
+function beginWorldseed(){if(worldseed)return;createWorldseed()}
+function updateWorldseed(now){
+  if(!worldseed)return;
+  if(!worldseed.done){let budget=5;while(budget--&&worldseed.turn<WORLDSEED_TURNS)stepWorldseed();projectWorldseed()}
 }
 
 // First spatial spell: the Crucible container has a physical handle in quiet
@@ -4071,6 +4130,7 @@ addEventListener('resize',()=>{
 renderer.setAnimationLoop((now)=>{
   updateCollapseBead(now);
   if(worldCollapsed){
+    updateWorldseed(now);
     renderer.render(scene,camera);window.vestibuleDirty=false;return;
   }
   globalThis.boundedWitness?.updateIdle?.(now);

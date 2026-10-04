@@ -2689,8 +2689,10 @@ const jovianBetwixtable=buildBetwixtable({name:'neptunian-jovian-system',parent:
     this.orbit.rotation.order='YXZ';
     this.orbit.rotation.x=Math.sin(t*.017)*.42;
     this.orbit.rotation.z=Math.sin(t*.011+1.7)*.16;
-    this.node.position.set(Math.cos(a)*this.radius,.305,Math.sin(a)*this.radius);
-    this.node.rotation.y=-a;
+    if(!betwixtFocusOwns(this.node)){
+      this.node.position.set(Math.cos(a)*this.radius,.305,Math.sin(a)*this.radius);
+      this.node.rotation.y=-a;
+    }
   }};
   root.userData.science=Object.freeze({source:'JPL JUP365 mean elements',epoch:'2000-01-01.5 TDB',laplace:'Io-Europa-Ganymede near 4:2:1; Callisto outside',bearingModel:'64 protected persistent bodies in two approach-energy packets; restricted dimensionless gravity toy; measured Galilean/Jupiter mass ratios; no bearing-bearing gravity; Jupiter impacts terminate bodies; escapes persist',presentation:'orbital radii compressed; body radii exaggerated'});
 }});
@@ -3107,6 +3109,11 @@ for(const [,obj] of controls.slice(-2))obj.visible=false;
 // Controls and the two explicitly retained candidates remain source evidence.
 const specimens=[];
 let focusedWorkshopObject=null,workshopFocusMotion=null,workshopObserverReturn=null;
+function betwixtFocusOwns(obj){
+  if(focusedWorkshopObject===obj)return true;
+  const m=workshopFocusMotion;
+  return !!m&&(m.obj===obj||m.outgoing===obj||m.incoming===obj);
+}
 function floorWorkshopObject(obj){
   // Ground by the object's actual rendered bounds, in parent space. Always correct
   // both floating and penetration; callers never hand-author a Y offset.
@@ -3150,15 +3157,44 @@ function beginWorkshopFocus(obj,toForeground){
   };
   window.vestibuleDirty=true;
 }
+function telescopeWorkshopFocus(incoming){
+  if(!focusedWorkshopObject||workshopFocusMotion||incoming===focusedWorkshopObject)return false;
+  const outgoing=focusedWorkshopObject,saved=workshopObserverReturn;
+  outgoing.updateWorldMatrix(true,true);incoming.updateWorldMatrix(true,true);
+  const outgoingHome=saved.position.clone();
+  const incomingHome=incoming.position.clone();
+  const incomingFrom=incoming.position.clone();
+  const seat=workshopPresentationPosition(incoming);
+  workshopFocusMotion={
+    telescope:true,outgoing,incoming,
+    outgoingFrom:outgoing.position.clone(),outgoingTo:outgoingHome,
+    incomingFrom,incomingTo:seat,incomingHome,
+    fromTarget:target.clone(),toTarget:target.clone(),
+    fromCameraPosition:camera.position.clone(),toCameraPosition:camera.position.clone(),
+    started:performance.now(),duration:THREE.MathUtils.clamp(390+incomingFrom.distanceTo(seat)*22,430,610)
+  };
+  saved.position=incomingHome;
+  focusedWorkshopObject=incoming;
+  window.vestibuleDirty=true;return true;
+}
 function dismissWorkshopFocus(){if(focusedWorkshopObject&&!workshopFocusMotion){if(focusedWorkshopObject===relationalInspectionBetwixtable)showMoleculeCard(false);beginWorkshopFocus(focusedWorkshopObject,false)}}
 function resetWorkshopGlass(){}
 function updateWorkshop(now){
   if(workshopFocusMotion){
     const m=workshopFocusMotion,raw=Math.min(1,(now-m.started)/m.duration),t=easeQuiet(raw);
-    m.obj.position.lerpVectors(m.from,m.to,t);
+    if(m.telescope){
+      m.outgoing.position.lerpVectors(m.outgoingFrom,m.outgoingTo,t);
+      m.incoming.position.lerpVectors(m.incomingFrom,m.incomingTo,t);
+    }else m.obj.position.lerpVectors(m.from,m.to,t);
     camera.position.lerpVectors(m.fromCameraPosition,m.toCameraPosition,t);
     target.lerpVectors(m.fromTarget,m.toTarget,t);camera.lookAt(target);
     if(raw>=1){
+      if(m.telescope){
+        m.outgoing.position.copy(m.outgoingTo);
+        m.incoming.position.copy(m.incomingTo);
+        workshopFocusMotion=null;window.vestibuleDirty=true;
+        return;
+      }
       m.obj.position.copy(m.to);
       if(!m.toForeground){
         camera.position.copy(workshopObserverReturn.cameraPosition);
@@ -3205,11 +3241,7 @@ function workshopTap(x,y){
     if(workshopFocusMotion)return true;
     const scoped=hitBetwixtables(focusedWorkshopObject),winner=scoped[0]?.b||null;
     if(winner&&winner!==focusedWorkshopObject){
-      // First telescoping cut: return the parent resolution, then summon the child.
-      // This avoids two focus owners fighting over transforms.
-      const child=winner;dismissWorkshopFocus();
-      const descend=()=>{if(workshopFocusMotion)return requestAnimationFrame(descend);child.userData.betwixtable.focus()};
-      requestAnimationFrame(descend);return true;
+      telescopeWorkshopFocus(winner);return true;
     }
     if(winner===focusedWorkshopObject){
       const spatial=winner.userData.betwixtable;

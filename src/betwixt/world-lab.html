@@ -1622,8 +1622,8 @@ function createWorldseed(){
   const geo=new THREE.PlaneGeometry(11,11,n-1,n-1);geo.rotateX(-Math.PI/2);
   const colors=new Float32Array(N*3);geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
   const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.88,metalness:0,side:THREE.DoubleSide});
-  const mesh=new THREE.Mesh(geo,mat);mesh.name='worldseed:projection';mesh.position.y=GROUND_Y+.018;mesh.receiveShadow=true;scene.add(mesh);
-  const handles=new THREE.Group();handles.name='worldseed:anonymous-distinctions';scene.add(handles);
+  const mesh=new THREE.Mesh(geo,mat);mesh.name='worldseed:projection';mesh.position.y=GROUND_Y+.018;mesh.receiveShadow=true;const organism=new THREE.Group();organism.name='worldseed:organism';scene.add(organism);organism.add(mesh);
+  const handles=new THREE.Group();handles.name='worldseed:anonymous-distinctions';organism.add(handles);
   worldseed={n,N,potential,resistance,trace,disturbance,next,mesh,handles,turn:0,lastStep:performance.now(),done:false,history:[],distinctions:new Map(),nextHandle:1};
   projectWorldseed();
 }

@@ -2538,6 +2538,7 @@ globalThis.deskLampBetwixtable=deskLampBetwixtable;
 // articulated head lives. It records evidence; it does not modify geometry.
 const lampObserver=createBoundedWitness({
   parent:deskLampBetwixtable,
+  targetBetwixtable:deskLampBetwixtable,
   position:[-2.85,1.2,0],
   budget:Infinity,
   maxDistance:8
@@ -2568,11 +2569,19 @@ function scanLampHead(){
   }
   lampObserver.pause();
   const transcript=lampObserver.transcript().slice(before);
-  const hits=transcript.filter(r=>r.result);
+  const targetHits=transcript.filter(r=>r.result?.target);
+  const occluded=transcript.filter(r=>r.result?.status==='occluded');
   const evidence=Object.freeze({
     senses:transcript.length,
-    hits:hits.length,
-    misses:transcript.length-hits.length,
+    hits:targetHits.length,
+    misses:transcript.length-targetHits.length,
+    occluded:occluded.length,
+    targetBounds:Object.freeze({
+      min:Object.freeze(box.min.toArray().map(v=>+v.toFixed(4))),
+      max:Object.freeze(box.max.toArray().map(v=>+v.toFixed(4))),
+      center:Object.freeze(worldCenter.toArray().map(v=>+v.toFixed(4))),
+      radius:+box.getSize(new THREE.Vector3()).length().toFixed(4)/2
+    }),
     transcript:Object.freeze(transcript)
   });
   deskLampBetwixtable.userData.neptunianHeadScan=evidence;
@@ -2706,7 +2715,7 @@ function observerCarrierReport(){
     schema:'neptunian-observer-report/0',
     carrier:'observer-carrier-fireship',
     mission:'lamp-head',
-    repository:'43869374-parent',
+    repository:null,
     createdAt:new Date().toISOString(),
     evidence:scan
   });
@@ -4062,7 +4071,7 @@ addEventListener('pageshow',e=>{
 // This deliberately exposes geometric consequence rather than scene identity: no names,
 // userData, parentage, materials, object IDs, source coordinates, or semantic components.
 // A cold caller owns its pose and a finite action budget outside this implementation.
-function createBoundedWitness({parent=scene,position=[0,1.6,0],forward=[0,0,-1],budget=Infinity,maxDistance=18}={}){
+function createBoundedWitness({parent=scene,targetBetwixtable=null,position=[0,1.6,0],forward=[0,0,-1],budget=Infinity,maxDistance=18}={}){
   // Observer pose is parent-local. World conversion happens once, at the ray boundary.
   const p=new THREE.Vector3(...position),f=new THREE.Vector3(...forward);
   if(!(budget===Infinity||(Number.isFinite(budget)&&budget>=1)))throw new Error('Witness budget must be positive or Infinity');
@@ -4111,9 +4120,10 @@ function createBoundedWitness({parent=scene,position=[0,1.6,0],forward=[0,0,-1],
     ctx.fillText('SENSE '+step+(budget===Infinity?'   UNBOUNDED':'/'+Math.floor(budget)+'   LEFT '+remaining),18,65);
     ctx.fillText('POS   '+fmt3(p.toArray()),18,94);
     ctx.fillText('AIM   '+fmt3(f.toArray()),18,123);
-    const hit=lastReading?.result;
+    const reading=lastReading?.result;
+    const hit=targetBetwixtable?reading?.target:reading;
     ctx.fillStyle=hit?'#d9dde0':'#8f979c';
-    ctx.fillText(hit?'HIT   d='+hit.distance.toFixed(3):lastReading?'MISS':'READ  —',18,152);
+    ctx.fillText(hit?(targetBetwixtable?'TARGET ':'HIT   ')+'d='+hit.distance.toFixed(3):lastReading?(targetBetwixtable?(reading?.status||'MISS').toUpperCase():'MISS'):'READ  —',18,152);
     ctx.fillText(hit?'N     '+fmt3(hit.normal):'',18,181);
     telemetryTexture.needsUpdate=true;window.vestibuleDirty=true;
   }
@@ -4139,15 +4149,31 @@ function createBoundedWitness({parent=scene,position=[0,1.6,0],forward=[0,0,-1],
     return Object.freeze({distance:+hit.distance.toFixed(4),point:Object.freeze(hit.point.toArray().map(v=>+v.toFixed(4))),normal:normal?Object.freeze(normal.toArray().map(v=>+v.toFixed(4))):null});
   }
   function isWitnessSurface(o){for(let n=o;n;n=n.parent)if(n.userData?.witnessBody)return true;return false}
+  function visibleSurfaces(root){
+    const surfaces=[];
+    root.traverse(o=>{if(o.visible&&o.isMesh&&o.material?.visible!==false&&!o.userData?.betwixtable&&!isWitnessSurface(o))surfaces.push(o)});
+    return surfaces;
+  }
   function cast(){
     const ray=canonicalWorldRay();
     probe.set(ray.origin,ray.direction);probe.far=maxDistance;
-    const surfaces=[];scene.traverse(o=>{if(o.visible&&o.isMesh&&o.material?.visible!==false&&!o.userData?.betwixtable&&!isWitnessSurface(o))surfaces.push(o)});
-    return anonymousHit(probe.intersectObjects(surfaces,false)[0]||null);
+    if(targetBetwixtable){
+      const spatial=targetBetwixtable.userData?.betwixtable;
+      const presentation=spatial?.presentation;
+      if(!presentation)throw new Error('Witness target must expose Betwixtable presentation');
+      const targetHit=probe.intersectObjects(visibleSurfaces(presentation),false)[0]||null;
+      const worldHit=probe.intersectObjects(visibleSurfaces(scene),false)[0]||null;
+      const target=anonymousHit(targetHit);
+      const occluder=worldHit&&(!targetHit||worldHit.distance<targetHit.distance-1e-5)?anonymousHit(worldHit):null;
+      return Object.freeze({status:target?(occluder?'occluded':'target-hit'):'miss',target,occluder});
+    }
+    return anonymousHit(probe.intersectObjects(visibleSurfaces(scene),false)[0]||null);
   }
   function spendSense(){
     if(remaining<=0)return Object.freeze({ok:false,error:'budget-exhausted',remaining:0});
-    if(remaining!==Infinity)remaining--;step++;const result=cast(),record=Object.freeze({step,kind:'sense',result,remaining});history.push(record);lastReading=record;lastAction=result?'HIT':'MISS';updateTelemetry();return record;
+    if(remaining!==Infinity)remaining--;step++;const result=cast(),record=Object.freeze({step,kind:'sense',result,remaining});history.push(record);lastReading=record;
+    lastAction=targetBetwixtable?(result.status==='target-hit'?'TARGET':result.status==='occluded'?'OCCLUDED':'MISS'):(result?'HIT':'MISS');
+    updateTelemetry();return record;
   }
   function place(direction){
     if(!finite3(direction))throw new Error('place direction must be [x,y,z]');

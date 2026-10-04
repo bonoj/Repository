@@ -2724,67 +2724,7 @@ cairnLabBetwixtable.userData.cairn=Object.freeze({
 });
 globalThis.CairnLab=cairnLabBetwixtable.userData.cairn;
 
-let cairnPanel=null,cairnPanelState=null;
-const cairnPanelButtons=new Map();
-function cairnPanelFlash(name){
-  const b=cairnPanelButtons.get(name);if(!b)return;
-  const old=b.style.background;b.style.background='#73efff';
-  clearTimeout(b._cairnFlashTimer);
-  b._cairnFlashTimer=setTimeout(()=>{b.style.background=old||'#fff';},620);
-}
-function cairnRenderPanel(){
-  if(!cairnPanelState)return;
-  const build=(globalThis.__REPOSITORY_BUILD__||'source');
-  cairnPanelState.textContent='BOOT '+cairnBootId+'  ·  BUILD '+build+'  ·  '+cairnStatus+
-    '  ·  scars '+cairnEvents.length+'  ·  rock '+cairnState.rock+'  ·  beacon '+(cairnState.beacon?'ON':'OFF')+
-    '  ·  thing '+(!cairnState.spawned?'ABSENT':cairnState.destroyed?'TOMBSTONE':'PRESENT')+
-    '  ·  hammer '+cairnState.hammers+'  ·  rejects '+cairnState.rejected+
-    (cairnError?'  ·  ERROR '+cairnError:'');
-}
-function cairnBuildTestPanel(){
-  if(document.getElementById('cairn-test-panel'))return;
-  const panel=document.createElement('section');panel.id='cairn-test-panel';
-  Object.assign(panel.style,{position:'fixed',left:'50%',top:'50%',transform:'translate(-50%,-50%)',zIndex:'2147483000',
-    width:'min(94vw,920px)',maxHeight:'88vh',overflow:'auto',boxSizing:'border-box',background:'#fff',color:'#111',
-    border:'4px solid #111',borderRadius:'14px',padding:'18px',fontFamily:'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-    boxShadow:'0 18px 70px rgba(0,0,0,.48)',pointerEvents:'auto'});
-  panel.addEventListener('pointerdown',e=>e.stopPropagation());panel.addEventListener('click',e=>e.stopPropagation());
-  const title=document.createElement('div');title.textContent='CAIRN / NTFY TEST BANK';Object.assign(title.style,{fontSize:'24px',fontWeight:'900',marginBottom:'8px'});panel.appendChild(title);
-  const intro=document.createElement('div');intro.innerHTML='<b>What to do:</b> tap 1→8 in order. A button flashes cyan when its consequence is observed. Open this page in a second normal/incognito window: live ntfy consequences should flash the matching button there without refresh. <b>This panel bypasses the 3D table completely.</b>';
-  Object.assign(intro.style,{fontSize:'15px',lineHeight:'1.45',marginBottom:'12px'});panel.appendChild(intro);
-  const state=document.createElement('div');cairnPanelState=state;Object.assign(state.style,{background:'#f1f1f1',border:'2px solid #222',padding:'10px',fontSize:'13px',lineHeight:'1.4',marginBottom:'14px',overflowWrap:'anywhere'});panel.appendChild(state);
-  const grid=document.createElement('div');Object.assign(grid.style,{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(250px,1fr))',gap:'10px'});panel.appendChild(grid);
-  const specs=[
-    ['rock','1 · MOVE ROCK','Publishes MOVE. Expect rock count to change.'],
-    ['beacon','2 · TOGGLE BEACON','Publishes TOGGLE. Expect beacon ON/OFF.'],
-    ['spawn','3 · SPAWN THING','Publishes SPAWN. Expect THING PRESENT.'],
-    ['destroy','4 · DESTROY THING','Publishes DESTROY. Expect THING TOMBSTONE.'],
-    ['duplicate','5 · DUPLICATE EVENT','Publishes the same HAMMER semantic id twice. Expect hammer +1, not +2.'],
-    ['malformed','6 · MALFORMED','Publishes non-JSON deliberately. Expect reject count +1.'],
-    ['replay','7 · REPLAY HISTORY','Refetches ntfy history and rebuilds state. Expect replay APPLY trace/state reconstruction.'],
-    ['copy','8 · COPY EVIDENCE','Copies BOOT/BUILD/state/events/trace JSON. Paste it back to Clara.']
-  ];
-  const actions={
-    rock:()=>cairnPublish('MOVE',1),beacon:()=>cairnPublish('TOGGLE'),spawn:()=>cairnPublish('SPAWN'),
-    destroy:()=>cairnPublish('DESTROY'),duplicate:()=>cairnDuplicate(),
-    malformed:()=>cairnPublish('BAD',0,{raw:'this is deliberately not json'}),replay:()=>cairnReplay(),
-    copy:async()=>{try{await globalThis.CairnLab.copyLog();cairnPanelFlash('copy')}catch(err){cairnStatus='COPY FAIL';cairnError=String(err?.message||err);cairnRenderStatus()}}
-  };
-  for(const [key,label,help] of specs){
-    const wrap=document.createElement('div');Object.assign(wrap.style,{border:'2px solid #222',borderRadius:'10px',padding:'8px'});
-    const b=document.createElement('button');b.type='button';b.textContent=label;Object.assign(b.style,{display:'block',width:'100%',minHeight:'52px',background:'#fff',color:'#111',border:'2px solid #111',borderRadius:'7px',font:'800 16px ui-monospace, monospace',cursor:'pointer',padding:'8px'});
-    b.addEventListener('click',async e=>{e.preventDefault();e.stopPropagation();cairnTracePush('panel-tap',{control:key});cairnPanelFlash(key);await actions[key]();cairnRenderStatus()});
-    cairnPanelButtons.set(key,b);wrap.appendChild(b);
-    const h=document.createElement('div');h.textContent=help;Object.assign(h.style,{fontSize:'12px',lineHeight:'1.35',marginTop:'6px'});wrap.appendChild(h);grid.appendChild(wrap);
-  }
-  const footer=document.createElement('div');footer.textContent='Persistence test: after 1–6, reload one window. BOOT must change. State should return via replay. Then press 8 and paste the evidence JSON back to Clara.';
-  Object.assign(footer.style,{fontSize:'14px',fontWeight:'700',lineHeight:'1.4',marginTop:'14px',padding:'10px',background:'#fff4cc',border:'2px solid #8b6a00'});panel.appendChild(footer);
-  const hide=document.createElement('button');hide.type='button';hide.textContent='HIDE TEST BANK';Object.assign(hide.style,{marginTop:'12px',minHeight:'44px',padding:'8px 14px',background:'#111',color:'#fff',border:'0',borderRadius:'7px',font:'800 14px ui-monospace, monospace'});
-  hide.addEventListener('click',()=>panel.remove());panel.appendChild(hide);
-  document.body.appendChild(panel);cairnPanel=panel;cairnRenderPanel();
-}
-
-cairnBuildTestPanel();
+// Cairn foreground ntfy test bank retired after evidence capture; underlying CairnLab remains available.\n
 cairnProject();cairnRenderStatus();queueMicrotask(()=>cairnReplay());
 
 // Neptunian JIT construction pressure: semantic-node articulated desk lamp.

@@ -2787,15 +2787,19 @@ const jovianBetwixtable=buildBetwixtable({name:'neptunian-jovian-system',parent:
   carrierOrbit.add(carrierBetwixtable);
   carrierBetwixtable.position.set(2.42,0,0);
   carrierBetwixtable.userData.observerCarrier={status:'orbiting',mission:'lamp-head',report:null};
-  root.userData.jovian.carrier={node:carrierBetwixtable,orbit:carrierOrbit,phase:1.15,radius:2.42,rate:.018,update(now){
-    const t=now*.001,lon=this.phase+t*this.rate+.34*Math.sin(t*.0061),lat=.58*Math.sin(t*.0043+1.2)+.17*Math.sin(t*.0097);
+  root.userData.jovian.carrier={node:carrierBetwixtable,orbit:carrierOrbit,phase:1.15,radius:2.42,started:null,update(now){
+    if(this.started==null)this.started=now;
+    // Same omnispherical/precessing-shell motion as the Observer drones, slowed down
+    // for the carrier: fixed radius, orbit plane wandering almost pole-to-pole.
+    const t=(now-this.started)/1000,phase=this.phase+t*.055,inclination=Math.sin(t*.0065)*Math.PI*.49,node=t*.009;
     if(!betwixtFocusOwns(this.node)){
-      const cosLat=Math.cos(lat);
-      this.node.position.set(this.radius*cosLat*Math.cos(lon),this.radius*Math.sin(lat),this.radius*cosLat*Math.sin(lon));
-      // Keep the little ship tangential to its wandering path rather than aimed at Jupiter.
-      const lon2=lon+.012,lat2=.58*Math.sin((t+.65)*.0043+1.2)+.17*Math.sin((t+.65)*.0097);
-      const next=new THREE.Vector3(this.radius*Math.cos(lat2)*Math.cos(lon2),this.radius*Math.sin(lat2),this.radius*Math.cos(lat2)*Math.sin(lon2));
-      const tangent=next.sub(this.node.position);if(tangent.lengthSq()>1e-8)this.node.quaternion.setFromUnitVectors(new THREE.Vector3(1,0,0),tangent.normalize());
+      const p=new THREE.Vector3(Math.cos(phase)*this.radius,0,Math.sin(phase)*this.radius);
+      p.applyAxisAngle(new THREE.Vector3(1,0,0),inclination);p.applyAxisAngle(new THREE.Vector3(0,1,0),node);
+      this.node.position.copy(p);
+      const dt=.35,phase2=this.phase+(t+dt)*.055,inclination2=Math.sin((t+dt)*.0065)*Math.PI*.49,node2=(t+dt)*.009;
+      const next=new THREE.Vector3(Math.cos(phase2)*this.radius,0,Math.sin(phase2)*this.radius);
+      next.applyAxisAngle(new THREE.Vector3(1,0,0),inclination2);next.applyAxisAngle(new THREE.Vector3(0,1,0),node2);
+      const tangent=next.sub(p);if(tangent.lengthSq()>1e-8)this.node.quaternion.setFromUnitVectors(new THREE.Vector3(1,0,0),tangent.normalize());
     }
   }};
   root.userData.science=Object.freeze({source:'JPL JUP365 mean elements',epoch:'2000-01-01.5 TDB',laplace:'Io-Europa-Ganymede near 4:2:1; Callisto outside',bearingModel:'64 protected persistent bodies in two approach-energy packets; restricted dimensionless gravity toy; measured Galilean/Jupiter mass ratios; no bearing-bearing gravity; Jupiter impacts terminate bodies; escapes persist',presentation:'orbital radii compressed; body radii exaggerated'});

@@ -2523,6 +2523,56 @@ globalThis.WorkshopSpecimens.Ozymandias=Object.freeze({name:'Ozymandias',kind:'B
 globalThis.deskLampGraph=deskLampGraph;
 globalThis.deskLampBetwixtable=deskLampBetwixtable;
 
+// Native Neptunian pressure: an unbounded, counted Observer attached to the lamp itself.
+// The policy knows only the lamp Betwixtable's spatial bounds. It samples an omnispherical
+// shell and aims a small deterministic fan through the upper half of the bounds, where the
+// articulated head lives. It records evidence; it does not modify geometry.
+const lampObserver=createBoundedWitness({
+  parent:deskLampBetwixtable,
+  position:[-2.85,1.2,0],
+  budget:Infinity,
+  maxDistance:8
+});
+function scanLampHead(){
+  const box=deskLampBetwixtable.userData.betwixtable.bounds();
+  const localBox=box.clone();
+  const worldCenter=new THREE.Vector3();box.getCenter(worldCenter);
+  const center=deskLampBetwixtable.worldToLocal(worldCenter.clone());
+  const size=new THREE.Vector3();box.getSize(size);
+  const targets=[
+    [0,.30,0],[0,.18,0],[0,.42,0],
+    [.12,.30,0],[-.12,.30,0],[0,.30,.12],[0,.30,-.12]
+  ].map(([x,y,z])=>center.clone().add(new THREE.Vector3(x*size.x,y*size.y,z*size.z)));
+  const dirs=[
+    [1,0,0],[-1,0,0],[0,0,1],[0,0,-1],
+    [1,.65,0],[-1,.65,0],[0,.65,1],[0,.65,-1],
+    [1,-.35,1],[-1,-.35,1],[1,-.35,-1],[-1,-.35,-1]
+  ];
+  const before=lampObserver.transcript().length;
+  for(const d of dirs){
+    const pose=lampObserver.place(d);
+    const origin=new THREE.Vector3(...pose.position);
+    for(const target of targets){
+      lampObserver.aim(target.clone().sub(origin).normalize().toArray());
+      lampObserver.sense();
+    }
+  }
+  lampObserver.pause();
+  const transcript=lampObserver.transcript().slice(before);
+  const hits=transcript.filter(r=>r.result);
+  const evidence=Object.freeze({
+    senses:transcript.length,
+    hits:hits.length,
+    misses:transcript.length-hits.length,
+    transcript:Object.freeze(transcript)
+  });
+  deskLampBetwixtable.userData.neptunianHeadScan=evidence;
+  return evidence;
+}
+globalThis.lampObserver=lampObserver;
+globalThis.scanLampHead=scanLampHead;
+requestAnimationFrame(()=>scanLampHead());
+
 // Neptunian Crossing 001 — Builder pass only.
 // Two ordinary independent forms in existing Betwixt noise. No Witness semantics are attached.
 // Workshop materials are reused directly; whatever imperfections this fast passage contains are natural evidence.
@@ -3908,10 +3958,10 @@ addEventListener('pageshow',e=>{
 // This deliberately exposes geometric consequence rather than scene identity: no names,
 // userData, parentage, materials, object IDs, source coordinates, or semantic components.
 // A cold caller owns its pose and a finite action budget outside this implementation.
-function createBoundedWitness({parent=scene,position=[0,1.6,0],forward=[0,0,-1],budget=12,maxDistance=18}={}){
+function createBoundedWitness({parent=scene,position=[0,1.6,0],forward=[0,0,-1],budget=Infinity,maxDistance=18}={}){
   // Observer pose is parent-local. World conversion happens once, at the ray boundary.
   const p=new THREE.Vector3(...position),f=new THREE.Vector3(...forward);
-  if(!Number.isFinite(budget)||budget<1)throw new Error('Witness budget must be positive');
+  if(!(budget===Infinity||(Number.isFinite(budget)&&budget>=1)))throw new Error('Witness budget must be positive or Infinity');
   if(f.lengthSq()<1e-8)throw new Error('Witness forward vector must be nonzero');
   f.normalize();
   const probe=new THREE.Raycaster();
@@ -3945,7 +3995,7 @@ function createBoundedWitness({parent=scene,position=[0,1.6,0],forward=[0,0,-1],
       const top=new THREE.Vector3();box.getCenter(top);top.y=box.max.y+.72;parent.worldToLocal(top);telemetry.position.copy(top);
     }else telemetry.position.copy(orbitCenter).add(new THREE.Vector3(0,scanRadius+.72,0));
   }
-  let idle=true,orbitStarted=null,lastTraceAt=0,remaining=Math.floor(budget),step=0,lastReading=null,lastAction='IDLE';
+  let idle=true,orbitStarted=null,lastTraceAt=0,remaining=budget===Infinity?Infinity:Math.floor(budget),step=0,lastReading=null,lastAction='IDLE';
   const history=[];
   const fmt3=a=>a?'['+a.map(v=>Number(v).toFixed(2)).join('  ')+']':'—';
   function updateTelemetry(){
@@ -3954,7 +4004,7 @@ function createBoundedWitness({parent=scene,position=[0,1.6,0],forward=[0,0,-1],
     ctx.strokeStyle='rgba(210,168,107,.72)';ctx.lineWidth=2;ctx.strokeRect(1,1,510,190);
     ctx.font='600 24px monospace';ctx.fillStyle='#f0c98c';ctx.fillText('OBSERVER 001  '+lastAction,18,34);
     ctx.font='18px monospace';ctx.fillStyle='#d9dde0';
-    ctx.fillText('SENSE '+step+'/'+Math.floor(budget)+'   LEFT '+remaining,18,65);
+    ctx.fillText('SENSE '+step+(budget===Infinity?'   UNBOUNDED':'/'+Math.floor(budget)+'   LEFT '+remaining),18,65);
     ctx.fillText('POS   '+fmt3(p.toArray()),18,94);
     ctx.fillText('AIM   '+fmt3(f.toArray()),18,123);
     const hit=lastReading?.result;
@@ -3993,7 +4043,7 @@ function createBoundedWitness({parent=scene,position=[0,1.6,0],forward=[0,0,-1],
   }
   function spendSense(){
     if(remaining<=0)return Object.freeze({ok:false,error:'budget-exhausted',remaining:0});
-    remaining--;step++;const result=cast(),record=Object.freeze({step,kind:'sense',result,remaining});history.push(record);lastReading=record;lastAction=result?'HIT':'MISS';updateTelemetry();return record;
+    if(remaining!==Infinity)remaining--;step++;const result=cast(),record=Object.freeze({step,kind:'sense',result,remaining});history.push(record);lastReading=record;lastAction=result?'HIT':'MISS';updateTelemetry();return record;
   }
   function place(direction){
     if(!finite3(direction))throw new Error('place direction must be [x,y,z]');

@@ -3164,11 +3164,15 @@ function telescopeWorkshopFocus(incoming){
   const outgoingHome=saved.position.clone();
   const incomingHome=incoming.position.clone();
   const incomingFromWorld=incoming.getWorldPosition(new THREE.Vector3());
-  const seatWorld=outgoing.getWorldPosition(new THREE.Vector3());
+  const outgoingSpatial=outgoing.userData.betwixtable,incomingSpatial=incoming.userData.betwixtable;
+  const seatCenterWorld=outgoingSpatial.bounds().getCenter(new THREE.Vector3());
+  const incomingCenterWorld=incomingSpatial.bounds().getCenter(new THREE.Vector3());
+  const incomingOriginWorld=incoming.getWorldPosition(new THREE.Vector3());
+  const seatOriginWorld=incomingOriginWorld.clone().add(seatCenterWorld).sub(incomingCenterWorld);
   workshopFocusMotion={
     telescope:true,outgoing,incoming,
     outgoingFrom:outgoing.position.clone(),outgoingTo:outgoingHome,
-    incomingFromWorld,seatWorld,incomingHome,
+    incomingFromWorld,seatWorld:seatOriginWorld,incomingHome,
     fromTarget:target.clone(),toTarget:target.clone(),
     fromCameraPosition:camera.position.clone(),toCameraPosition:camera.position.clone(),
     started:performance.now(),duration:THREE.MathUtils.clamp(390+incomingFromWorld.distanceTo(seatWorld)*22,430,610)

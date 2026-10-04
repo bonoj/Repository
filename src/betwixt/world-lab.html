@@ -2773,8 +2773,9 @@ const jovianBetwixtable=buildBetwixtable({name:'neptunian-jovian-system',parent:
   root.userData.jovian.bearingLast=null;
   root.userData.jovian.updateBearings=function(now){if(this.bearingLast==null)this.bearingLast=now;const realDt=Math.min(.04,(now-this.bearingLast)/1000),dt=realDt*.55;this.bearingLast=now;const center=new THREE.Vector3(0,.305,0);for(const b of bearings){if(!b.active)continue;const d=new THREE.Vector3().subVectors(center,b.p),r2=Math.max(.0035,d.lengthSq());b.v.addScaledVector(d,.19*dt/(r2*Math.sqrt(r2)));for(let mi=0;mi<moons.length;mi++){const m=moons[mi],q=new THREE.Vector3().subVectors(m.position,b.p),q2=Math.max(.0035,q.lengthSq()),ratio=[.00004704,.00002528,.00007805,.00005667][mi];b.v.addScaledVector(q,.19*ratio*dt/(q2*Math.sqrt(q2)));}b.p.addScaledVector(b.v,dt);b.mesh.position.copy(b.p);b.sampleClock+=realDt*.42;if(b.sampleClock>=.025){b.sampleClock=0;b.history.push(b.p.clone());if(b.history.length>180)b.history.shift();b.trail.geometry.setFromPoints(b.history);}if(b.p.distanceTo(center)<.245){b.active=false;b.mesh.visible=false;}}};
   // Observer carrier: first earned physical home for Neptunian perception work.
-  // It lives beyond Callisto in this compressed Jovian frame and wanders slowly in inclination.
-  const carrierOrbit=new THREE.Group();carrierOrbit.name='observer-carrier:orbit';root.add(carrierOrbit);
+  // The fireship is free of the brass presentation ring: it roams a wide, slow
+  // spherical shell around Jupiter, with independently drifting longitude/latitude.
+  const carrierOrbit=new THREE.Group();carrierOrbit.name='observer-carrier:orbit';carrierOrbit.position.y=.305;root.add(carrierOrbit);
   const carrier=new THREE.Group();carrier.name='observer-carrier:fireship';
   const hull=new THREE.Mesh(new THREE.CylinderGeometry(.055,.09,.34,8),brassDark);hull.rotation.z=Math.PI/2;hull.castShadow=true;carrier.add(hull);
   const core=new THREE.Mesh(new THREE.SphereGeometry(.052,10,7),warm);carrier.add(core);
@@ -2784,16 +2785,17 @@ const jovianBetwixtable=buildBetwixtable({name:'neptunian-jovian-system',parent:
   const prow=new THREE.Mesh(new THREE.ConeGeometry(.075,.16,8),brass);prow.rotation.z=-Math.PI/2;prow.position.x=.24;carrier.add(prow);
   const carrierBetwixtable=makeBetwixtable(carrier,{name:'observer-carrier',padding:.34,interact:()=>downloadObserverCarrierReport()});
   carrierOrbit.add(carrierBetwixtable);
-  carrierBetwixtable.position.set(2.02,.305,0);
+  carrierBetwixtable.position.set(2.42,0,0);
   carrierBetwixtable.userData.observerCarrier={status:'orbiting',mission:'lamp-head',report:null};
-  root.userData.jovian.carrier={node:carrierBetwixtable,orbit:carrierOrbit,phase:1.15,radius:2.02,rate:.055,update(now){
-    const t=now*.001,a=this.phase+t*this.rate;
-    this.orbit.rotation.order='YXZ';
-    this.orbit.rotation.x=Math.sin(t*.017)*.42;
-    this.orbit.rotation.z=Math.sin(t*.011+1.7)*.16;
+  root.userData.jovian.carrier={node:carrierBetwixtable,orbit:carrierOrbit,phase:1.15,radius:2.42,rate:.018,update(now){
+    const t=now*.001,lon=this.phase+t*this.rate+.34*Math.sin(t*.0061),lat=.58*Math.sin(t*.0043+1.2)+.17*Math.sin(t*.0097);
     if(!betwixtFocusOwns(this.node)){
-      this.node.position.set(Math.cos(a)*this.radius,.305,Math.sin(a)*this.radius);
-      this.node.rotation.y=-a;
+      const cosLat=Math.cos(lat);
+      this.node.position.set(this.radius*cosLat*Math.cos(lon),this.radius*Math.sin(lat),this.radius*cosLat*Math.sin(lon));
+      // Keep the little ship tangential to its wandering path rather than aimed at Jupiter.
+      const lon2=lon+.012,lat2=.58*Math.sin((t+.65)*.0043+1.2)+.17*Math.sin((t+.65)*.0097);
+      const next=new THREE.Vector3(this.radius*Math.cos(lat2)*Math.cos(lon2),this.radius*Math.sin(lat2),this.radius*Math.cos(lat2)*Math.sin(lon2));
+      const tangent=next.sub(this.node.position);if(tangent.lengthSq()>1e-8)this.node.quaternion.setFromUnitVectors(new THREE.Vector3(1,0,0),tangent.normalize());
     }
   }};
   root.userData.science=Object.freeze({source:'JPL JUP365 mean elements',epoch:'2000-01-01.5 TDB',laplace:'Io-Europa-Ganymede near 4:2:1; Callisto outside',bearingModel:'64 protected persistent bodies in two approach-energy packets; restricted dimensionless gravity toy; measured Galilean/Jupiter mass ratios; no bearing-bearing gravity; Jupiter impacts terminate bodies; escapes persist',presentation:'orbital radii compressed; body radii exaggerated'});

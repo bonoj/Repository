@@ -50,7 +50,7 @@
   tools.append(temporaryTray,residentTray);
   document.body.append(tools);
 
-  // 2D pressure surface: Idiot Software Company. 
+  // 2D pressure surface: Idiot Software Company.
   // The company is an organism. Tap a large department to intervene; work travels elsewhere.
   const toyHost=document.createElement("section");toyHost.id="repository-2d";toyHost.setAttribute("aria-label","Idiot Software Company");
   const toyCanvas=document.createElement("canvas");toyHost.append(toyCanvas);document.body.append(toyHost);

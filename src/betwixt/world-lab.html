@@ -325,8 +325,7 @@ window.vestibuleFail=(scope,e)=>{
   clearTimeout(window.vestibuleWatch);
   const f=document.getElementById('fault');
   f.style.display='block';
-  f.textContent='WORLD LAB VESTIBULE — '+scope+'
-'+(e?.stack||e?.message||String(e));
+  f.textContent='WORLD LAB VESTIBULE — '+scope+'\\n'+(e?.stack||e?.message||String(e));
 };
 addEventListener('error',e=>vestibuleFail('startup / runtime',e.error||e.message));
 addEventListener('unhandledrejection',e=>vestibuleFail('promise',e.reason));
@@ -364,9 +363,7 @@ renderer.domElement.addEventListener('webglcontextlost',e=>{
   e.preventDefault(); vestibuleFail('WebGL context lost','Reload to reconstruct the vestibule.');
 });
 renderer.debug.onShaderError=(gl,p,vs,fs)=>{
-  vestibuleFail('shader',gl.getProgramInfoLog(p)+'
-'+gl.getShaderInfoLog(vs)+'
-'+gl.getShaderInfoLog(fs));
+  vestibuleFail('shader',gl.getProgramInfoLog(p)+'\\n'+gl.getShaderInfoLog(vs)+'\\n'+gl.getShaderInfoLog(fs));
 };
 
 scene.add(new THREE.HemisphereLight(0xfff9ef,0xc7c4be,1.7));

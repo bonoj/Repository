@@ -325,7 +325,8 @@ window.vestibuleFail=(scope,e)=>{
   clearTimeout(window.vestibuleWatch);
   const f=document.getElementById('fault');
   f.style.display='block';
-  f.textContent='WORLD LAB VESTIBULE — '+scope+'\n'+(e?.stack||e?.message||String(e));
+  f.textContent='WORLD LAB VESTIBULE — '+scope+'
+'+(e?.stack||e?.message||String(e));
 };
 addEventListener('error',e=>vestibuleFail('startup / runtime',e.error||e.message));
 addEventListener('unhandledrejection',e=>vestibuleFail('promise',e.reason));
@@ -363,7 +364,9 @@ renderer.domElement.addEventListener('webglcontextlost',e=>{
   e.preventDefault(); vestibuleFail('WebGL context lost','Reload to reconstruct the vestibule.');
 });
 renderer.debug.onShaderError=(gl,p,vs,fs)=>{
-  vestibuleFail('shader',gl.getProgramInfoLog(p)+'\n'+gl.getShaderInfoLog(vs)+'\n'+gl.getShaderInfoLog(fs));
+  vestibuleFail('shader',gl.getProgramInfoLog(p)+'
+'+gl.getShaderInfoLog(vs)+'
+'+gl.getShaderInfoLog(fs));
 };
 
 scene.add(new THREE.HemisphereLight(0xfff9ef,0xc7c4be,1.7));
@@ -2411,7 +2414,10 @@ const workshopTabletopBetwixtable=buildBetwixtable({
 // Neptunian JIT construction pressure: semantic-node articulated desk lamp.
 // The graph is construction authority; Workshop materials and endpoint primitives do the physical work.
 // This is intentionally an ordinary Betwixtable, placed forward of the vertical work stack.
-// Accepted Workshop specimen: Ozymandias, the Brass Spear Fisher.\n// Preserve this graph as the named source form; descendants may reinterpret it without erasing it.\nconst ozymandiasGraph=Object.freeze({\n  name:'ozymandias-brass-spear-fisher',
+// Accepted Workshop specimen: Ozymandias, the Brass Spear Fisher.
+// Preserve this graph as the named source form; descendants may reinterpret it without erasing it.
+const ozymandiasGraph=Object.freeze({
+  name:'ozymandias-brass-spear-fisher',
   nodes:Object.freeze([
     Object.freeze({id:'base',kind:'support',at:[0,.10,0]}),
     Object.freeze({id:'lowerPivot',kind:'pivot',at:[0,.28,0]}),
@@ -2428,7 +2434,15 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     Object.freeze({from:'shadeAxis',to:'bulb',relation:'contains'})
   ])
 });
-const deskLampGraph=Object.freeze({\n  ...ozymandiasGraph,\n  name:'ozymandias-derived-desk-lamp',\n  nodes:Object.freeze(ozymandiasGraph.nodes.map(n=>n.id==='shadeAxis'\n    ? Object.freeze({...n,at:[1.27,1.20,0]})\n    : n.id==='bulb' ? Object.freeze({...n,at:[1.42,1.09,0]}) : n))\n});\n\nconst deskLampBetwixtable=buildBetwixtable({
+const deskLampGraph=Object.freeze({
+  ...ozymandiasGraph,
+  name:'ozymandias-derived-desk-lamp',
+  nodes:Object.freeze(ozymandiasGraph.nodes.map(n=>n.id==='shadeAxis'
+    ? Object.freeze({...n,at:[1.27,1.20,0]})
+    : n.id==='bulb' ? Object.freeze({...n,at:[1.42,1.09,0]}) : n))
+});
+
+const deskLampBetwixtable=buildBetwixtable({
   name:'semantic-desk-lamp',
   parent:scene,
   at:new THREE.Vector3(0,GROUND_Y+.03,3.55),
@@ -2464,7 +2478,9 @@ const deskLampGraph=Object.freeze({\n  ...ozymandiasGraph,\n  name:'ozymandias-d
 
     // Shade axis follows the semantic head relation. ConeGeometry's local Y is aligned to that axis.
     const axis=P('shadeAxis').clone().sub(P('headPivot')).normalize();
-    // Lamp mutation of Ozymandias: a broad, shallow reflector replaces the spear-fisher head silhouette.\n    // Open mouth faces along the semantic aim axis; bulb sits visibly within that mouth.\n    const shadeCenter=P('shadeAxis').clone().addScaledVector(axis,.03);
+    // Lamp mutation of Ozymandias: a broad, shallow reflector replaces the spear-fisher head silhouette.
+    // Open mouth faces along the semantic aim axis; bulb sits visibly within that mouth.
+    const shadeCenter=P('shadeAxis').clone().addScaledVector(axis,.03);
     const shade=part('shade',new THREE.Mesh(new THREE.ConeGeometry(.38,.24,32,1,true),brass));
     shade.position.copy(shadeCenter);
     shade.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),axis);
@@ -2504,7 +2520,10 @@ const deskLampGraph=Object.freeze({\n  ...ozymandiasGraph,\n  name:'ozymandias-d
     spatial.jitAudit=()=>root.userData.neptunianAudit;
   }
 });
-globalThis.ozymandiasGraph=ozymandiasGraph;\nglobalThis.WorkshopSpecimens||=Object.create(null);\nglobalThis.WorkshopSpecimens.Ozymandias=Object.freeze({name:'Ozymandias',kind:'Brass Spear Fisher',graph:ozymandiasGraph,acceptedFrom:'f7ea17bd'});\nglobalThis.deskLampGraph=deskLampGraph;
+globalThis.ozymandiasGraph=ozymandiasGraph;
+globalThis.WorkshopSpecimens||=Object.create(null);
+globalThis.WorkshopSpecimens.Ozymandias=Object.freeze({name:'Ozymandias',kind:'Brass Spear Fisher',graph:ozymandiasGraph,acceptedFrom:'f7ea17bd'});
+globalThis.deskLampGraph=deskLampGraph;
 globalThis.deskLampBetwixtable=deskLampBetwixtable;
 
 // Neptunian Crossing 001 — Builder pass only.

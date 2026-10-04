@@ -2449,6 +2449,38 @@ const workshopTabletopBetwixtable=buildBetwixtable({
         shard.rotation.set(a*q.wobble,a*1.37+t*q.spin,a*.73);
       }
     };
+
+    // Fifth Thoughtform: Rendezvous. Two wandering eyes discover a shared path,
+    // exchange one pulse, then separate: seek -> meet -> exchange -> separate.
+    const rendezvousThoughtform=new THREE.Group();rendezvousThoughtform.name='thoughtform:rendezvous';
+    rendezvousThoughtform.position.set(.98,-.52,.98);root.add(rendezvousThoughtform);
+    rendezvousThoughtform.userData.thoughtform=Object.freeze({
+      kind:'thoughtform',title:'Rendezvous',
+      question:'Can two independently instantiated things discover a sufficiently cheap shared surface to exchange consequence?',
+      toy:'Two eyes wander independently. When they establish a common path, a filament appears and one pulse crosses it; then the path breaks and wandering resumes.',
+      invariant:'Transport is the experiment. Do not assume inference, durable storage, or a named networking architecture before the crossing earns it.',
+      interaction:'none'
+    });
+    const rendezvousStem=new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,.38,10),brass);rendezvousStem.position.y=.28;rendezvousThoughtform.add(rendezvousStem);
+    const rendezvousCage=new THREE.Group();rendezvousCage.name='thoughtform:rendezvous-gimbal-cage';rendezvousCage.position.y=-.20;rendezvousThoughtform.add(rendezvousCage);rendezvousThoughtform.userData.gimbalCage=rendezvousCage;
+    rendezvousCage.add(new THREE.Mesh(new THREE.SphereGeometry(.27,20,14),glassFace));
+    rendezvousCage.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(.27,12,8)),glassEdge));
+    for(const rotation of [[Math.PI/2,0,0],[0,Math.PI/2,0],[0,0,0]]){const ring=new THREE.Mesh(new THREE.TorusGeometry(.34,.025,8,28),brass);ring.rotation.set(...rotation);rendezvousCage.add(ring);}
+    const eyeMat=new THREE.MeshStandardMaterial({color:0xf4f1e8,roughness:.38}),pupilMat=new THREE.MeshBasicMaterial({color:0x08090a});
+    function rendezvousEye(name){const eye=new THREE.Group();eye.name=name;rendezvousCage.add(eye);eye.add(new THREE.Mesh(new THREE.SphereGeometry(.055,12,8),eyeMat));const pupil=new THREE.Mesh(new THREE.SphereGeometry(.019,10,7),pupilMat);pupil.name=name+':pupil';eye.add(pupil);eye.userData.pupil=pupil;return eye;}
+    const rendezvousA=rendezvousEye('thoughtform:rendezvous-eye-a'),rendezvousB=rendezvousEye('thoughtform:rendezvous-eye-b');
+    const filamentGeometry=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);
+    const filament=new THREE.Line(filamentGeometry,new THREE.LineBasicMaterial({color:0xffd7a0,transparent:true,opacity:.72,depthWrite:false}));filament.name='thoughtform:rendezvous-filament';filament.visible=false;rendezvousCage.add(filament);
+    const rendezvousPulse=new THREE.Mesh(new THREE.SphereGeometry(.018,10,7),warm);rendezvousPulse.name='thoughtform:rendezvous-pulse';rendezvousPulse.visible=false;rendezvousCage.add(rendezvousPulse);
+    const rendezvousLook=(eye,other)=>{const d=other.position.clone().sub(eye.position);if(d.lengthSq()>1e-8)d.normalize();eye.userData.pupil.position.copy(d.multiplyScalar(.047));};
+    rendezvousThoughtform.userData.animate=(t)=>{
+      const cycle=(t%6000)/6000,meeting=cycle<.25;
+      if(meeting){const settle=Math.min(1,cycle/.07);rendezvousA.position.lerp(new THREE.Vector3(-.12,.015,0),settle);rendezvousB.position.lerp(new THREE.Vector3(.12,-.015,0),settle);}
+      else{const a=t*.00073,b=t*.00091+2.1;rendezvousA.position.set(Math.cos(a)*.13,Math.sin(a*1.7)*.07,Math.sin(a)*.10);rendezvousB.position.set(Math.cos(b)*.12,Math.sin(b*1.3)*.065,Math.sin(b)*.12);}
+      rendezvousLook(rendezvousA,rendezvousB);rendezvousLook(rendezvousB,rendezvousA);filament.visible=meeting;rendezvousPulse.visible=meeting;
+      if(meeting){filamentGeometry.setFromPoints([rendezvousA.position,rendezvousB.position]);rendezvousPulse.position.lerpVectors(rendezvousA.position,rendezvousB.position,Math.min(1,cycle/.25));}
+      window.vestibuleDirty=true;
+    };
   }
 });
 
@@ -3987,6 +4019,8 @@ renderer.setAnimationLoop((now)=>{
   nepThoughtform?.userData.animate?.(now);
   const graphMindThoughtform=workshopTabletopBetwixtable.getObjectByName('thoughtform:deterministic-self-authoring-graph');
   graphMindThoughtform?.userData.animate?.(now);
+  const rendezvousThoughtform=workshopTabletopBetwixtable.getObjectByName('thoughtform:rendezvous');
+  rendezvousThoughtform?.userData.animate?.(now);
     const chemThoughtform=workshopTabletopBetwixtable.getObjectByName('thoughtform:chemlab-cold-boot');
   const chemCage=chemThoughtform?.userData.gimbalCage;
   if(chemCage){

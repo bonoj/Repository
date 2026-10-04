@@ -64,7 +64,7 @@
     {x:.25,y:.72,r:.14,phase:2,tone:2},{x:.78,y:.72,r:.12,phase:3,tone:3},
     {x:.50,y:.47,r:.16,phase:4,tone:4}
   ];
-  const flights=[],echoes=[];
+  const flights=[],echoes=[],marks=[];
   let toyW=1,toyH=1,toyD=1,toyLast=performance.now(),toyTurn=0;
   function toyResize(){const r=toyCanvas.getBoundingClientRect();toyD=Math.min(2,devicePixelRatio||1);const w=Math.max(1,Math.floor(r.width*toyD)),h=Math.max(1,Math.floor(r.height*toyD));if(w!==toyCanvas.width||h!==toyCanvas.height){toyCanvas.width=w;toyCanvas.height=h}toyW=w;toyH=h}
   function bellPos(b){return{x:b.x*toyW,y:b.y*toyH,r:b.r*Math.min(toyW,toyH)}}
@@ -74,13 +74,13 @@
     const hop=1+((index+toyTurn)% (bells.length-1));
     const targetIndex=(index+hop)%bells.length,target=bells[targetIndex];
     flights.push({from:index,to:targetIndex,t:0,curve:(toyTurn%2?1:-1)*(.12+.04*index)});
-    source.phase+=.7;toyTurn++;
+    source.phase+=.7;source.tone++;toyTurn++;
     // Consequence is delayed until the travelling signal arrives elsewhere.
   }
   function toyTap(e){const r=toyCanvas.getBoundingClientRect(),x=(e.clientX-r.left)*toyD,y=(e.clientY-r.top)*toyD;let hit=-1,bd=Infinity;bells.forEach((b,i)=>{const p=bellPos(b),d=Math.hypot(x-p.x,y-p.y);if(d<p.r*1.35&&d<bd){hit=i;bd=d}});if(hit>=0)strike(hit)}
   toyCanvas.addEventListener("pointerup",e=>{e.preventDefault();toyTap(e)});
   function toyStep(dt){
-    for(let i=flights.length-1;i>=0;i--){const f=flights[i];f.t+=dt*.72;if(f.t>=1){const b=bells[f.to];b.phase+=2.4;b.r=Math.min(.205,b.r+.012);echoes.push({at:f.to,t:0});flights.splice(i,1)}}
+    for(let i=flights.length-1;i>=0;i--){const f=flights[i];f.t+=dt*.72;if(f.t>=1){const b=bells[f.to];b.phase+=2.4;b.r=Math.min(.22,b.r+.006);b.tone++;marks.push({from:f.from,to:f.to,curve:f.curve});if(marks.length>80)marks.shift();echoes.push({at:f.to,t:0});flights.splice(i,1)}}
     for(let i=echoes.length-1;i>=0;i--){echoes[i].t+=dt;if(echoes[i].t>1.35)echoes.splice(i,1)}
     for(const b of bells)b.r+=(b.r>.16?-.0035:0)*dt;
   }

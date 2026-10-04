@@ -2330,7 +2330,7 @@ const workshopTabletopBetwixtable=buildBetwixtable({
 
     // Three-axis brass gimbal cage around an accepted Workshop-glass UV sphere.
     // The cage is one child so it can turn slowly as a single quiet physical presence.
-    const cage=new THREE.Group();cage.name='thoughtform:gimbal-cage';cage.position.y=-.20;thoughtform.add(cage);
+    const cage=new THREE.Group();cage.name='thoughtform:gimbal-cage';cage.position.y=-.20;thoughtform.add(cage);thoughtform.userData.gimbalCage=cage;
     thoughtform.userData.gimbalCage=cage;
     const sphere=new THREE.Mesh(new THREE.SphereGeometry(.25,20,14),glassFace);
     cage.add(sphere);
@@ -2366,7 +2366,7 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     });
     const chemStem=new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,.38,10),brass);
     chemStem.position.y=.28;chemStem.castShadow=true;chemThoughtform.add(chemStem);
-    const chemCage=new THREE.Group();chemCage.name='thoughtform:chemlab-gimbal-cage';chemCage.position.y=-.20;chemThoughtform.add(chemCage);
+    const chemCage=new THREE.Group();chemCage.name='thoughtform:chemlab-gimbal-cage';chemCage.position.y=-.20;chemThoughtform.add(chemCage);chemThoughtform.userData.gimbalCage=chemCage;
     chemThoughtform.userData.gimbalCage=chemCage;
     const chemSphere=new THREE.Mesh(new THREE.SphereGeometry(.27,20,14),glassFace);chemCage.add(chemSphere);
     chemCage.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(.27,12,8)),glassEdge));
@@ -4086,8 +4086,16 @@ renderer.setAnimationLoop((now)=>{
   jovianBetwixtable.userData.betwixtable.presentation.userData.jovian?.update(now);
   jovianBetwixtable.userData.betwixtable.presentation.userData.jovian?.updateBearings(now);
   jovianBetwixtable.userData.betwixtable.presentation.userData.jovian?.carrier?.update(now);
-  const thoughtformCage=workshopTabletopBetwixtable.getObjectByName('thoughtform:semantic-snapping-primitives')?.userData.gimbalCage;
-  if(thoughtformCage){thoughtformCage.rotation.y=now*.00018;thoughtformCage.rotation.x=Math.sin(now*.00007)*.10;window.vestibuleDirty=true;}
+  // Every thoughtform shares one gimbal behavior, but each keeps an independent phase.
+  const thoughtformNames=['thoughtform:semantic-snapping-primitives','thoughtform:chemlab-cold-boot','thoughtform:neptunian-caretaker-carrier','thoughtform:deterministic-self-authoring-graph','thoughtform:rendezvous'];
+  thoughtformNames.forEach((name,i)=>{
+    const cage=workshopTabletopBetwixtable.getObjectByName(name)?.userData.gimbalCage;if(!cage)return;
+    const phase=i*1.137;
+    cage.rotation.y=now*.00018+phase;
+    cage.rotation.x=Math.sin(now*.00007+phase)*.10;
+    cage.rotation.z=Math.sin(now*.000053+phase*1.7)*.055;
+    window.vestibuleDirty=true;
+  });
   const nepThoughtform=workshopTabletopBetwixtable.getObjectByName('thoughtform:neptunian-caretaker-carrier');
   nepThoughtform?.userData.animate?.(now);
   const graphMindThoughtform=workshopTabletopBetwixtable.getObjectByName('thoughtform:deterministic-self-authoring-graph');
@@ -4097,7 +4105,6 @@ renderer.setAnimationLoop((now)=>{
     const chemThoughtform=workshopTabletopBetwixtable.getObjectByName('thoughtform:chemlab-cold-boot');
   const chemCage=chemThoughtform?.userData.gimbalCage;
   if(chemCage){
-    chemCage.rotation.y=-now*.00022;chemCage.rotation.z=Math.sin(now*.00005)*.08;
     const minis=chemCage.children.filter(child=>child.name?.startsWith('thoughtform:mini:'));
     minis.forEach((m,i)=>{const a=now*.00065+(m.userData.phase||i);m.position.set(Math.cos(a)*.13,Math.sin(a*1.7)*.055,Math.sin(a)*.13);m.rotation.y=-a*1.8;m.rotation.x=Math.sin(a*1.3)*.5;});
     window.vestibuleDirty=true;

@@ -2467,18 +2467,44 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     rendezvousCage.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(.27,12,8)),glassEdge));
     for(const rotation of [[Math.PI/2,0,0],[0,Math.PI/2,0],[0,0,0]]){const ring=new THREE.Mesh(new THREE.TorusGeometry(.34,.025,8,28),brass);ring.rotation.set(...rotation);rendezvousCage.add(ring);}
     const eyeMat=new THREE.MeshStandardMaterial({color:0xf4f1e8,roughness:.38}),pupilMat=new THREE.MeshBasicMaterial({color:0x08090a});
-    function rendezvousEye(name){const eye=new THREE.Group();eye.name=name;rendezvousCage.add(eye);eye.add(new THREE.Mesh(new THREE.SphereGeometry(.055,12,8),eyeMat));const pupil=new THREE.Mesh(new THREE.SphereGeometry(.019,10,7),pupilMat);pupil.name=name+':pupil';eye.add(pupil);eye.userData.pupil=pupil;return eye;}
-    const rendezvousA=rendezvousEye('thoughtform:rendezvous-eye-a'),rendezvousB=rendezvousEye('thoughtform:rendezvous-eye-b');
+    function rendezvousEye(name,seed){
+      const eye=new THREE.Group();eye.name=name;rendezvousCage.add(eye);eye.add(new THREE.Mesh(new THREE.SphereGeometry(.055,12,8),eyeMat));
+      const pupil=new THREE.Mesh(new THREE.SphereGeometry(.019,10,7),pupilMat);pupil.name=name+':pupil';eye.add(pupil);
+      eye.userData.pupil=pupil;eye.userData.seed=seed;return eye;
+    }
+    const rendezvousA=rendezvousEye('thoughtform:rendezvous-eye-a',.37),rendezvousB=rendezvousEye('thoughtform:rendezvous-eye-b',2.41);
     const filamentGeometry=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);
     const filament=new THREE.Line(filamentGeometry,new THREE.LineBasicMaterial({color:0xffd7a0,transparent:true,opacity:.72,depthWrite:false}));filament.name='thoughtform:rendezvous-filament';filament.visible=false;rendezvousCage.add(filament);
     const rendezvousPulse=new THREE.Mesh(new THREE.SphereGeometry(.018,10,7),warm);rendezvousPulse.name='thoughtform:rendezvous-pulse';rendezvousPulse.visible=false;rendezvousCage.add(rendezvousPulse);
-    const rendezvousLook=(eye,other)=>{const d=other.position.clone().sub(eye.position);if(d.lengthSq()>1e-8)d.normalize();eye.userData.pupil.position.copy(d.multiplyScalar(.047));};
+    const rendezvousLook=(eye,direction)=>{const d=direction.clone();if(d.lengthSq()>1e-8)d.normalize();eye.userData.pupil.position.copy(d.multiplyScalar(.047));};
+    const rendezvousWander=(eye,t,phase)=>{
+      // Bounded 3-D Lissajous wander. The eye center stays well inside the glass
+      // shell and the paired phases keep the two bodies from clipping one another.
+      const a=t*.00113+phase,b=t*.00167+phase*1.91,c=t*.00083+phase*.73;
+      eye.position.set(Math.sin(a)*.145,Math.sin(b)*.105,Math.sin(c)*.145);
+      const jitter=new THREE.Vector3(Math.sin(t*.0107+phase),Math.sin(t*.0131+phase*2.3),Math.sin(t*.0091+phase*.4));
+      rendezvousLook(eye,jitter);
+    };
     rendezvousThoughtform.userData.animate=(t)=>{
-      const cycle=(t%6000)/6000,meeting=cycle<.25;
-      if(meeting){const settle=Math.min(1,cycle/.07);rendezvousA.position.lerp(new THREE.Vector3(-.12,.015,0),settle);rendezvousB.position.lerp(new THREE.Vector3(.12,-.015,0),settle);}
-      else{const a=t*.00073,b=t*.00091+2.1;rendezvousA.position.set(Math.cos(a)*.13,Math.sin(a*1.7)*.07,Math.sin(a)*.10);rendezvousB.position.set(Math.cos(b)*.12,Math.sin(b*1.3)*.065,Math.sin(b)*.12);}
-      rendezvousLook(rendezvousA,rendezvousB);rendezvousLook(rendezvousB,rendezvousA);filament.visible=meeting;rendezvousPulse.visible=meeting;
-      if(meeting){filamentGeometry.setFromPoints([rendezvousA.position,rendezvousB.position]);rendezvousPulse.position.lerpVectors(rendezvousA.position,rendezvousB.position,Math.min(1,cycle/.25));}
+      // Four seconds of independent search, then two seconds of mutual notice,
+      // intent gaze and packet exchange. Smoothstep prevents teleporting at phase edges.
+      const cycle=(t%6000)/6000,meeting=cycle>=2/3;
+      rendezvousWander(rendezvousA,t,rendezvousA.userData.seed);rendezvousWander(rendezvousB,t,rendezvousB.userData.seed);
+      const delta=rendezvousB.position.clone().sub(rendezvousA.position),distance=delta.length(),minDistance=.125;
+      if(distance<minDistance&&distance>1e-6){const push=delta.normalize().multiplyScalar((minDistance-distance)*.5);rendezvousA.position.addScaledVector(push,-1);rendezvousB.position.add(push);}
+      if(meeting){
+        const u=(cycle-2/3)/(1/3),attention=Math.min(1,u/.12),release=Math.min(1,(1-u)/.12),intent=Math.min(attention,release);
+        const midpoint=rendezvousA.position.clone().add(rendezvousB.position).multiplyScalar(.5);
+        const axis=rendezvousB.position.clone().sub(rendezvousA.position);if(axis.lengthSq()<1e-8)axis.set(1,0,0);axis.normalize();
+        const meetA=midpoint.clone().addScaledVector(axis,-.105),meetB=midpoint.clone().addScaledVector(axis,.105);
+        const ease=intent*intent*(3-2*intent);rendezvousA.position.lerp(meetA,ease);rendezvousB.position.lerp(meetB,ease);
+        rendezvousLook(rendezvousA,rendezvousB.position.clone().sub(rendezvousA.position));rendezvousLook(rendezvousB,rendezvousA.position.clone().sub(rendezvousB.position));
+        filament.visible=intent>.55;rendezvousPulse.visible=filament.visible;
+        if(filament.visible){
+          filamentGeometry.setFromPoints([rendezvousA.position,rendezvousB.position]);
+          const packet=Math.max(0,Math.min(1,(u-.22)/.56));rendezvousPulse.position.lerpVectors(rendezvousA.position,rendezvousB.position,packet);
+        }
+      }else{filament.visible=false;rendezvousPulse.visible=false;}
       window.vestibuleDirty=true;
     };
   }

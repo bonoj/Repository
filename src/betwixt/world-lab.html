@@ -4182,15 +4182,27 @@ function createBoundedWitness({parent=scene,targetBetwixtable=null,position=[0,1
     sensorNeedleGeometry.setFromPoints([localOrigin,localEnd]);
     window.vestibuleDirty=true;
   }
-  function anonymousHit(hit){
+  function anonymousHit(hit,continuity=null){
     if(!hit)return null;
     const normal=hit.face?.normal?.clone();if(normal)normal.transformDirection(hit.object.matrixWorld);
-    return Object.freeze({distance:+hit.distance.toFixed(4),point:Object.freeze(hit.point.toArray().map(v=>+v.toFixed(4))),normal:normal?Object.freeze(normal.toArray().map(v=>+v.toFixed(4))):null});
+    const reading={distance:+hit.distance.toFixed(4),point:Object.freeze(hit.point.toArray().map(v=>+v.toFixed(4))),normal:normal?Object.freeze(normal.toArray().map(v=>+v.toFixed(4))):null};
+    if(continuity!==null)reading.continuity=continuity;
+    return Object.freeze(reading);
   }
   function isWitnessSurface(o){for(let n=o;n;n=n.parent)if(n.userData?.witnessBody)return true;return false}
   function visibleSurfaces(root){
     const surfaces=[];
     root.traverse(o=>{if(o.visible&&o.isMesh&&o.material?.visible!==false&&!o.userData?.betwixtable&&!isWitnessSurface(o))surfaces.push(o)});
+    return surfaces;
+  }
+  // Mission-local continuity is deliberately weaker than identity. The ordinal is
+  // assigned only from deterministic presentation traversal order and means nothing
+  // beyond "this target surface is the same one encountered earlier in this mission."
+  const targetContinuity=new WeakMap();
+  let nextContinuity=1;
+  function targetSurfaces(presentation){
+    const surfaces=visibleSurfaces(presentation);
+    for(const surface of surfaces)if(!targetContinuity.has(surface))targetContinuity.set(surface,nextContinuity++);
     return surfaces;
   }
   function cast(){
@@ -4200,9 +4212,9 @@ function createBoundedWitness({parent=scene,targetBetwixtable=null,position=[0,1
       const spatial=targetBetwixtable.userData?.betwixtable;
       const presentation=spatial?.presentation;
       if(!presentation)throw new Error('Witness target must expose Betwixtable presentation');
-      const targetHit=probe.intersectObjects(visibleSurfaces(presentation),false)[0]||null;
+      const targetHit=probe.intersectObjects(targetSurfaces(presentation),false)[0]||null;
       const worldHit=probe.intersectObjects(visibleSurfaces(scene),false)[0]||null;
-      const target=anonymousHit(targetHit);
+      const target=anonymousHit(targetHit,targetHit?targetContinuity.get(targetHit.object):null);
       const occluder=worldHit&&(!targetHit||worldHit.distance<targetHit.distance-1e-5)?anonymousHit(worldHit):null;
       return Object.freeze({status:target?(occluder?'occluded':'target-hit'):'miss',target,occluder});
     }

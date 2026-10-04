@@ -4085,7 +4085,6 @@ renderer.setAnimationLoop((now)=>{
   workshopTabletopBetwixtable.userData.betwixtable.presentation.children.find(o=>o.name==='thoughtform:neptunian-caretaker-carrier')?.userData.animate?.(now);
   jovianBetwixtable.userData.betwixtable.presentation.userData.jovian?.update(now);
   jovianBetwixtable.userData.betwixtable.presentation.userData.jovian?.updateBearings(now);
-  jovianBetwixtable.userData.betwixtable.presentation.userData.jovian?.carrier?.update(now);
   // Every thoughtform shares one gimbal behavior, but each keeps an independent phase.
   const thoughtformNames=['thoughtform:semantic-snapping-primitives','thoughtform:chemlab-cold-boot','thoughtform:neptunian-caretaker-carrier','thoughtform:deterministic-self-authoring-graph','thoughtform:rendezvous'];
   thoughtformNames.forEach((name,i)=>{

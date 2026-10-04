@@ -2414,6 +2414,41 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     const carrierCore=new THREE.Mesh(new THREE.SphereGeometry(.055,10,7),warm);carrier.add(carrierCore);
     for(let i=0;i<3;i++){const drone=new THREE.Mesh(new THREE.OctahedronGeometry(.025,0),steel);drone.name='thoughtform:caretaker-drone:'+i;drone.userData.phase=i*Math.PI*2/3;carrier.add(drone);}
     nepThoughtform.userData.animate=(t)=>{carrier.rotation.y=t*.00022;for(let i=0;i<3;i++){const d=carrier.children[i+2],a=t*.0011+d.userData.phase;d.position.set(Math.cos(a)*.16,Math.sin(a*1.7)*.045,Math.sin(a)*.16);}}
+
+    // Fourth Thoughtform: deterministic self-authoring graph traversal.
+    // The white point is stable authority; apparent surrounding chaos is entirely seeded motion.
+    const graphMindThoughtform=new THREE.Group();graphMindThoughtform.name='thoughtform:deterministic-self-authoring-graph';
+    graphMindThoughtform.position.set(0,-.52,-1.38);root.add(graphMindThoughtform);
+    graphMindThoughtform.userData.thoughtform=Object.freeze({
+      kind:'thoughtform',title:'Deterministic self-authoring graph',
+      plan:'Build a tiny model-like authoring engine inside the runtime: deterministic graph traversal over a rich playground vocabulary, with a socketable external agent able to steer, inspect, or extend the traversal. It is not intended to imitate a true LLM; it is a proving ground for self-authored executable consequence, inspectable state, replay, and model/runtime collaboration.',
+      invariant:'Same graph, seed, state, and inputs produce the same traversal and authored result. Apparent complexity must remain replayable.',
+      emergence:'Start with the smallest traversal that can author a meaningful next graph state. Add memory, choice vocabulary, scoring, mutation, and agent sockets only when executable pressure earns them.',
+      interaction:'none'
+    });
+    const mindStem=new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,.38,10),brass);mindStem.position.y=.28;graphMindThoughtform.add(mindStem);
+    const mindCage=new THREE.Group();mindCage.name='thoughtform:graph-mind-gimbal-cage';mindCage.position.y=-.20;graphMindThoughtform.add(mindCage);graphMindThoughtform.userData.gimbalCage=mindCage;
+    mindCage.add(new THREE.Mesh(new THREE.SphereGeometry(.27,20,14),glassFace));
+    mindCage.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(.27,12,8)),glassEdge));
+    for(const rotation of [[Math.PI/2,0,0],[0,Math.PI/2,0],[0,0,0]]){const ring=new THREE.Mesh(new THREE.TorusGeometry(.34,.025,8,28),brass);ring.rotation.set(...rotation);mindCage.add(ring);}
+    const mindCore=new THREE.Mesh(new THREE.SphereGeometry(.025,10,8),new THREE.MeshBasicMaterial({color:0xffffff}));mindCore.name='thoughtform:graph-mind-star';mindCage.add(mindCore);
+    const shadowMat=new THREE.MeshBasicMaterial({color:0x070809,transparent:true,opacity:.86,depthWrite:false});
+    const shadows=new THREE.Group();shadows.name='thoughtform:graph-mind-shadow';mindCage.add(shadows);
+    let mindSeed=0x51f15e;
+    const mindRand=()=>{mindSeed=(Math.imul(mindSeed,1664525)+1013904223)>>>0;return mindSeed/4294967296};
+    for(let i=0;i<19;i++){
+      const shard=new THREE.Mesh(new THREE.TetrahedronGeometry(.018+mindRand()*.035,0),shadowMat);
+      shard.userData.orbit=Object.freeze({r:.055+mindRand()*.17,phase:mindRand()*Math.PI*2,speed:.00055+mindRand()*.00135,tilt:(mindRand()-.5)*2.4,wobble:.4+mindRand()*1.9,spin:.001+mindRand()*.003});
+      shadows.add(shard);
+    }
+    graphMindThoughtform.userData.animate=(t)=>{
+      for(const shard of shadows.children){
+        const q=shard.userData.orbit,a=q.phase+t*q.speed;
+        shard.position.set(Math.cos(a)*q.r,Math.sin(a*q.wobble)*q.r*.48,Math.sin(a)*q.r);
+        shard.position.applyAxisAngle(new THREE.Vector3(1,0,0),q.tilt);
+        shard.rotation.set(a*q.wobble,a*1.37+t*q.spin,a*.73);
+      }
+    };
   }
 });
 
@@ -3948,7 +3983,11 @@ renderer.setAnimationLoop((now)=>{
   jovianBetwixtable.userData.betwixtable.presentation.userData.jovian?.updateBearings(now);
   const thoughtformCage=workshopTabletopBetwixtable.getObjectByName('thoughtform:semantic-snapping-primitives')?.userData.gimbalCage;
   if(thoughtformCage){thoughtformCage.rotation.y=now*.00018;thoughtformCage.rotation.x=Math.sin(now*.00007)*.10;window.vestibuleDirty=true;}
-  const chemThoughtform=workshopTabletopBetwixtable.getObjectByName('thoughtform:chemlab-cold-boot');
+  const nepThoughtform=workshopTabletopBetwixtable.getObjectByName('thoughtform:neptunian-caretaker-carrier');
+  nepThoughtform?.userData.animate?.(now);
+  const graphMindThoughtform=workshopTabletopBetwixtable.getObjectByName('thoughtform:deterministic-self-authoring-graph');
+  graphMindThoughtform?.userData.animate?.(now);
+    const chemThoughtform=workshopTabletopBetwixtable.getObjectByName('thoughtform:chemlab-cold-boot');
   const chemCage=chemThoughtform?.userData.gimbalCage;
   if(chemCage){
     chemCage.rotation.y=-now*.00022;chemCage.rotation.z=Math.sin(now*.00005)*.08;

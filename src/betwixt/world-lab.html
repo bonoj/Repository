@@ -3637,7 +3637,8 @@ function telescopeWorkshopFocus(incoming){
 }
 function dismissWorkshopFocus(){if(focusedWorkshopObject&&!workshopFocusMotion){if(focusedWorkshopObject===relationalInspectionBetwixtable)showMoleculeCard(false);beginWorkshopFocus(focusedWorkshopObject,false)}}
 function resetWorkshopGlass(){}
-function updateWorkshop(now){\n  updateInhabitedD20(now);
+function updateWorkshop(now){
+  updateInhabitedD20(now);
   if(workshopFocusMotion){
     const m=workshopFocusMotion,raw=Math.min(1,(now-m.started)/m.duration),t=easeQuiet(raw);
     if(m.telescope){

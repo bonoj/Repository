@@ -60,7 +60,7 @@
   civHost.append(civCanvas);
   document.body.append(civHost);
   const civ=civCanvas.getContext("2d",{alpha:false});
-  const CIV_W=96,CIV_H=96,CIV_N=CIV_W*CIV_H;
+  const CIV_W=64,CIV_H=64,CIV_N=CIV_W*CIV_H;
   const elevation=new Float32Array(CIV_N),wet=new Float32Array(CIV_N),fertility=new Float32Array(CIV_N);
   const people=[],towns=[],ripples=[];
   let civImage=null,civLast=performance.now(),civAcc=0,civPointer=null,civMoved=false;
@@ -76,18 +76,18 @@
     fertility[i]=Math.max(0,Math.min(1,.28+wet[i]*2.4+(civHash(x+31,y+17)-.5)*.32));
   }
   function landAt(x,y){return x>=0&&y>=0&&x<CIV_W&&y<CIV_H&&elevation[civIdx(x,y)]>0}
-  for(let i=0;i<58;i++){
-    let x=8+Math.floor(civHash(i,11)*(CIV_W-16)),y=8+Math.floor(civHash(i,29)*(CIV_H-16)),guard=0;
-    while(!landAt(x,y)&&guard++<80){x=5+Math.floor(civHash(i+guard,41)*(CIV_W-10));y=5+Math.floor(civHash(i+guard,67)*(CIV_H-10))}
+  for(let i=0;i<34;i++){
+    let x=6+Math.floor(civHash(i,11)*(CIV_W-12)),y=6+Math.floor(civHash(i,29)*(CIV_H-12)),guard=0;
+    while(!landAt(x,y)&&guard++<80){x=4+Math.floor(civHash(i+guard,41)*(CIV_W-8));y=4+Math.floor(civHash(i+guard,67)*(CIV_H-8))}
     people.push({x:x+.5,y:y+.5,vx:0,vy:0,age:civHash(i,91)*20,home:-1,rest:0,trail:[]});
   }
   function perturb(px,py,drag=false){
-    const r=drag?2.2:6.2,depth=drag?.055:.16;
+    const r=drag?3.4:7.8,depth=drag?.12:.28;
     for(let y=Math.max(0,Math.floor(py-r));y<=Math.min(CIV_H-1,Math.ceil(py+r));y++)for(let x=Math.max(0,Math.floor(px-r));x<=Math.min(CIV_W-1,Math.ceil(px+r));x++){
       const d=Math.hypot(x+.5-px,y+.5-py);if(d>r)continue;
       const k=(1-d/r);const i=civIdx(x,y);elevation[i]-=depth*k*k;wet[i]=Math.max(wet[i],Math.max(0,-elevation[i])+.05*k);fertility[i]=Math.min(1,fertility[i]+.12*k);
     }
-    const force=drag?.7:2.8;
+    const force=drag?1.25:4.4;
     for(const p of people){const dx=p.x-px,dy=p.y-py,d=Math.hypot(dx,dy)||1;if(d<r*2.2){const k=(1-d/(r*2.2))*force;p.vx+=dx/d*k;p.vy+=dy/d*k}}
     ripples.push({x:px,y:py,r:.2,max:r*2.3,life:1});
   }
@@ -148,12 +148,12 @@
     civ.imageSmoothingEnabled=false;civ.drawImage(off,0,0,w,h);
     const sx=w/CIV_W,sy=h/CIV_H;
     civ.lineWidth=Math.max(1,Math.min(sx,sy)*.22);
-    for(const t of towns){if(t.pop<.12)continue;civ.fillStyle="rgba(236,205,139,.9)";const s=Math.max(2,Math.min(7,2+t.pop*.32))*Math.min(sx,sy);civ.fillRect(t.x*sx-s/2,t.y*sy-s/2,s,s)}
+    for(const t of towns){if(t.pop<.12)continue;civ.fillStyle="rgba(236,205,139,.9)";const s=Math.max(3.5,Math.min(9,3.5+t.pop*.42))*Math.min(sx,sy);civ.fillRect(t.x*sx-s/2,t.y*sy-s/2,s,s)}
     // Movement leaves a faint human-scale path; bodies have facing, not orbital-dot symmetry.
     civ.lineWidth=Math.max(1,Math.min(sx,sy)*.16);
     for(const p of people){
       if(p.trail?.length>1){civ.strokeStyle="rgba(226,211,169,.18)";civ.beginPath();civ.moveTo(p.trail[0].x*sx,p.trail[0].y*sy);for(let i=1;i<p.trail.length;i++)civ.lineTo(p.trail[i].x*sx,p.trail[i].y*sy);civ.stroke()}
-      const a=Math.atan2(p.vy,p.vx),s=Math.max(1.6,Math.min(sx,sy)*.52);
+      const a=Math.atan2(p.vy,p.vx),s=Math.max(2.6,Math.min(sx,sy)*.72);
       civ.save();civ.translate(p.x*sx,p.y*sy);civ.rotate(a+Math.PI/2);
       civ.fillStyle=p.home>=0?"rgba(247,226,178,.96)":"rgba(220,215,194,.9)";
       civ.beginPath();civ.moveTo(0,-s);civ.lineTo(s*.48,s*.62);civ.lineTo(0,s*.38);civ.lineTo(-s*.48,s*.62);civ.closePath();civ.fill();civ.restore();
@@ -164,9 +164,9 @@
     const dt=Math.min(.05,(now-civLast)/1000);civLast=now;civAcc+=dt;civStep(dt);civDraw();requestAnimationFrame(civLoop);
   }
   function civPoint(e){const r=civCanvas.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*CIV_W,y:(e.clientY-r.top)/r.height*CIV_H}}
-  civCanvas.addEventListener("pointerdown",e=>{e.preventDefault();civCanvas.setPointerCapture(e.pointerId);civPointer=civPoint(e);civMoved=false});
+  civCanvas.addEventListener("pointerdown",e=>{e.preventDefault();civCanvas.setPointerCapture(e.pointerId);civPointer=civPoint(e);civMoved=false;perturb(civPointer.x,civPointer.y,false)});
   civCanvas.addEventListener("pointermove",e=>{if(!civPointer||!civCanvas.hasPointerCapture(e.pointerId))return;e.preventDefault();const p=civPoint(e);if(Math.hypot(p.x-civPointer.x,p.y-civPointer.y)>.9){civMoved=true;perturb(p.x,p.y,true);civPointer=p}});
-  civCanvas.addEventListener("pointerup",e=>{if(!civPointer)return;e.preventDefault();const p=civPoint(e);if(!civMoved)perturb(p.x,p.y,false);civPointer=null});
+  civCanvas.addEventListener("pointerup",e=>{if(!civPointer)return;e.preventDefault();civPointer=null});
   civCanvas.addEventListener("pointercancel",()=>{civPointer=null});
   requestAnimationFrame(civLoop);
 

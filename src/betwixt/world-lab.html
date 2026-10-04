@@ -2752,6 +2752,143 @@ const neptunianCrossing001Betwixtable=buildBetwixtable({
   }
 });
 
+// Graph Mind Crossing: a tiny deterministic aquarium between the thoughtform table and Jupiter.
+// It runs unattended. Tap once to focus; tap again while focused to download the blind evidence envelope.
+// Hidden ground truth remains in runtime state and is intentionally omitted from that envelope.
+const graphMindAquarium=buildBetwixtable({name:'graph-mind-aquarium',parent:scene,at:new THREE.Vector3(0,GROUND_Y+7.05,0),padding:.30,interact:()=>downloadGraphMindEnvelope(),build(root){
+  const shellMat=new THREE.MeshPhysicalMaterial({color:0x111820,roughness:.14,metalness:.08,transparent:true,opacity:.22,transmission:.52,thickness:.06,ior:1.18,depthWrite:false,side:THREE.DoubleSide});
+  const shell=new THREE.Mesh(new THREE.SphereGeometry(1.12,28,18),shellMat);shell.name='graph-mind:aquarium-shell';root.add(shell);
+  root.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(1.12,14,9)),glassEdge));
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(.72,.84,.10,24),brassDark);base.position.y=-1.12;base.castShadow=true;root.add(base);
+  const star=new THREE.Mesh(new THREE.SphereGeometry(.045,12,8),new THREE.MeshBasicMaterial({color:0xffffff}));star.name='graph-mind:observer-star';root.add(star);
+
+  const moteMats={
+    A:new THREE.MeshStandardMaterial({color:0xd8c27a,roughness:.35,metalness:.18}),
+    B:new THREE.MeshStandardMaterial({color:0x83a9c2,roughness:.38,metalness:.12})
+  };
+  const stateGlow=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.82});
+  const moteSpecs=[
+    {id:'m0',kind:'A',phase:.10,hidden:1},{id:'m1',kind:'A',phase:.91,hidden:0},
+    {id:'m2',kind:'A',phase:1.72,hidden:1},{id:'m3',kind:'A',phase:2.63,hidden:0},
+    {id:'m4',kind:'B',phase:.46,hidden:0},{id:'m5',kind:'B',phase:1.29,hidden:0},
+    {id:'m6',kind:'B',phase:2.08,hidden:0},{id:'m7',kind:'B',phase:2.91,hidden:0},
+    {id:'m8',kind:'B',phase:3.67,hidden:0}
+  ];
+  const motes=moteSpecs.map((spec,i)=>{
+    const group=new THREE.Group();group.name='graph-mind:mote:'+spec.id;root.add(group);
+    const body=new THREE.Mesh(new THREE.IcosahedronGeometry(spec.kind==='A'?.065:.055,1),moteMats[spec.kind]);group.add(body);
+    const glow=new THREE.Mesh(new THREE.SphereGeometry(.018,8,6),stateGlow);glow.position.y=.075;glow.visible=false;group.add(glow);
+    return {...spec,state:0,group,body,glow,index:i};
+  });
+
+  const shardMat=new THREE.MeshBasicMaterial({color:0x08090a,transparent:true,opacity:.90,depthWrite:false});
+  const shards=new THREE.Group();shards.name='graph-mind:contradiction-residue';root.add(shards);
+  const crystalMat=new THREE.MeshStandardMaterial({color:0xd9d6cc,roughness:.22,metalness:.52});
+  const crystal=new THREE.Group();crystal.name='graph-mind:anonymous-distinction';root.add(crystal);
+
+  const evidence=[],snapshots=[];
+  const mind={schema:'graph-mind-crossing/0',seed:'gm-741',step:0,lastTick:null,interval:680,maxEvidence:160,contradictions:0,distinction:null,predictedChange:true,lastTarget:null};
+  function positionMotes(t){
+    motes.forEach((m,i)=>{
+      const a=t*.00017*(1+(i%3)*.07)+m.phase;
+      const b=t*.00011+m.phase*1.73;
+      m.group.position.set(Math.cos(a)*(.48+(i%4)*.12),Math.sin(b)*.38,Math.sin(a)*(.48+(i%4)*.12));
+      m.group.rotation.y=a*1.7;m.glow.visible=!!m.state;
+    });
+  }
+  function addShard(step){
+    const shard=new THREE.Mesh(new THREE.TetrahedronGeometry(.035+(step%4)*.007,0),shardMat);
+    const phase=(step*2.3999632297)%(Math.PI*2);
+    shard.userData.phase=phase;shard.userData.radius=.18+Math.min(.46,mind.contradictions*.018);shards.add(shard);
+    if(shards.children.length>28)shards.remove(shards.children[0]);
+  }
+  function proposeDistinction(){
+    if(mind.distinction||mind.contradictions<6)return;
+    // The learner is allowed only an anonymous partition over its own encounter history.
+    // It does not receive the world's hidden bit. The cheapest observed partition here is
+    // recurrence of the same opaque encounter handle, which must then pay rent prospectively.
+    const byHandle=new Map();
+    for(const e of evidence){
+      if(e.observed.kind!=='A')continue;
+      const q=byHandle.get(e.observed.handle)||{changed:0,unchanged:0};
+      e.actual.changed?q.changed++:q.unchanged++;byHandle.set(e.observed.handle,q);
+    }
+    const members=[...byHandle].filter(([,q])=>q.changed>=2&&q.unchanged===0).map(([h])=>h);
+    if(members.length<1)return;
+    mind.distinction={handle:'Δ1',members:new Set(members),bornAt:mind.step,correct:0,total:0};
+    crystal.clear();
+    for(let i=0;i<6;i++){const p=new THREE.Mesh(new THREE.OctahedronGeometry(.035,0),crystalMat),a=i*Math.PI/3;p.position.set(Math.cos(a)*.14,0,Math.sin(a)*.14);crystal.add(p);}
+  }
+  function encounter(){
+    mind.step++;
+    const aMotes=motes.filter(m=>m.kind==='A'),actor=aMotes[(mind.step-1)%aMotes.length];
+    const bMotes=motes.filter(m=>m.kind==='B'),target=bMotes[(mind.step*3+actor.index)%bMotes.length];
+    // World truth: an invisible inherited bit on A determines whether nearby B toggles.
+    const changed=actor.hidden===1;
+    const predicted=mind.distinction?mind.distinction.members.has(actor.id):mind.predictedChange;
+    const before=target.state;if(changed)target.state=1-target.state;
+    const correct=predicted===changed;
+    const event={
+      step:mind.step,
+      observed:{kind:'A',state:actor.state,relation:'near',targetKind:'B',targetState:before,handle:actor.id},
+      predicted:{changed:predicted},
+      actual:{changed,from:before,to:target.state},
+      correct,
+      contradiction:correct?null:'κ'+mind.step,
+      distinction:mind.distinction?mind.distinction.handle:null
+    };
+    evidence.push(event);if(evidence.length>mind.maxEvidence)evidence.shift();
+    if(!correct){mind.contradictions++;addShard(mind.step);}
+    if(mind.distinction){mind.distinction.total++;if(correct)mind.distinction.correct++;}
+    proposeDistinction();
+    if(mind.step%8===0)snapshots.push({
+      step:mind.step,contradictions:mind.contradictions,
+      distinction:mind.distinction?{handle:mind.distinction.handle,bornAt:mind.distinction.bornAt,members:[...mind.distinction.members],prospectiveAccuracy:mind.distinction.total?mind.distinction.correct/mind.distinction.total:null}:null
+    });
+    if(snapshots.length>24)snapshots.shift();
+    mind.lastTarget=target;
+  }
+  root.userData.graphMind={
+    mind,motes,evidence,snapshots,
+    update(now){
+      positionMotes(now);
+      star.position.set(Math.cos(now*.00029)*.28,Math.sin(now*.00041)*.18,Math.sin(now*.00029)*.28);
+      if(mind.lastTick==null)mind.lastTick=now;
+      while(now-mind.lastTick>=mind.interval){mind.lastTick+=mind.interval;encounter();}
+      shards.children.forEach((shard,i)=>{const a=shard.userData.phase+now*.00035*(1+(i%3)*.08),r=shard.userData.radius;shard.position.set(Math.cos(a)*r,Math.sin(a*1.7)*.16,Math.sin(a)*r);shard.rotation.set(a,a*1.3,a*.7);});
+      crystal.visible=!!mind.distinction;if(crystal.visible){crystal.rotation.y=now*.00042;crystal.rotation.x=Math.sin(now*.00019)*.25;}
+      window.vestibuleDirty=true;
+    },
+    envelope(){
+      return {
+        schema:'graph-mind-evidence-envelope/0',
+        experiment:'tiny-aquarium',
+        seed:mind.seed,
+        startingVocabulary:{visible:['kind:A|B','state:0|1'],relations:['near','follows','changes']},
+        note:'Blind evidence only. Hidden world rule intentionally omitted.',
+        steps:mind.step,
+        contradictions:mind.contradictions,
+        distinction:mind.distinction?{handle:mind.distinction.handle,bornAt:mind.distinction.bornAt,prospectiveAccuracy:mind.distinction.total?mind.distinction.correct/mind.distinction.total:null}:null,
+        snapshots:snapshots.map(x=>structuredClone(x)),
+        events:evidence.map(x=>structuredClone(x))
+      };
+    },
+    groundTruth(){
+      return {schema:'graph-mind-ground-truth/0',seed:mind.seed,rule:'A carries an invisible inherited binary bit. Encountering an A with hidden=1 toggles the selected nearby B; hidden=0 leaves B unchanged.',assignments:motes.filter(m=>m.kind==='A').map(m=>({handle:m.id,hidden:m.hidden}))};
+    }
+  };
+}});
+
+function downloadGraphMindEnvelope(){
+  const gm=graphMindAquarium?.userData?.betwixtable?.presentation?.userData?.graphMind;
+  if(!gm)return false;
+  const blob=new Blob([JSON.stringify(gm.envelope(),null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='graph-mind-envelope-'+Date.now()+'.json';document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);return true;
+}
+globalThis.graphMindGroundTruth=()=>graphMindAquarium?.userData?.betwixtable?.presentation?.userData?.graphMind?.groundTruth();
+
 // Neptunian Jovian Betwixtable: Janus turns the old ice-pusher toy into a deterministic N-body encounter.
 const jovianBetwixtable=buildBetwixtable({name:'neptunian-jovian-system',parent:scene,at:new THREE.Vector3(0,GROUND_Y+9.45,0),padding:.38,build(root){
   const rim=new THREE.Mesh(new THREE.TorusGeometry(2.05,.075,10,64),brass);rim.rotation.x=Math.PI/2;root.add(rim);
@@ -4083,6 +4220,7 @@ addEventListener('resize',()=>{
 renderer.setAnimationLoop((now)=>{
   globalThis.boundedWitness?.updateIdle?.(now);
   workshopTabletopBetwixtable.userData.betwixtable.presentation.children.find(o=>o.name==='thoughtform:neptunian-caretaker-carrier')?.userData.animate?.(now);
+  graphMindAquarium.userData.betwixtable.presentation.userData.graphMind?.update(now);
   jovianBetwixtable.userData.betwixtable.presentation.userData.jovian?.update(now);
   jovianBetwixtable.userData.betwixtable.presentation.userData.jovian?.updateBearings(now);
   // Every thoughtform shares one gimbal behavior, but each keeps an independent phase.

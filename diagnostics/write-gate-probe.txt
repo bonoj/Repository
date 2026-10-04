@@ -1,6 +1,7 @@
-// benign language-model vocabulary experiment
-const vocabulary=["THE","CAT","DRAGON","MOON","EATS","SEES","BUILDS","DREAMS","A","SMALL","RED","WORLD","."];
-const tokens=[];
+// benign canvas language-machine probe
+const host=document.createElement("section");const canvas=document.createElement("canvas");host.append(canvas);document.body.append(host);const ctx=canvas.getContext("2d");
+const vocabulary=["THE","CAT","DRAGON","MOON","EATS","SEES","BUILDS","DREAMS","A","SMALL","RED","WORLD","."];const tokens=[];
 function weight(a,b){return ((a*7+b*11+a*b*3+7)%17)/16}
-function predictNext(){if(!tokens.length)return 0;let best=0,score=-1;for(let b=0;b<vocabulary.length;b++){let s=0;tokens.forEach((t,i)=>s+=weight(t,b)*(i+2));if(s>score){score=s;best=b}}return best}
-function appendToken(v){tokens.push(v);if(tokens.length>9)tokens.shift()}
+function predict(){if(!tokens.length)return;let best=0,bs=-1;for(let b=0;b<vocabulary.length;b++){let s=0;tokens.forEach((t,i)=>s+=weight(t,b)*(i+2));if(s>bs){bs=s;best=b}}tokens.push(best);if(tokens.length>9)tokens.shift()}
+canvas.addEventListener("pointerup",e=>{e.preventDefault();predict()});
+function draw(){ctx.fillStyle="#101216";ctx.fillRect(0,0,canvas.width,canvas.height);tokens.forEach((t,i)=>ctx.fillText(vocabulary[t],20+i*50,80));requestAnimationFrame(draw)}requestAnimationFrame(draw);

@@ -79,7 +79,7 @@
   for(let i=0;i<58;i++){
     let x=8+Math.floor(civHash(i,11)*(CIV_W-16)),y=8+Math.floor(civHash(i,29)*(CIV_H-16)),guard=0;
     while(!landAt(x,y)&&guard++<80){x=5+Math.floor(civHash(i+guard,41)*(CIV_W-10));y=5+Math.floor(civHash(i+guard,67)*(CIV_H-10))}
-    people.push({x:x+.5,y:y+.5,vx:0,vy:0,age:civHash(i,91)*20,home:-1});
+    people.push({x:x+.5,y:y+.5,vx:0,vy:0,age:civHash(i,91)*20,home:-1,rest:0,trail:[]});
   }
   function perturb(px,py,drag=false){
     const r=drag?2.2:6.2,depth=drag?.055:.16;
@@ -93,24 +93,44 @@
   }
   function civStep(dt){
     for(let i=ripples.length-1;i>=0;i--){const r=ripples[i];r.life-=dt*1.3;r.r+=(r.max-r.r)*dt*5;if(r.life<=0)ripples.splice(i,1)}
+    // A person alternates between belonging somewhere and making a purposeful trip.
+    // Town attraction is therefore social geography, not a force field.
     for(let n=0;n<people.length;n++){
       const p=people[n];p.age+=dt;
+      if(p.home<0&&towns.length){
+        let best=-1,bd=1e9;
+        for(let k=0;k<towns.length;k++){const t=towns[k],d=Math.hypot(t.x-p.x,t.y-p.y);if(d<bd&&d<18){bd=d;best=k}}
+        if(best>=0)p.home=best;
+      }
+      const home=p.home>=0?towns[p.home]:null;
+      if(home&&home.pop<.12)p.home=-1;
+      p.rest=Math.max(0,p.rest-dt);
       const cx=Math.max(1,Math.min(CIV_W-2,Math.floor(p.x))),cy=Math.max(1,Math.min(CIV_H-2,Math.floor(p.y)));
       let bestX=cx,bestY=cy,best=-99;
       for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){
         const x=cx+ox,y=cy+oy,i=civIdx(x,y);if(elevation[i]<=0)continue;
-        const score=fertility[i]*.8-wet[i]*.25+civHash(n+Math.floor(p.age*.4),i)*.38;
+        let score=fertility[i]*.95-wet[i]*.32;
+        if(home){
+          const nowD=Math.hypot(p.x-home.x,p.y-home.y),nextD=Math.hypot(x+.5-home.x,y+.5-home.y);
+          // Most motion is an excursion with a readable return tendency.
+          score+=(nowD>4? (nowD-nextD)*1.4 : (nextD-nowD)*.16);
+        }
+        score+=civHash(n+Math.floor(p.age*.18),i)*.12;
         if(score>best){best=score;bestX=x;bestY=y}
       }
-      p.vx+=(bestX+.5-p.x)*dt*.55;p.vy+=(bestY+.5-p.y)*dt*.55;
-      const sp=Math.hypot(p.vx,p.vy);if(sp>.72){p.vx*=.72/sp;p.vy*=.72/sp}
-      const nx=p.x+p.vx*dt*5,ny=p.y+p.vy*dt*5;
-      if(landAt(Math.floor(nx),Math.floor(ny))){p.x=nx;p.y=ny}else{p.vx*=-.65;p.vy*=-.65}
-      p.vx*=Math.pow(.78,dt);p.vy*=Math.pow(.78,dt);
+      const dx=bestX+.5-p.x,dy=bestY+.5-p.y;
+      if(p.rest<=0){p.vx+=dx*dt*.34;p.vy+=dy*dt*.34}
+      const sp=Math.hypot(p.vx,p.vy);if(sp>.46){p.vx*=.46/sp;p.vy*=.46/sp}
+      const nx=p.x+p.vx*dt*4.2,ny=p.y+p.vy*dt*4.2;
+      if(landAt(Math.floor(nx),Math.floor(ny))){p.x=nx;p.y=ny}else{p.vx*=-.5;p.vy*=-.5;p.rest=.5}
+      p.vx*=Math.pow(.66,dt);p.vy*=Math.pow(.66,dt);
+      if(home&&Math.hypot(p.x-home.x,p.y-home.y)<2.2&&civHash(n,Math.floor(p.age))>.992)p.rest=.8+civHash(n+7,Math.floor(p.age))*1.8;
+      if(!p.trail)p.trail=[];
+      if(!p.trail.length||Math.hypot(p.x-p.trail[p.trail.length-1].x,p.y-p.trail[p.trail.length-1].y)>.7){p.trail.push({x:p.x,y:p.y});if(p.trail.length>8)p.trail.shift()}
     }
-    // Settlements are consequences of repeated local habitation, not placed UI.
+    // Settlements remain emergent, but inhabitants who witness one can belong to it.
     if(towns.length<10&&Math.floor(civAcc)%17===0){
-      for(const p of people){if(towns.some(t=>Math.hypot(t.x-p.x,t.y-p.y)<8))continue;const i=civIdx(Math.floor(p.x),Math.floor(p.y));if(fertility[i]>.53&&civHash(Math.floor(civAcc),Math.floor(p.x*13+p.y))>.985){towns.push({x:p.x,y:p.y,pop:1});break}}
+      for(const p of people){if(towns.some(t=>Math.hypot(t.x-p.x,t.y-p.y)<8))continue;const i=civIdx(Math.floor(p.x),Math.floor(p.y));if(fertility[i]>.53&&civHash(Math.floor(civAcc),Math.floor(p.x*13+p.y))>.985){towns.push({x:p.x,y:p.y,pop:1});p.home=towns.length-1;break}}
     }
     for(const t of towns){let near=0;for(const p of people)if(Math.hypot(p.x-t.x,p.y-t.y)<6)near++;t.pop+=(near-t.pop)*dt*.08;if(!landAt(Math.floor(t.x),Math.floor(t.y)))t.pop*=Math.pow(.25,dt)}
   }
@@ -129,8 +149,15 @@
     const sx=w/CIV_W,sy=h/CIV_H;
     civ.lineWidth=Math.max(1,Math.min(sx,sy)*.22);
     for(const t of towns){if(t.pop<.12)continue;civ.fillStyle="rgba(236,205,139,.9)";const s=Math.max(2,Math.min(7,2+t.pop*.32))*Math.min(sx,sy);civ.fillRect(t.x*sx-s/2,t.y*sy-s/2,s,s)}
-    civ.fillStyle="rgba(245,232,194,.92)";
-    for(const p of people){const r=Math.max(1.1,Math.min(sx,sy)*.32);civ.beginPath();civ.arc(p.x*sx,p.y*sy,r,0,Math.PI*2);civ.fill()}
+    // Movement leaves a faint human-scale path; bodies have facing, not orbital-dot symmetry.
+    civ.lineWidth=Math.max(1,Math.min(sx,sy)*.16);
+    for(const p of people){
+      if(p.trail?.length>1){civ.strokeStyle="rgba(226,211,169,.18)";civ.beginPath();civ.moveTo(p.trail[0].x*sx,p.trail[0].y*sy);for(let i=1;i<p.trail.length;i++)civ.lineTo(p.trail[i].x*sx,p.trail[i].y*sy);civ.stroke()}
+      const a=Math.atan2(p.vy,p.vx),s=Math.max(1.6,Math.min(sx,sy)*.52);
+      civ.save();civ.translate(p.x*sx,p.y*sy);civ.rotate(a+Math.PI/2);
+      civ.fillStyle=p.home>=0?"rgba(247,226,178,.96)":"rgba(220,215,194,.9)";
+      civ.beginPath();civ.moveTo(0,-s);civ.lineTo(s*.48,s*.62);civ.lineTo(0,s*.38);civ.lineTo(-s*.48,s*.62);civ.closePath();civ.fill();civ.restore();
+    }
     for(const r of ripples){civ.strokeStyle="rgba(230,235,220,"+Math.max(0,r.life*.7)+")";civ.beginPath();civ.ellipse(r.x*sx,r.y*sy,r.r*sx,r.r*sy,0,0,Math.PI*2);civ.stroke()}
   }
   function civLoop(now){

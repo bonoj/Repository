@@ -3163,15 +3163,15 @@ function telescopeWorkshopFocus(incoming){
   outgoing.updateWorldMatrix(true,true);incoming.updateWorldMatrix(true,true);
   const outgoingHome=saved.position.clone();
   const incomingHome=incoming.position.clone();
-  const incomingFrom=incoming.position.clone();
-  const seat=workshopPresentationPosition(incoming);
+  const incomingFromWorld=incoming.getWorldPosition(new THREE.Vector3());
+  const seatWorld=outgoing.getWorldPosition(new THREE.Vector3());
   workshopFocusMotion={
     telescope:true,outgoing,incoming,
     outgoingFrom:outgoing.position.clone(),outgoingTo:outgoingHome,
-    incomingFrom,incomingTo:seat,incomingHome,
+    incomingFromWorld,seatWorld,incomingHome,
     fromTarget:target.clone(),toTarget:target.clone(),
     fromCameraPosition:camera.position.clone(),toCameraPosition:camera.position.clone(),
-    started:performance.now(),duration:THREE.MathUtils.clamp(390+incomingFrom.distanceTo(seat)*22,430,610)
+    started:performance.now(),duration:THREE.MathUtils.clamp(390+incomingFromWorld.distanceTo(seatWorld)*22,430,610)
   };
   saved.position=incomingHome;
   focusedWorkshopObject=incoming;
@@ -3184,14 +3184,16 @@ function updateWorkshop(now){
     const m=workshopFocusMotion,raw=Math.min(1,(now-m.started)/m.duration),t=easeQuiet(raw);
     if(m.telescope){
       m.outgoing.position.lerpVectors(m.outgoingFrom,m.outgoingTo,t);
-      m.incoming.position.lerpVectors(m.incomingFrom,m.incomingTo,t);
+      const worldPos=new THREE.Vector3().lerpVectors(m.incomingFromWorld,m.seatWorld,t);
+      m.incoming.position.copy(m.incoming.parent?m.incoming.parent.worldToLocal(worldPos):worldPos);
     }else m.obj.position.lerpVectors(m.from,m.to,t);
     camera.position.lerpVectors(m.fromCameraPosition,m.toCameraPosition,t);
     target.lerpVectors(m.fromTarget,m.toTarget,t);camera.lookAt(target);
     if(raw>=1){
       if(m.telescope){
         m.outgoing.position.copy(m.outgoingTo);
-        m.incoming.position.copy(m.incomingTo);
+        const seatLocal=m.seatWorld.clone();
+        m.incoming.position.copy(m.incoming.parent?m.incoming.parent.worldToLocal(seatLocal):seatLocal);
         workshopFocusMotion=null;window.vestibuleDirty=true;
         return;
       }

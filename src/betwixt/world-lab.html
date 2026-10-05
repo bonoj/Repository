@@ -1946,52 +1946,84 @@ const observerTwixt=buildBetwixtable({
 const observerEye=observerTwixt.userData.betwixtable.presentation.userData.observerEye;
 const observerGazePoint=new THREE.Vector3();
 const observerGazeLocal=new THREE.Vector3();
-const observerGazeFrom=new THREE.Vector3(0,0,1);
-const observerGazeTo=new THREE.Vector3(0,0,1);
-const observerGazeDirection=new THREE.Vector3(0,0,1);
-const observerGazeQuaternion=new THREE.Quaternion();
-let observerGazeNext=0,observerGazeStarted=0,observerGazeDuration=1200;
-function observerEyeWorldPosition(out=new THREE.Vector3()){return observerEye.getWorldPosition(out)}
-function chooseObserverGaze(now){
-  const eyeWorld=observerEyeWorldPosition();
-  const roll=Math.random();
-  if(roll<.16){
-    // A glance at the human is a sampled encounter, not camera pursuit.
-    observerGazePoint.copy(camera.position);
-    observerGazeDuration=700+Math.random()*650;
-    observerGazeNext=now+observerGazeDuration+900+Math.random()*1700;
-  }else if(roll<.48){
-    // Nearby bonded matter can catch its attention.
-    workshopCrucibleBetwixtable.userData.betwixtable.bounds().getCenter(observerGazePoint);
-    observerGazePoint.x+=(Math.random()-.5)*.20;
-    observerGazePoint.y+=(Math.random()-.5)*.16;
-    observerGazePoint.z+=(Math.random()-.5)*.20;
-    observerGazeDuration=900+Math.random()*900;
-    observerGazeNext=now+observerGazeDuration+1200+Math.random()*2200;
-  }else{
-    // Most attention is self-directed wandering through nearby space.
-    const a=Math.random()*Math.PI*2,e=(Math.random()-.5)*.8;
-    observerGazePoint.set(Math.cos(a)*Math.cos(e),Math.sin(e),Math.sin(a)*Math.cos(e))
-      .multiplyScalar(2.5).add(eyeWorld);
-    observerGazeDuration=1100+Math.random()*1300;
-    observerGazeNext=now+observerGazeDuration+1400+Math.random()*2600;
-  }
-  observerEye.getWorldDirection(observerGazeFrom).normalize();
-  observerGazeTo.copy(observerGazePoint).sub(eyeWorld).normalize();
-  observerGazeStarted=now;
+const observerEyeWorld=new THREE.Vector3();
+const observerDesiredWorld=new THREE.Vector3();
+const observerDesiredLocal=new THREE.Vector3();
+const observerLocalForward=new THREE.Vector3(0,0,1); // iris/pupil are physically built on +Z
+const observerTargetPoint=new THREE.Vector3();
+const observerOrientFrom=new THREE.Quaternion();
+const observerOrientTo=new THREE.Quaternion();
+const observerLookMatrix=new THREE.Matrix4();
+const observerParentWorldQuaternion=new THREE.Quaternion();
+let observerAttention='wander';
+let observerAttentionStarted=0;
+let observerAttentionUntil=0;
+let observerAttentionTarget=null;
+let observerNextNotice=performance.now()+4200+Math.random()*5200;
+
+function observerWorldTargetToLocalQuaternion(worldPoint,out){
+  observerEye.getWorldPosition(observerEyeWorld);
+  observerDesiredWorld.copy(worldPoint).sub(observerEyeWorld).normalize();
+  observerEye.parent.getWorldQuaternion(observerParentWorldQuaternion);
+  observerDesiredLocal.copy(observerDesiredWorld).applyQuaternion(observerParentWorldQuaternion.invert()).normalize();
+  out.setFromUnitVectors(observerLocalForward,observerDesiredLocal);
+  return out;
+}
+function observerWanderQuaternion(now,out){
+  // Continuous idle life: predominantly side-to-side, with a smaller independent vertical drift.
+  const t=now*.001;
+  const yaw=.46*Math.sin(t*.34)+.13*Math.sin(t*.127+1.7);
+  const pitch=.105*Math.sin(t*.23+.8)+.035*Math.sin(t*.071+2.4);
+  return out.setFromEuler(new THREE.Euler(pitch,yaw,0,'YXZ'));
+}
+function beginObserverAttention(now,target){
+  observerAttention='orient';
+  observerAttentionStarted=now;
+  observerAttentionTarget=target;
+  observerOrientFrom.copy(observerEye.quaternion);
+  if(target==='camera')observerTargetPoint.copy(camera.position);
+  else workshopCrucibleBetwixtable.userData.betwixtable.bounds().getCenter(observerTargetPoint);
+  observerWorldTargetToLocalQuaternion(observerTargetPoint,observerOrientTo);
+  observerAttentionUntil=now+720+Math.random()*380; // legible orient, never a snap
 }
 function updateObserverEye(now){
   if(!betwixtPlace.visible||!observerEye)return;
-  if(!observerGazeNext||now>=observerGazeNext)chooseObserverGaze(now);
-  const t=THREE.MathUtils.smoothstep(Math.min(1,(now-observerGazeStarted)/observerGazeDuration),0,1);
-  observerGazeDirection.copy(observerGazeFrom).lerp(observerGazeTo,t).normalize();
-  observerGazePoint.copy(observerEyeWorldPosition()).add(observerGazeDirection);
-  observerEye.parent.worldToLocal(observerGazeLocal.copy(observerGazePoint));
-  observerEye.lookAt(observerGazeLocal);
+
+  if(observerAttention==='wander'){
+    observerWanderQuaternion(now,observerOrientTo);
+    observerEye.quaternion.slerp(observerOrientTo,.035);
+    if(now>=observerNextNotice){
+      // The room catches attention more often than the human does.
+      beginObserverAttention(now,Math.random()<.24?'camera':'crucible');
+    }
+  }else if(observerAttention==='orient'){
+    // Target was sampled when attention was caught; orient deliberately toward that encounter.
+    const t=THREE.MathUtils.smoothstep(
+      THREE.MathUtils.clamp((now-observerAttentionStarted)/(observerAttentionUntil-observerAttentionStarted),0,1),0,1
+    );
+    observerEye.quaternion.copy(observerOrientFrom).slerp(observerOrientTo,t);
+    if(now>=observerAttentionUntil){
+      observerAttention='attend';
+      observerAttentionStarted=now;
+      observerAttentionUntil=now+850+Math.random()*1150;
+    }
+  }else{
+    // While attention is held, a moving target may be pursued; fixation itself retains tiny living drift.
+    if(observerAttentionTarget==='camera')observerTargetPoint.copy(camera.position);
+    else workshopCrucibleBetwixtable.userData.betwixtable.bounds().getCenter(observerTargetPoint);
+    observerWorldTargetToLocalQuaternion(observerTargetPoint,observerOrientTo);
+    const microYaw=.008*Math.sin(now*.0041);
+    const microPitch=.005*Math.sin(now*.0033+1.1);
+    observerOrientTo.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(microPitch,microYaw,0,'YXZ')));
+    observerEye.quaternion.slerp(observerOrientTo,.09);
+    if(now>=observerAttentionUntil){
+      observerAttention='wander';
+      observerAttentionTarget=null;
+      observerNextNotice=now+4200+Math.random()*6200;
+    }
+  }
   window.vestibuleDirty=true;
 }
-observerTwixt.userData.betwixtable.focusDistance=3.15;
-workshopCrucibleBetwixtable.userData.betwixtable.focusDistance=3.15;
 registerRelationalNode('observer-eye',{object:observerTwixt,bounds:()=>observerTwixt.userData.betwixtable.bounds()});
 registerRelationalNode('crucible-twixt',{object:workshopCrucibleBetwixtable,bounds:()=>workshopCrucibleBetwixtable.userData.betwixtable.bounds()});
 relateSpatial({subject:'observer-eye',kind:'above',reference:'crucible-twixt',gap:.22});

@@ -1884,11 +1884,18 @@ const constructionWitnessT1=buildBetwixtable({
     }
     function attach(childId,childPort,parentId,parentPort,{child={},parent={}}={}){
       const c=things.get(childId),p=things.get(parentId);
-      if(relations.some(r=>r.some(([id,port])=>(id===childId&&port===childPort)||(id===parentId&&port===parentPort))))throw Error('T1 construction port occupied');
+      // Continuous surfaces may host multiple relations at distinct selectors.
+      // Only discrete ports are exclusive as a whole.
+      const endpointOccupied=(id,port,selector)=>{
+        const t=things.get(id),surface=['side','rim','surface'].includes(port);
+        if(surface)return relations.some(r=>r.some(e=>e.id===id&&e.port===port&&JSON.stringify(e.selector||{})===JSON.stringify(selector||{})));
+        return relations.some(r=>r.some(e=>e.id===id&&e.port===port));
+      };
+      if(endpointOccupied(childId,childPort,child)||endpointOccupied(parentId,parentPort,parent))throw Error('T1 construction attachment occupied');
       presentation.updateMatrixWorld(true);const cf=worldFrame(c,childPort,child),pf=worldFrame(p,parentPort,parent);
       c.root.quaternion.premultiply(new THREE.Quaternion().setFromUnitVectors(cf.out,pf.out.clone().negate()));
       presentation.updateMatrixWorld(true);c.root.position.add(pf.p.clone().sub(worldFrame(c,childPort,child).p));
-      relations.push([[childId,childPort],[parentId,parentPort]]);
+      relations.push([{id:childId,port:childPort,selector:{...child}},{id:parentId,port:parentPort,selector:{...parent}}]);
     }
     attach('post-A','top','slab-A','bottom');
     attach('rail-A','a','post-A','side',{parent:{along:.27}});

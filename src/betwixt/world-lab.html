@@ -2572,20 +2572,23 @@ const worldD20=buildBetwixtable({
   padding:.55,interact:()=>startRocketChase(),
   build(root,spatial){
     const shellGeo=new THREE.IcosahedronGeometry(worldD20Radius,0);
-    const lattice=new THREE.LineSegments(
-      new THREE.EdgesGeometry(shellGeo),
-      new THREE.LineBasicMaterial({color:0xc49a55,transparent:true,opacity:.95})
-    );
-    lattice.name='world-d20:hollow-lattice';root.add(lattice);
-
-    // Small brass joints make the open polyhedron read as a physical cage.
+    // Thirty physical struts: the openings are faces, the edges are real walls.
+    const frameMat=new THREE.MeshStandardMaterial({color:0xc49a55,metalness:.72,roughness:.28});
+    const edgePos=new THREE.EdgesGeometry(shellGeo).getAttribute('position');
+    const edgeA=new THREE.Vector3(),edgeB=new THREE.Vector3(),edgeMid=new THREE.Vector3(),edgeDir=new THREE.Vector3();
+    for(let i=0;i<edgePos.count;i+=2){
+      edgeA.fromBufferAttribute(edgePos,i);edgeB.fromBufferAttribute(edgePos,i+1);
+      edgeMid.copy(edgeA).add(edgeB).multiplyScalar(.5);edgeDir.copy(edgeB).sub(edgeA);
+      const strut=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,edgeDir.length(),10),frameMat);
+      strut.position.copy(edgeMid);strut.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),edgeDir.clone().normalize());
+      root.add(strut);
+    }
     const pos=shellGeo.getAttribute('position'),seen=[];
     for(let i=0;i<pos.count;i++){
       const p=new THREE.Vector3().fromBufferAttribute(pos,i);
       if(seen.some(q=>q.distanceToSquared(p)<1e-8))continue;
       seen.push(p.clone());
-      const joint=new THREE.Mesh(new THREE.SphereGeometry(.035,8,6),new THREE.MeshStandardMaterial({color:0xc49a55,metalness:.72,roughness:.28}));
-      joint.position.copy(p);root.add(joint);
+      const joint=new THREE.Mesh(new THREE.SphereGeometry(.09,10,7),frameMat);joint.position.copy(p);root.add(joint);
     }
 
     // Face centers are semantic portals, not visible panels.
@@ -2595,7 +2598,7 @@ const worldD20=buildBetwixtable({
       const b=new THREE.Vector3().fromBufferAttribute(tri,i*3+1);
       const d=new THREE.Vector3().fromBufferAttribute(tri,i*3+2);
       const center=a.add(b).add(d).multiplyScalar(1/3);
-      portals.push({center:center.clone(),normal:center.clone().normalize()});
+      portals.push({center:center.clone(),normal:center.clone().normalize(),corners:[a.clone(),b.clone(),d.clone()]});
     }
 
     // Rocket points along local +Y. Quaternion below maps +Y to instantaneous travel.
@@ -2618,14 +2621,30 @@ const worldD20=buildBetwixtable({
     const up=new THREE.Vector3(0,1,0),gravity=new THREE.Vector3(0,-.58,0);
     const velocity=new THREE.Vector3(),desired=new THREE.Vector3(),accel=new THREE.Vector3();
     let portalIndex=2,nextIndex=13,last=performance.now();
+    const rocketClearance=.16;
     rocket.position.copy(portals[portalIndex].center).addScaledVector(portals[portalIndex].normal,worldD20Radius*.48);
     velocity.copy(portals[portalIndex].normal).multiplyScalar(-1.25);
 
     function chooseNext(){
-      // Deterministic stride visits distant openings so crossings visibly traverse the volume.
       portalIndex=nextIndex;
+      // Distant deterministic openings; center targeting leaves generous clearance from every strut.
       nextIndex=(nextIndex+7)%portals.length;
       if(nextIndex===portalIndex)nextIndex=(nextIndex+9)%portals.length;
+    }
+    function keepClearOfFrame(){
+      // Hard collision against all 30 cylindrical edge segments, with rocket body clearance.
+      for(let i=0;i<edgePos.count;i+=2){
+        edgeA.fromBufferAttribute(edgePos,i);edgeB.fromBufferAttribute(edgePos,i+1);
+        const ab=edgeB.clone().sub(edgeA),ap=rocket.position.clone().sub(edgeA);
+        const t=THREE.MathUtils.clamp(ap.dot(ab)/ab.lengthSq(),0,1);
+        const nearest=edgeA.clone().addScaledVector(ab,t),away=rocket.position.clone().sub(nearest);
+        const min=.075+rocketClearance,d=away.length();
+        if(d<min){
+          if(d<1e-5)away.copy(rocket.position).normalize();else away.multiplyScalar(1/d);
+          rocket.position.copy(nearest).addScaledVector(away,min);
+          const vn=velocity.dot(away);if(vn<0)velocity.addScaledVector(away,-1.65*vn);
+        }
+      }
     }
     worldD20Animators.push(now=>{
       const dt=Math.min(.032,Math.max(.001,(now-last)/1000));last=now;
@@ -2639,6 +2658,7 @@ const worldD20=buildBetwixtable({
       const speed=velocity.length();
       if(speed>1.75)velocity.multiplyScalar(1.75/speed);
       rocket.position.addScaledVector(velocity,dt);
+      keepClearOfFrame();
       if(velocity.lengthSq()>1e-6)rocket.quaternion.setFromUnitVectors(up,velocity.clone().normalize());
       flame.scale.y=.72+.28*Math.sin(now*.022);flame.scale.x=flame.scale.z=.86+.14*Math.sin(now*.031);
       if(distance<.2)chooseNext();
@@ -2677,8 +2697,8 @@ function updateRocketChase(now){
   const forward=new THREE.Vector3(0,1,0).applyQuaternion(q).normalize();
   let chaseUp=new THREE.Vector3(0,1,0);if(Math.abs(forward.dot(chaseUp))>.92)chaseUp.set(0,0,1);
   const side=new THREE.Vector3().crossVectors(forward,chaseUp).normalize();chaseUp.crossVectors(side,forward).normalize();
-  const desired=p.clone().addScaledVector(forward,-.78).addScaledVector(chaseUp,.32);
-  const look=p.clone().addScaledVector(forward,.42);
+  const desired=p.clone().addScaledVector(forward,-2.35).addScaledVector(chaseUp,.82);
+  const look=p.clone().addScaledVector(forward,.68);
   camera.position.lerp(desired,.15);target.lerp(look,.18);camera.up.lerp(chaseUp,.1).normalize();camera.lookAt(target);
 }
 function updateWorldD20(now){if(worldD20Animators.length){for(const animate of worldD20Animators)animate(now);}updateRocketChase(now);window.vestibuleDirty=true;}

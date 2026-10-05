@@ -29,15 +29,42 @@ export function primitiveFrames(thing){
   const d=thing.semantics.dimensions;
   if(thing.kind==="post")return [
     {thing:thing.id,port:"top",position:[0,d.height/2,0],outward:[0,1,0],up:[0,0,1]},
-    {thing:thing.id,port:"bottom",position:[0,-d.height/2,0],outward:[0,-1,0],up:[0,0,1]}
+    {thing:thing.id,port:"bottom",position:[0,-d.height/2,0],outward:[0,-1,0],up:[0,0,1]},
+    {thing:thing.id,port:"side",surface:"cylinder",radius:d.radius,span:d.height,axis:[0,1,0]}
   ];
   if(thing.kind==="rail")return [
     {thing:thing.id,port:"a",position:[-d.length/2,0,0],outward:[-1,0,0],up:[0,1,0]},
-    {thing:thing.id,port:"b",position:[d.length/2,0,0],outward:[1,0,0],up:[0,1,0]}
+    {thing:thing.id,port:"b",position:[d.length/2,0,0],outward:[1,0,0],up:[0,1,0]},
+    {thing:thing.id,port:"side",surface:"cylinder",radius:d.radius,span:d.length,axis:[1,0,0]}
   ];
   if(thing.kind==="block"||thing.kind==="slab")return [
     {thing:thing.id,port:"top",position:[0,d.size[1]/2,0],outward:[0,1,0],up:[0,0,1]},
     {thing:thing.id,port:"bottom",position:[0,-d.size[1]/2,0],outward:[0,-1,0],up:[0,0,1]}
   ];
-  return [{thing:thing.id,port:"center",position:[0,0,0],outward:[0,1,0],up:[0,0,1]}];
+  if(thing.kind==="ring")return [
+    {thing:thing.id,port:"rim",surface:"torus",radius:d.radius,tube:d.tube,axis:[0,0,1]},
+    {thing:thing.id,port:"axis",axis:[0,0,1]}
+  ];
+  if(thing.kind==="bead")return [
+    {thing:thing.id,port:"surface",surface:"sphere",radius:d.radius}
+  ];
+  return [];
+}
+
+// A relation may select a concrete frame from a continuous attachment surface.
+// Selection belongs to realization: semantic ports remain surfaces/axes, not coordinates.
+export function selectPrimitiveFrame(thing,port,selector={}){
+  const d=thing.semantics.dimensions;
+  const angle=selector.angle??0,along=selector.along??0;
+  if((thing.kind==="post"||thing.kind==="rail")&&port==="side"){
+    if(thing.kind==="post")return {position:[Math.cos(angle)*d.radius,along*d.height/2,Math.sin(angle)*d.radius],outward:[Math.cos(angle),0,Math.sin(angle)],up:[0,1,0]};
+    return {position:[along*d.length/2,Math.cos(angle)*d.radius,Math.sin(angle)*d.radius],outward:[0,Math.cos(angle),Math.sin(angle)],up:[1,0,0]};
+  }
+  if(thing.kind==="ring"&&port==="rim")
+    return {position:[Math.cos(angle)*d.radius,Math.sin(angle)*d.radius,0],outward:[Math.cos(angle),Math.sin(angle),0],up:[0,0,1]};
+  if(thing.kind==="bead"&&port==="surface"){
+    const polar=selector.polar??Math.PI/2;
+    return {position:[Math.sin(polar)*Math.cos(angle)*d.radius,Math.cos(polar)*d.radius,Math.sin(polar)*Math.sin(angle)*d.radius],outward:[Math.sin(polar)*Math.cos(angle),Math.cos(polar),Math.sin(polar)*Math.sin(angle)],up:[0,1,0]};
+  }
+  return primitiveFrames(thing).find(f=>f.port===port)??null;
 }

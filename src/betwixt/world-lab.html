@@ -2620,9 +2620,9 @@ const worldD20=buildBetwixtable({
 
     const up=new THREE.Vector3(0,1,0);
     let last=performance.now(),trip=0,mode='TRANSIT',targetPortal=null;
-    const bodyRadius=.19,bodyHalfLength=.34,safeMargin=.07;
+    const bodyRadius=.19,bodyHalfLength=.34,safeMargin=.075,frameRadius=.075;
     const velocity=new THREE.Vector3(),desiredDir=new THREE.Vector3(),steer=new THREE.Vector3(),forward=new THREE.Vector3();
-    const cruise=1.18,maxTurnAccel=.72,farRadius=worldD20Radius*2.45;
+    const cruise=1.12,maxTurnAccel=.68,farRadius=worldD20Radius*2.55,predictTime=1.15;
     function portalClearance(p){
       let min=Infinity;
       for(const pair of [[p.corners[0],p.corners[1]],[p.corners[1],p.corners[2]],[p.corners[2],p.corners[0]]]){
@@ -2632,54 +2632,86 @@ const worldD20=buildBetwixtable({
       }
       return min;
     }
-    const viablePortals=portals.filter(p=>portalClearance(p)>bodyRadius+safeMargin);
-    function choosePortal(){
-      trip++;targetPortal=viablePortals[(trip*7+3)%viablePortals.length]||portals[(trip*7+3)%portals.length];
+    const viablePortals=portals.filter(p=>portalClearance(p)>bodyRadius+safeMargin+frameRadius);
+    function choosePortal(){trip++;targetPortal=viablePortals[(trip*7+3)%viablePortals.length]||portals[(trip*7+3)%portals.length];}
+    function pointSegmentDistance(p,a,b){
+      const ab=b.clone().sub(a),t=THREE.MathUtils.clamp(p.clone().sub(a).dot(ab)/ab.lengthSq(),0,1);
+      return p.distanceTo(a.clone().addScaledVector(ab,t));
+    }
+    function corridorClear(origin,dir,horizon){
+      // Conservative capsule sweep approximation: sample the future centerline and
+      // reject it before the body envelope can reach any brass strut.
+      const d=dir.clone().normalize(),step=.11,clear=bodyRadius+safeMargin+frameRadius;
+      for(let dist=bodyHalfLength;dist<=horizon+bodyHalfLength;dist+=step){
+        const p=origin.clone().addScaledVector(d,dist);
+        for(let i=0;i<edgePos.count;i+=2){
+          edgeA.fromBufferAttribute(edgePos,i);edgeB.fromBufferAttribute(edgePos,i+1);
+          if(pointSegmentDistance(p,edgeA,edgeB)<clear)return false;
+        }
+      }
+      return true;
+    }
+    function rotateCandidate(base,axis,angle){return base.clone().applyAxisAngle(axis,angle).normalize();}
+    function safeHeading(preferred){
+      const base=velocity.clone().normalize(),want=preferred.clone().normalize();
+      const horizon=cruise*predictTime;
+      if(corridorClear(rocket.position,want,horizon))return want;
+      // Reynolds-style predictive avoidance: search small heading changes first.
+      const side=new THREE.Vector3().crossVectors(base,up);
+      if(side.lengthSq()<.02)side.set(1,0,0);else side.normalize();
+      const localUp=new THREE.Vector3().crossVectors(side,base).normalize();
+      const angles=[.16,-.16,.28,-.28,.42,-.42,.58,-.58,.76,-.76,1.0,-1.0];
+      for(const a of angles){
+        const axis=Math.abs(a*10)%2<1?localUp:side;
+        const cand=rotateCandidate(base,axis,a);
+        if(corridorClear(rocket.position,cand,horizon))return cand;
+      }
+      // If boxed in, favor the clearest backward-curving candidate rather than impact.
+      return rotateCandidate(base,localUp,1.15);
     }
     function steerToward(dir,dt,strength=maxTurnAccel){
-      desiredDir.copy(dir).normalize();
+      const safe=safeHeading(dir);
+      desiredDir.copy(safe);
       const speed=Math.max(.001,velocity.length());
       forward.copy(velocity).multiplyScalar(1/speed);
-      // Lateral acceleration only: turn the velocity vector without waypoint braking.
-      steer.copy(desiredDir).sub(forward.multiplyScalar(desiredDir.dot(forward)));
+      steer.copy(desiredDir).sub(forward.clone().multiplyScalar(desiredDir.dot(forward)));
       if(steer.lengthSq()>1e-8)steer.normalize().multiplyScalar(strength);
       velocity.addScaledVector(steer,dt).normalize().multiplyScalar(cruise);
     }
-    rocket.position.copy((viablePortals[0]||portals[0]).normal).multiplyScalar(-worldD20Radius*.28);
-    choosePortal();
-    velocity.copy(targetPortal.center).sub(rocket.position).normalize().multiplyScalar(cruise);
+    rocket.position.copy((viablePortals[0]||portals[0]).normal).multiplyScalar(-worldD20Radius*.24);
+    choosePortal();velocity.copy(targetPortal.center).sub(rocket.position).normalize().multiplyScalar(cruise);
     worldD20Animators.push(now=>{
-      const dt=Math.min(.032,Math.max(.001,(now-last)/1000));last=now;
-      const r=rocket.position.length();
+      const dt=Math.min(.032,Math.max(.001,(now-last)/1000));last=now,r=rocket.position.length();
       if(mode==='TRANSIT'){
-        // Aim through the aperture along its normal corridor; the conservative capsule
-        // clearance was checked before this opening could become a target.
-        const gate=targetPortal.center;
-        const outward=targetPortal.normal;
-        const aim=gate.clone().addScaledVector(outward,worldD20Radius*.9);
-        steerToward(aim.sub(rocket.position),dt,.54);
-        if(rocket.position.dot(outward)>worldD20Radius*1.28)mode='ORBIT';
+        const gate=targetPortal.center,outward=targetPortal.normal;
+        const aim=gate.clone().addScaledVector(outward,worldD20Radius*.95);
+        steerToward(aim.sub(rocket.position),dt,.58);
+        if(rocket.position.dot(outward)>worldD20Radius*1.32)mode='ORBIT';
       }else{
-        // Wide constant-speed banking arc outside. No endpoint, deceleration or reversal.
-        // Inward acceleration bends the persistent velocity until a safe aperture lines up.
         const inward=rocket.position.clone().multiplyScalar(-1).normalize();
-        steerToward(inward,dt,maxTurnAccel);
-        if(r>farRadius)steerToward(inward,dt,maxTurnAccel*1.35);
-        if(r<worldD20Radius*1.72){
-          choosePortal();mode='TRANSIT';
+        steerToward(inward,dt,r>farRadius?maxTurnAccel*1.3:maxTurnAccel);
+        // Only commit when a complete conservative corridor to and through an aperture is clear.
+        if(r<worldD20Radius*1.9){
+          const candidates=viablePortals.filter(p=>{
+            const to=p.center.clone().sub(rocket.position),h=to.length()+worldD20Radius*.8;
+            return to.dot(velocity)>0&&corridorClear(rocket.position,to,h);
+          });
+          if(candidates.length){targetPortal=candidates[(trip++*5+2)%candidates.length];mode='TRANSIT';}
         }
       }
+      // Last prospective veto at the actual velocity: turn now, never bounce later.
+      if(!corridorClear(rocket.position,velocity,cruise*.72))steerToward(rocket.position.clone().multiplyScalar(-1),dt,maxTurnAccel*1.45);
       rocket.position.addScaledVector(velocity,dt);
       if(velocity.lengthSq()>1e-7)rocket.quaternion.setFromUnitVectors(up,velocity.clone().normalize());
       flame.scale.y=.72+.28*Math.sin(now*.022);flame.scale.x=flame.scale.z=.86+.14*Math.sin(now*.031);
     });
-    root.userData.rocketBody={kind:'capsule-envelope',radius:bodyRadius,halfLength:bodyHalfLength,margin:safeMargin};
+    root.userData.rocketBody={kind:'capsule-envelope',radius:bodyRadius,halfLength:bodyHalfLength,margin:safeMargin,predictiveClearance:true};
     root.userData.portals=portals;
     root.userData.rocket=rocket;
     spatial.fit();
   }
 });
-worldD20.userData.world=Object.freeze({kind:'hollow-d20-flight',faces:20,rule:'embodied rocket maintains forward speed: body-safe transit through aperture, then wide lateral-acceleration orbit outside, then another safe transit; no waypoint braking or reversal'});
+worldD20.userData.world=Object.freeze({kind:'hollow-d20-flight',faces:20,rule:'persistent-speed embodied flight with conservative prospective capsule clearance; collision prediction vetoes unsafe headings before impact; safe transit alternates with wide exterior banking'});
 const rocketChase={active:false,returning:false,saved:null,fromCamera:new THREE.Vector3(),fromTarget:new THREE.Vector3(),started:0};
 function startRocketChase(){
   if(rocketChase.active)return;

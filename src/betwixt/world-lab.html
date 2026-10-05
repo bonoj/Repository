@@ -4094,13 +4094,6 @@ function workshopTap(x,y){
     if(b===relationalInspectionBetwixtable)showMoleculeCard(true);
     window.vestibuleDirty=true;return true;
   }
-  // Raycast the larger invisible volume explicitly; invisible objects are skipped by normal rendering.
-  workshopCrucibleOrbTapTarget.visible=true;
-  const crucibleOrbHit=raycaster.intersectObject(workshopCrucibleOrbTapTarget,false).length>0;
-  workshopCrucibleOrbTapTarget.visible=false;
-  if(crucibleOrbHit){
-    tapWorkshopCrucibleOrb();window.vestibuleDirty=true;return true;
-  }
   if(cruciblePlace.visible&&workshopCrucibleTool&&workshopTerrain){
     const hit=raycaster.intersectObject(workshopTerrain.mesh,true)[0];
     if(hit){

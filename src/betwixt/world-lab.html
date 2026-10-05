@@ -1929,12 +1929,30 @@ function scanConstructionT1(){
   }
   constructionT1Observer.pause();
   const transcript=constructionT1Observer.transcript().slice(before),hits=transcript.filter(r=>r.result?.target),occluded=transcript.filter(r=>r.result?.status==='occluded');
+  // Diagnose what Observer actually encountered without teaching its rays semantic identity.
+  // Continuity remains anonymous during sensing; only after the mission do we compare
+  // anonymous hit clusters with the realized meshes that built T1.
+  const continuitySummary=new Map();
+  for(const record of hits){
+    const h=record.result.target,c=continuitySummary.get(h.continuity)??{continuity:h.continuity,hits:0,min:[Infinity,Infinity,Infinity],max:[-Infinity,-Infinity,-Infinity],normalSum:[0,0,0]};
+    c.hits++;
+    for(let i=0;i<3;i++){c.min[i]=Math.min(c.min[i],h.point[i]);c.max[i]=Math.max(c.max[i],h.point[i]);if(h.normal)c.normalSum[i]+=h.normal[i];}
+    continuitySummary.set(h.continuity,c);
+  }
+  const continuities=Object.freeze([...continuitySummary.values()].sort((a,b)=>a.continuity-b.continuity).map(c=>Object.freeze({
+    continuity:c.continuity,hits:c.hits,min:Object.freeze(c.min.map(v=>+v.toFixed(4))),max:Object.freeze(c.max.map(v=>+v.toFixed(4))),
+    meanNormal:Object.freeze(c.normalSum.map(v=>+(v/c.hits).toFixed(4)))
+  })));
+  const semanticThings=Object.freeze([...globalThis.semanticConstructionWitnessT1.things.values()].map(t=>{
+    const b=new THREE.Box3().setFromObject(t.root),center=b.getCenter(new THREE.Vector3());
+    return Object.freeze({id:t.id,kind:t.kind,bounds:Object.freeze({min:Object.freeze(b.min.toArray().map(v=>+v.toFixed(4))),max:Object.freeze(b.max.toArray().map(v=>+v.toFixed(4))),center:Object.freeze(center.toArray().map(v=>+v.toFixed(4)))})});
+  }));
   const report=Object.freeze({
-    schema:'construction-observer-report/0',mission:'semantic-construction-t1',
+    schema:'construction-observer-report/1',mission:'semantic-construction-t1',
     build:globalThis.__REPOSITORY_BUILD__||'source',createdAt:new Date().toISOString(),
     evidence:Object.freeze({senses:transcript.length,hits:hits.length,misses:transcript.length-hits.length,occluded:occluded.length,
       targetBounds:Object.freeze({min:Object.freeze(box.min.toArray().map(v=>+v.toFixed(4))),max:Object.freeze(box.max.toArray().map(v=>+v.toFixed(4))),center:Object.freeze(centerWorld.toArray().map(v=>+v.toFixed(4)))}),
-      transcript:Object.freeze(transcript)})
+      continuities,semanticThings,transcript:Object.freeze(transcript)})
   });
   constructionWitnessT1.userData.observerReport=report;globalThis.constructionT1ObserverReport=()=>report;
   return report;

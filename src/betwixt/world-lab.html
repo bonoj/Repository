@@ -2619,66 +2619,59 @@ const worldD20=buildBetwixtable({
     root.add(rocket);
 
     const up=new THREE.Vector3(0,1,0);
-    let last=performance.now(),trip=0,legT=0;
-    const forward=new THREE.Vector3(),p0=new THREE.Vector3(),p1=new THREE.Vector3(),p2=new THREE.Vector3(),p3=new THREE.Vector3();
-    const bodyRadius=.19,bodyHalfLength=.34,safeMargin=.055;
-    let inside=true,currentPortal=null;
+    let last=performance.now(),trip=0,mode='TRANSIT',targetPortal=null;
+    const bodyRadius=.19,bodyHalfLength=.34,safeMargin=.07;
+    const velocity=new THREE.Vector3(),desiredDir=new THREE.Vector3(),steer=new THREE.Vector3(),forward=new THREE.Vector3();
+    const cruise=1.18,maxTurnAccel=.72,farRadius=worldD20Radius*2.45;
     function portalClearance(p){
-      // Conservative in-plane clearance from face center to each edge. The body is
-      // represented by a capsule; crossing normal to the face minimizes its footprint.
-      const a=p.corners[0],b=p.corners[1],d=p.corners[2],center=p.center;
       let min=Infinity;
-      for(const pair of [[a,b],[b,d],[d,a]]){
-        const ab=pair[1].clone().sub(pair[0]),ap=center.clone().sub(pair[0]);
+      for(const pair of [[p.corners[0],p.corners[1]],[p.corners[1],p.corners[2]],[p.corners[2],p.corners[0]]]){
+        const ab=pair[1].clone().sub(pair[0]),ap=p.center.clone().sub(pair[0]);
         const q=pair[0].clone().addScaledVector(ab,THREE.MathUtils.clamp(ap.dot(ab)/ab.lengthSq(),0,1));
-        min=Math.min(min,center.distanceTo(q));
+        min=Math.min(min,p.center.distanceTo(q));
       }
       return min;
     }
-    function chooseOpening(wantOut){
-      const viable=portals.filter(p=>portalClearance(p)>bodyRadius+safeMargin);
-      // Deterministic wandering among physically viable apertures; topology informs
-      // the crossing but does not prescribe a face-to-face route.
-      trip++;
-      return viable[(trip*7+3)%viable.length]||portals[(trip*7+3)%portals.length];
+    const viablePortals=portals.filter(p=>portalClearance(p)>bodyRadius+safeMargin);
+    function choosePortal(){
+      trip++;targetPortal=viablePortals[(trip*7+3)%viablePortals.length]||portals[(trip*7+3)%portals.length];
     }
-    function beginLeg(){
-      currentPortal=chooseOpening(inside);
-      const nrm=currentPortal.normal,gate=currentPortal.center;
-      const deep=worldD20Radius*.34,far=worldD20Radius*2.05;
-      if(inside){
-        p0.copy(rocket.position);
-        p1.copy(gate).addScaledVector(nrm,-Math.max(bodyHalfLength+.24,worldD20Radius*.42));
-        p2.copy(gate).addScaledVector(nrm, Math.max(bodyHalfLength+.24,worldD20Radius*.42));
-        p3.copy(nrm).multiplyScalar(far);
-      }else{
-        p0.copy(rocket.position);
-        p1.copy(gate).addScaledVector(nrm, Math.max(bodyHalfLength+.24,worldD20Radius*.42));
-        p2.copy(gate).addScaledVector(nrm,-Math.max(bodyHalfLength+.24,worldD20Radius*.42));
-        // Finish genuinely deep inside before another decision.
-        const tangent=new THREE.Vector3(-nrm.z,0,nrm.x);
-        if(tangent.lengthSq()<.01)tangent.set(1,0,0); else tangent.normalize();
-        p3.copy(nrm).multiplyScalar(-deep).addScaledVector(tangent,.12*Math.sin(trip*1.7));
-      }
-      legT=0;
+    function steerToward(dir,dt,strength=maxTurnAccel){
+      desiredDir.copy(dir).normalize();
+      const speed=Math.max(.001,velocity.length());
+      forward.copy(velocity).multiplyScalar(1/speed);
+      // Lateral acceleration only: turn the velocity vector without waypoint braking.
+      steer.copy(desiredDir).sub(forward.multiplyScalar(desiredDir.dot(forward)));
+      if(steer.lengthSq()>1e-8)steer.normalize().multiplyScalar(strength);
+      velocity.addScaledVector(steer,dt).normalize().multiplyScalar(cruise);
     }
-    function bezier(t,out){
-      const u=1-t,uu=u*u,tt=t*t;
-      return out.copy(p0).multiplyScalar(uu*u)
-        .addScaledVector(p1,3*uu*t).addScaledVector(p2,3*u*tt).addScaledVector(p3,tt*t);
-    }
-    rocket.position.set(0,.08,0);beginLeg();
-    const pathPos=new THREE.Vector3(),pathAhead=new THREE.Vector3();
+    rocket.position.copy((viablePortals[0]||portals[0]).normal).multiplyScalar(-worldD20Radius*.28);
+    choosePortal();
+    velocity.copy(targetPortal.center).sub(rocket.position).normalize().multiplyScalar(cruise);
     worldD20Animators.push(now=>{
       const dt=Math.min(.032,Math.max(.001,(now-last)/1000));last=now;
-      legT=Math.min(1,legT+dt*.29);
-      const eased=legT*legT*(3-2*legT);
-      bezier(eased,pathPos);bezier(Math.min(1,eased+.008),pathAhead);
-      rocket.position.copy(pathPos);
-      forward.copy(pathAhead).sub(pathPos);
-      if(forward.lengthSq()>1e-7)rocket.quaternion.setFromUnitVectors(up,forward.normalize());
+      const r=rocket.position.length();
+      if(mode==='TRANSIT'){
+        // Aim through the aperture along its normal corridor; the conservative capsule
+        // clearance was checked before this opening could become a target.
+        const gate=targetPortal.center;
+        const outward=targetPortal.normal;
+        const aim=gate.clone().addScaledVector(outward,worldD20Radius*.9);
+        steerToward(aim.sub(rocket.position),dt,.54);
+        if(rocket.position.dot(outward)>worldD20Radius*1.28)mode='ORBIT';
+      }else{
+        // Wide constant-speed banking arc outside. No endpoint, deceleration or reversal.
+        // Inward acceleration bends the persistent velocity until a safe aperture lines up.
+        const inward=rocket.position.clone().multiplyScalar(-1).normalize();
+        steerToward(inward,dt,maxTurnAccel);
+        if(r>farRadius)steerToward(inward,dt,maxTurnAccel*1.35);
+        if(r<worldD20Radius*1.72){
+          choosePortal();mode='TRANSIT';
+        }
+      }
+      rocket.position.addScaledVector(velocity,dt);
+      if(velocity.lengthSq()>1e-7)rocket.quaternion.setFromUnitVectors(up,velocity.clone().normalize());
       flame.scale.y=.72+.28*Math.sin(now*.022);flame.scale.x=flame.scale.z=.86+.14*Math.sin(now*.031);
-      if(legT>=1){inside=!inside;beginLeg();}
     });
     root.userData.rocketBody={kind:'capsule-envelope',radius:bodyRadius,halfLength:bodyHalfLength,margin:safeMargin};
     root.userData.portals=portals;
@@ -2686,7 +2679,7 @@ const worldD20=buildBetwixtable({
     spatial.fit();
   }
 });
-worldD20.userData.world=Object.freeze({kind:'hollow-d20-flight',faces:20,rule:'embodied rocket alternates INSIDE/OUTSIDE; planner selects only apertures its capsule envelope can fit through, commits to near-normal crossing, then travels deep before replanning'});
+worldD20.userData.world=Object.freeze({kind:'hollow-d20-flight',faces:20,rule:'embodied rocket maintains forward speed: body-safe transit through aperture, then wide lateral-acceleration orbit outside, then another safe transit; no waypoint braking or reversal'});
 const rocketChase={active:false,returning:false,saved:null,fromCamera:new THREE.Vector3(),fromTarget:new THREE.Vector3(),started:0};
 function startRocketChase(){
   if(rocketChase.active)return;

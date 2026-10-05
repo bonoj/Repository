@@ -2651,7 +2651,38 @@ const worldD20=buildBetwixtable({
   }
 });
 worldD20.userData.world=Object.freeze({kind:'hollow-d20-flight',faces:20,rule:'open faces; gravity + steering + time; rocket forward follows velocity'});
-function updateWorldD20(now){if(!worldD20Animators.length)return;for(const animate of worldD20Animators)animate(now);window.vestibuleDirty=true;}
+const rocketChase={active:false,returning:false,saved:null,fromCamera:new THREE.Vector3(),fromTarget:new THREE.Vector3(),started:0};
+function startRocketChase(){
+  if(rocketChase.active)return;
+  rocketChase.saved={camera:camera.position.clone(),target:target.clone(),radius,theta,phi,up:camera.up.clone()};
+  rocketChase.active=true;rocketChase.returning=false;
+}
+function releaseRocketChase(){
+  if(!rocketChase.active||rocketChase.returning)return false;
+  rocketChase.returning=true;rocketChase.started=performance.now();
+  rocketChase.fromCamera.copy(camera.position);rocketChase.fromTarget.copy(target);return true;
+}
+function updateRocketChase(now){
+  if(!rocketChase.active)return;
+  const saved=rocketChase.saved;
+  if(rocketChase.returning){
+    const raw=Math.min(1,(now-rocketChase.started)/620),t=easeQuiet(raw);
+    camera.position.lerpVectors(rocketChase.fromCamera,saved.camera,t);
+    target.lerpVectors(rocketChase.fromTarget,saved.target,t);camera.up.lerp(saved.up,t).normalize();camera.lookAt(target);
+    if(raw>=1){radius=saved.radius;theta=saved.theta;phi=saved.phi;rocketChase.active=false;rocketChase.returning=false;rocketChase.saved=null}
+    return;
+  }
+  const rocket=worldD20.userData.rocket;if(!rocket)return;
+  rocket.updateWorldMatrix(true,false);
+  const p=rocket.getWorldPosition(new THREE.Vector3()),q=rocket.getWorldQuaternion(new THREE.Quaternion());
+  const forward=new THREE.Vector3(0,1,0).applyQuaternion(q).normalize();
+  let chaseUp=new THREE.Vector3(0,1,0);if(Math.abs(forward.dot(chaseUp))>.92)chaseUp.set(0,0,1);
+  const side=new THREE.Vector3().crossVectors(forward,chaseUp).normalize();chaseUp.crossVectors(side,forward).normalize();
+  const desired=p.clone().addScaledVector(forward,-.78).addScaledVector(chaseUp,.32);
+  const look=p.clone().addScaledVector(forward,.42);
+  camera.position.lerp(desired,.15);target.lerp(look,.18);camera.up.lerp(chaseUp,.1).normalize();camera.lookAt(target);
+}
+function updateWorldD20(now){if(worldD20Animators.length){for(const animate of worldD20Animators)animate(now);}updateRocketChase(now);window.vestibuleDirty=true;}
 
 
 /* Rendezvous cairn laboratory — disposable transport pressure.

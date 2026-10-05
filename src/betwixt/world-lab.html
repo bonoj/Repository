@@ -2996,7 +2996,7 @@ function cairnRenderStatus(){
   cairnStatusTexture.needsUpdate=true;window.vestibuleDirty=true;
 }
 const cairnLabBetwixtable=buildBetwixtable({
-  name:'rendezvous-cairn-laboratory',parent:legacyWorkshop,at:new THREE.Vector3(-3.8,GROUND_Y+2.35,-2.5),padding:.32,
+  name:'rendezvous-cairn-laboratory',parent:observatoryPlace,at:new THREE.Vector3(-3.8,GROUND_Y+2.35,-2.5),padding:.32,
   build(root){
     const table=new THREE.Mesh(new THREE.CylinderGeometry(2.05,2.05,.12,48),brassDark);table.position.y=.06;table.castShadow=true;root.add(table);
     const glass=new THREE.Mesh(new THREE.CylinderGeometry(1.92,1.92,.035,48),glassFace);glass.position.y=.135;root.add(glass);
@@ -3219,7 +3219,7 @@ requestAnimationFrame(()=>scanLampHead());
 // Workshop materials are reused directly; whatever imperfections this fast passage contains are natural evidence.
 const neptunianCrossing001Betwixtable=buildBetwixtable({
   name:'neptunian-crossing-001',
-  parent:legacyWorkshop,
+  parent:observatoryPlace,
   // Deliberately off-axis from the vertical laboratory stack: nearby Betwixt remains perceptual noise.
   at:new THREE.Vector3(6.8,GROUND_Y+.03,-4.9),
   padding:.34,
@@ -3323,6 +3323,8 @@ const jovianBetwixtable=buildBetwixtable({name:'neptunian-jovian-system',parent:
   for(const z of [-.105,.105]){const rail=new THREE.Mesh(new THREE.BoxGeometry(.30,.018,.026),brass);rail.position.z=z;carrier.add(rail);}
   const prow=new THREE.Mesh(new THREE.ConeGeometry(.075,.16,8),brass);prow.rotation.z=-Math.PI/2;prow.position.x=.24;carrier.add(prow);
   const carrierBetwixtable=makeBetwixtable(carrier,{name:'observer-carrier',padding:.34,interact:()=>downloadObserverCarrierReport()});carrierOrbit.add(carrierBetwixtable);
+  // Observer is a first-class Observatory instrument; Jovian dynamics retain the node reference.
+  observatoryPlace.attach(carrierBetwixtable);
   carrierBetwixtable.userData.observerCarrier={status:'janus-inbound',mission:'lamp-head',report:null};
 
   const janus={node:carrierBetwixtable,mass:.0048,p:new THREE.Vector3(-5.8,1.35,-1.15),v:new THREE.Vector3(.285,-.035,.055),trail:null,history:[],sampleClock:0,last:null,cycle:0};

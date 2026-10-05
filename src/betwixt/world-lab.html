@@ -430,6 +430,11 @@ const C={
 // This zeroed parent earns one operation: move the intact organism as a unit.
 // Persistent place: old Workshop contents exist even when not presented.
 // Shell/UI and Betwixt environment remain outside; Crucible Twixt is explicitly excluded.
+const betwixtPlace=new THREE.Group();
+betwixtPlace.name='place:betwixt';
+betwixtPlace.visible=true;
+scene.add(betwixtPlace);
+
 const observatoryPlace=new THREE.Group();
 observatoryPlace.name='place:observatory';
 observatoryPlace.visible=false;
@@ -446,7 +451,7 @@ cruciblePlace.visible=false;
 scene.add(cruciblePlace);
 
 // Places are visibility/interaction boundaries, never pick targets themselves.
-const betwixtPlaces=new Set([observatoryPlace,legacyWorkshop,cruciblePlace]);
+const betwixtPlaces=new Set([betwixtPlace,observatoryPlace,legacyWorkshop,cruciblePlace]);
 function owningBetwixtPlace(object){
   for(let o=object;o;o=o.parent)if(betwixtPlaces.has(o))return o;
   return null;
@@ -1538,8 +1543,9 @@ function setWorkshopCrucibleEnabled(enabled,button){
   workshopBearingLast=performance.now();window.vestibuleDirty=true;return workshopCrucibleEnabled;
 }
 function toggleWorkshopCrucible(button){return workshopCrucibleEnabled?enterBetwixt():enterPlace('crucible')}
-let currentPlace=null;
+let currentPlace='betwixt';
 const placeDefinitions={
+  betwixt:{object:betwixtPlace,title:'🌀 BETWIXT'},
   observatory:{object:observatoryPlace,title:'👁️ OBSERVATORY'},
   workshop:{object:legacyWorkshop,title:'🛠️ WORKSHOP'},
   crucible:{object:cruciblePlace,title:'⚗️ CRUCIBLE'}
@@ -1547,47 +1553,41 @@ const placeDefinitions={
 function setBetwixtTitle(text){
   if(placeTitleEl)placeTitleEl.textContent=text;
   const shell=globalThis.RepositoryShell;if(!shell?.setPlace)return;
-  if(text==='BETWIXT')shell.setPlace({sigil:'🌀',title:'BETWIXT'});
-  else {
-    const [sigil,...words]=text.split(' ');
-    shell.setPlace({sigil,title:words.join(' ')});
-  }
+  const [sigil,...words]=text.split(' ');
+  shell.setPlace({sigil,title:words.join(' ')});
 }
-function removeBetwixtPortal(){
-  globalThis.RepositoryShell?.removeTool('betwixt-portal');
-}
+function removeBetwixtPortal(){globalThis.RepositoryShell?.removeTool('betwixt-portal')}
 function removePlaceSpells(){
   const shell=globalThis.RepositoryShell;if(!shell)return;
   for(const id of ['observatory-place','workshop-place','crucible-container'])shell.removeTool(id);
 }
 function installBetwixtPortal(){
   const shell=globalThis.RepositoryShell;if(!shell||shell.inspect().tools.includes('betwixt-portal'))return;
-  shell.registerTool({id:'betwixt-portal',text:'🌀',label:'Return to Betwixt',lane:'resident',onClick:()=>enterBetwixt()});
+  shell.registerTool({id:'betwixt-portal',text:'🌀',label:'Return to Betwixt',lane:'resident',onClick:()=>presentLocus('betwixt')});
 }
-function enterBetwixt(){
-  for(const {object} of Object.values(placeDefinitions))object.visible=false;
-  if(workshopCrucibleEnabled){workshopCrucibleEnabled=false;removeWorkshopCrucibleSpells()}
-  currentPlace=null;setBetwixtTitle('BETWIXT');removeBetwixtPortal();installPlaceSpells();
-  window.vestibuleDirty=true;
+function installPlaceSpells(){
+  const shell=globalThis.RepositoryShell;if(!shell)return;
+  if(!shell.inspect().tools.includes('observatory-place'))shell.registerTool({id:'observatory-place',text:'👁️',label:'Observatory',lane:'resident',onClick:()=>presentLocus('observatory')});
+  if(!shell.inspect().tools.includes('workshop-place'))shell.registerTool({id:'workshop-place',text:'🛠️',label:'Workshop',lane:'resident',onClick:()=>presentLocus('workshop')});
+  if(!shell.inspect().tools.includes('crucible-container'))shell.registerTool({id:'crucible-container',text:'⚗️',label:'Crucible',lane:'resident',onClick:()=>presentLocus('crucible')});
 }
-function enterPlace(name){
+function presentLocus(name){
   const next=placeDefinitions[name];if(!next)return false;
-  for(const {object} of Object.values(placeDefinitions))object.visible=false;
+  for(const [id,{object}] of Object.entries(placeDefinitions))object.visible=id===name;
+  currentPlace=name;
   if(name==='crucible'){
     workshopCrucibleEnabled=true;ensureWorkshopTerrain();installWorkshopCrucibleSpells();
   }else if(workshopCrucibleEnabled){
     workshopCrucibleEnabled=false;removeWorkshopCrucibleSpells();
   }
-  next.object.visible=true;currentPlace=name;setBetwixtTitle(next.title);removePlaceSpells();installBetwixtPortal();
+  setBetwixtTitle(next.title);
+  if(name==='betwixt'){removeBetwixtPortal();installPlaceSpells()}
+  else{removePlaceSpells();installBetwixtPortal()}
   window.vestibuleDirty=true;return true;
 }
-function installPlaceSpells(){
-  const shell=globalThis.RepositoryShell;if(!shell)return;
-  if(!shell.inspect().tools.includes('observatory-place'))shell.registerTool({id:'observatory-place',text:'👁️',label:'Observatory',lane:'resident',onClick:()=>enterPlace('observatory')});
-  if(!shell.inspect().tools.includes('workshop-place'))shell.registerTool({id:'workshop-place',text:'🛠️',label:'Workshop',lane:'resident',onClick:()=>enterPlace('workshop')});
-  if(!shell.inspect().tools.includes('crucible-container'))shell.registerTool({id:'crucible-container',text:'⚗️',label:'Crucible',lane:'resident',onClick:()=>enterPlace('crucible')});
-}
-queueMicrotask(installPlaceSpells);
+function enterBetwixt(){return presentLocus('betwixt')}
+function enterPlace(name){return presentLocus(name)}
+queueMicrotask(()=>presentLocus('betwixt'));
 
 // Resident cleanup spell: implode the executable contents of Betwixt into one transient marble.
 // Floor, dome, camera, renderer, and lights are environment rather than contents. Everything else
@@ -1818,6 +1818,7 @@ function resolveSpatialRelations(){
     }
   }
 }
+registerRelationalNode('betwixt',{object:betwixtPlace,bounds:()=>visibleWorldBounds(betwixtPlace)});
 registerRelationalNode('workshop',{object:legacyWorkshop,bounds:()=>visibleWorldBounds(legacyWorkshop)});
 registerRelationalNode('observatory',{object:observatoryPlace,bounds:()=>visibleWorldBounds(observatoryPlace)});
 registerRelationalNode('crucible',{object:cruciblePlace,bounds:()=>visibleWorldBounds(cruciblePlace)});
@@ -1842,7 +1843,7 @@ workshopCrucibleOrbMesh.userData.workshopCrucibleOrb=true;
 workshopCrucibleOrb.add(workshopCrucibleOrbMesh);
 // Invisible forgiving touch volume; visual geometry remains exactly .50.
 const workshopCrucibleBetwixtable=makeBetwixtable(workshopCrucibleOrb,{name:'crucible',interact:()=>tapWorkshopCrucibleOrb()});const workshopCrucibleOrbTapTarget=workshopCrucibleBetwixtable.userData.betwixtable.target;
-scene.attach(workshopCrucibleBetwixtable); // ⚗️ Crucible is a Betwixt place, never legacy Workshop content.
+betwixtPlace.attach(workshopCrucibleBetwixtable); // ⚗️ Twixt belongs to the persistent Betwixt locus.
 const workshopCrucibleBearingGeo=new THREE.SphereGeometry(.072,10,7);
 const workshopCrucibleBearingMats=[
   new THREE.MeshStandardMaterial({color:0x252724,roughness:.34,metalness:.58}),

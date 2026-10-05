@@ -1324,23 +1324,21 @@ function setContentTinkered(tinkered){
 }
 function toggleContentTinkered(){return setContentTinkered(!contentTinkered)}
 
-// 🛠 clears the bench. Hidden means the entire content organism is absent;
-// frozen means its simulation clocks stop advancing while Betwixt remains live.
+// 🛠 enters Workshop. The old lab-world organism now lives here as one intact
+// Workshop-resident container rather than disappearing when the bench is cleared.
 let contentWorkshopHidden=false;
-let contentFrozenAt=0;
 function setContentWorkshopHidden(hidden){
   hidden=!!hidden;
   if(hidden===contentWorkshopHidden)return contentWorkshopHidden;
   contentWorkshopHidden=hidden;
   if(hidden){
-    // Restore ordinary geometry before removal; Workshop is not a transform stack.
+    // Restore ordinary geometry before seating the intact legacy organism.
     contentRaised=false;contentLiftMotion=null;
     contentTinkered=false;contentTinkerMotion=null;contentGravityVelocity=0;
-    betwixtContent.position.y=0;betwixtContent.scale.setScalar(1);
-    contentFrozenAt=performance.now();
-    betwixtContent.visible=false;
+    betwixtContent.position.set(0,0,0);betwixtContent.scale.setScalar(1);
     workshopField.visible=true;
     workshopCrucibleBetwixtable.visible=true;
+    if(legacyLabBetwixtable){legacyLabBetwixtable.visible=true;seatLegacyLabsAboveJovian();}
     // Workshop context does not own Crucible state. The resident ⚗️ container
     // alone decides whether its parented organism is present here.
     if(workshopCrucibleEnabled)workshopCrucible.visible=true;
@@ -1353,19 +1351,10 @@ function setContentWorkshopHidden(hidden){
       focusedWorkshopObject.position.copy(workshopObserverReturn?.position||focusedWorkshopObject.position);
       focusedWorkshopObject=null;workshopFocusMotion=null;workshopObserverReturn=null;
     }
-    const now=performance.now(),pause=Math.max(0,now-contentFrozenAt);
-    // Shift the donor systems' wall-clock anchors so hidden time never becomes a
-    // giant simulation step on return.
-    jupurnLastFrame+=pause;lastFoundryNow+=pause;lastSpoilNow+=pause;
-    nextFoundryWake+=pause;nextDescentWake+=pause;
-    for(const st of foundryStates.values())st.nextLaunch+=pause;
-    for(const st of descentStates.values())st.nextAt+=pause;
-    betwixtContent.visible=true;
+    if(legacyLabBetwixtable)legacyLabBetwixtable.visible=false;
     workshopField.visible=false;
     workshopCrucibleBetwixtable.visible=false;
     workshopCrucible.visible=false;
-
-    contentFrozenAt=0;
     home();
   }
   window.vestibuleDirty=true;
@@ -1750,6 +1739,32 @@ function buildBetwixtable({name='betwixtable',parent=scene,at=null,padding=.18,i
 }
 globalThis.Betwixtable=buildBetwixtable;
 
+// The original Jupurn + lab-world organism has moved into Workshop as one
+// Betwixtable. Outside Workshop it is absent; inside, its own bottom is seated
+// above the Jovian system with measured breathing room rather than a center guess.
+const legacyLabBetwixtable=makeBetwixtable(betwixtContent,{name:'legacy-lab-worlds'});
+legacyLabBetwixtable.visible=false;
+function visibleWorldBounds(object){
+  object.updateMatrixWorld(true);
+  const box=new THREE.Box3(),part=new THREE.Box3();
+  object.traverse(o=>{
+    if(!o.visible||(!o.isMesh&&!o.isLine&&!o.isPoints))return;
+    part.setFromObject(o);if(!part.isEmpty())box.union(part);
+  });
+  return box;
+}
+function seatLegacyLabsAboveJovian(gap=.72){
+  if(!legacyLabBetwixtable||typeof jovianBetwixtable==='undefined')return null;
+  legacyLabBetwixtable.position.set(0,0,0);
+  legacyLabBetwixtable.updateMatrixWorld(true);
+  const legacy=visibleWorldBounds(betwixtContent);
+  const jovian=jovianBetwixtable.userData.betwixtable.bounds();
+  if(legacy.isEmpty()||jovian.isEmpty())return null;
+  legacyLabBetwixtable.position.y+=jovian.max.y+gap-legacy.min.y;
+  legacyLabBetwixtable.updateMatrixWorld(true);
+  legacyLabBetwixtable.userData.betwixtable.fit();
+  return Object.freeze({bottom:jovian.max.y+gap,jovianTop:jovian.max.y,gap});
+}
 
 
 
@@ -4600,11 +4615,15 @@ renderer.setAnimationLoop((now)=>{
 
   if(contentWorkshopHidden){
     updateWorkshop(now);
-    if(!workshopCrucibleEnabled){renderer.render(scene,camera);window.vestibuleDirty=false;return;}
-    const workshopDt=Math.min(.05,Math.max(.001,(now-workshopBearingLast)/1000));
-    if(workshopWater||workshopLava){workshopWater?.update(now);workshopLava?.update(now);updateWorkshopSteam(now,workshopDt)}
-    workshopMeteors?.update(now);workshopMeteors?.syncRender?.();
-    if(workshopBearings){const bearingDt=Math.min(.15,Math.max(.001,(now-workshopBearingLast)/1000));workshopBearingLast=now;workshopBearings.update(bearingDt);updateWorkshopLavaPops(now)}else workshopBearingLast=now;
+    // The legacy lab organism is now Workshop content, so its clocks continue
+    // while it hangs above the Jovian experiment instead of freezing offstage.
+    JupurnSystem(now);ExchangeSystem(now);OrbitalSystem(now);FoundrySystem(now);DescentSystem(now);SpoilSystem(now);
+    if(workshopCrucibleEnabled){
+      const workshopDt=Math.min(.05,Math.max(.001,(now-workshopBearingLast)/1000));
+      if(workshopWater||workshopLava){workshopWater?.update(now);workshopLava?.update(now);updateWorkshopSteam(now,workshopDt)}
+      workshopMeteors?.update(now);workshopMeteors?.syncRender?.();
+      if(workshopBearings){const bearingDt=Math.min(.15,Math.max(.001,(now-workshopBearingLast)/1000));workshopBearingLast=now;workshopBearings.update(bearingDt);updateWorkshopLavaPops(now)}else workshopBearingLast=now;
+    }else workshopBearingLast=now;
     renderer.render(scene,camera);window.vestibuleDirty=false;
     return;
   }

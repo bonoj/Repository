@@ -4,12 +4,14 @@
   "scripts": {
     "build": "node tools/build.mjs",
     "verify": "node tools/verify.mjs",
-    "test": "npm run build && npm run verify"
+    "test": "npm run build && npm run verify",
+    "smoke:runtime": "node tools/runtime-smoke.mjs"
   },
   "dependencies": {
     "three": "0.180.0"
   },
   "devDependencies": {
-    "esbuild": "0.25.10"
+    "esbuild": "0.25.10",
+    "playwright": "1.55.1"
   }
 }

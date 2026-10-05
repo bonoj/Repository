@@ -1946,7 +1946,7 @@ const observerTwixt=buildBetwixtable({
 
     const ocularSeat=new THREE.Group();ocularSeat.name='observer:ocular-seat';root.add(ocularSeat);
     // Crucible precedent: .39 radius, .035 brass section around the same .50 sphere.
-    const seatRadius=.39,seatAft=-.11;
+    const seatRadius=.535,seatAft=-.11;
     const seatFront=new THREE.Mesh(new THREE.TorusGeometry(seatRadius,.035,8,32),workshopCrucibleStandMat);
     seatFront.name='observer:ocular-seat:meridian';seatFront.castShadow=true;ocularSeat.add(seatFront);
     const seatBack=new THREE.Mesh(new THREE.TorusGeometry(seatRadius,.035,8,32),workshopCrucibleStandMat);

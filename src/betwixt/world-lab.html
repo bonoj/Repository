@@ -1837,10 +1837,14 @@ const constructionWitness=buildBetwixtable({
     }
     // Authored topology; transforms are consequences.
     attach('post-A','top','slab-A','bottom');
-    // Rail is carried by the post through hierarchy only after its relation resolves.
-    things.get('rail-A').root.position.set(.50,.08,0);
-    things.get('ring-A').root.position.set(1.02,.08,0);
-    things.get('bead-A').root.position.set(1.02,-.29,0);
+    // Continue the same rule: topology first; each placement is solved from its two frames.
+    // These relations are intentionally semantically boring.
+    things.get('post-A').frames.side={p:[0,.12,0],out:[1,0,0],up:[0,1,0]};things.get('post-A').ports.add('side');
+    attach('rail-A','a','post-A','side');
+    things.get('rail-A').frames.mid={p:[0,0,0],out:[0,-1,0],up:[1,0,0]};things.get('rail-A').ports.add('mid');
+    attach('ring-A','center','rail-A','mid');
+    things.get('ring-A').frames.low={p:[0,-.25,0],out:[0,-1,0],up:[0,0,1]};things.get('ring-A').ports.add('low');
+    attach('bead-A','center','ring-A','low');
     for(const t of things.values())t.root.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
     presentation.userData.semanticConstruction={things,relations};
     globalThis.semanticConstructionWitness=presentation.userData.semanticConstruction;

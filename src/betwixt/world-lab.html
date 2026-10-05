@@ -2559,101 +2559,71 @@ const workshopTabletopBetwixtable=buildBetwixtable({
 });
 
 
-/* TERRAIN D20 — twenty bounded planar terrain worlds.
-   Each visible triangular face owns independent terrain state. Its subsurface domain is
-   the triangular pyramid from that face to the die center, so future excavation must
-   taper toward the apex rather than crossing another biome volume.
-   Tap while focused only rolls the die for now. */
-let d20Roll=null,d20RollCount=0;
+/* WORLD D20 — twenty cheap tappable biome faces.
+   The die is a runtime world cartridge, not twenty simultaneously expensive worlds.
+   Each face owns a bounded triangular surface and a latent face-to-center pyramidal volume.
+   For this probe, tapping a face marks that face exactly once with a few tiny inhabitants. */
 const thoughtformTableBounds=new THREE.Box3().setFromObject(workshopTabletopBetwixtable);
-const terrainD20Radius=1.18,terrainD20Clearance=.65;
-const terrainD20=buildBetwixtable({
-  name:'twenty-terrain-d20',
+const worldD20Radius=1.18,worldD20Clearance=.65;
+const worldD20=buildBetwixtable({
+  name:'twenty-world-d20',
   parent:scene,
   at:new THREE.Vector3(
     workshopTabletopBetwixtable.position.x,
-    thoughtformTableBounds.max.y+terrainD20Radius+terrainD20Clearance,
+    thoughtformTableBounds.max.y+worldD20Radius+worldD20Clearance,
     workshopTabletopBetwixtable.position.z
   ),
   padding:.32,
-  interact:()=>rollTerrainD20(),
+  interact:({raycaster}={})=>tapWorldD20Face(raycaster),
   build(root,spatial){
-    const seedGeo=new THREE.IcosahedronGeometry(terrainD20Radius,0).toNonIndexed();
+    const seedGeo=new THREE.IcosahedronGeometry(worldD20Radius,0).toNonIndexed();
     const seedPos=seedGeo.getAttribute('position');
-    const subdivisions=9;
     const palette=[0xc8d9d6,0x4d3027,0xc9a45f,0x506d42,0x487c78,0x65704c,0xb9c2b9,0x9b6044,0x355c3a,0x71658e,0x777d78,0x82935d,0x835a43,0x755c78,0x343536,0xa39258,0x696863,0xd1cab6,0x527991,0xa66f7e];
-    const a=new THREE.Vector3(),b=new THREE.Vector3(),cc=new THREE.Vector3();
-    const normal=new THREE.Vector3(),p0=new THREE.Vector3(),p1=new THREE.Vector3(),p2=new THREE.Vector3();
-    const terrainFaces=[];
-    function terrainHeight(u,v,face){
-      // Independent bounded planar field. Fade to zero at all three edges so the
-      // twenty worlds meet cleanly while remaining free to differ in their interiors.
-      const w=1-u-v,edge=Math.max(0,Math.min(1,Math.min(u,v,w)*subdivisions*1.35));
-      const envelope=edge*edge*(3-2*edge);
-      const n1=Math.sin(u*19.7+face*1.73)*Math.cos(v*17.3-face*.91);
-      const n2=Math.sin((u+v)*37.1+face*2.41);
-      const n3=Math.cos((u*2-v)*61.3-face*.37);
-      return envelope*(n1*.075+n2*.035+n3*.018);
-    }
-    function sample(u,v,face,out){
-      a.fromBufferAttribute(seedPos,face*3);b.fromBufferAttribute(seedPos,face*3+1);cc.fromBufferAttribute(seedPos,face*3+2);
-      normal.copy(a).add(b).add(cc).normalize();
-      out.copy(a).multiplyScalar(1-u-v).addScaledVector(b,u).addScaledVector(cc,v);
-      out.addScaledVector(normal,terrainHeight(u,v,face));
-      return out;
-    }
+    const faces=[],a=new THREE.Vector3(),b=new THREE.Vector3(),cc=new THREE.Vector3();
     for(let face=0;face<20;face++){
-      const positions=[];
-      const pushTri=(x,y,z)=>{for(const p of [x,y,z])positions.push(p.x,p.y,p.z)};
-      for(let row=0;row<subdivisions;row++){
-        for(let col=0;col<subdivisions-row;col++){
-          const u0=col/subdivisions,v0=row/subdivisions,u1=(col+1)/subdivisions,v1=row/subdivisions,u2=col/subdivisions,v2=(row+1)/subdivisions;
-          sample(u0,v0,face,p0);sample(u1,v1,face,p1);sample(u2,v2,face,p2);pushTri(p0,p1,p2);
-          if(col<subdivisions-row-1){
-            const q0=p1.clone(),q1=new THREE.Vector3(),q2=p2.clone();
-            sample((col+1)/subdivisions,(row+1)/subdivisions,face,q1);pushTri(q0,q1,q2);
-          }
-        }
-      }
-      const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.computeVertexNormals();
-      const mat=new THREE.MeshStandardMaterial({color:palette[face],roughness:.94,metalness:0,flatShading:true,side:THREE.FrontSide});
-      const mesh=new THREE.Mesh(geo,mat);mesh.name='terrain-d20:biome-'+face;mesh.castShadow=true;mesh.receiveShadow=true;root.add(mesh);
       a.fromBufferAttribute(seedPos,face*3);b.fromBufferAttribute(seedPos,face*3+1);cc.fromBufferAttribute(seedPos,face*3+2);
-      terrainFaces.push(Object.freeze({
-        face,
-        // Barycentric surface coordinates define the planar terrain. Depth d in [0,1]
-        // contracts every surface point toward apex (0,0,0): Pdepth = Psurface*(1-d).
-        // This is the pyramidal excavation contract; no excavation is active yet.
-        corners:[a.toArray(),b.toArray(),cc.toArray()],
-        apex:[0,0,0],
-        excavation:'pyramidal-taper'
-      }));
+      const geo=new THREE.BufferGeometry();
+      geo.setAttribute('position',new THREE.Float32BufferAttribute([...a.toArray(),...b.toArray(),...cc.toArray()],3));
+      geo.computeVertexNormals();
+      const mat=new THREE.MeshStandardMaterial({color:palette[face],roughness:.9,metalness:0,flatShading:true,side:THREE.FrontSide});
+      const mesh=new THREE.Mesh(geo,mat);mesh.name='world-d20:biome-'+face;mesh.castShadow=true;mesh.receiveShadow=true;root.add(mesh);
+      const normal=a.clone().add(b).add(cc).normalize(),center=a.clone().add(b).add(cc).multiplyScalar(1/3);
+      mesh.userData.worldD20Face=face;
+      faces.push({face,mesh,marked:false,corners:[a.clone(),b.clone(),cc.clone()],normal,center,apex:new THREE.Vector3()});
     }
-    const edges=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(terrainD20Radius+.006,0)),new THREE.LineBasicMaterial({color:0x3d3324,transparent:true,opacity:.56}));
-    edges.name='terrain-d20:biome-boundaries';root.add(edges);
-    root.userData.terrainFaces=terrainFaces;
+    const edges=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(worldD20Radius+.006,0)),new THREE.LineBasicMaterial({color:0x3d3324,transparent:true,opacity:.58}));
+    edges.name='world-d20:biome-boundaries';root.add(edges);
+    root.userData.faces=faces;
+    root.userData.faceMeshes=faces.map(f=>f.mesh);
     spatial.fit();
   }
 });
-terrainD20.userData.world=Object.freeze({kind:'twenty-bounded-terrains',faces:20,volumes:'face-to-center triangular pyramids',rule:'tap while focused to roll'});
-function rollTerrainD20(){
-  if(workshopFocusMotion||d20Roll)return true;
-  const p=terrainD20.userData.betwixtable.presentation;
-  const from=p.quaternion.clone();
-  const axis=new THREE.Vector3(Math.random()-.5,Math.random()-.5,Math.random()-.5);
-  if(axis.lengthSq()<1e-6)axis.set(0,1,0);axis.normalize();
-  const spins=2+Math.floor(Math.random()*4),angle=spins*Math.PI*2+Math.random()*Math.PI*2;
-  const targetQ=new THREE.Quaternion().setFromAxisAngle(axis,angle);targetQ.multiply(from);
-  d20Roll={from,to:targetQ,started:performance.now(),duration:850+Math.random()*500,count:++d20RollCount};
+worldD20.userData.world=Object.freeze({kind:'twenty-world-cartridge',faces:20,volumes:'face-to-center triangular pyramids',rule:'tap each face once to seed its proxy surface'});
+function seedWorldD20Face(face){
+  if(!face||face.marked)return false;
+  face.marked=true;
+  const root=face.mesh.parent,up=new THREE.Vector3(0,1,0);
+  const group=new THREE.Group();group.name='world-d20:face-'+face.face+':seeded';
+  group.position.copy(face.center).addScaledVector(face.normal,.018);
+  group.quaternion.setFromUnitVectors(up,face.normal);root.add(group);
+  const dark=new THREE.MeshStandardMaterial({color:0x272621,roughness:.88});
+  const pale=new THREE.MeshStandardMaterial({color:0xe5dcc0,roughness:.86});
+  const accent=new THREE.MeshStandardMaterial({color:0xd98b45,roughness:.72});
+  // Deliberately generic proxy inhabitants: enough visible residue to prove every
+  // individual face can receive one-shot state without pretending its world exists yet.
+  const post=new THREE.Mesh(new THREE.CylinderGeometry(.018,.024,.12,5),dark);post.position.set(-.10,.06,.025);group.add(post);
+  const stone=new THREE.Mesh(new THREE.DodecahedronGeometry(.045,0),pale);stone.position.set(.075,.045,-.055);stone.scale.y=.65;group.add(stone);
+  const flag=new THREE.Mesh(new THREE.ConeGeometry(.035,.09,4),accent);flag.position.set(.015,.045,.09);flag.rotation.y=face.face*.73;group.add(flag);
   window.vestibuleDirty=true;return true;
 }
-function updateInhabitedD20(now){
-  if(!d20Roll)return;
-  const p=terrainD20.userData.betwixtable.presentation;
-  const raw=Math.min(1,(now-d20Roll.started)/d20Roll.duration),t=1-Math.pow(1-raw,3);
-  p.quaternion.copy(d20Roll.from).slerp(d20Roll.to,t);
-  if(raw>=1){p.quaternion.copy(d20Roll.to).normalize();d20Roll=null}
-  window.vestibuleDirty=true;
+function tapWorldD20Face(activeRaycaster){
+  const faces=worldD20.userData.betwixtable?.presentation?.userData?.faces||worldD20.userData.faces;
+  const list=faces||[];
+  const meshes=list.map(f=>f.mesh);
+  const hit=activeRaycaster?.intersectObjects(meshes,false)?.[0]||null;
+  const index=hit?.object?.userData?.worldD20Face;
+  if(Number.isInteger(index))seedWorldD20Face(list[index]);
+  return true;
 }
 
 
@@ -3647,7 +3617,7 @@ function telescopeWorkshopFocus(incoming){
 function dismissWorkshopFocus(){if(focusedWorkshopObject&&!workshopFocusMotion){if(focusedWorkshopObject===relationalInspectionBetwixtable)showMoleculeCard(false);beginWorkshopFocus(focusedWorkshopObject,false)}}
 function resetWorkshopGlass(){}
 function updateWorkshop(now){
-  updateInhabitedD20(now);
+  // world d20 has no continuous update; face taps leave one-shot proxy state.
   if(workshopFocusMotion){
     const m=workshopFocusMotion,raw=Math.min(1,(now-m.started)/m.duration),t=easeQuiet(raw);
     if(m.telescope){

@@ -2681,7 +2681,7 @@ const worldD20=buildBetwixtable({
     rocket.position.copy((viablePortals[0]||portals[0]).normal).multiplyScalar(-worldD20Radius*.24);
     choosePortal();velocity.copy(targetPortal.center).sub(rocket.position).normalize().multiplyScalar(cruise);
     worldD20Animators.push(now=>{
-      const dt=Math.min(.032,Math.max(.001,(now-last)/1000));last=now,r=rocket.position.length();
+      const dt=Math.min(.032,Math.max(.001,(now-last)/1000));last=now;const r=rocket.position.length();
       if(mode==='TRANSIT'){
         const gate=targetPortal.center,outward=targetPortal.normal;
         const aim=gate.clone().addScaledVector(outward,worldD20Radius*.95);

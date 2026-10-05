@@ -2618,51 +2618,33 @@ const worldD20=buildBetwixtable({
     const flame=new THREE.Mesh(new THREE.ConeGeometry(.045,.22,9),flameMat);flame.position.y=-.33;flame.rotation.z=Math.PI;rocket.add(flame);
     root.add(rocket);
 
-    const up=new THREE.Vector3(0,1,0),gravity=new THREE.Vector3(0,-.58,0);
-    const velocity=new THREE.Vector3(),accel=new THREE.Vector3(),home=new THREE.Vector3();
-    let last=performance.now(),wanderPhase=0;
-    const rocketClearance=.16,outerLeash=worldD20Radius*2.65;
-    // Face topology remains available in portals; free flight deliberately does not consume it.
-    rocket.position.set(.12,.18,.08);
-    velocity.set(.92,.72,-.64);
-
-    function keepClearOfFrame(){
-      for(let i=0;i<edgePos.count;i+=2){
-        edgeA.fromBufferAttribute(edgePos,i);edgeB.fromBufferAttribute(edgePos,i+1);
-        const ab=edgeB.clone().sub(edgeA),ap=rocket.position.clone().sub(edgeA);
-        const t=THREE.MathUtils.clamp(ap.dot(ab)/ab.lengthSq(),0,1);
-        const nearest=edgeA.clone().addScaledVector(ab,t),away=rocket.position.clone().sub(nearest);
-        const min=.075+rocketClearance,d=away.length();
-        if(d<min){
-          if(d<1e-5)away.copy(rocket.position).normalize();else away.multiplyScalar(1/d);
-          rocket.position.copy(nearest).addScaledVector(away,min);
-          const vn=velocity.dot(away);if(vn<0)velocity.addScaledVector(away,-1.7*vn);
-        }
-      }
+    const up=new THREE.Vector3(0,1,0);
+    let last=performance.now(),phase=.4;
+    const loopAxis=new THREE.Vector3(.23,.94,.25).normalize();
+    const loopU=new THREE.Vector3(1,0,0).sub(loopAxis.clone().multiplyScalar(loopAxis.x)).normalize();
+    const loopV=new THREE.Vector3().crossVectors(loopAxis,loopU).normalize();
+    const pathPos=new THREE.Vector3(),pathAhead=new THREE.Vector3(),forward=new THREE.Vector3();
+    function sampleFlight(t,out){
+      // Continuous wandering Lissajous-like orbit. Radius repeatedly crosses the cage shell;
+      // slow precession prevents it from becoming a fixed hoop.
+      const a=t,b=t*.47+.8;
+      const radial=worldD20Radius*(1.08+.30*Math.sin(t*.61));
+      const wobble=.28*Math.sin(b);
+      out.copy(loopU).multiplyScalar(Math.cos(a)*radial)
+        .addScaledVector(loopV,Math.sin(a)*radial)
+        .addScaledVector(loopAxis,wobble);
+      const pre=.22*Math.sin(t*.083);
+      out.applyAxisAngle(new THREE.Vector3(0,1,0),pre);
+      return out;
     }
+    sampleFlight(phase,rocket.position);
     worldD20Animators.push(now=>{
-      const dt=Math.min(.032,Math.max(.001,(now-last)/1000));last=now;wanderPhase+=dt;
-      const r=rocket.position.length();
-      // Rocket owns continuous volume dynamics. A soft distant leash merely bends it home;
-      // no face or opening is selected as a destination.
-      accel.copy(gravity);
-      const forward=velocity.clone().normalize();
-      const thrust=.62;
-      accel.addScaledVector(forward,thrust);
-      // Gentle deterministic attitude bias keeps trajectories rich without becoming a route.
-      accel.x+=Math.sin(wanderPhase*.73)*.18;accel.z+=Math.cos(wanderPhase*.57)*.16;
-      if(r>worldD20Radius*1.35){
-        home.copy(rocket.position).multiplyScalar(-1).normalize();
-        const leash=THREE.MathUtils.clamp((r-worldD20Radius*1.35)/(outerLeash-worldD20Radius*1.35),0,1);
-        accel.addScaledVector(home,.85+leash*2.4);
-      }
-      velocity.addScaledVector(accel,dt);
-      const speed=velocity.length();
-      if(speed<.72)velocity.multiplyScalar(.72/Math.max(speed,.001));
-      if(speed>1.72)velocity.multiplyScalar(1.72/speed);
-      rocket.position.addScaledVector(velocity,dt);
-      keepClearOfFrame();
-      if(velocity.lengthSq()>1e-6)rocket.quaternion.setFromUnitVectors(up,velocity.clone().normalize());
+      const dt=Math.min(.032,Math.max(.001,(now-last)/1000));last=now;
+      phase+=dt*.72;
+      sampleFlight(phase,pathPos);sampleFlight(phase+.018,pathAhead);
+      rocket.position.copy(pathPos);
+      forward.copy(pathAhead).sub(pathPos).normalize();
+      if(forward.lengthSq()>1e-6)rocket.quaternion.setFromUnitVectors(up,forward);
       flame.scale.y=.72+.28*Math.sin(now*.022);flame.scale.x=flame.scale.z=.86+.14*Math.sin(now*.031);
     });
 
@@ -2671,7 +2653,7 @@ const worldD20=buildBetwixtable({
     spatial.fit();
   }
 });
-worldD20.userData.world=Object.freeze({kind:'hollow-d20-flight',faces:20,rule:'face topology retained; rocket free-flies volume under gravity, thrust, time, hard frame collision; forward follows velocity'});
+worldD20.userData.world=Object.freeze({kind:'hollow-d20-flight',faces:20,rule:'face topology retained; rocket follows a continuous wandering volumetric loop crossing inside/outside without touching the hard frame; forward follows path tangent'});
 const rocketChase={active:false,returning:false,saved:null,fromCamera:new THREE.Vector3(),fromTarget:new THREE.Vector3(),started:0};
 function startRocketChase(){
   if(rocketChase.active)return;

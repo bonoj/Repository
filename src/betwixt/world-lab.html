@@ -444,6 +444,17 @@ cruciblePlace.name='place:crucible';
 cruciblePlace.visible=false;
 scene.add(cruciblePlace);
 
+// Places are visibility/interaction boundaries, never pick targets themselves.
+const betwixtPlaces=new Set([observatoryPlace,legacyWorkshop,cruciblePlace]);
+function owningBetwixtPlace(object){
+  for(let o=object;o;o=o.parent)if(betwixtPlaces.has(o))return o;
+  return null;
+}
+function betwixtInteractionActive(object){
+  const place=owningBetwixtPlace(object);
+  return !place||place.visible;
+}
+
 const betwixtContent=new THREE.Group();
 betwixtContent.name='BetwixtContent';
 legacyWorkshop.add(betwixtContent);
@@ -3877,7 +3888,7 @@ function workshopTap(x,y){
   // Betwixtables form operable resolutions. Shells do not occlude descendant shells:
   // collect every hit first, then let the deepest embedded Betwixtable own the tap.
   const builtBetwixtables=[];
-  scene.traverse(o=>{if(o.userData?.betwixtable?.target&&o.userData.betwixtable.focus)builtBetwixtables.push(o)});
+  scene.traverse(o=>{if(o.userData?.betwixtable?.target&&o.userData.betwixtable.focus&&betwixtInteractionActive(o))builtBetwixtables.push(o)});
   const betwixtDepth=o=>{let d=0,p=o.parent;while(p){if(p.userData?.betwixtable)d++;p=p.parent}return d};
   const hitBetwixtables=scope=>{
     const hits=[];
@@ -3929,7 +3940,7 @@ function workshopTap(x,y){
   if(crucibleOrbHit){
     tapWorkshopCrucibleOrb();window.vestibuleDirty=true;return true;
   }
-  if(workshopCrucibleTool&&workshopTerrain){
+  if(cruciblePlace.visible&&workshopCrucibleTool&&workshopTerrain){
     const hit=raycaster.intersectObject(workshopTerrain.mesh,true)[0];
     if(hit){
       const p=workshopTerrain.owner.worldToLocal(hit.point.clone()),tool=workshopCrucibleTool;
@@ -3941,7 +3952,7 @@ function workshopTap(x,y){
       window.vestibuleDirty=true;return true;
     }
   }
-  const focusables=[...specimens.map(([,o])=>o)];
+  const focusables=legacyWorkshop.visible?[...specimens.map(([,o])=>o)]:[];
   const hits=raycaster.intersectObjects(focusables,true);
   let obj=hits[0]?.object||null;
   while(obj&&obj.parent&&obj.parent!==workshopField&&obj.parent!==scene)obj=obj.parent;
@@ -4518,14 +4529,14 @@ const SelectionSystem={
     raycaster.setFromCamera(pointerNDC,camera);
     const pickables=[];
     for(const id of ecs.query(C.Selectable,C.RenderObject))
-      if(C.Selectable.get(id).enabled)pickables.push(...C.RenderObject.get(id).pickables);
+      if(C.Selectable.get(id).enabled)pickables.push(...C.RenderObject.get(id).pickables.filter(betwixtInteractionActive));
     for(const hit of raycaster.intersectObjects(pickables,false)){
       const id=hit.object.userData.entityId;      if(id&&ecs.has(id,C.Selectable))return id;
     }
     return null;
   },
   tap(x,y){
-    if(fluidGlobeTap(x,y))return;
+    if(legacyWorkshop.visible&&fluidGlobeTap(x,y))return;
     if(workshopTap(x,y))return;
     const hit=this.pick(x,y);
     if(selectedEntity){

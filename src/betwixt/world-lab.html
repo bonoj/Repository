@@ -429,10 +429,20 @@ const C={
 // This zeroed parent earns one operation: move the intact organism as a unit.
 // Persistent place: old Workshop contents exist even when not presented.
 // Shell/UI and Betwixt environment remain outside; Crucible Twixt is explicitly excluded.
+const observatoryPlace=new THREE.Group();
+observatoryPlace.name='place:observatory';
+observatoryPlace.visible=false;
+scene.add(observatoryPlace);
+
 const legacyWorkshop=new THREE.Group();
-legacyWorkshop.name='place:legacy-workshop';
+legacyWorkshop.name='place:workshop';
 legacyWorkshop.visible=false;
 scene.add(legacyWorkshop);
+
+const cruciblePlace=new THREE.Group();
+cruciblePlace.name='place:crucible';
+cruciblePlace.visible=false;
+scene.add(cruciblePlace);
 
 const betwixtContent=new THREE.Group();
 betwixtContent.name='BetwixtContent';
@@ -1361,7 +1371,7 @@ globalThis.WorkshopGravity=WorkshopGravity;
 // Workshop terrain is the intact transported Crucible implementation. It is one
 // useful terrain, not Workshop's definition of terrain.
 let workshopTerrain=null,workshopTerrainGenesis=null,workshopTerrainSeed=741;
-const workshopCrucible=new THREE.Group();workshopCrucible.name='workshop:crucible';workshopCrucible.visible=false;legacyWorkshop.add(workshopCrucible);
+const workshopCrucible=new THREE.Group();workshopCrucible.name='crucible:apparatus';workshopCrucible.visible=true;cruciblePlace.add(workshopCrucible);
 let workshopCrucibleEnabled=false;
 const workshopCrucibleSpellIds=['crucible-meteor','crucible-terrain-next','crucible-bearings','crucible-water','crucible-lava','crucible-carve','crucible-raise'];
 function ensureWorkshopTerrain(){
@@ -1510,17 +1520,27 @@ function removeWorkshopCrucibleSpells(){
 }
 function setWorkshopCrucibleEnabled(enabled,button){
   workshopCrucibleEnabled=!!enabled;
-  if(workshopCrucibleEnabled){ensureWorkshopTerrain();workshopCrucible.visible=contentWorkshopHidden;installWorkshopCrucibleSpells()}
-  else{workshopCrucible.visible=false;removeWorkshopCrucibleSpells()}
+  if(workshopCrucibleEnabled){ensureWorkshopTerrain();cruciblePlace.visible=true;installWorkshopCrucibleSpells()}
+  else{cruciblePlace.visible=false;removeWorkshopCrucibleSpells()}
   button?.classList.toggle('active',workshopCrucibleEnabled);button?.setAttribute('aria-pressed',workshopCrucibleEnabled?'true':'false');
   workshopBearingLast=performance.now();window.vestibuleDirty=true;return workshopCrucibleEnabled;
 }
 function toggleWorkshopCrucible(button){return setWorkshopCrucibleEnabled(!workshopCrucibleEnabled,button)}
-function installWorkshopCrucibleContainerSpell(){
-  const shell=globalThis.RepositoryShell;if(!shell||shell.inspect().tools.includes('crucible-container'))return;
-  shell.registerTool({id:'crucible-container',text:'⚗️',label:'Crucible',lane:'resident',onClick:b=>toggleWorkshopCrucible(b)});
+let observatoryEnabled=false,workshopPlaceEnabled=false;
+function setPlaceVisible(place,enabled,button){
+  place.visible=!!enabled;
+  button?.classList.toggle('active',!!enabled);
+  button?.setAttribute('aria-pressed',enabled?'true':'false');
+  window.vestibuleDirty=true;
+  return !!enabled;
 }
-queueMicrotask(installWorkshopCrucibleContainerSpell);
+function installPlaceSpells(){
+  const shell=globalThis.RepositoryShell;if(!shell)return;
+  if(!shell.inspect().tools.includes('observatory-place'))shell.registerTool({id:'observatory-place',text:'👁️',label:'Observatory',lane:'resident',onClick:b=>{observatoryEnabled=setPlaceVisible(observatoryPlace,!observatoryEnabled,b)}});
+  if(!shell.inspect().tools.includes('workshop-place'))shell.registerTool({id:'workshop-place',text:'🛠️',label:'Workshop',lane:'resident',onClick:b=>{workshopPlaceEnabled=setPlaceVisible(legacyWorkshop,!workshopPlaceEnabled,b)}});
+  if(!shell.inspect().tools.includes('crucible-container'))shell.registerTool({id:'crucible-container',text:'⚗️',label:'Crucible',lane:'resident',onClick:b=>toggleWorkshopCrucible(b)});
+}
+queueMicrotask(installPlaceSpells);
 
 // Resident cleanup spell: implode the executable contents of Betwixt into one transient marble.
 // Floor, dome, camera, renderer, and lights are environment rather than contents. Everything else
@@ -1751,7 +1771,9 @@ function resolveSpatialRelations(){
     }
   }
 }
-registerRelationalNode('legacy-workshop',{object:legacyWorkshop,bounds:()=>visibleWorldBounds(legacyWorkshop)});
+registerRelationalNode('workshop',{object:legacyWorkshop,bounds:()=>visibleWorldBounds(legacyWorkshop)});
+registerRelationalNode('observatory',{object:observatoryPlace,bounds:()=>visibleWorldBounds(observatoryPlace)});
+registerRelationalNode('crucible',{object:cruciblePlace,bounds:()=>visibleWorldBounds(cruciblePlace)});
 // Jovian is now internal to Workshop; no parent-to-child placement relation is required.
 
 // The legacy organism exists inside its persistent Workshop place.

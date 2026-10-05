@@ -2559,143 +2559,97 @@ const workshopTabletopBetwixtable=buildBetwixtable({
 });
 
 
-/* WORLD D20 — twenty addressable faces, twenty genuinely different one-shot experiences.
-   Topology is the construction substrate: each face already owns surface, center, corners,
-   edges, outward/inward directions, neighbors, and a latent face-to-center volume.
-   Experiences state relationships first; local coordinates are compiled consequences. */
+/* WORLD D20 — hollow topology flight study.
+   The shell is only its 30 edges: twenty faces remain physically open.
+   A tiny rocket continuously traverses the enclosed volume under gravity, steering
+   from one open face to another. Its longitudinal axis is always aligned to velocity. */
 const thoughtformTableBounds=new THREE.Box3().setFromObject(workshopTabletopBetwixtable);
-const worldD20Radius=1.18,worldD20Clearance=.65;
+const worldD20Radius=1.28,worldD20Clearance=.65;
 const worldD20Animators=[];
-const worldD20Vivid=[
-  0x15d36f,0x10bce8,0xff4b38,0xf6c945,0x8f4cff,
-  0xff7a18,0x12e0c0,0xef2f8a,0x79d43b,0x3155ff,
-  0xf4f1e8,0xff244f,0x48a7ff,0xd7ff36,0x7a3cff,
-  0xffb000,0x11131a,0x2de2e6,0xff5f87,0x6bffb8
-];
 const worldD20=buildBetwixtable({
-  name:'twenty-world-d20',parent:scene,
+  name:'hollow-flight-d20',parent:scene,
   at:new THREE.Vector3(workshopTabletopBetwixtable.position.x,thoughtformTableBounds.max.y+worldD20Radius+worldD20Clearance,workshopTabletopBetwixtable.position.z),
-  padding:.48,interact:({raycaster}={})=>tapWorldD20Face(raycaster),
+  padding:.55,
   build(root,spatial){
-    const seedGeo=new THREE.IcosahedronGeometry(worldD20Radius,0).toNonIndexed(),seedPos=seedGeo.getAttribute('position');
-    const basePalette=[0x255b45,0x145c78,0x7b2927,0x80651c,0x4f337d,0x8a3d17,0x176b61,0x772052,0x4c6f24,0x233b91,0x74716b,0x8a1731,0x245b8f,0x6b7f1f,0x432274,0x8c5b10,0x24262b,0x14777a,0x8a3650,0x287456];
-    const faces=[],a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3();
+    const shellGeo=new THREE.IcosahedronGeometry(worldD20Radius,0);
+    const lattice=new THREE.LineSegments(
+      new THREE.EdgesGeometry(shellGeo),
+      new THREE.LineBasicMaterial({color:0xc49a55,transparent:true,opacity:.95})
+    );
+    lattice.name='world-d20:hollow-lattice';root.add(lattice);
+
+    // Small brass joints make the open polyhedron read as a physical cage.
+    const pos=shellGeo.getAttribute('position'),seen=[];
+    for(let i=0;i<pos.count;i++){
+      const p=new THREE.Vector3().fromBufferAttribute(pos,i);
+      if(seen.some(q=>q.distanceToSquared(p)<1e-8))continue;
+      seen.push(p.clone());
+      const joint=new THREE.Mesh(new THREE.SphereGeometry(.035,8,6),new THREE.MeshStandardMaterial({color:0xc49a55,metalness:.72,roughness:.28}));
+      joint.position.copy(p);root.add(joint);
+    }
+
+    // Face centers are semantic portals, not visible panels.
+    const tri=shellGeo.toNonIndexed().getAttribute('position'),portals=[];
     for(let i=0;i<20;i++){
-      a.fromBufferAttribute(seedPos,i*3);b.fromBufferAttribute(seedPos,i*3+1);c.fromBufferAttribute(seedPos,i*3+2);
-      const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute([...a.toArray(),...b.toArray(),...c.toArray()],3));geo.computeVertexNormals();
-      const mat=new THREE.MeshStandardMaterial({color:basePalette[i],roughness:.82,metalness:.04,flatShading:true,side:THREE.FrontSide});
-      const mesh=new THREE.Mesh(geo,mat);mesh.name='world-d20:face-'+i;mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData.worldD20Face=i;root.add(mesh);
-      const center=a.clone().add(b).add(c).multiplyScalar(1/3),normal=center.clone().normalize();
-      const edgePairs=[[a.clone(),b.clone()],[b.clone(),c.clone()],[c.clone(),a.clone()]];
-      faces.push({face:i,mesh,marked:false,corners:[a.clone(),b.clone(),c.clone()],edges:edgePairs,normal,center,apex:new THREE.Vector3(),experience:null});
+      const a=new THREE.Vector3().fromBufferAttribute(tri,i*3);
+      const b=new THREE.Vector3().fromBufferAttribute(tri,i*3+1);
+      const d=new THREE.Vector3().fromBufferAttribute(tri,i*3+2);
+      const center=a.add(b).add(d).multiplyScalar(1/3);
+      portals.push({center:center.clone(),normal:center.clone().normalize()});
     }
-    // Compile adjacency from shared geometric edges once. Experiences can traverse it without inventing a graph.
-    const same=(p,q)=>p.distanceToSquared(q)<1e-8;
-    for(const f of faces){
-      f.neighbors=f.edges.map(([ea,eb])=>{
-        const n=faces.find(g=>g!==f&&g.edges.some(([ga,gb])=>(same(ea,ga)&&same(eb,gb))||(same(ea,gb)&&same(eb,ga))));
-        return n?.face??null;
-      });
+
+    // Rocket points along local +Y. Quaternion below maps +Y to instantaneous travel.
+    const rocket=new THREE.Group();rocket.name='world-d20:rocket';
+    const bodyMat=new THREE.MeshStandardMaterial({color:0xf2eee4,metalness:.18,roughness:.42});
+    const redMat=new THREE.MeshStandardMaterial({color:0xe94b35,metalness:.08,roughness:.5});
+    const darkMat=new THREE.MeshStandardMaterial({color:0x30363d,metalness:.55,roughness:.3});
+    const body=new THREE.Mesh(new THREE.CylinderGeometry(.065,.085,.34,12),bodyMat);body.position.y=.01;rocket.add(body);
+    const nose=new THREE.Mesh(new THREE.ConeGeometry(.066,.15,12),redMat);nose.position.y=.255;rocket.add(nose);
+    const bell=new THREE.Mesh(new THREE.CylinderGeometry(.055,.085,.09,10),darkMat);bell.position.y=-.205;rocket.add(bell);
+    for(let i=0;i<3;i++){
+      const fin=new THREE.Mesh(new THREE.BoxGeometry(.025,.13,.13),redMat);
+      fin.position.set(Math.cos(i*Math.PI*2/3)*.075,-.12,Math.sin(i*Math.PI*2/3)*.075);
+      fin.rotation.y=-i*Math.PI*2/3;rocket.add(fin);
     }
-    const boundaries=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(worldD20Radius+.006,0)),new THREE.LineBasicMaterial({color:0x17130f,transparent:true,opacity:.72}));
-    boundaries.name='world-d20:topology';root.add(boundaries);
-    root.userData.faces=faces;root.userData.faceMeshes=faces.map(f=>f.mesh);spatial.fit();
+    const flameMat=new THREE.MeshBasicMaterial({color:0xffa52c,transparent:true,opacity:.9});
+    const flame=new THREE.Mesh(new THREE.ConeGeometry(.045,.22,9),flameMat);flame.position.y=-.33;flame.rotation.z=Math.PI;rocket.add(flame);
+    root.add(rocket);
+
+    const up=new THREE.Vector3(0,1,0),gravity=new THREE.Vector3(0,-.58,0);
+    const velocity=new THREE.Vector3(),desired=new THREE.Vector3(),accel=new THREE.Vector3();
+    let portalIndex=2,nextIndex=13,last=performance.now();
+    rocket.position.copy(portals[portalIndex].center).addScaledVector(portals[portalIndex].normal,worldD20Radius*.48);
+    velocity.copy(portals[portalIndex].normal).multiplyScalar(-1.25);
+
+    function chooseNext(){
+      // Deterministic stride visits distant openings so crossings visibly traverse the volume.
+      portalIndex=nextIndex;
+      nextIndex=(nextIndex+7)%portals.length;
+      if(nextIndex===portalIndex)nextIndex=(nextIndex+9)%portals.length;
+    }
+    worldD20Animators.push(now=>{
+      const dt=Math.min(.032,Math.max(.001,(now-last)/1000));last=now;
+      const target=portals[nextIndex].center.clone().addScaledVector(portals[nextIndex].normal,worldD20Radius*.62);
+      desired.copy(target).sub(rocket.position);
+      const distance=desired.length();
+      desired.normalize().multiplyScalar(1.42);
+      // Steering supplies thrust; gravity remains an independent continuous influence.
+      accel.copy(desired).sub(velocity).multiplyScalar(2.25).add(gravity);
+      velocity.addScaledVector(accel,dt);
+      const speed=velocity.length();
+      if(speed>1.75)velocity.multiplyScalar(1.75/speed);
+      rocket.position.addScaledVector(velocity,dt);
+      if(velocity.lengthSq()>1e-6)rocket.quaternion.setFromUnitVectors(up,velocity.clone().normalize());
+      flame.scale.y=.72+.28*Math.sin(now*.022);flame.scale.x=flame.scale.z=.86+.14*Math.sin(now*.031);
+      if(distance<.2)chooseNext();
+    });
+
+    root.userData.portals=portals;
+    root.userData.rocket=rocket;
+    spatial.fit();
   }
 });
-worldD20.userData.world=Object.freeze({kind:'twenty-experience-cartridge',faces:20,rule:'one tap per face; topology before coordinates'});
-function d20Mat(color,{emissive=0,metalness=.05,roughness=.65,transparent=false,opacity=1}={}){
-  return new THREE.MeshStandardMaterial({color,emissive,emissiveIntensity:emissive?1.2:0,metalness,roughness,transparent,opacity,side:THREE.DoubleSide});
-}
-function d20Local(face,name){
-  const g=new THREE.Group();g.name='world-d20:face-'+face.face+':'+name;g.position.copy(face.center).addScaledVector(face.normal,.014);
-  g.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),face.normal);face.mesh.parent.add(g);return g;
-}
-function d20Cyl(g,a,b,r,m,segments=8){return workshopCyl(g,a,b,r,m,segments)}
-function d20Dot(g,x,y,z,r,m,detail=0){const q=new THREE.Mesh(new THREE.IcosahedronGeometry(r,detail),m);q.position.set(x,y,z);q.castShadow=true;g.add(q);return q}
-function d20Line(g,points,color=0xffffff,opacity=.9){
-  const q=new THREE.Line(new THREE.BufferGeometry().setFromPoints(points),new THREE.LineBasicMaterial({color,transparent:opacity<1,opacity}));g.add(q);return q;
-}
-function d20Animate(fn){worldD20Animators.push(fn)}
-function d20Experience(face){
-  const i=face.face,g=d20Local(face,'experience'),accent=worldD20Vivid[i],bright=d20Mat(accent,{emissive:accent,roughness:.48}),dark=workshopDark,pale=workshopPale,metal=workshopMetal,warm=workshopWarm;
-  face.mesh.material.color.setHex(accent).multiplyScalar(.52);face.experience=g;
-  const seed=(n)=>((Math.sin((i+1)*91.7+n*37.13)*43758.5453)%1+1)%1;
-  const twig=(a,b,r=.012,m=bright)=>d20Cyl(g,a,b,r,m,7);
-  if(i===0){ // GROW — branching organism follows surface then reaches outward.
-    const branch=(x,z,y,len,ang,depth)=>{if(depth<=0)return;const a=new THREE.Vector3(x,y,z),b=new THREE.Vector3(x+Math.cos(ang)*len,y+.025+depth*.018,z+Math.sin(ang)*len);twig(a,b,.009+depth*.003,depth>1?workshopWood:bright);d20Dot(g,b.x,b.y,b.z,.018+depth*.003,bright);branch(b.x,b.z,b.y,len*.63,ang-.72,depth-1);branch(b.x,b.z,b.y,len*.60,ang+.66,depth-1)};
-    branch(0,0,.015,.22,-1.0,3);branch(0,0,.015,.20,1.2,3);
-  }else if(i===1){ // FLOOD — layered translucent pool with animated ripples.
-    const water=d20Mat(0x18d7ff,{emissive:0x063f66,roughness:.12,transparent:true,opacity:.72});
-    const pool=new THREE.Mesh(new THREE.CircleGeometry(.34,24),water);pool.rotation.x=-Math.PI/2;pool.scale.z=.72;pool.position.y=.025;g.add(pool);
-    for(let k=0;k<3;k++){const r=new THREE.Mesh(new THREE.TorusGeometry(.09+k*.07,.008,6,24),bright);r.rotation.x=Math.PI/2;r.position.y=.04;g.add(r);d20Animate(t=>{r.scale.setScalar(.82+.18*Math.sin(t*.002+k));r.material.opacity=.7;r.material.transparent=true})}
-  }else if(i===2){ // SHATTER — irregular shards displaced inward, glowing wound below.
-    const wound=new THREE.Mesh(new THREE.CircleGeometry(.27,7),d20Mat(0x140008,{emissive:0xff173d,roughness:.8}));wound.rotation.x=-Math.PI/2;wound.position.y=-.035;g.add(wound);
-    for(let k=0;k<9;k++){const q=new THREE.Mesh(new THREE.TetrahedronGeometry(.07+seed(k)*.045,0),k%2?metal:dark);const a=seed(k+20)*Math.PI*2,r=.10+seed(k+40)*.24;q.position.set(Math.cos(a)*r,-.03-seed(k+60)*.12,Math.sin(a)*r);q.rotation.set(seed(k)*3,seed(k+1)*4,seed(k+2)*3);g.add(q)}
-  }else if(i===3){ // CITY — roads connect sites; buildings accrete beside network.
-    const sites=[[-.22,-.08],[.18,-.18],[.05,.20],[-.08,.03]];
-    for(let k=0;k<sites.length-1;k++)d20Line(g,[new THREE.Vector3(sites[k][0],.025,sites[k][1]),new THREE.Vector3(sites[k+1][0],.025,sites[k+1][1])],0xffd84a,1);
-    sites.forEach((p,k)=>{for(let n=0;n<3;n++){const h=.06+.06*seed(k*7+n);const q=workshopBox(g,p[0]+(n-1)*.055,h/2+.025,p[1]+(n%2?.045:-.045),.038,h,.038,n===1?bright:pale);q.rotation.y=(k+n)*.3}});
-  }else if(i===4){ // ERODE — channels etched as branching blue runoff scars.
-    for(let k=0;k<5;k++){const x=(k-2)*.065;d20Line(g,[new THREE.Vector3(x,.03,-.25),new THREE.Vector3(x*.55,.028,-.08),new THREE.Vector3((k-2)*.025,.026,.08),new THREE.Vector3(0,.024,.27)],k%2?0x77e6ff:0x1a6dff,.9)}
-    for(let k=0;k<10;k++)d20Dot(g,(seed(k)-.5)*.5,.045,(seed(k+30)-.5)*.45,.009,bright);
-  }else if(i===5){ // SWARM — autonomous agents explore their bounded home face.
-    const bugs=[];for(let k=0;k<11;k++){const b=d20Dot(g,(seed(k)-.5)*.42,.04,(seed(k+20)-.5)*.36,.018,k%3?dark:bright);b.userData.phase=seed(k+50)*6.28;bugs.push(b)}
-    d20Animate(t=>bugs.forEach((b,k)=>{const a=t*.0007*(1+(k%3)*.2)+b.userData.phase;b.position.x=Math.cos(a)*(.12+(k%4)*.035);b.position.z=Math.sin(a*(1.1+(k%2)*.13))*(.11+(k%3)*.035)}));
-  }else if(i===6){ // CLOCK — persistent moving mechanism.
-    for(let k=0;k<3;k++){const gear=new THREE.Group();gear.position.set((k-1)*.13,.045,(k%2?-.05:.04));g.add(gear);const ring=new THREE.Mesh(new THREE.TorusGeometry(.10-k*.015,.018,6,18),k===1?bright:workshopMetal);ring.rotation.x=Math.PI/2;gear.add(ring);for(let n=0;n<8;n++){const tooth=workshopBox(gear,Math.cos(n*Math.PI/4)*.105,0,Math.sin(n*Math.PI/4)*.105,.025,.025,.045,k===1?bright:metal);tooth.rotation.y=-n*Math.PI/4}d20Animate(t=>gear.rotation.y=t*.0015*(k===1?-1.4:1)*(k+1))}
-  }else if(i===7){ // BURN — exhausted fire leaves blackened ground and frozen ember tongues.
-    const char=new THREE.Mesh(new THREE.CircleGeometry(.32,18),new THREE.MeshBasicMaterial({color:0x160b0a,side:THREE.DoubleSide}));char.rotation.x=-Math.PI/2;char.position.y=.018;g.add(char);
-    for(let k=0;k<8;k++){const flame=new THREE.Mesh(new THREE.ConeGeometry(.025+.02*seed(k),.10+.10*seed(k+10),7),k%2?bright:d20Mat(0xffd21a,{emissive:0xff6a00}));flame.position.set((seed(k+30)-.5)*.38,.06,(seed(k+50)-.5)*.34);g.add(flame);d20Animate(t=>flame.scale.y=.65+.35*Math.sin(t*.008+k))}
-  }else if(i===8){ // EXCAVATE — illuminated shaft explicitly travels inward toward die center.
-    const rim=new THREE.Mesh(new THREE.TorusGeometry(.19,.025,8,24),workshopMetal);rim.rotation.x=Math.PI/2;rim.position.y=.025;g.add(rim);
-    for(let k=0;k<5;k++){const ring=new THREE.Mesh(new THREE.TorusGeometry(.17-k*.022,.012,6,18),k===4?bright:dark);ring.rotation.x=Math.PI/2;ring.position.y=-.06-k*.075;ring.scale.setScalar(1-k*.10);g.add(ring)}
-    const lamp=d20Dot(g,0,-.37,0,.035,bright,1);lamp.material.emissiveIntensity=2;
-  }else if(i===9){ // WEAVE — tensile graph connects boundary-ish anchors.
-    const pts=[];for(let k=0;k<9;k++){const a=k/9*Math.PI*2,r=.25+(k%2)*.06;pts.push(new THREE.Vector3(Math.cos(a)*r,.035,Math.sin(a)*r));d20Dot(g,pts[k].x,.035,pts[k].z,.014,bright)}
-    for(let k=0;k<pts.length;k++){d20Line(g,[pts[k],pts[(k+3)%pts.length]],k%2?0xf7f1ff:accent,.75)}
-  }else if(i===10){ // WEATHER — cloud occupies outward space; precipitation bridges cloud to surface.
-    const cloud=new THREE.Group();cloud.position.y=.20;g.add(cloud);for(let k=0;k<7;k++)d20Dot(cloud,(seed(k)-.5)*.32,(seed(k+8)-.5)*.08,(seed(k+16)-.5)*.22,.07+.03*seed(k+24),pale,1);
-    const drops=[];for(let k=0;k<9;k++){const d=d20Dot(g,(seed(k+40)-.5)*.35,.06+(k%3)*.07,(seed(k+60)-.5)*.25,.008,bright);drops.push(d)}
-    d20Animate(t=>{cloud.position.x=Math.sin(t*.0007)*.06;drops.forEach((d,k)=>d.position.y=.025+(((t*.00012+k*.13)%1)*.28))});
-  }else if(i===11){ // MAGNETIZE — matter makes an invisible field legible.
-    for(let lane=-2;lane<=2;lane++){const pts=[];for(let k=0;k<=12;k++){const x=-.28+k*.046,z=lane*.035*(1-Math.pow((k-6)/6,2))*2;pts.push(new THREE.Vector3(x,.04,z))}d20Line(g,pts,lane===0?0xffffff:accent,.85)}
-    d20Dot(g,-.29,.045,0,.045,d20Mat(0xff3344,{emissive:0x661111}));d20Dot(g,.29,.045,0,.045,d20Mat(0x334cff,{emissive:0x111166}));
-  }else if(i===12){ // HATCH — one articulated creature, not particles.
-    const egg=new THREE.Mesh(new THREE.SphereGeometry(.09,12,8),pale);egg.scale.y=1.25;egg.position.set(-.16,.10,.05);g.add(egg);
-    const beast=new THREE.Group();beast.position.set(.08,.08,0);g.add(beast);d20Dot(beast,0,.05,0,.075,bright,1);d20Dot(beast,.09,.09,-.01,.045,bright,1);
-    for(const sx of [-1,1])for(const sz of [-1,1]){const hip=new THREE.Vector3(sx*.035,.03,sz*.035),foot=new THREE.Vector3(sx*.11,-.055,sz*.10);d20Cyl(beast,hip,foot,.012,dark,6)}
-    d20Animate(t=>{beast.rotation.y=Math.sin(t*.0011)*.7;beast.position.x=.07+Math.sin(t*.0008)*.05});
-  }else if(i===13){ // CRYSTALLIZE — angular competitive growth.
-    for(let k=0;k<13;k++){const q=new THREE.Mesh(new THREE.OctahedronGeometry(.035+.035*seed(k),0),k%3?bright:d20Mat(0xe8ffff,{metalness:.15,roughness:.18}));const a=seed(k+20)*6.28,r=.04+.24*seed(k+40);q.position.set(Math.cos(a)*r,.04+.05*seed(k+60),Math.sin(a)*r);q.scale.y=1.5+seed(k+80)*2.5;q.rotation.y=a;g.add(q)}
-  }else if(i===14){ // REVEAL — parted fog exposes an apparently pre-existing ruin.
-    const ruin=workshopBox(g,0,.07,0,.18,.14,.12,workshopPale);for(let k=0;k<3;k++)workshopBox(g,(k-1)*.075,.15,0,.035,.18,.035,workshopDark);
-    const fog=d20Mat(0xd9d5ef,{transparent:true,opacity:.22,roughness:1});for(let k=0;k<7;k++){const q=d20Dot(g,(seed(k)-.5)*.45,.10,(seed(k+20)-.5)*.35,.09,fog,1);d20Animate(t=>{q.position.x+=(Math.sin(t*.0005+k)*.00005)})}
-  }else if(i===15){ // LAUNCH — consequence escapes face and becomes die-level orbital state.
-    const mast=d20Cyl(g,new THREE.Vector3(0,.02,0),new THREE.Vector3(0,.22,0),.025,metal,8);const rocket=new THREE.Mesh(new THREE.ConeGeometry(.045,.16,8),bright);rocket.position.y=.28;g.add(rocket);
-    const sat=new THREE.Group();face.mesh.parent.add(sat);sat.name='world-d20:satellite-from-face-'+i;const body=d20Dot(sat,1.65,0,0,.045,bright,1);workshopBox(sat,1.65,0,0,.28,.012,.08,dark);
-    d20Animate(t=>{sat.rotation.y=t*.00055;sat.rotation.z=.55;body.rotation.y=t*.003});
-  }else if(i===16){ // COLLAPSE — rings descend inward toward the shared center.
-    for(let k=0;k<6;k++){const ring=new THREE.Mesh(new THREE.TorusGeometry(.29-k*.038,.018,6,20),k===5?bright:dark);ring.rotation.x=Math.PI/2;ring.position.y=-k*.055;g.add(ring)}
-    const voidMesh=new THREE.Mesh(new THREE.CircleGeometry(.11,20),new THREE.MeshBasicMaterial({color:0x000000,side:THREE.DoubleSide}));voidMesh.rotation.x=-Math.PI/2;voidMesh.position.y=-.30;g.add(voidMesh);
-  }else if(i===17){ // MIRROR — observer relationship, not object pile.
-    const mirror=new THREE.Mesh(new THREE.CircleGeometry(.31,3),new THREE.MeshPhysicalMaterial({color:0xbfefff,metalness:.75,roughness:.04,transmission:.18,transparent:true,opacity:.88,side:THREE.DoubleSide}));mirror.rotation.x=-Math.PI/2;mirror.position.y=.025;mirror.rotation.z=Math.PI/6;g.add(mirror);
-    const ghost=new THREE.Mesh(new THREE.TorusKnotGeometry(.08,.018,40,6),bright);ghost.position.y=-.09;ghost.scale.y=-1;g.add(ghost);d20Animate(t=>ghost.rotation.y=t*.0012);
-  }else if(i===18){ // SIGNAL — explicitly traverses existing face adjacency graph.
-    const root=face.mesh.parent,path=[face.face];let cur=face;for(let k=0;k<5;k++){const next=cur.neighbors[(k+i)%3];if(next==null||path.includes(next))break;path.push(next);cur=root.userData.faces[next]}
-    const points=path.map(n=>root.userData.faces[n].center.clone().multiplyScalar(1.025));const line=d20Line(root,points,accent,.82);line.name='world-d20:signal-path';
-    const pulse=d20Dot(root,points[0].x,points[0].y,points[0].z,.035,bright,1);d20Animate(t=>{if(points.length<2)return;const u=(t*.00025)%1,p=u*(points.length-1),k=Math.min(points.length-2,Math.floor(p));pulse.position.lerpVectors(points[k],points[k+1],p-k)});
-  }else if(i===19){ // DOOR — tiny face asserts a larger-than-container interior.
-    const portal=new THREE.Mesh(new THREE.CircleGeometry(.30,3),new THREE.MeshBasicMaterial({color:0x02020a,side:THREE.DoubleSide}));portal.rotation.x=-Math.PI/2;portal.rotation.z=Math.PI/6;portal.position.y=.022;g.add(portal);
-    for(let k=0;k<18;k++){const star=d20Dot(g,(seed(k)-.5)*.40,-.02-seed(k+20)*.35,(seed(k+40)-.5)*.34,.006+.008*seed(k+60),k%4===0?bright:pale);star.scale.setScalar(.7+seed(k+80))}
-    const farRing=new THREE.Mesh(new THREE.TorusGeometry(.16,.012,6,24),bright);farRing.rotation.x=Math.PI/2;farRing.position.y=-.28;g.add(farRing);d20Animate(t=>farRing.rotation.z=t*.0006);
-  }
-  worldD20.userData.betwixtable?.fit?.();window.vestibuleDirty=true;return true;
-}
-function tapWorldD20Face(activeRaycaster){
-  const presentation=worldD20.userData.betwixtable?.presentation,faces=presentation?.userData?.faces||[],hit=activeRaycaster?.intersectObjects(faces.map(f=>f.mesh),false)?.[0]||null,index=hit?.object?.userData?.worldD20Face;
-  if(Number.isInteger(index)){const face=faces[index];if(!face.marked){face.marked=true;d20Experience(face)}}
-  return true;
-}
+worldD20.userData.world=Object.freeze({kind:'hollow-d20-flight',faces:20,rule:'open faces; gravity + steering + time; rocket forward follows velocity'});
 function updateWorldD20(now){if(!worldD20Animators.length)return;for(const animate of worldD20Animators)animate(now);window.vestibuleDirty=true;}
 
 

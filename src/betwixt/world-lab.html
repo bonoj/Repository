@@ -1548,6 +1548,10 @@ function setBetwixtTitle(text){if(placeTitleEl)placeTitleEl.textContent=text}
 function removeBetwixtPortal(){
   globalThis.RepositoryShell?.removeTool('betwixt-portal');
 }
+function removePlaceSpells(){
+  const shell=globalThis.RepositoryShell;if(!shell)return;
+  for(const id of ['observatory-place','workshop-place','crucible-container'])shell.removeTool(id);
+}
 function installBetwixtPortal(){
   const shell=globalThis.RepositoryShell;if(!shell||shell.inspect().tools.includes('betwixt-portal'))return;
   shell.registerTool({id:'betwixt-portal',text:'🌀',label:'Return to Betwixt',lane:'resident',onClick:()=>enterBetwixt()});
@@ -1555,7 +1559,7 @@ function installBetwixtPortal(){
 function enterBetwixt(){
   for(const {object} of Object.values(placeDefinitions))object.visible=false;
   if(workshopCrucibleEnabled){workshopCrucibleEnabled=false;removeWorkshopCrucibleSpells()}
-  currentPlace=null;setBetwixtTitle('BETWIXT');removeBetwixtPortal();
+  currentPlace=null;setBetwixtTitle('BETWIXT');removeBetwixtPortal();installPlaceSpells();
   window.vestibuleDirty=true;
 }
 function enterPlace(name){
@@ -1566,7 +1570,7 @@ function enterPlace(name){
   }else if(workshopCrucibleEnabled){
     workshopCrucibleEnabled=false;removeWorkshopCrucibleSpells();
   }
-  next.object.visible=true;currentPlace=name;setBetwixtTitle(next.title);installBetwixtPortal();
+  next.object.visible=true;currentPlace=name;setBetwixtTitle(next.title);removePlaceSpells();installBetwixtPortal();
   window.vestibuleDirty=true;return true;
 }
 function installPlaceSpells(){

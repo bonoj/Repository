@@ -2569,10 +2569,19 @@ const d20BiomeDefs=[
 ];
 const d20FaceMats=d20BiomeDefs.map(([name,color])=>new THREE.MeshStandardMaterial({name:'d20-biome:'+name,color,roughness:.78,metalness:name==='crystal'||name==='obsidian'?.18:.02,flatShading:true}));
 let d20Roll=null,d20RollCount=0;
+// Semantic placement: the d20 is ABOVE the thoughtform table. Resolve that relation
+// from live bounds so either object may change shape without reintroducing overlap.
+const thoughtformTableBounds=new THREE.Box3().setFromObject(workshopTabletopBetwixtable);
+const inhabitedD20Radius=1.18;
+const inhabitedD20Clearance=.65;
 const inhabitedD20=buildBetwixtable({
   name:'inhabited-d20',
   parent:scene,
-  at:new THREE.Vector3(0,GROUND_Y+8.6,0),
+  at:new THREE.Vector3(
+    workshopTabletopBetwixtable.position.x,
+    thoughtformTableBounds.max.y+inhabitedD20Radius+inhabitedD20Clearance,
+    workshopTabletopBetwixtable.position.z
+  ),
   padding:.32,
   interact:()=>rollInhabitedD20(),
   build(root,spatial){

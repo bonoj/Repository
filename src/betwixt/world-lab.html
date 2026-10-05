@@ -1752,7 +1752,7 @@ function resolveSpatialRelations(){
   }
 }
 registerRelationalNode('legacy-workshop',{object:legacyWorkshop,bounds:()=>visibleWorldBounds(legacyWorkshop)});
-relateSpatial({subject:'legacy-workshop',kind:'above',reference:'jovian-system',gap:.72});
+// Jovian is now internal to Workshop; no parent-to-child placement relation is required.
 
 // The legacy organism exists inside its persistent Workshop place.
 legacyLabCarrier.visible=true;
@@ -2354,7 +2354,7 @@ if(!geometryRegressionHealthy)throw new Error('CHEMLAB geometry regression expec
 
 const workshopTabletopBetwixtable=buildBetwixtable({
   name:'brass-glass-tabletop',
-  parent:scene,
+  parent:legacyWorkshop,
   // Deliberately airborne: a clean third spatial specimen with generous clearance
   // above the floor-bound Crucible and Chem discovery objects.
   at:new THREE.Vector3(0,GROUND_Y+4.6,0),
@@ -2633,7 +2633,7 @@ const thoughtformTableBounds=new THREE.Box3().setFromObject(workshopTabletopBetw
 const worldD20Radius=1.28,worldD20Clearance=.65;
 const worldD20Animators=[];
 const worldD20=buildBetwixtable({
-  name:'failure-to-launch',parent:scene,
+  name:'failure-to-launch',parent:legacyWorkshop,
   at:new THREE.Vector3(workshopTabletopBetwixtable.position.x+8.5,thoughtformTableBounds.max.y+worldD20Radius+worldD20Clearance,workshopTabletopBetwixtable.position.z-5.5),
   padding:.55,interact:()=>startRocketChase(),
   build(root,spatial){
@@ -2936,7 +2936,7 @@ function cairnRenderStatus(){
   cairnStatusTexture.needsUpdate=true;window.vestibuleDirty=true;
 }
 const cairnLabBetwixtable=buildBetwixtable({
-  name:'rendezvous-cairn-laboratory',parent:scene,at:new THREE.Vector3(-3.8,GROUND_Y+2.35,-2.5),padding:.32,
+  name:'rendezvous-cairn-laboratory',parent:legacyWorkshop,at:new THREE.Vector3(-3.8,GROUND_Y+2.35,-2.5),padding:.32,
   build(root){
     const table=new THREE.Mesh(new THREE.CylinderGeometry(2.05,2.05,.12,48),brassDark);table.position.y=.06;table.castShadow=true;root.add(table);
     const glass=new THREE.Mesh(new THREE.CylinderGeometry(1.92,1.92,.035,48),glassFace);glass.position.y=.135;root.add(glass);
@@ -3013,7 +3013,7 @@ const deskLampGraph=Object.freeze({
 
 const deskLampBetwixtable=buildBetwixtable({
   name:'semantic-desk-lamp',
-  parent:scene,
+  parent:legacyWorkshop,
   at:new THREE.Vector3(0,GROUND_Y+.03,3.55),
   padding:.30,
   build(root,spatial){
@@ -3159,7 +3159,7 @@ requestAnimationFrame(()=>scanLampHead());
 // Workshop materials are reused directly; whatever imperfections this fast passage contains are natural evidence.
 const neptunianCrossing001Betwixtable=buildBetwixtable({
   name:'neptunian-crossing-001',
-  parent:scene,
+  parent:legacyWorkshop,
   // Deliberately off-axis from the vertical laboratory stack: nearby Betwixt remains perceptual noise.
   at:new THREE.Vector3(6.8,GROUND_Y+.03,-4.9),
   padding:.34,
@@ -3223,7 +3223,7 @@ const neptunianCrossing001Betwixtable=buildBetwixtable({
 });
 
 // Neptunian Jovian Betwixtable: Janus turns the old ice-pusher toy into a deterministic N-body encounter.
-const jovianBetwixtable=buildBetwixtable({name:'neptunian-jovian-system',parent:scene,at:new THREE.Vector3(0,GROUND_Y+9.45,0),padding:.38,build(root){
+const jovianBetwixtable=buildBetwixtable({name:'neptunian-jovian-system',parent:legacyWorkshop,at:new THREE.Vector3(0,GROUND_Y+9.45,0),padding:.38,build(root){
   const rim=new THREE.Mesh(new THREE.TorusGeometry(2.05,.075,10,64),brass);rim.rotation.x=Math.PI/2;root.add(rim);
   root.add(new THREE.Mesh(new THREE.CylinderGeometry(1.96,1.96,.035,64),glassFace));
   const center=new THREE.Vector3(0,.305,0),mu=.19;
@@ -3377,7 +3377,7 @@ cardSpecs.forEach((spec,i)=>{
 // replaced freely without changing the brass/glass work surface beneath it.
 const relationalInspectionBetwixtable=buildBetwixtable({
   name:'relational-inspection',
-  parent:scene,
+  parent:legacyWorkshop,
   at:new THREE.Vector3(0,GROUND_Y+6.15,0),
   padding:.30,
   build(root,spatial){

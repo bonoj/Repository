@@ -2628,7 +2628,7 @@ const worldD20Radius=1.28,worldD20Clearance=.65;
 const worldD20Animators=[];
 const worldD20=buildBetwixtable({
   name:'failure-to-launch',parent:scene,
-  at:new THREE.Vector3(workshopTabletopBetwixtable.position.x,thoughtformTableBounds.max.y+worldD20Radius+worldD20Clearance,workshopTabletopBetwixtable.position.z),
+  at:new THREE.Vector3(workshopTabletopBetwixtable.position.x+8.5,thoughtformTableBounds.max.y+worldD20Radius+worldD20Clearance,workshopTabletopBetwixtable.position.z-5.5),
   padding:.55,interact:()=>startRocketChase(),
   build(root,spatial){
     const shellGeo=new THREE.IcosahedronGeometry(worldD20Radius,0);

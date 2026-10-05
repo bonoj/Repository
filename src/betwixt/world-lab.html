@@ -1944,8 +1944,6 @@ const observerTwixt=buildBetwixtable({
   }
 });
 const observerEye=observerTwixt.userData.betwixtable.presentation.userData.observerEye;
-const observerGazePoint=new THREE.Vector3();
-const observerGazeLocal=new THREE.Vector3();
 const observerEyeWorld=new THREE.Vector3();
 const observerDesiredWorld=new THREE.Vector3();
 const observerDesiredLocal=new THREE.Vector3();
@@ -1953,7 +1951,6 @@ const observerLocalForward=new THREE.Vector3(0,0,1); // iris/pupil are physicall
 const observerTargetPoint=new THREE.Vector3();
 const observerOrientFrom=new THREE.Quaternion();
 const observerOrientTo=new THREE.Quaternion();
-const observerLookMatrix=new THREE.Matrix4();
 const observerParentWorldQuaternion=new THREE.Quaternion();
 let observerAttention='wander';
 let observerAttentionStarted=0;

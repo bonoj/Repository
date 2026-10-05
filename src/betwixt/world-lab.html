@@ -64,7 +64,7 @@ select{width:100%;padding:0 12px;appearance:auto}
 </style>
 </head>
 <body>
-<div id="mark"><strong>WORLD LAB</strong></div>
+<div id="mark"><strong id="placeTitle">BETWIXT</strong></div>
 
 <div id="fault"></div>
 <canvas id="ink" aria-label="Crayon annotation layer"></canvas>
@@ -318,6 +318,7 @@ Attention brings a presence to the observer. Commitment carries the observer to 
 
 <script>
 const labActionsEl=document.getElementById('labActions');
+const placeTitleEl=document.getElementById('placeTitle');
 const enterLabEl=document.getElementById('enterLab');
 const githubLabEl=document.getElementById('githubLab');
 
@@ -1536,20 +1537,43 @@ function setWorkshopCrucibleEnabled(enabled,button){
   button?.classList.toggle('active',workshopCrucibleEnabled);button?.setAttribute('aria-pressed',workshopCrucibleEnabled?'true':'false');
   workshopBearingLast=performance.now();window.vestibuleDirty=true;return workshopCrucibleEnabled;
 }
-function toggleWorkshopCrucible(button){return setWorkshopCrucibleEnabled(!workshopCrucibleEnabled,button)}
-let observatoryEnabled=false,workshopPlaceEnabled=false;
-function setPlaceVisible(place,enabled,button){
-  place.visible=!!enabled;
-  button?.classList.toggle('active',!!enabled);
-  button?.setAttribute('aria-pressed',enabled?'true':'false');
+function toggleWorkshopCrucible(button){return workshopCrucibleEnabled?enterBetwixt():enterPlace('crucible')}
+let currentPlace=null;
+const placeDefinitions={
+  observatory:{object:observatoryPlace,title:'👁️ OBSERVATORY'},
+  workshop:{object:legacyWorkshop,title:'🛠️ WORKSHOP'},
+  crucible:{object:cruciblePlace,title:'⚗️ CRUCIBLE'}
+};
+function setBetwixtTitle(text){if(placeTitleEl)placeTitleEl.textContent=text}
+function removeBetwixtPortal(){
+  globalThis.RepositoryShell?.removeTool('betwixt-portal');
+}
+function installBetwixtPortal(){
+  const shell=globalThis.RepositoryShell;if(!shell||shell.inspect().tools.includes('betwixt-portal'))return;
+  shell.registerTool({id:'betwixt-portal',text:'🌀',label:'Return to Betwixt',lane:'resident',onClick:()=>enterBetwixt()});
+}
+function enterBetwixt(){
+  for(const {object} of Object.values(placeDefinitions))object.visible=false;
+  if(workshopCrucibleEnabled){workshopCrucibleEnabled=false;removeWorkshopCrucibleSpells()}
+  currentPlace=null;setBetwixtTitle('BETWIXT');removeBetwixtPortal();
   window.vestibuleDirty=true;
-  return !!enabled;
+}
+function enterPlace(name){
+  const next=placeDefinitions[name];if(!next)return false;
+  for(const {object} of Object.values(placeDefinitions))object.visible=false;
+  if(name==='crucible'){
+    workshopCrucibleEnabled=true;ensureWorkshopTerrain();installWorkshopCrucibleSpells();
+  }else if(workshopCrucibleEnabled){
+    workshopCrucibleEnabled=false;removeWorkshopCrucibleSpells();
+  }
+  next.object.visible=true;currentPlace=name;setBetwixtTitle(next.title);installBetwixtPortal();
+  window.vestibuleDirty=true;return true;
 }
 function installPlaceSpells(){
   const shell=globalThis.RepositoryShell;if(!shell)return;
-  if(!shell.inspect().tools.includes('observatory-place'))shell.registerTool({id:'observatory-place',text:'👁️',label:'Observatory',lane:'resident',onClick:b=>{observatoryEnabled=setPlaceVisible(observatoryPlace,!observatoryEnabled,b)}});
-  if(!shell.inspect().tools.includes('workshop-place'))shell.registerTool({id:'workshop-place',text:'🛠️',label:'Workshop',lane:'resident',onClick:b=>{workshopPlaceEnabled=setPlaceVisible(legacyWorkshop,!workshopPlaceEnabled,b)}});
-  if(!shell.inspect().tools.includes('crucible-container'))shell.registerTool({id:'crucible-container',text:'⚗️',label:'Crucible',lane:'resident',onClick:b=>toggleWorkshopCrucible(b)});
+  if(!shell.inspect().tools.includes('observatory-place'))shell.registerTool({id:'observatory-place',text:'👁️',label:'Observatory',lane:'resident',onClick:()=>enterPlace('observatory')});
+  if(!shell.inspect().tools.includes('workshop-place'))shell.registerTool({id:'workshop-place',text:'🛠️',label:'Workshop',lane:'resident',onClick:()=>enterPlace('workshop')});
+  if(!shell.inspect().tools.includes('crucible-container'))shell.registerTool({id:'crucible-container',text:'⚗️',label:'Crucible',lane:'resident',onClick:()=>enterPlace('crucible')});
 }
 queueMicrotask(installPlaceSpells);
 
@@ -1589,7 +1613,7 @@ function installCollapseWorldSpell(){
   const shell=globalThis.RepositoryShell;if(!shell||shell.inspect().tools.includes('collapse-world'))return;
   shell.registerTool({id:'collapse-world',text:'⚪️',label:'Collapse world',lane:'resident',onClick:()=>collapseWorldToBead()});
 }
-queueMicrotask(installCollapseWorldSpell);
+// Legacy marble spell preserved but intentionally not instantiated.
 function updateCollapseBead(now){
   if(!collapseBead.visible)return;
   const dt=Math.min(.05,Math.max(0,(now-(collapseLastNow??now))/1000));collapseLastNow=now;
@@ -1884,8 +1908,7 @@ function tapWorkshopCrucibleOrb(){
     return true;
   }
   if(workshopFocusMotion)return true;
-  const button=globalThis.RepositoryShell?.button('crucible-container')||null;
-  return toggleWorkshopCrucible(button);
+  return enterPlace('crucible');
 }
 
 // Workshop junk bin: retired physical specimens remain as inert clutter, not spells or residents.

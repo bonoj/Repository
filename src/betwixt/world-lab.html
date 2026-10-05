@@ -2619,20 +2619,14 @@ const worldD20=buildBetwixtable({
     root.add(rocket);
 
     const up=new THREE.Vector3(0,1,0),gravity=new THREE.Vector3(0,-.58,0);
-    const velocity=new THREE.Vector3(),desired=new THREE.Vector3(),accel=new THREE.Vector3();
-    let portalIndex=2,nextIndex=13,last=performance.now();
-    const rocketClearance=.16;
-    rocket.position.copy(portals[portalIndex].center).addScaledVector(portals[portalIndex].normal,worldD20Radius*.48);
-    velocity.copy(portals[portalIndex].normal).multiplyScalar(-1.25);
+    const velocity=new THREE.Vector3(),accel=new THREE.Vector3(),home=new THREE.Vector3();
+    let last=performance.now(),wanderPhase=0;
+    const rocketClearance=.16,outerLeash=worldD20Radius*2.65;
+    // Face topology remains available in portals; free flight deliberately does not consume it.
+    rocket.position.set(.12,.18,.08);
+    velocity.set(.92,.72,-.64);
 
-    function chooseNext(){
-      portalIndex=nextIndex;
-      // Distant deterministic openings; center targeting leaves generous clearance from every strut.
-      nextIndex=(nextIndex+7)%portals.length;
-      if(nextIndex===portalIndex)nextIndex=(nextIndex+9)%portals.length;
-    }
     function keepClearOfFrame(){
-      // Hard collision against all 30 cylindrical edge segments, with rocket body clearance.
       for(let i=0;i<edgePos.count;i+=2){
         edgeA.fromBufferAttribute(edgePos,i);edgeB.fromBufferAttribute(edgePos,i+1);
         const ab=edgeB.clone().sub(edgeA),ap=rocket.position.clone().sub(edgeA);
@@ -2642,26 +2636,34 @@ const worldD20=buildBetwixtable({
         if(d<min){
           if(d<1e-5)away.copy(rocket.position).normalize();else away.multiplyScalar(1/d);
           rocket.position.copy(nearest).addScaledVector(away,min);
-          const vn=velocity.dot(away);if(vn<0)velocity.addScaledVector(away,-1.65*vn);
+          const vn=velocity.dot(away);if(vn<0)velocity.addScaledVector(away,-1.7*vn);
         }
       }
     }
     worldD20Animators.push(now=>{
-      const dt=Math.min(.032,Math.max(.001,(now-last)/1000));last=now;
-      const target=portals[nextIndex].center.clone().addScaledVector(portals[nextIndex].normal,worldD20Radius*.62);
-      desired.copy(target).sub(rocket.position);
-      const distance=desired.length();
-      desired.normalize().multiplyScalar(1.42);
-      // Steering supplies thrust; gravity remains an independent continuous influence.
-      accel.copy(desired).sub(velocity).multiplyScalar(2.25).add(gravity);
+      const dt=Math.min(.032,Math.max(.001,(now-last)/1000));last=now;wanderPhase+=dt;
+      const r=rocket.position.length();
+      // Rocket owns continuous volume dynamics. A soft distant leash merely bends it home;
+      // no face or opening is selected as a destination.
+      accel.copy(gravity);
+      const forward=velocity.clone().normalize();
+      const thrust=.62;
+      accel.addScaledVector(forward,thrust);
+      // Gentle deterministic attitude bias keeps trajectories rich without becoming a route.
+      accel.x+=Math.sin(wanderPhase*.73)*.18;accel.z+=Math.cos(wanderPhase*.57)*.16;
+      if(r>worldD20Radius*1.35){
+        home.copy(rocket.position).multiplyScalar(-1).normalize();
+        const leash=THREE.MathUtils.clamp((r-worldD20Radius*1.35)/(outerLeash-worldD20Radius*1.35),0,1);
+        accel.addScaledVector(home,.85+leash*2.4);
+      }
       velocity.addScaledVector(accel,dt);
       const speed=velocity.length();
-      if(speed>1.75)velocity.multiplyScalar(1.75/speed);
+      if(speed<.72)velocity.multiplyScalar(.72/Math.max(speed,.001));
+      if(speed>1.72)velocity.multiplyScalar(1.72/speed);
       rocket.position.addScaledVector(velocity,dt);
       keepClearOfFrame();
       if(velocity.lengthSq()>1e-6)rocket.quaternion.setFromUnitVectors(up,velocity.clone().normalize());
       flame.scale.y=.72+.28*Math.sin(now*.022);flame.scale.x=flame.scale.z=.86+.14*Math.sin(now*.031);
-      if(distance<.2)chooseNext();
     });
 
     root.userData.portals=portals;
@@ -2669,7 +2671,7 @@ const worldD20=buildBetwixtable({
     spatial.fit();
   }
 });
-worldD20.userData.world=Object.freeze({kind:'hollow-d20-flight',faces:20,rule:'open faces; gravity + steering + time; rocket forward follows velocity'});
+worldD20.userData.world=Object.freeze({kind:'hollow-d20-flight',faces:20,rule:'face topology retained; rocket free-flies volume under gravity, thrust, time, hard frame collision; forward follows velocity'});
 const rocketChase={active:false,returning:false,saved:null,fromCamera:new THREE.Vector3(),fromTarget:new THREE.Vector3(),started:0};
 function startRocketChase(){
   if(rocketChase.active)return;

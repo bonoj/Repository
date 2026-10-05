@@ -3,9 +3,10 @@
   "type": "module",
   "scripts": {
     "build": "node tools/build.mjs",
-    "verify": "node tools/verify.mjs",
+    "verify": "node tools/verify.mjs && npm run verify:construction",
     "test": "npm run build && npm run verify",
-    "smoke:runtime": "node tools/runtime-smoke.mjs"
+    "smoke:runtime": "node tools/runtime-smoke.mjs",
+    "verify:construction": "node tools/verify-construction.mjs"
   },
   "dependencies": {
     "three": "0.180.0"

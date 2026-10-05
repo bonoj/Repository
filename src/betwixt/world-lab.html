@@ -2014,7 +2014,8 @@ function updateObserverEye(now){
 
   if(observerAttention==='wander'){
     observerWanderQuaternion(now,observerOrientTo);
-    observerEye.quaternion.slerp(observerOrientTo,.035);\n    observerTwixt.userData.betwixtable.presentation.userData.observerOcularSeat.quaternion.copy(observerEye.quaternion);
+    observerEye.quaternion.slerp(observerOrientTo,.035);
+    observerTwixt.userData.betwixtable.presentation.userData.observerOcularSeat.quaternion.copy(observerEye.quaternion);
     if(now>=observerNextNotice){
       // The room catches attention more often than the human does.
       beginObserverAttention(now,Math.random()<.24?'camera':'crucible');
@@ -2024,7 +2025,8 @@ function updateObserverEye(now){
     const t=THREE.MathUtils.smoothstep(
       THREE.MathUtils.clamp((now-observerAttentionStarted)/(observerAttentionUntil-observerAttentionStarted),0,1),0,1
     );
-    observerEye.quaternion.copy(observerOrientFrom).slerp(observerOrientTo,t);\n    observerTwixt.userData.betwixtable.presentation.userData.observerOcularSeat.quaternion.copy(observerEye.quaternion);
+    observerEye.quaternion.copy(observerOrientFrom).slerp(observerOrientTo,t);
+    observerTwixt.userData.betwixtable.presentation.userData.observerOcularSeat.quaternion.copy(observerEye.quaternion);
     if(now>=observerAttentionUntil){
       observerAttention='attend';
       observerAttentionStarted=now;
@@ -2038,7 +2040,8 @@ function updateObserverEye(now){
     const microYaw=.008*Math.sin(now*.0041);
     const microPitch=.005*Math.sin(now*.0033+1.1);
     observerOrientTo.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(microPitch,microYaw,0,'YXZ')));
-    observerEye.quaternion.slerp(observerOrientTo,.09);\n    observerTwixt.userData.betwixtable.presentation.userData.observerOcularSeat.quaternion.copy(observerEye.quaternion);
+    observerEye.quaternion.slerp(observerOrientTo,.09);
+    observerTwixt.userData.betwixtable.presentation.userData.observerOcularSeat.quaternion.copy(observerEye.quaternion);
     if(now>=observerAttentionUntil){
       observerAttention='wander';
       observerAttentionTarget=null;

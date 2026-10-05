@@ -1924,6 +1924,8 @@ const observerTwixt=buildBetwixtable({
     const glass=new THREE.Mesh(new THREE.IcosahedronGeometry(.50,3),workshopCrucibleOrbGlass);
     glass.castShadow=true;root.add(glass);
 
+    // Ocular seat: the Crucible tripod grammar turned perpendicular to gaze.
+    // Eye + paired rings + three bindings are one rigid gaze assembly around the sphere center.
     const eye=new THREE.Group();eye.name='observer:eye';root.add(eye);
     const white=new THREE.Mesh(
       new THREE.SphereGeometry(.20,22,14),
@@ -1940,6 +1942,28 @@ const observerTwixt=buildBetwixtable({
       new THREE.MeshStandardMaterial({color:0x151817,roughness:.36,side:THREE.DoubleSide})
     );
     pupil.position.z=.191;eye.add(pupil);
+
+    // TorusGeometry lies in XY: exactly the plane perpendicular to the eye's +Z gaze.
+    // Same .035 brass thickness as the Crucible support ring; aft ring gives the seat depth.
+    const seatRadius=.285,seatAft=-.115;
+    const seatFront=new THREE.Mesh(new THREE.TorusGeometry(seatRadius,.035,8,32),workshopCrucibleStandMat);
+    seatFront.name='observer:ocular-seat:front';seatFront.castShadow=true;eye.add(seatFront);
+    const seatBack=new THREE.Mesh(new THREE.TorusGeometry(seatRadius,.035,8,32),workshopCrucibleStandMat);
+    seatBack.name='observer:ocular-seat:back';seatBack.position.z=seatAft;seatBack.castShadow=true;eye.add(seatBack);
+
+    // Crucible's threefold support clocking, transposed onto the gaze plane:
+    // one binding at 12 o'clock, two at 4 and 8. They share the rings' rigid transform.
+    for(let i=0;i<3;i++){
+      const a=Math.PI/2+i*Math.PI*2/3;
+      const x=Math.cos(a)*seatRadius,y=Math.sin(a)*seatRadius;
+      const front=new THREE.Vector3(x,y,0),back=new THREE.Vector3(x,y,seatAft);
+      const d=back.clone().sub(front);
+      const binding=new THREE.Mesh(new THREE.CylinderGeometry(.027,.034,d.length(),8),workshopCrucibleStandMat);
+      binding.name='observer:ocular-seat:binding';
+      binding.position.copy(front).add(back).multiplyScalar(.5);
+      binding.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());
+      binding.castShadow=true;eye.add(binding);
+    }
     root.userData.observerEye=eye;
   }
 });

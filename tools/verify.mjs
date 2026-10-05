@@ -46,18 +46,18 @@ for(const shellEvidence of [
   "repository-devtools",
   "🌀",
   "BETWIXT",
-  "🛠",
   "RepositoryBetwixt",
   "betwixt-presence",
   "attachBetwixtMirror"
 ]){
   if(!html.includes(shellEvidence))throw new Error(`Repository shell evidence missing: ${shellEvidence}`);
 }
-if(!shellSource.includes("temporary:[]")||!shellSource.includes('{id:"workshop",text:"🛠"')||!shellSource.includes('{id:"refresh",text:"🔄"'))throw new Error("Shell must manifest Workshop and Refresh");
+if(!shellSource.includes("temporary:[]")||!shellSource.includes('{id:"refresh",text:"🔄"'))throw new Error("Shell must manifest Refresh");
+if(shellSource.includes('{id:"workshop"')||shellSource.includes('text:"🛠"'))throw new Error("Workshop spell must remain retired");
 for(const retiredId of ['id:"spin"','id:"marble"','id:"crucible"','id:"arcball"','id:"fluid-globes"','id:"crayon"','id:"lift"']){
   if(shellSource.includes(retiredId))throw new Error(`Retired spell still manifests in shell: ${retiredId}`);
 }
-if(!shellSource.includes("enterWorkshopOnReady"))throw new Error("Betwixt must begin in Workshop");
+if(shellSource.includes("enterWorkshopOnReady")||shellSource.includes("toggleWorkshop("))throw new Error("Workshop mode bootstrap must remain retired");
 const bridgeMark=html.indexOf("attachBetwixtMirror");
 const donorRuntime=html.indexOf("window.vestibule={");
 if(!(bridgeMark>donorRuntime))throw new Error("Repository ECS mirror must attach after donor runtime");
@@ -71,8 +71,7 @@ for(const boundaryEvidence of [
   "betwixtContent.add(orbitRoot)",
   "betwixtContent.add(mesh)",
   "contentWorkshopHidden",
-  "toggleContentWorkshopHidden",
-  "🛠"
+  "toggleContentWorkshopHidden"
 ]){
   if(!html.includes(boundaryEvidence))throw new Error(`Betwixt content-boundary evidence missing: ${boundaryEvidence}`);
 }

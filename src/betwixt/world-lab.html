@@ -1853,6 +1853,55 @@ const constructionWitness=buildBetwixtable({
 });
 
 
+// SEMANTIC CONSTRUCTION WITNESS T1 — same topology, earned attachment surfaces.
+const constructionWitnessT1=buildBetwixtable({
+  name:'semantic-construction-t1',parent:legacyWorkshop,at:new THREE.Vector3(2.15,GROUND_Y,0),padding:.34,
+  build(presentation,spatial){
+    const warm=new THREE.MeshStandardMaterial({color:0xf0f0ed,roughness:.68,metalness:.04});
+    const brass=new THREE.MeshStandardMaterial({color:0x9b6638,roughness:.34,metalness:.62});
+    const things=new Map(),relations=[];
+    function add(id,kind,ports,mesh,frame){
+      const root=new THREE.Group();root.name='construction-t1:'+id;root.add(mesh);presentation.add(root);
+      things.set(id,{id,kind,ports:new Set(ports),root,frame});return root;
+    }
+    add('slab-A','slab',['bottom'],new THREE.Mesh(new THREE.BoxGeometry(1.25,.13,.78),warm),
+      p=>p==='bottom'?{p:[0,-.065,0],out:[0,-1,0],up:[0,0,1]}:null);
+    add('post-A','post',['top','side'],new THREE.Mesh(new THREE.CylinderGeometry(.085,.085,.88,12),brass),
+      (p,s={})=>p==='top'?{p:[0,.44,0],out:[0,1,0],up:[0,0,1]}:
+        p==='side'?{p:[.085,(s.along??.27)*.44,0],out:[1,0,0],up:[0,1,0]}:null);
+    const rail=new THREE.Mesh(new THREE.CylinderGeometry(.052,.052,1.02,10),brass);rail.rotation.z=Math.PI/2;
+    add('rail-A','rail',['a','side'],rail,(p,s={})=>p==='a'?{p:[-.51,0,0],out:[-1,0,0],up:[0,1,0]}:
+      p==='side'?{p:[(s.along??0)*.51,-.052,0],out:[0,-1,0],up:[1,0,0]}:null);
+    add('ring-A','ring',['rim'],new THREE.Mesh(new THREE.TorusGeometry(.25,.042,8,24),brass),
+      (p,s={})=>{const a=s.angle??Math.PI/2;return p==='rim'?{p:[Math.cos(a)*.25,Math.sin(a)*.25,0],out:[Math.cos(a),Math.sin(a),0],up:[0,0,1]}:null});
+    add('bead-A','bead',['surface'],new THREE.Mesh(new THREE.SphereGeometry(.09,12,8),brass),
+      (p,s={})=>p==='surface'?{p:[0,.09,0],out:[0,1,0],up:[0,0,1]}:null);
+    function worldFrame(t,port,selector){
+      const f=t.frame(port,selector);if(!f)throw Error('T1 attachment frame missing');
+      const p=new THREE.Vector3(...f.p);t.root.localToWorld(p);
+      const q=t.root.getWorldQuaternion(new THREE.Quaternion());
+      return {p,out:new THREE.Vector3(...f.out).applyQuaternion(q).normalize(),up:new THREE.Vector3(...f.up).applyQuaternion(q).normalize()};
+    }
+    function attach(childId,childPort,parentId,parentPort,{child={},parent={}}={}){
+      const c=things.get(childId),p=things.get(parentId);
+      if(relations.some(r=>r.some(([id,port])=>(id===childId&&port===childPort)||(id===parentId&&port===parentPort))))throw Error('T1 construction port occupied');
+      presentation.updateMatrixWorld(true);const cf=worldFrame(c,childPort,child),pf=worldFrame(p,parentPort,parent);
+      c.root.quaternion.premultiply(new THREE.Quaternion().setFromUnitVectors(cf.out,pf.out.clone().negate()));
+      presentation.updateMatrixWorld(true);c.root.position.add(pf.p.clone().sub(worldFrame(c,childPort,child).p));
+      relations.push([[childId,childPort],[parentId,parentPort]]);
+    }
+    attach('post-A','top','slab-A','bottom');
+    attach('rail-A','a','post-A','side',{parent:{along:.27}});
+    attach('ring-A','rim','rail-A','side',{parent:{along:0},child:{angle:Math.PI/2}});
+    attach('bead-A','surface','ring-A','rim',{parent:{angle:-Math.PI/2}});
+    for(const t of things.values())t.root.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
+    presentation.userData.semanticConstruction={generation:'T1',things,relations};
+    globalThis.semanticConstructionWitnessT1=presentation.userData.semanticConstruction;
+    queueMicrotask(()=>{spatial.seat();spatial.fit();window.vestibuleDirty=true});
+  }
+});
+
+
 // The original Jupurn + lab-world organism has moved into Workshop under one
 // plain positioning carrier. The aggregate is deliberately NOT Betwixtable;
 // its existing children retain their own focus semantics. Its own bottom is seated

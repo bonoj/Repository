@@ -1338,7 +1338,7 @@ function setContentWorkshopHidden(hidden){
     betwixtContent.position.set(0,0,0);betwixtContent.scale.setScalar(1);
     workshopField.visible=true;
     workshopCrucibleBetwixtable.visible=true;
-    if(legacyLabBetwixtable){legacyLabBetwixtable.visible=true;seatLegacyLabsAboveJovian();}
+    if(legacyLabCarrier){legacyLabCarrier.visible=true;seatLegacyLabsAboveJovian();}
     // Workshop context does not own Crucible state. The resident ⚗️ container
     // alone decides whether its parented organism is present here.
     if(workshopCrucibleEnabled)workshopCrucible.visible=true;
@@ -1351,7 +1351,7 @@ function setContentWorkshopHidden(hidden){
       focusedWorkshopObject.position.copy(workshopObserverReturn?.position||focusedWorkshopObject.position);
       focusedWorkshopObject=null;workshopFocusMotion=null;workshopObserverReturn=null;
     }
-    if(legacyLabBetwixtable)legacyLabBetwixtable.visible=false;
+    if(legacyLabCarrier)legacyLabCarrier.visible=false;
     workshopField.visible=false;
     workshopCrucibleBetwixtable.visible=false;
     workshopCrucible.visible=false;
@@ -1739,11 +1739,15 @@ function buildBetwixtable({name='betwixtable',parent=scene,at=null,padding=.18,i
 }
 globalThis.Betwixtable=buildBetwixtable;
 
-// The original Jupurn + lab-world organism has moved into Workshop as one
-// Betwixtable. Outside Workshop it is absent; inside, its own bottom is seated
+// The original Jupurn + lab-world organism has moved into Workshop under one
+// plain positioning carrier. The aggregate is deliberately NOT Betwixtable;
+// its existing children retain their own focus semantics. Its own bottom is seated
 // above the Jovian system with measured breathing room rather than a center guess.
-const legacyLabBetwixtable=makeBetwixtable(betwixtContent,{name:'legacy-lab-worlds'});
-legacyLabBetwixtable.visible=false;
+const legacyLabCarrier=new THREE.Group();
+legacyLabCarrier.name='legacy-lab-worlds-carrier';
+scene.add(legacyLabCarrier);
+legacyLabCarrier.add(betwixtContent);
+legacyLabCarrier.visible=false;
 function visibleWorldBounds(object){
   object.updateMatrixWorld(true);
   const box=new THREE.Box3(),part=new THREE.Box3();
@@ -1754,15 +1758,14 @@ function visibleWorldBounds(object){
   return box;
 }
 function seatLegacyLabsAboveJovian(gap=.72){
-  if(!legacyLabBetwixtable||typeof jovianBetwixtable==='undefined')return null;
-  legacyLabBetwixtable.position.set(0,0,0);
-  legacyLabBetwixtable.updateMatrixWorld(true);
+  if(!legacyLabCarrier||typeof jovianBetwixtable==='undefined')return null;
+  legacyLabCarrier.position.set(0,0,0);
+  legacyLabCarrier.updateMatrixWorld(true);
   const legacy=visibleWorldBounds(betwixtContent);
   const jovian=jovianBetwixtable.userData.betwixtable.bounds();
   if(legacy.isEmpty()||jovian.isEmpty())return null;
-  legacyLabBetwixtable.position.y+=jovian.max.y+gap-legacy.min.y;
-  legacyLabBetwixtable.updateMatrixWorld(true);
-  legacyLabBetwixtable.userData.betwixtable.fit();
+  legacyLabCarrier.position.y+=jovian.max.y+gap-legacy.min.y;
+  legacyLabCarrier.updateMatrixWorld(true);
   return Object.freeze({bottom:jovian.max.y+gap,jovianTop:jovian.max.y,gap});
 }
 

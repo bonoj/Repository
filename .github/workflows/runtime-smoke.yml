@@ -1,0 +1,34 @@
+name: Runtime Smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: bonoj/Crucible
+          ref: d1c5e437197e72b16624c0b7104c6e9d9cbb0d0f
+          path: vendor/crucible
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package.json
+      - run: npm install --no-audit --no-fund --package-lock=false
+      - run: npx playwright install --with-deps chromium
+      - name: Build pinned Crucible donor
+        working-directory: vendor/crucible
+        run: |
+          npm install --no-audit --no-fund
+          npm test
+          GITHUB_SHA=d1c5e437197e72b16624c0b7104c6e9d9cbb0d0f node tools/build.mjs
+          printf '%s  %s\n' '3355df58812cab9afabbfc33464ee67bf3a736912a1ff9edac7a3afc48ab6c12' 'dist/index.html' | sha256sum -c -
+      - run: npm run build
+      - run: npm run smoke:runtime

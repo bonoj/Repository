@@ -3,8 +3,7 @@
   const spells={
     temporary:[],
     resident:[
-      {id:"refresh",text:"🔄",label:"Refresh",onClick:freshArrival},
-      {id:"workshop",text:"🛠",label:"Workshop",onClick:toggleWorkshop}
+      {id:"refresh",text:"🔄",label:"Refresh",onClick:freshArrival}
     ]
   };
   const build=globalThis.__REPOSITORY_BUILD__||"local";
@@ -148,18 +147,6 @@
     location.replace(url);
   }
 
-  function toggleWorkshop(button){
-    const world=globalThis.vestibule;
-    if(!world?.toggleContentWorkshopHidden)return;
-    const hidden=world.toggleContentWorkshopHidden();
-    button?.classList.toggle("active",hidden);
-    button?.setAttribute("aria-pressed",hidden?"true":"false");
-    const lift=registered.get("lift");
-    if(lift){lift.classList.remove("active");lift.setAttribute("aria-pressed","false");lift.textContent="⬆️"}
-    const marble=registered.get("marble");
-    marble?.classList.remove("active");marble?.setAttribute("aria-pressed","false");
-  }
-
   function liftBetwixtContent(button){
     const world=globalThis.vestibule;
     if(!world?.toggleContentRaised||world.contentWorkshopHidden)return;
@@ -208,17 +195,6 @@
   for(const spell of spells.temporary)registerTool({...spell,lane:"temporary"});
   for(const spell of spells.resident)registerTool({...spell,lane:"resident"});
 
-  // Betwixt now begins at the bench. Workshop is the sole manifested spell.
-  // Wait for the donor to expose its world boundary, then enter exactly once.
-  function enterWorkshopOnReady(){
-    const world=globalThis.vestibule;
-    if(!world?.setContentWorkshopHidden)return false;
-    if(!world.contentWorkshopHidden)world.setContentWorkshopHidden(true);
-    const button=registered.get("workshop");
-    button?.classList.add("active");button?.setAttribute("aria-pressed","true");
-    return true;
-  }
-  if(!enterWorkshopOnReady())addEventListener("vestibule-ready",enterWorkshopOnReady,{once:true});
 
   globalThis.RepositoryShell={
     place,

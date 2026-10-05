@@ -57,7 +57,7 @@
     frames++;
     if(now-stamp>=500){
       fps=Math.round(frames*1000/(now-stamp));
-      status.textContent=`${place.sigil} ${place.title} · ${build} · ${fps} fps`;
+      renderStatus();
       frames=0;stamp=now;
     }
     requestAnimationFrame(sample);
@@ -97,6 +97,15 @@
   function removeTool(id){
     registered.get(id)?.remove();
     registered.delete(id);
+  }
+  function renderStatus(){
+    status.textContent=`${place.sigil} ${place.title} · ${build} · ${fps||"…"} fps`;
+  }
+  function setPlace({sigil,title}={}){
+    if(typeof sigil==="string"&&sigil)place.sigil=sigil;
+    if(typeof title==="string"&&title)place.title=title;
+    renderStatus();
+    return {...place};
   }
 
   let crucibleAperture=null;
@@ -206,6 +215,7 @@
     trays:{temporary:temporaryTray,resident:residentTray},
     registerTool,
     removeTool,
+    setPlace,
     button:id=>registered.get(id)||null,
     inspect:()=>({place:{...place},build,sha,fps,tools:[...registered.keys()]})
   };

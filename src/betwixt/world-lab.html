@@ -1923,39 +1923,50 @@ function scanConstructionT1(){
   ].map(([x,y,z])=>center.clone().add(new THREE.Vector3(x*size.x,y*size.y,z*size.z)));
   const dirs=[[1,0,0],[-1,0,0],[0,0,1],[0,0,-1],[1,.7,0],[-1,.7,0],[0,.7,1],[0,.7,-1],[1,-.45,1],[-1,-.45,1],[1,-.45,-1],[-1,-.45,-1]];
   const before=constructionT1Observer.transcript().length;
+  const seenContinuities=new Set(),coveragePasses=[];
+  function senseFrom(d,target){
+    const pose=constructionT1Observer.place(d),origin=new THREE.Vector3(...pose.position);
+    constructionT1Observer.aim(target.clone().sub(origin).normalize().toArray());
+    const record=constructionT1Observer.sense(),c=record.result?.target?.continuity;
+    if(c!=null)seenContinuities.add(c);return record;
+  }
   for(const d of dirs){
     const pose=constructionT1Observer.place(d),origin=new THREE.Vector3(...pose.position);
-    for(const target of targets){constructionT1Observer.aim(target.clone().sub(origin).normalize().toArray());constructionT1Observer.sense();}
+    for(const target of targets){
+      constructionT1Observer.aim(target.clone().sub(origin).normalize().toArray());
+      const record=constructionT1Observer.sense(),c=record.result?.target?.continuity;if(c!=null)seenContinuities.add(c);
+    }
+  }
+  coveragePasses.push(Object.freeze({pass:0,kind:'coarse',senses:dirs.length*targets.length,continuities:seenContinuities.size}));
+  // Curiosity is geometric, not semantic: inspect poorly sampled octants of the
+  // target volume and stop when a refinement pass discovers no new continuity.
+  const refineDirs=[[1,1,1],[-1,1,1],[1,1,-1],[-1,1,-1],[1,-1,1],[-1,-1,1],[1,-1,-1],[-1,-1,-1]];
+  for(let pass=1;pass<=3;pass++){
+    const beforeCount=seenContinuities.size,frac=.72/pass;
+    const refineTargets=[];
+    for(const x of [-frac,0,frac])for(const y of [-frac,0,frac])for(const z of [-frac,0,frac])
+      if(Math.abs(x)+Math.abs(y)+Math.abs(z)>0)refineTargets.push(center.clone().add(new THREE.Vector3(x*size.x*.5,y*size.y*.5,z*size.z*.5)));
+    let senses=0;
+    for(const d of refineDirs)for(const target of refineTargets){senseFrom(d,target);senses++;}
+    const discovered=seenContinuities.size-beforeCount;
+    coveragePasses.push(Object.freeze({pass,kind:'coverage-refinement',senses,continuities:seenContinuities.size,discovered}));
+    if(discovered===0)break;
   }
   constructionT1Observer.pause();
   const transcript=constructionT1Observer.transcript().slice(before),hits=transcript.filter(r=>r.result?.target),occluded=transcript.filter(r=>r.result?.status==='occluded');
-  // Diagnose what Observer actually encountered without teaching its rays semantic identity.
-  // Continuity remains anonymous during sensing; only after the mission do we compare
-  // anonymous hit clusters with the realized meshes that built T1.
   const continuitySummary=new Map();
   for(const record of hits){
     const h=record.result.target,c=continuitySummary.get(h.continuity)??{continuity:h.continuity,hits:0,min:[Infinity,Infinity,Infinity],max:[-Infinity,-Infinity,-Infinity],normalSum:[0,0,0]};
-    c.hits++;
-    for(let i=0;i<3;i++){c.min[i]=Math.min(c.min[i],h.point[i]);c.max[i]=Math.max(c.max[i],h.point[i]);if(h.normal)c.normalSum[i]+=h.normal[i];}
-    continuitySummary.set(h.continuity,c);
+    c.hits++;for(let i=0;i<3;i++){c.min[i]=Math.min(c.min[i],h.point[i]);c.max[i]=Math.max(c.max[i],h.point[i]);if(h.normal)c.normalSum[i]+=h.normal[i];}continuitySummary.set(h.continuity,c);
   }
   const continuities=Object.freeze([...continuitySummary.values()].sort((a,b)=>a.continuity-b.continuity).map(c=>Object.freeze({
-    continuity:c.continuity,hits:c.hits,min:Object.freeze(c.min.map(v=>+v.toFixed(4))),max:Object.freeze(c.max.map(v=>+v.toFixed(4))),
-    meanNormal:Object.freeze(c.normalSum.map(v=>+(v/c.hits).toFixed(4)))
+    continuity:c.continuity,hits:c.hits,min:Object.freeze(c.min.map(v=>+v.toFixed(4))),max:Object.freeze(c.max.map(v=>+v.toFixed(4))),meanNormal:Object.freeze(c.normalSum.map(v=>+(v/c.hits).toFixed(4)))
   })));
-  const semanticThings=Object.freeze([...globalThis.semanticConstructionWitnessT1.things.values()].map(t=>{
-    const b=new THREE.Box3().setFromObject(t.root),center=b.getCenter(new THREE.Vector3());
-    return Object.freeze({id:t.id,kind:t.kind,bounds:Object.freeze({min:Object.freeze(b.min.toArray().map(v=>+v.toFixed(4))),max:Object.freeze(b.max.toArray().map(v=>+v.toFixed(4))),center:Object.freeze(center.toArray().map(v=>+v.toFixed(4)))})});
-  }));
-  const report=Object.freeze({
-    schema:'construction-observer-report/1',mission:'semantic-construction-t1',
-    build:globalThis.__REPOSITORY_BUILD__||'source',createdAt:new Date().toISOString(),
-    evidence:Object.freeze({senses:transcript.length,hits:hits.length,misses:transcript.length-hits.length,occluded:occluded.length,
-      targetBounds:Object.freeze({min:Object.freeze(box.min.toArray().map(v=>+v.toFixed(4))),max:Object.freeze(box.max.toArray().map(v=>+v.toFixed(4))),center:Object.freeze(centerWorld.toArray().map(v=>+v.toFixed(4)))}),
-      continuities,semanticThings,transcript:Object.freeze(transcript)})
-  });
-  constructionWitnessT1.userData.observerReport=report;globalThis.constructionT1ObserverReport=()=>report;
-  return report;
+  const semanticThings=Object.freeze([...globalThis.semanticConstructionWitnessT1.things.values()].map(t=>{const b=new THREE.Box3().setFromObject(t.root),c=b.getCenter(new THREE.Vector3());return Object.freeze({id:t.id,kind:t.kind,bounds:Object.freeze({min:Object.freeze(b.min.toArray().map(v=>+v.toFixed(4))),max:Object.freeze(b.max.toArray().map(v=>+v.toFixed(4))),center:Object.freeze(c.toArray().map(v=>+v.toFixed(4)))})});}));
+  const report=Object.freeze({schema:'construction-observer-report/2',mission:'semantic-construction-t1',build:globalThis.__REPOSITORY_BUILD__||'source',createdAt:new Date().toISOString(),
+    evidence:Object.freeze({senses:transcript.length,hits:hits.length,misses:transcript.length-hits.length,occluded:occluded.length,coveragePasses:Object.freeze(coveragePasses),
+      targetBounds:Object.freeze({min:Object.freeze(box.min.toArray().map(v=>+v.toFixed(4))),max:Object.freeze(box.max.toArray().map(v=>+v.toFixed(4))),center:Object.freeze(centerWorld.toArray().map(v=>+v.toFixed(4)))}),continuities,semanticThings,transcript:Object.freeze(transcript)})});
+  constructionWitnessT1.userData.observerReport=report;globalThis.constructionT1ObserverReport=()=>report;return report;
 }
 function downloadConstructionT1Report(){
   const report=scanConstructionT1(),blob=new Blob([JSON.stringify(report,null,2)],{type:'application/json'}),a=document.createElement('a');

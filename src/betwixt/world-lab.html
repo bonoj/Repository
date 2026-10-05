@@ -2569,7 +2569,7 @@ const worldD20Animators=[];
 const worldD20=buildBetwixtable({
   name:'hollow-flight-d20',parent:scene,
   at:new THREE.Vector3(workshopTabletopBetwixtable.position.x,thoughtformTableBounds.max.y+worldD20Radius+worldD20Clearance,workshopTabletopBetwixtable.position.z),
-  padding:.55,
+  padding:.55,interact:()=>{worldD20.userData.chasing=!worldD20.userData.chasing;},
   build(root,spatial){
     const shellGeo=new THREE.IcosahedronGeometry(worldD20Radius,0);
     const lattice=new THREE.LineSegments(
@@ -2646,6 +2646,7 @@ const worldD20=buildBetwixtable({
 
     root.userData.portals=portals;
     root.userData.rocket=rocket;
+    worldD20.userData.rocket=rocket;
     spatial.fit();
   }
 });

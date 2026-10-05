@@ -1912,6 +1912,36 @@ for(let i=0;i<3;i++){
 const workshopJupurnXZ=C.Transform.get(jupurnEntity).position;
 workshopCrucibleBetwixtable.position.set(workshopJupurnXZ.x,GROUND_Y+.70,workshopJupurnXZ.z);
 workshopCrucibleBetwixtable.visible=true;
+
+// Observer grammar probe: eye-in-glass as a first-class Twixt, molecularly bonded above ⚗️.
+// No brass/support is assumed; the relation, not a stand, carries its placement.
+const observerTwixt=buildBetwixtable({
+  name:'observer-eye',
+  parent:betwixtPlace,
+  padding:.16,
+  build:(root)=>{
+    const glass=new THREE.Mesh(
+      new THREE.SphereGeometry(.42,28,18),
+      new THREE.MeshPhysicalMaterial({
+        color:0xd5e5e6,roughness:.08,metalness:0,transparent:true,opacity:.22,
+        transmission:.76,thickness:.07,ior:1.18,depthWrite:false,side:THREE.DoubleSide
+      })
+    );
+    root.add(glass);
+    const eye=new THREE.Group();eye.name='observer:eye';root.add(eye);
+    const white=new THREE.Mesh(new THREE.SphereGeometry(.20,22,14),new THREE.MeshStandardMaterial({color:0xe8e5dc,roughness:.48}));
+    eye.add(white);
+    const iris=new THREE.Mesh(new THREE.SphereGeometry(.105,20,12,0,Math.PI*2,0,Math.PI*.42),new THREE.MeshStandardMaterial({color:0x596d6d,roughness:.42}));
+    iris.rotation.x=Math.PI/2;iris.position.z=.165;eye.add(iris);
+    const pupil=new THREE.Mesh(new THREE.SphereGeometry(.052,18,10,0,Math.PI*2,0,Math.PI*.36),new THREE.MeshStandardMaterial({color:0x151817,roughness:.36}));
+    pupil.rotation.x=Math.PI/2;pupil.position.z=.205;eye.add(pupil);
+    root.userData.observerEye=eye;
+  }
+});
+registerRelationalNode('observer-eye',{object:observerTwixt,bounds:()=>observerTwixt.userData.betwixtable.bounds()});
+registerRelationalNode('crucible-twixt',{object:workshopCrucibleBetwixtable,bounds:()=>workshopCrucibleBetwixtable.userData.betwixtable.bounds()});
+relateSpatial({subject:'observer-eye',kind:'above',reference:'crucible-twixt',gap:.22});
+
 function tapWorkshopCrucibleOrb(){
   // First touch uses Betwixt's existing foreground grammar. Once present,
   // the same physical object casts its Crucible spell.

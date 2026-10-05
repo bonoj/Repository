@@ -2023,7 +2023,18 @@ function updateObserverEye(now){
 }
 registerRelationalNode('observer-eye',{object:observerTwixt,bounds:()=>observerTwixt.userData.betwixtable.bounds()});
 registerRelationalNode('crucible-twixt',{object:workshopCrucibleBetwixtable,bounds:()=>workshopCrucibleBetwixtable.userData.betwixtable.bounds()});
-relateSpatial({subject:'observer-eye',kind:'above',reference:'crucible-twixt',gap:.22});
+relateSpatial({subject:'observer-eye',kind:'above',reference:'crucible-twixt',gap:2.0});
+
+function tapObserverTwixt(){
+  if(focusedWorkshopObject!==observerTwixt){
+    if(focusedWorkshopObject)dismissWorkshopFocus();
+    else beginWorkshopFocus(observerTwixt,true);
+    return true;
+  }
+  if(workshopFocusMotion)return true;
+  return enterPlace('observatory');
+}
+observerTwixt.userData.betwixtable.interact=()=>tapObserverTwixt();
 
 function tapWorkshopCrucibleOrb(){
   // First touch uses Betwixt's existing foreground grammar. Once present,

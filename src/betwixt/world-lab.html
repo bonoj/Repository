@@ -1924,8 +1924,9 @@ const observerTwixt=buildBetwixtable({
     const glass=new THREE.Mesh(new THREE.IcosahedronGeometry(.50,3),workshopCrucibleOrbGlass);
     glass.castShadow=true;root.add(glass);
 
-    // Ocular seat: the Crucible tripod grammar turned perpendicular to gaze.
-    // Eye + paired rings + three bindings are one rigid gaze assembly around the sphere center.
+    // Ocular seat: the Crucible stand's sphere-scale grammar turned perpendicular to gaze.
+    // The brass carriage encloses the entire .50 glass sphere, not the eyeball.
+    // Eye and carriage share gaze orientation; glass remains stationary.
     const eye=new THREE.Group();eye.name='observer:eye';root.add(eye);
     const white=new THREE.Mesh(
       new THREE.SphereGeometry(.20,22,14),
@@ -1943,16 +1944,16 @@ const observerTwixt=buildBetwixtable({
     );
     pupil.position.z=.191;eye.add(pupil);
 
-    // TorusGeometry lies in XY: exactly the plane perpendicular to the eye's +Z gaze.
-    // Same .035 brass thickness as the Crucible support ring; aft ring gives the seat depth.
-    const seatRadius=.285,seatAft=-.115;
+    const ocularSeat=new THREE.Group();ocularSeat.name='observer:ocular-seat';root.add(ocularSeat);
+    // Crucible precedent: .39 radius, .035 brass section around the same .50 sphere.
+    const seatRadius=.39,seatAft=-.11;
     const seatFront=new THREE.Mesh(new THREE.TorusGeometry(seatRadius,.035,8,32),workshopCrucibleStandMat);
-    seatFront.name='observer:ocular-seat:front';seatFront.castShadow=true;eye.add(seatFront);
+    seatFront.name='observer:ocular-seat:meridian';seatFront.castShadow=true;ocularSeat.add(seatFront);
     const seatBack=new THREE.Mesh(new THREE.TorusGeometry(seatRadius,.035,8,32),workshopCrucibleStandMat);
-    seatBack.name='observer:ocular-seat:back';seatBack.position.z=seatAft;seatBack.castShadow=true;eye.add(seatBack);
+    seatBack.name='observer:ocular-seat:aft';seatBack.position.z=seatAft;seatBack.castShadow=true;ocularSeat.add(seatBack);
 
-    // Crucible's threefold support clocking, transposed onto the gaze plane:
-    // one binding at 12 o'clock, two at 4 and 8. They share the rings' rigid transform.
+    // Same threefold clocking as the tripod, transposed onto the gaze plane:
+    // one binding at 12 o'clock, two at 4 and 8.
     for(let i=0;i<3;i++){
       const a=Math.PI/2+i*Math.PI*2/3;
       const x=Math.cos(a)*seatRadius,y=Math.sin(a)*seatRadius;
@@ -1962,8 +1963,9 @@ const observerTwixt=buildBetwixtable({
       binding.name='observer:ocular-seat:binding';
       binding.position.copy(front).add(back).multiplyScalar(.5);
       binding.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());
-      binding.castShadow=true;eye.add(binding);
+      binding.castShadow=true;ocularSeat.add(binding);
     }
+    root.userData.observerOcularSeat=ocularSeat;
     root.userData.observerEye=eye;
   }
 });
@@ -2012,7 +2014,7 @@ function updateObserverEye(now){
 
   if(observerAttention==='wander'){
     observerWanderQuaternion(now,observerOrientTo);
-    observerEye.quaternion.slerp(observerOrientTo,.035);
+    observerEye.quaternion.slerp(observerOrientTo,.035);\n    observerTwixt.userData.betwixtable.presentation.userData.observerOcularSeat.quaternion.copy(observerEye.quaternion);
     if(now>=observerNextNotice){
       // The room catches attention more often than the human does.
       beginObserverAttention(now,Math.random()<.24?'camera':'crucible');
@@ -2022,7 +2024,7 @@ function updateObserverEye(now){
     const t=THREE.MathUtils.smoothstep(
       THREE.MathUtils.clamp((now-observerAttentionStarted)/(observerAttentionUntil-observerAttentionStarted),0,1),0,1
     );
-    observerEye.quaternion.copy(observerOrientFrom).slerp(observerOrientTo,t);
+    observerEye.quaternion.copy(observerOrientFrom).slerp(observerOrientTo,t);\n    observerTwixt.userData.betwixtable.presentation.userData.observerOcularSeat.quaternion.copy(observerEye.quaternion);
     if(now>=observerAttentionUntil){
       observerAttention='attend';
       observerAttentionStarted=now;
@@ -2036,7 +2038,7 @@ function updateObserverEye(now){
     const microYaw=.008*Math.sin(now*.0041);
     const microPitch=.005*Math.sin(now*.0033+1.1);
     observerOrientTo.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(microPitch,microYaw,0,'YXZ')));
-    observerEye.quaternion.slerp(observerOrientTo,.09);
+    observerEye.quaternion.slerp(observerOrientTo,.09);\n    observerTwixt.userData.betwixtable.presentation.userData.observerOcularSeat.quaternion.copy(observerEye.quaternion);
     if(now>=observerAttentionUntil){
       observerAttention='wander';
       observerAttentionTarget=null;

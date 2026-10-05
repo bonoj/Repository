@@ -2559,15 +2559,75 @@ const workshopTabletopBetwixtable=buildBetwixtable({
 });
 
 
-/* WORLD D20 — hollow topology flight study.
-   The shell is only its 30 edges: twenty faces remain physically open.
-   A tiny rocket continuously traverses the enclosed volume under gravity, steering
-   from one open face to another. Its longitudinal axis is always aligned to velocity. */
+/* FAILURE TO LAUNCH — preserved collaboration specimen.
+
+   What john asked for, progressively:
+   - Treat the d20 as a VOLUME, not a collection of surfaces.
+   - Retain face-to-face topology as an available capability, but do not use it for this maneuver.
+   - Let a rocket fly continuously through the volume, emerge, make a wide graceful orbital
+     loop outside, and return through it.
+   - Never bounce from the shell or skim it.
+   - A rocket has volumetric displacement: its whole body needs clearance.
+   - Preserve forward momentum. No hard deceleration followed by hard acceleration, no
+     waypoint reversal, no impossible position interpolation.
+   - Hard lattice geometry makes an unsafe trajectory invalid before impact; prospectively
+     sense/sweep/raycast and course-correct conservatively.
+   - This is solved navigation machinery. Research established approaches rather than
+     feeling out bespoke curves.
+
+   What Clara repeatedly communicated:
+   - Correctly identified SURFACE vs VOLUME affordances.
+   - Said geometry should expose affordances and behaviors should consume only those needed.
+   - Said openings should be traversable absence of boundary rather than face destinations.
+   - Said the path should be born safe rather than repaired after collision.
+   - Identified body envelope / swept volume, persistent velocity, bounded turn rate,
+     body-safe transit corridors, prospective sensing, and predictive steering.
+   - Eventually researched established Reynolds-style predictive obstacle avoidance,
+     conservative body bounds, and velocity-feasibility ideas.
+
+   What the executable repeatedly did instead:
+   - face-center routing;
+   - collision/bounce correction;
+   - near-shell parametric wandering;
+   - deeper but still authored curves;
+   - static aperture-fit tests;
+   - Bezier legs that were continuous in position but not credible flight dynamics;
+   - destination steering without proving the reachable swept trajectory;
+   - finally conservative predictive steering that avoided the lattice so effectively
+     the rocket stopped entering the volume.
+
+   Analysis:
+   The semantic transmission largely succeeded. john intentionally spoke at the compressed
+   perceptual level because shared understanding was expected to supply ordinary priors:
+   ROCKET implies finite extent; FLY implies persistent velocity; GRACEFUL LOOP implies
+   bounded curvature; HARD GEOMETRY implies prospective avoidance; THROUGH implies swept-body
+   clearance. Clara often decompressed those requirements correctly in prose.
+
+   The failure was the handoff from conceptual/explanatory understanding to executable
+   implementation. Sophisticated explanations repeatedly sounded like evidence that the
+   implementation possessed the same model. They were not. Local proxies were substituted
+   for the stated architecture, then subsequent human observations repaired symptoms instead
+   of causing the locomotion model to be discarded early.
+
+   Misattribution lesson:
+   john reasonably attributed demonstrated conceptual understanding to executable
+   understanding because Clara explicitly articulated the right mechanics. That attribution
+   was encouraged by confident language such as "that's the correction" before executable
+   evidence established it.
+
+   Keep:
+     Articulation is not implementation evidence.
+     Shared language can establish shared intent. Only consequence establishes shared execution.
+     Nouns carry physical consequences.
+     Reality gets a vote.
+
+   This object is intentionally preserved as FAILURE TO LAUNCH rather than polished into a
+   success. It is a reminder that semantic compression was not the thing that failed here. */
 const thoughtformTableBounds=new THREE.Box3().setFromObject(workshopTabletopBetwixtable);
 const worldD20Radius=1.28,worldD20Clearance=.65;
 const worldD20Animators=[];
 const worldD20=buildBetwixtable({
-  name:'hollow-flight-d20',parent:scene,
+  name:'failure-to-launch',parent:scene,
   at:new THREE.Vector3(workshopTabletopBetwixtable.position.x,thoughtformTableBounds.max.y+worldD20Radius+worldD20Clearance,workshopTabletopBetwixtable.position.z),
   padding:.55,interact:()=>startRocketChase(),
   build(root,spatial){

@@ -1778,7 +1778,76 @@ function buildBetwixtable({name='betwixtable',parent=legacyWorkshop,at=null,padd
   seat();fit();
   return node;
 }
+
 globalThis.Betwixtable=buildBetwixtable;
+
+// SEMANTIC CONSTRUCTION WITNESS T0
+// Deliberately meaningless. This is the first Workshop inhabitant whose physical
+// organization is derived from named attachment relations rather than authored world transforms.
+const constructionWitness=buildBetwixtable({
+  name:'semantic-construction-t0',
+  parent:legacyWorkshop,
+  at:new THREE.Vector3(0,GROUND_Y,0),
+  padding:.34,
+  build(presentation,spatial){
+    const warm=new THREE.MeshStandardMaterial({color:0xf0f0ed,roughness:.68,metalness:.04});
+    const brass=new THREE.MeshStandardMaterial({color:0x9b6638,roughness:.34,metalness:.62});
+    const bearing=new THREE.MeshStandardMaterial({color:0x9b6638,roughness:.30,metalness:.50});
+    const things=new Map(),relations=[];
+    function thing(id,kind,ports,mesh,frames){
+      const root=new THREE.Group();root.name='construction:'+id;root.add(mesh);presentation.add(root);
+      things.set(id,{id,kind,ports:new Set(ports),root,frames});return root;
+    }
+    thing('slab-A','slab',['top','bottom'],
+      new THREE.Mesh(new THREE.BoxGeometry(1.25,.13,.78),warm),
+      {top:{p:[0,.065,0],out:[0,1,0],up:[0,0,1]},bottom:{p:[0,-.065,0],out:[0,-1,0],up:[0,0,1]}}
+    );
+    thing('post-A','post',['top','bottom'],
+      new THREE.Mesh(new THREE.CylinderGeometry(.085,.085,.88,12),brass),
+      {top:{p:[0,.44,0],out:[0,1,0],up:[0,0,1]},bottom:{p:[0,-.44,0],out:[0,-1,0],up:[0,0,1]}}
+    );
+    const railMesh=new THREE.Mesh(new THREE.CylinderGeometry(.052,.052,1.02,10),brass);railMesh.rotation.z=Math.PI/2;
+    thing('rail-A','rail',['a','b'],railMesh,
+      {a:{p:[-.51,0,0],out:[-1,0,0],up:[0,1,0]},b:{p:[.51,0,0],out:[1,0,0],up:[0,1,0]}}
+    );
+    const ringMesh=new THREE.Mesh(new THREE.TorusGeometry(.25,.042,8,24),brass);ringMesh.rotation.y=Math.PI/2;
+    thing('ring-A','ring',['center'],ringMesh,
+      {center:{p:[0,0,0],out:[0,1,0],up:[0,0,1]}}
+    );
+    thing('bead-A','bead',['center'],
+      new THREE.Mesh(new THREE.SphereGeometry(.09,12,8),bearing),
+      {center:{p:[0,0,0],out:[0,-1,0],up:[0,0,1]}}
+    );
+    function frameWorld(t,port){
+      const f=t.frames[port],p=new THREE.Vector3(...f.p),out=new THREE.Vector3(...f.out),up=new THREE.Vector3(...f.up);
+      t.root.localToWorld(p);const q=t.root.getWorldQuaternion(new THREE.Quaternion());
+      return {p,out:out.applyQuaternion(q).normalize(),up:up.applyQuaternion(q).normalize()};
+    }
+    function attach(childId,childPort,parentId,parentPort){
+      const child=things.get(childId),parent=things.get(parentId);
+      if(!child?.ports.has(childPort)||!parent?.ports.has(parentPort))throw Error('construction relation endpoint missing');
+      if(relations.some(r=>(r.a[0]===childId&&r.a[1]===childPort)||(r.b[0]===childId&&r.b[1]===childPort)||(r.a[0]===parentId&&r.a[1]===parentPort)||(r.b[0]===parentId&&r.b[1]===parentPort)))throw Error('construction port occupied');
+      presentation.updateMatrixWorld(true);
+      const cf=frameWorld(child,childPort),pf=frameWorld(parent,parentPort);
+      const q=new THREE.Quaternion().setFromUnitVectors(cf.out,pf.out.clone().negate());
+      child.root.quaternion.premultiply(q);presentation.updateMatrixWorld(true);
+      const after=frameWorld(child,childPort);
+      child.root.position.add(pf.p.clone().sub(after.p));
+      relations.push({a:[childId,childPort],b:[parentId,parentPort]});
+    }
+    // Authored topology; transforms are consequences.
+    attach('post-A','top','slab-A','bottom');
+    // Rail is carried by the post through hierarchy only after its relation resolves.
+    things.get('rail-A').root.position.set(.50,.08,0);
+    things.get('ring-A').root.position.set(1.02,.08,0);
+    things.get('bead-A').root.position.set(1.02,-.29,0);
+    for(const t of things.values())t.root.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
+    presentation.userData.semanticConstruction={things,relations};
+    globalThis.semanticConstructionWitness=presentation.userData.semanticConstruction;
+    queueMicrotask(()=>{spatial.seat();spatial.fit();window.vestibuleDirty=true});
+  }
+});
+
 
 // The original Jupurn + lab-world organism has moved into Workshop under one
 // plain positioning carrier. The aggregate is deliberately NOT Betwixtable;

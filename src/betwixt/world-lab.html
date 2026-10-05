@@ -1946,21 +1946,52 @@ const observerTwixt=buildBetwixtable({
 const observerEye=observerTwixt.userData.betwixtable.presentation.userData.observerEye;
 const observerGazePoint=new THREE.Vector3();
 const observerGazeLocal=new THREE.Vector3();
-let observerGazeNext=0,observerGazeMode='camera';
+const observerGazeFrom=new THREE.Vector3(0,0,1);
+const observerGazeTo=new THREE.Vector3(0,0,1);
+const observerGazeDirection=new THREE.Vector3(0,0,1);
+const observerGazeQuaternion=new THREE.Quaternion();
+let observerGazeNext=0,observerGazeStarted=0,observerGazeDuration=1200;
+function observerEyeWorldPosition(out=new THREE.Vector3()){return observerEye.getWorldPosition(out)}
 function chooseObserverGaze(now){
-  // Alternate between acknowledging the human observer and inspecting the bonded Crucible.
-  observerGazeMode=observerGazeMode==='camera'?'crucible':'camera';
-  observerGazeNext=now+2600+Math.random()*3200;
+  const eyeWorld=observerEyeWorldPosition();
+  const roll=Math.random();
+  if(roll<.16){
+    // A glance at the human is a sampled encounter, not camera pursuit.
+    observerGazePoint.copy(camera.position);
+    observerGazeDuration=700+Math.random()*650;
+    observerGazeNext=now+observerGazeDuration+900+Math.random()*1700;
+  }else if(roll<.48){
+    // Nearby bonded matter can catch its attention.
+    workshopCrucibleBetwixtable.userData.betwixtable.bounds().getCenter(observerGazePoint);
+    observerGazePoint.x+=(Math.random()-.5)*.20;
+    observerGazePoint.y+=(Math.random()-.5)*.16;
+    observerGazePoint.z+=(Math.random()-.5)*.20;
+    observerGazeDuration=900+Math.random()*900;
+    observerGazeNext=now+observerGazeDuration+1200+Math.random()*2200;
+  }else{
+    // Most attention is self-directed wandering through nearby space.
+    const a=Math.random()*Math.PI*2,e=(Math.random()-.5)*.8;
+    observerGazePoint.set(Math.cos(a)*Math.cos(e),Math.sin(e),Math.sin(a)*Math.cos(e))
+      .multiplyScalar(2.5).add(eyeWorld);
+    observerGazeDuration=1100+Math.random()*1300;
+    observerGazeNext=now+observerGazeDuration+1400+Math.random()*2600;
+  }
+  observerEye.getWorldDirection(observerGazeFrom).normalize();
+  observerGazeTo.copy(observerGazePoint).sub(eyeWorld).normalize();
+  observerGazeStarted=now;
 }
 function updateObserverEye(now){
   if(!betwixtPlace.visible||!observerEye)return;
-  if(now>=observerGazeNext)chooseObserverGaze(now);
-  if(observerGazeMode==='camera')observerGazePoint.copy(camera.position);
-  else workshopCrucibleBetwixtable.getWorldPosition(observerGazePoint);
+  if(!observerGazeNext||now>=observerGazeNext)chooseObserverGaze(now);
+  const t=THREE.MathUtils.smoothstep(Math.min(1,(now-observerGazeStarted)/observerGazeDuration),0,1);
+  observerGazeDirection.copy(observerGazeFrom).lerp(observerGazeTo,t).normalize();
+  observerGazePoint.copy(observerEyeWorldPosition()).add(observerGazeDirection);
   observerEye.parent.worldToLocal(observerGazeLocal.copy(observerGazePoint));
   observerEye.lookAt(observerGazeLocal);
   window.vestibuleDirty=true;
 }
+observerTwixt.userData.betwixtable.focusDistance=3.15;
+workshopCrucibleBetwixtable.userData.betwixtable.focusDistance=3.15;
 registerRelationalNode('observer-eye',{object:observerTwixt,bounds:()=>observerTwixt.userData.betwixtable.bounds()});
 registerRelationalNode('crucible-twixt',{object:workshopCrucibleBetwixtable,bounds:()=>workshopCrucibleBetwixtable.userData.betwixtable.bounds()});
 relateSpatial({subject:'observer-eye',kind:'above',reference:'crucible-twixt',gap:.22});
@@ -3876,7 +3907,8 @@ function workshopPresentationPosition(obj){
   const originWorld=obj.getWorldPosition(new THREE.Vector3());
   const forward=new THREE.Vector3();camera.getWorldDirection(forward);
   const up=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1).normalize();
-  const desiredCenterWorld=camera.position.clone().addScaledVector(forward,8.5).addScaledVector(up,.35);
+  const focusDistance=spatial?.focusDistance??8.5;
+  const desiredCenterWorld=camera.position.clone().addScaledVector(forward,focusDistance).addScaledVector(up,.35);
   const desiredOriginWorld=originWorld.clone().add(desiredCenterWorld).sub(centerWorld);
   return obj.parent?obj.parent.worldToLocal(desiredOriginWorld):desiredOriginWorld;
 }
@@ -3891,7 +3923,7 @@ function beginWorkshopFocus(obj,toForeground){
   const to=toForeground?workshopPresentationPosition(obj):saved.position.clone();
   workshopFocusMotion={
     obj,from,to,toForeground,fromTarget:target.clone(),
-    toTarget:toForeground?camera.position.clone().addScaledVector(new THREE.Vector3().set(0,0,-1).applyQuaternion(camera.quaternion),8.5).addScaledVector(new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1).normalize(),.35):saved.target.clone(),
+    toTarget:toForeground?camera.position.clone().addScaledVector(new THREE.Vector3().set(0,0,-1).applyQuaternion(camera.quaternion),obj.userData?.betwixtable?.focusDistance??8.5).addScaledVector(new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1).normalize(),.35):saved.target.clone(),
     fromCameraPosition:camera.position.clone(),
     toCameraPosition:toForeground?camera.position.clone():saved.cameraPosition.clone(),
     started:performance.now(),duration:THREE.MathUtils.clamp(390+from.distanceTo(to)*22,430,610)

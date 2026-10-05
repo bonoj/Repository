@@ -1724,22 +1724,31 @@ function visibleWorldBounds(object){
   });
   return box;
 }
-function seatLegacyLabsAboveJovian(gap=.72){
-  if(!legacyLabCarrier||typeof jovianBetwixtable==='undefined')return null;
-  legacyLabCarrier.position.set(0,0,0);
-  legacyLabCarrier.updateMatrixWorld(true);
-  const legacy=visibleWorldBounds(betwixtContent);
-  const jovian=jovianBetwixtable.userData.betwixtable.bounds();
-  if(legacy.isEmpty()||jovian.isEmpty())return null;
-  legacyLabCarrier.position.y+=jovian.max.y+gap-legacy.min.y;
-  legacyLabCarrier.updateMatrixWorld(true);
-  return Object.freeze({bottom:jovian.max.y+gap,jovianTop:jovian.max.y,gap});
+
+// Named spatial anchors. Relations can be declared before either endpoint exists;
+// construction order is no longer allowed to encode world topology.
+const relationalNodes=new Map(),spatialRelations=[];
+function registerRelationalNode(name,{object,bounds=()=>visibleWorldBounds(object)}){
+  relationalNodes.set(name,{name,object,bounds});resolveSpatialRelations();return object;
 }
+function relateSpatial(relation){spatialRelations.push({...relation,resolved:false});resolveSpatialRelations();return relation}
+function resolveSpatialRelations(){
+  for(const relation of spatialRelations){
+    const subject=relationalNodes.get(relation.subject),reference=relationalNodes.get(relation.reference);
+    if(!subject||!reference)continue;
+    if(relation.kind==='above'){
+      subject.object.updateMatrixWorld(true);reference.object.updateMatrixWorld(true);
+      const a=subject.bounds(),b=reference.bounds();if(a.isEmpty()||b.isEmpty())continue;
+      subject.object.position.y+=b.max.y+(relation.gap??0)-a.min.y;
+      subject.object.updateMatrixWorld(true);relation.resolved=true;
+    }
+  }
+}
+registerRelationalNode('legacy-lab-worlds',{object:legacyLabCarrier,bounds:()=>visibleWorldBounds(betwixtContent)});
+relateSpatial({subject:'legacy-lab-worlds',kind:'above',reference:'jovian-system',gap:.72});
 
-// Workshop is no longer a mode or spell. This is simply Betwixt's ordinary world.
+// Workshop is gone. This is ordinary Betwixt.
 legacyLabCarrier.visible=true;
-seatLegacyLabsAboveJovian();
-
 
 
 const workshopCrucibleOrb=new THREE.Group();
@@ -3297,6 +3306,7 @@ const jovianBetwixtable=buildBetwixtable({name:'neptunian-jovian-system',parent:
   },updateBearings(){/* Janus update owns the integrated encounter now. */}};
   root.userData.science=Object.freeze({source:'JPL JUP365 mean elements for Galilean starting ratios; deterministic dimensionless encounter toy',janusMassRatio:.0048,massHierarchy:'Jupiter >> Janus >> Galileans >> ice test masses',model:'integrated Jupiter + Galileans + Janus perturbation; ice test masses; accelerated long-period reset preserves accumulated moon consequences',presentation:'orbital distances compressed; body radii exaggerated'});
 }});
+registerRelationalNode('jovian-system',{object:jovianBetwixtable,bounds:()=>jovianBetwixtable.userData.betwixtable.bounds()});
 
 
 // Carrier report aperture. Today the human shuttles this JSON back to the model;

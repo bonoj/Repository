@@ -1905,6 +1905,52 @@ const constructionWitnessT1=buildBetwixtable({
     presentation.userData.semanticConstruction={generation:'T1',things,relations};
     globalThis.semanticConstructionWitnessT1=presentation.userData.semanticConstruction;
     queueMicrotask(()=>{spatial.seat();spatial.fit();window.vestibuleDirty=true});
+    // First tap summons the Twixt. Second tap observes the thing itself.
+    spatial.interact=()=>tapConstructionT1();
+  }
+});
+let constructionT1Observer=null;
+function scanConstructionT1(){
+  constructionT1Observer??=createBoundedWitness({
+    parent:constructionWitnessT1,targetBetwixtable:constructionWitnessT1,
+    position:[-2.85,1.35,0],budget:Infinity,maxDistance:8
+  });
+  const box=constructionWitnessT1.userData.betwixtable.bounds(),centerWorld=box.getCenter(new THREE.Vector3());
+  const center=constructionWitnessT1.worldToLocal(centerWorld.clone()),size=box.getSize(new THREE.Vector3());
+  const targets=[
+    [0,0,0],[0,.34,0],[0,-.34,0],[.34,0,0],[-.34,0,0],[0,0,.34],[0,0,-.34],
+    [.28,.28,0],[-.28,.28,0],[.28,-.28,0],[-.28,-.28,0]
+  ].map(([x,y,z])=>center.clone().add(new THREE.Vector3(x*size.x,y*size.y,z*size.z)));
+  const dirs=[[1,0,0],[-1,0,0],[0,0,1],[0,0,-1],[1,.7,0],[-1,.7,0],[0,.7,1],[0,.7,-1],[1,-.45,1],[-1,-.45,1],[1,-.45,-1],[-1,-.45,-1]];
+  const before=constructionT1Observer.transcript().length;
+  for(const d of dirs){
+    const pose=constructionT1Observer.place(d),origin=new THREE.Vector3(...pose.position);
+    for(const target of targets){constructionT1Observer.aim(target.clone().sub(origin).normalize().toArray());constructionT1Observer.sense();}
+  }
+  constructionT1Observer.pause();
+  const transcript=constructionT1Observer.transcript().slice(before),hits=transcript.filter(r=>r.result?.target),occluded=transcript.filter(r=>r.result?.status==='occluded');
+  const report=Object.freeze({
+    schema:'construction-observer-report/0',mission:'semantic-construction-t1',
+    build:globalThis.__REPOSITORY_BUILD__||'source',createdAt:new Date().toISOString(),
+    evidence:Object.freeze({senses:transcript.length,hits:hits.length,misses:transcript.length-hits.length,occluded:occluded.length,
+      targetBounds:Object.freeze({min:Object.freeze(box.min.toArray().map(v=>+v.toFixed(4))),max:Object.freeze(box.max.toArray().map(v=>+v.toFixed(4))),center:Object.freeze(centerWorld.toArray().map(v=>+v.toFixed(4)))}),
+      transcript:Object.freeze(transcript)})
+  });
+  constructionWitnessT1.userData.observerReport=report;globalThis.constructionT1ObserverReport=()=>report;
+  return report;
+}
+function downloadConstructionT1Report(){
+  const report=scanConstructionT1(),blob=new Blob([JSON.stringify(report,null,2)],{type:'application/json'}),a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='construction-observer-t1-'+Date.now()+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),0);return report;
+}
+function tapConstructionT1(){
+  if(focusedWorkshopObject!==constructionWitnessT1){
+    if(focusedWorkshopObject)telescopeWorkshopFocus(constructionWitnessT1);else beginWorkshopFocus(constructionWitnessT1,true);
+    return true;
+  }
+  if(workshopFocusMotion)return true;
+  downloadConstructionT1Report();return true;
+}
   }
 });
 

@@ -1345,7 +1345,8 @@ function setContentWorkshopHidden(hidden){
     // alone decides whether its parented organism is present here.
     if(workshopCrucibleEnabled)workshopCrucible.visible=true;
     resetWorkshopGlass();
-    target.set(0,.35,0);radius=11.8;theta=.16;phi=1.02;applyCamera();
+    // Workshop opens on the central thoughtform table: this is the working anchor, not the surrounding clutter.
+    target.copy(workshopTabletopBetwixtable.position);radius=7.2;theta=.16;phi=1.02;applyCamera();
     setLabActions(null);
   }else{
     if(focusedWorkshopObject){

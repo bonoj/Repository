@@ -20,5 +20,11 @@ const witnesses=[
 ];
 if(witnesses.map(w=>w.kind).join(",")!=="block,post,slab,rail,ring,bead")throw new Error("construction primitive vocabulary incomplete");
 if(witnesses.some(w=>!w.semantics.material||!w.semantics.dimensions))throw new Error("construction primitive lacks realizable semantics");
+const [blockW,postW,slabW,railW,ringW,beadW]=witnesses;
+const port=(thing,id)=>thing.ports.find(p=>p.id===id);
+if(port(postW,"side")?.surface!=="cylinder")throw new Error("post side did not earn cylindrical attachment surface");
+if(port(railW,"side")?.surface!=="cylinder")throw new Error("rail side did not earn cylindrical attachment surface");
+if(port(ringW,"rim")?.surface!=="torus"||port(ringW,"axis")?.kind!=="axis")throw new Error("ring attachment semantics collapsed to a point");
+if(port(beadW,"surface")?.surface!=="sphere")throw new Error("bead attachment semantics collapsed to its center");
 
 console.log("Semantic construction substrate and primitive vocabulary verified.");

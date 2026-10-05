@@ -1,5 +1,6 @@
 import {constructionThing,construction,relate,detach,portAvailable} from "../src/fundamentals/construction/construction.js";
 import {realizationFrames} from "../src/fundamentals/construction/realization.js";
+import {selectPrimitiveFrame} from "../src/fundamentals/construction/three-primitives.js";
 
 const post=constructionThing({id:"post-A",kind:"post",ports:[{id:"top",kind:"support"},{id:"bottom",kind:"support"}]});
 const slab=constructionThing({id:"slab-B",kind:"slab",ports:[{id:"underside",kind:"support"}]});
@@ -27,4 +28,8 @@ if(port(railW,"side")?.surface!=="cylinder")throw new Error("rail side did not e
 if(port(ringW,"rim")?.surface!=="torus"||port(ringW,"axis")?.kind!=="axis")throw new Error("ring attachment semantics collapsed to a point");
 if(port(beadW,"surface")?.surface!=="sphere")throw new Error("bead attachment semantics collapsed to its center");
 
-console.log("Semantic construction substrate and primitive vocabulary verified.");
+const rim=selectPrimitiveFrame(ringW,"rim",{angle:-Math.PI/2});
+const sphere=selectPrimitiveFrame(beadW,"surface",{polar:0});
+if(Math.abs(rim.position[1]+ringW.semantics.dimensions.radius)>1e-9)throw new Error("ring rim surface selection failed");
+if(Math.abs(sphere.position[1]-beadW.semantics.dimensions.radius)>1e-9)throw new Error("bead surface selection failed");
+console.log("Semantic construction substrate, attachment surfaces, and primitive vocabulary verified.");

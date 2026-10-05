@@ -2569,7 +2569,7 @@ const worldD20Animators=[];
 const worldD20=buildBetwixtable({
   name:'hollow-flight-d20',parent:scene,
   at:new THREE.Vector3(workshopTabletopBetwixtable.position.x,thoughtformTableBounds.max.y+worldD20Radius+worldD20Clearance,workshopTabletopBetwixtable.position.z),
-  padding:.55,interact:()=>{worldD20.userData.chasing=!worldD20.userData.chasing;},
+  padding:.55,interact:()=>startRocketChase(),
   build(root,spatial){
     const shellGeo=new THREE.IcosahedronGeometry(worldD20Radius,0);
     const lattice=new THREE.LineSegments(
@@ -3715,6 +3715,13 @@ function updateWorkshop(now){
 }
 function workshopTap(x,y){
   if(!contentWorkshopHidden)return false;
+  if(rocketChase.active&&!rocketChase.returning){
+    const r=canvas.getBoundingClientRect();
+    pointerNDC.set(((x-r.left)/r.width)*2-1,-((y-r.top)/r.height)*2+1);
+    raycaster.setFromCamera(pointerNDC,camera);
+    const hit=raycaster.intersectObject(worldD20.userData.rocket,true).length>0;
+    if(!hit){releaseRocketChase();return true}
+  }
   const r=canvas.getBoundingClientRect();
   pointerNDC.set(((x-r.left)/r.width)*2-1,-((y-r.top)/r.height)*2+1);
   raycaster.setFromCamera(pointerNDC,camera);

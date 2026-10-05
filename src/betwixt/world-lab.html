@@ -1544,7 +1544,15 @@ const placeDefinitions={
   workshop:{object:legacyWorkshop,title:'🛠️ WORKSHOP'},
   crucible:{object:cruciblePlace,title:'⚗️ CRUCIBLE'}
 };
-function setBetwixtTitle(text){if(placeTitleEl)placeTitleEl.textContent=text}
+function setBetwixtTitle(text){
+  if(placeTitleEl)placeTitleEl.textContent=text;
+  const shell=globalThis.RepositoryShell;if(!shell?.setPlace)return;
+  if(text==='BETWIXT')shell.setPlace({sigil:'🌀',title:'BETWIXT'});
+  else {
+    const [sigil,...words]=text.split(' ');
+    shell.setPlace({sigil,title:words.join(' ')});
+  }
+}
 function removeBetwixtPortal(){
   globalThis.RepositoryShell?.removeTool('betwixt-portal');
 }
@@ -3073,7 +3081,7 @@ const deskLampGraph=Object.freeze({
 
 const deskLampBetwixtable=buildBetwixtable({
   name:'semantic-desk-lamp',
-  parent:legacyWorkshop,
+  parent:observatoryPlace,
   at:new THREE.Vector3(0,GROUND_Y+.03,3.55),
   padding:.30,
   build(root,spatial){
@@ -3283,7 +3291,7 @@ const neptunianCrossing001Betwixtable=buildBetwixtable({
 });
 
 // Neptunian Jovian Betwixtable: Janus turns the old ice-pusher toy into a deterministic N-body encounter.
-const jovianBetwixtable=buildBetwixtable({name:'neptunian-jovian-system',parent:legacyWorkshop,at:new THREE.Vector3(0,GROUND_Y+9.45,0),padding:.38,build(root){
+const jovianBetwixtable=buildBetwixtable({name:'neptunian-jovian-system',parent:observatoryPlace,at:new THREE.Vector3(0,GROUND_Y+9.45,0),padding:.38,build(root){
   const rim=new THREE.Mesh(new THREE.TorusGeometry(2.05,.075,10,64),brass);rim.rotation.x=Math.PI/2;root.add(rim);
   root.add(new THREE.Mesh(new THREE.CylinderGeometry(1.96,1.96,.035,64),glassFace));
   const center=new THREE.Vector3(0,.305,0),mu=.19;
@@ -3323,8 +3331,6 @@ const jovianBetwixtable=buildBetwixtable({name:'neptunian-jovian-system',parent:
   for(const z of [-.105,.105]){const rail=new THREE.Mesh(new THREE.BoxGeometry(.30,.018,.026),brass);rail.position.z=z;carrier.add(rail);}
   const prow=new THREE.Mesh(new THREE.ConeGeometry(.075,.16,8),brass);prow.rotation.z=-Math.PI/2;prow.position.x=.24;carrier.add(prow);
   const carrierBetwixtable=makeBetwixtable(carrier,{name:'observer-carrier',padding:.34,interact:()=>downloadObserverCarrierReport()});carrierOrbit.add(carrierBetwixtable);
-  // Observer is a first-class Observatory instrument; Jovian dynamics retain the node reference.
-  observatoryPlace.attach(carrierBetwixtable);
   carrierBetwixtable.userData.observerCarrier={status:'janus-inbound',mission:'lamp-head',report:null};
 
   const janus={node:carrierBetwixtable,mass:.0048,p:new THREE.Vector3(-5.8,1.35,-1.15),v:new THREE.Vector3(.285,-.035,.055),trail:null,history:[],sampleClock:0,last:null,cycle:0};

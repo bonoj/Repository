@@ -427,9 +427,16 @@ const C={
 
 // The current six-toy arrangement is content in Betwixt, not Betwixt itself.
 // This zeroed parent earns one operation: move the intact organism as a unit.
+// Persistent place: old Workshop contents exist even when not presented.
+// Shell/UI and Betwixt environment remain outside; Crucible Twixt is explicitly excluded.
+const legacyWorkshop=new THREE.Group();
+legacyWorkshop.name='place:legacy-workshop';
+legacyWorkshop.visible=false;
+scene.add(legacyWorkshop);
+
 const betwixtContent=new THREE.Group();
 betwixtContent.name='BetwixtContent';
-scene.add(betwixtContent);
+legacyWorkshop.add(betwixtContent);
 
 const presenceMat=new THREE.MeshStandardMaterial({color:0xf0f0ed,roughness:.68,metalness:.04});
 const PRESENCES=[
@@ -1354,7 +1361,7 @@ globalThis.WorkshopGravity=WorkshopGravity;
 // Workshop terrain is the intact transported Crucible implementation. It is one
 // useful terrain, not Workshop's definition of terrain.
 let workshopTerrain=null,workshopTerrainGenesis=null,workshopTerrainSeed=741;
-const workshopCrucible=new THREE.Group();workshopCrucible.name='workshop:crucible';workshopCrucible.visible=false;scene.add(workshopCrucible);
+const workshopCrucible=new THREE.Group();workshopCrucible.name='workshop:crucible';workshopCrucible.visible=false;legacyWorkshop.add(workshopCrucible);
 let workshopCrucibleEnabled=false;
 const workshopCrucibleSpellIds=['crucible-meteor','crucible-terrain-next','crucible-bearings','crucible-water','crucible-lava','crucible-carve','crucible-raise'];
 function ensureWorkshopTerrain(){
@@ -1523,7 +1530,7 @@ const collapseBead=new THREE.Mesh(
   new THREE.SphereGeometry(.16,16,10),
   new THREE.MeshStandardMaterial({color:0xffffff,roughness:.72,metalness:0})
 );
-collapseBead.name='residue:collapsed-world';collapseBead.castShadow=true;collapseBead.visible=false;scene.add(collapseBead);
+collapseBead.name='residue:collapsed-world';collapseBead.castShadow=true;collapseBead.visible=false;legacyWorkshop.add(collapseBead);
 let worldCollapsed=false,collapseBeadVelocity=0,collapseLastNow=null,collapseSettledAt=null;
 function collapseWorldToBead(){
   if(worldCollapsed)return true;
@@ -1579,7 +1586,7 @@ function createWorldseed(){
   const geo=new THREE.PlaneGeometry(11,11,n-1,n-1);geo.rotateX(-Math.PI/2);
   const colors=new Float32Array(N*3);geo.setAttribute('color',new THREE.BufferAttribute(colors,3));
   const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.88,metalness:0,side:THREE.DoubleSide});
-  const mesh=new THREE.Mesh(geo,mat);mesh.name='worldseed:projection';mesh.position.y=GROUND_Y+.018;mesh.receiveShadow=true;const organism=new THREE.Group();organism.name='worldseed:organism';scene.add(organism);organism.add(mesh);
+  const mesh=new THREE.Mesh(geo,mat);mesh.name='worldseed:projection';mesh.position.y=GROUND_Y+.018;mesh.receiveShadow=true;const organism=new THREE.Group();organism.name='worldseed:organism';legacyWorkshop.add(organism);organism.add(mesh);
   const handles=new THREE.Group();handles.name='worldseed:anonymous-distinctions';organism.add(handles);
   worldseed={n,N,potential,resistance,trace,disturbance,next,mesh,handles,turn:0,lastStep:performance.now(),done:false,history:[],distinctions:new Map(),nextHandle:1};
   projectWorldseed();
@@ -1636,7 +1643,7 @@ function makeBetwixtable(content,{name=content.name||'betwixtable',padding=.18,i
   const parent=content.parent;
   const localPosition=content.position.clone(),localQuaternion=content.quaternion.clone(),localScale=content.scale.clone();
   const node=new THREE.Group();node.name='betwixtable:'+name;
-  if(parent)parent.add(node);else scene.add(node);
+  if(parent)parent.add(node);else legacyWorkshop.add(node);
   node.position.copy(localPosition);node.quaternion.copy(localQuaternion);node.scale.copy(localScale);
   content.position.set(0,0,0);content.quaternion.identity();content.scale.set(1,1,1);node.add(content);
   const target=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));
@@ -1659,7 +1666,7 @@ function makeBetwixtable(content,{name=content.name||'betwixtable',padding=.18,i
 }
 
 
-function buildBetwixtable({name='betwixtable',parent=scene,at=null,padding=.18,interact=null,build}={}){
+function buildBetwixtable({name='betwixtable',parent=legacyWorkshop,at=null,padding=.18,interact=null,build}={}){
   // Construction-first path: the shell exists before its presentation. Builders author
   // only local geometry; the shell owns world placement and all later spatial behavior.
   const node=new THREE.Group();node.name='betwixtable:'+name;parent.add(node);
@@ -1712,7 +1719,7 @@ globalThis.Betwixtable=buildBetwixtable;
 // above the Jovian system with measured breathing room rather than a center guess.
 const legacyLabCarrier=new THREE.Group();
 legacyLabCarrier.name='legacy-lab-worlds-carrier';
-scene.add(legacyLabCarrier);
+legacyWorkshop.add(legacyLabCarrier);
 legacyLabCarrier.add(betwixtContent);
 legacyLabCarrier.visible=false;
 function visibleWorldBounds(object){
@@ -1744,10 +1751,10 @@ function resolveSpatialRelations(){
     }
   }
 }
-registerRelationalNode('legacy-lab-worlds',{object:legacyLabCarrier,bounds:()=>visibleWorldBounds(betwixtContent)});
-relateSpatial({subject:'legacy-lab-worlds',kind:'above',reference:'jovian-system',gap:.72});
+registerRelationalNode('legacy-workshop',{object:legacyWorkshop,bounds:()=>visibleWorldBounds(legacyWorkshop)});
+relateSpatial({subject:'legacy-workshop',kind:'above',reference:'jovian-system',gap:.72});
 
-// Workshop is gone. This is ordinary Betwixt.
+// The legacy organism exists inside its persistent Workshop place.
 legacyLabCarrier.visible=true;
 
 
@@ -1766,6 +1773,7 @@ workshopCrucibleOrbMesh.userData.workshopCrucibleOrb=true;
 workshopCrucibleOrb.add(workshopCrucibleOrbMesh);
 // Invisible forgiving touch volume; visual geometry remains exactly .50.
 const workshopCrucibleBetwixtable=makeBetwixtable(workshopCrucibleOrb,{name:'crucible',interact:()=>tapWorkshopCrucibleOrb()});const workshopCrucibleOrbTapTarget=workshopCrucibleBetwixtable.userData.betwixtable.target;
+scene.attach(workshopCrucibleBetwixtable); // ⚗️ Crucible is a Betwixt place, never legacy Workshop content.
 const workshopCrucibleBearingGeo=new THREE.SphereGeometry(.072,10,7);
 const workshopCrucibleBearingMats=[
   new THREE.MeshStandardMaterial({color:0x252724,roughness:.34,metalness:.58}),
@@ -1848,7 +1856,7 @@ function tapWorkshopCrucibleOrb(){
 }
 
 // Workshop junk bin: retired physical specimens remain as inert clutter, not spells or residents.
-const workshopJunkBin=new THREE.Group();workshopJunkBin.name='workshop:junk-bin';scene.add(workshopJunkBin);
+const workshopJunkBin=new THREE.Group();workshopJunkBin.name='workshop:junk-bin';legacyWorkshop.add(workshopJunkBin);
 workshopJunkBin.position.set(-5.1,GROUND_Y,-2.35);
 const junkTrayMat=new THREE.MeshStandardMaterial({color:0x4b4032,roughness:.88,metalness:.18});
 const junkTray=new THREE.Mesh(new THREE.BoxGeometry(2.15,.10,1.18),junkTrayMat);junkTray.position.y=.05;junkTray.receiveShadow=true;workshopJunkBin.add(junkTray);
@@ -1915,7 +1923,7 @@ microscope.position.set(.48,.10,0);microscope.rotation.y=-.28;
 const workshopField=new THREE.Group();
 workshopField.name='workshop:49-radically-different-artillery';
 workshopField.visible=true;
-scene.add(workshopField);
+legacyWorkshop.add(workshopField);
 
 const workshopMetal=new THREE.MeshStandardMaterial({color:0x5f625d,roughness:.72,metalness:.28});
 const workshopDark=new THREE.MeshStandardMaterial({color:0x252724,roughness:.8,metalness:.18});
@@ -3338,7 +3346,7 @@ globalThis.downloadObserverCarrierReport=downloadObserverCarrierReport;
 // Temporary Chemlab glance board: only the element/color vocabulary earned by
 // accepted specimens so far. This is presentation residue, not chemistry authority.
 const chemlabGlanceBoard=new THREE.Group();chemlabGlanceBoard.name='temporary:chemlab-glance-board';
-chemlabGlanceBoard.position.set(0,GROUND_Y+6.62,-1.25);scene.add(chemlabGlanceBoard);
+chemlabGlanceBoard.position.set(0,GROUND_Y+6.62,-1.25);legacyWorkshop.add(chemlabGlanceBoard);
 const boardMat=new THREE.MeshStandardMaterial({color:0xf2f1eb,roughness:.88,metalness:0});
 const cardSpecs=[
   {symbol:'H',name:'HYDROGEN',color:'#f1eee6',ink:'#252525'},
@@ -3924,7 +3932,7 @@ function workshopTap(x,y){
    The elevated contained phase is an explicit reservoir volume because Crucible's
    earned fluid state is terrain-supported 2.5D. Shattering releases that volume;
    a visible carrier falls to terrain, then the exact transported solver owns it. */
-const fluidGlobes=new THREE.Group();fluidGlobes.name='specimen:fluid-globes';scene.add(fluidGlobes);fluidGlobes.visible=false;
+const fluidGlobes=new THREE.Group();fluidGlobes.name='specimen:fluid-globes';legacyWorkshop.add(fluidGlobes);fluidGlobes.visible=false;
 let fluidGlobesActive=false,fluidGlobesReady=false,fluidLastNow=0;
 const fluidVessels=[],fluidFalls=[],fluidShards=[];
 let specimenWater=null,specimenLava=null;

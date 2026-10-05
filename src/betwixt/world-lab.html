@@ -2619,29 +2619,27 @@ const worldD20=buildBetwixtable({
     root.add(rocket);
 
     const up=new THREE.Vector3(0,1,0);
-    let last=performance.now(),phase=.4;
-    const loopAxis=new THREE.Vector3(.23,.94,.25).normalize();
-    const loopU=new THREE.Vector3(1,0,0).sub(loopAxis.clone().multiplyScalar(loopAxis.x)).normalize();
-    const loopV=new THREE.Vector3().crossVectors(loopAxis,loopU).normalize();
+    let last=performance.now(),phase=.35;
     const pathPos=new THREE.Vector3(),pathAhead=new THREE.Vector3(),forward=new THREE.Vector3();
+    // A smooth deep-volume loop: boundary crossings are deliberately steep, while the
+    // exterior turn is broad. Faces remain topology, not waypoints.
     function sampleFlight(t,out){
-      // Continuous wandering Lissajous-like orbit. Radius repeatedly crosses the cage shell;
-      // slow precession prevents it from becoming a fixed hoop.
-      const a=t,b=t*.47+.8;
-      const radial=worldD20Radius*(1.08+.30*Math.sin(t*.61));
-      const wobble=.28*Math.sin(b);
-      out.copy(loopU).multiplyScalar(Math.cos(a)*radial)
-        .addScaledVector(loopV,Math.sin(a)*radial)
-        .addScaledVector(loopAxis,wobble);
-      const pre=.22*Math.sin(t*.083);
-      out.applyAxisAngle(new THREE.Vector3(0,1,0),pre);
+      const cycle=t%(Math.PI*2);
+      // sin(t) gives maximum radial speed exactly where radius crosses the shell.
+      const radial=worldD20Radius*(1.12+1.02*Math.sin(cycle));
+      // Direction wanders much more slowly than the in/out stroke, so crossings are
+      // nearly normal to whichever opening they happen to occupy.
+      const az=.42*t+.18*Math.sin(t*.17);
+      const el=.34*Math.sin(t*.29)+.16*Math.sin(t*.11+1.3);
+      const ce=Math.cos(el);
+      out.set(Math.cos(az)*ce,Math.sin(el),Math.sin(az)*ce).multiplyScalar(radial);
       return out;
     }
     sampleFlight(phase,rocket.position);
     worldD20Animators.push(now=>{
       const dt=Math.min(.032,Math.max(.001,(now-last)/1000));last=now;
-      phase+=dt*.72;
-      sampleFlight(phase,pathPos);sampleFlight(phase+.018,pathAhead);
+      phase+=dt*.48;
+      sampleFlight(phase,pathPos);sampleFlight(phase+.012,pathAhead);
       rocket.position.copy(pathPos);
       forward.copy(pathAhead).sub(pathPos).normalize();
       if(forward.lengthSq()>1e-6)rocket.quaternion.setFromUnitVectors(up,forward);
@@ -2653,7 +2651,7 @@ const worldD20=buildBetwixtable({
     spatial.fit();
   }
 });
-worldD20.userData.world=Object.freeze({kind:'hollow-d20-flight',faces:20,rule:'face topology retained; rocket follows a continuous wandering volumetric loop crossing inside/outside without touching the hard frame; forward follows path tangent'});
+worldD20.userData.world=Object.freeze({kind:'hollow-d20-flight',faces:20,rule:'face topology retained; deep-inside to far-outside loop with steep shell crossings and broad exterior turns; faces are not waypoints; forward follows path tangent'});
 const rocketChase={active:false,returning:false,saved:null,fromCamera:new THREE.Vector3(),fromTarget:new THREE.Vector3(),started:0};
 function startRocketChase(){
   if(rocketChase.active)return;

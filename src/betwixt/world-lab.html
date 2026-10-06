@@ -1543,14 +1543,15 @@ function ensureBeyondArena(){
   for(let i=0;i<3;i++){const a=Math.PI/2+i*Math.PI*2/3,x=Math.cos(a)*seatRadius,y=Math.sin(a)*seatRadius,front=new THREE.Vector3(x,y,0),back=new THREE.Vector3(x,y,seatAft),d=back.clone().sub(front),binding=new THREE.Mesh(new THREE.CylinderGeometry(.027,.034,d.length(),8),workshopCrucibleStandMat);binding.position.copy(front).add(back).multiplyScalar(.5);binding.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());binding.castShadow=true;seat.add(binding)}
 
   const visitors=[],arcs=[],bearings=[],arcGeo=new THREE.SphereGeometry(.105,7,5),bbGeo=new THREE.SphereGeometry(.075,6,4);
-  const SENSOR_RANGE=18,LAUNCH_RANGE=16,ACQUIRE_DWELL=850;
+  const SENSOR_RANGE=18,LAUNCH_RANGE=16,ACQUIRE_DWELL=360;
   let nextVisitor=performance.now()+1100,nextArc=0,serial=0,focus=null,focusSince=0;
   const rand=(n,k=0)=>{const q=Math.sin((n+1)*127.1+(k+1)*311.7+741*19.19)*43758.5453123;return q-Math.floor(q)};
   function addVisitor(now){
-    const id=serial++,a=rand(id,1)*Math.PI*2,r=8+rand(id,2)*14,x=Math.cos(a)*r,z=Math.sin(a)*r,gy=terrain.groundHeight(x,z),g=new THREE.Group();g.position.set(x,gy-1.9,z);root.add(g);
+    // Spawn just outside/inside the sensing frontier: rapid experiments still show the boundary being crossed.
+    const id=serial++,a=rand(id,1)*Math.PI*2,r=14.5+rand(id,2)*7.0,x=Math.cos(a)*r,z=Math.sin(a)*r,gy=terrain.groundHeight(x,z),g=new THREE.Group();g.position.set(x,gy-1.9,z);root.add(g);
     const body=new THREE.Mesh(new THREE.IcosahedronGeometry(.58+rand(id,3)*.24,1),red);body.scale.y=1.35;body.castShadow=true;g.add(body);
     const crown=new THREE.Mesh(new THREE.ConeGeometry(.34,.72,6),workshopCrucibleStandMat);crown.position.y=.82;crown.castShadow=true;g.add(crown);
-    visitors.push({id,g,gy,born:now,rise:1500+rand(id,4)*900,active:true});
+    visitors.push({id,g,gy,born:now,rise:650+rand(id,4)*300,active:true,speed:4.0+rand(id,5)*1.8,last:now});
   }
   function exposed(v){
     if(!v.active)return false;
@@ -1572,11 +1573,21 @@ function ensureBeyondArena(){
   }
   const qAim=new THREE.Quaternion(),forward=new THREE.Vector3(0,0,1);
   function look(p){const d=p.clone().sub(chassis.position).normalize();qAim.setFromUnitVectors(forward,d);eye.quaternion.slerp(qAim,.10);seat.quaternion.copy(eye.quaternion)}
-  function sendArc(now,v){const a=chassis.position.clone().add(new THREE.Vector3(0,0,.34).applyQuaternion(eye.quaternion)),b=v.g.position.clone().add(new THREE.Vector3(0,.42,0)),m=new THREE.Mesh(arcGeo,gold);m.castShadow=true;root.add(m);arcs.push({m,a,b,v,born:now,duration:950+a.distanceTo(b)*24,apex:2.8+a.distanceTo(b)*.10});nextArc=now+1450}
+  function sendArc(now,v){const a=chassis.position.clone().add(new THREE.Vector3(0,0,.34).applyQuaternion(eye.quaternion)),b=v.g.position.clone().add(new THREE.Vector3(0,.42,0)),m=new THREE.Mesh(arcGeo,gold);m.castShadow=true;root.add(m);arcs.push({m,a,b,v,born:now,duration:620+a.distanceTo(b)*16,apex:2.8+a.distanceTo(b)*.10});nextArc=now+720}
   function shower(v,now){if(!v.active)return;v.active=false;root.remove(v.g);const p=v.g.position.clone().add(new THREE.Vector3(0,.55,0));for(let i=0;i<32;i++){const m=new THREE.Mesh(bbGeo,bearingMat);m.position.copy(p);m.castShadow=true;root.add(m);const a=rand(v.id,i+20)*Math.PI*2,s=.9+rand(v.id,i+80)*3.2;bearings.push({m,v:new THREE.Vector3(Math.cos(a)*s,1.7+rand(v.id,i+140)*4.3,Math.sin(a)*s),born:now})}if(focus===v){focus=null;focusSince=0}}
   function update(now){
-    if(now>=nextVisitor&&visitors.filter(v=>v.active).length<6){addVisitor(now);nextVisitor=now+2400+rand(serial,9)*2200}
-    for(const v of visitors)if(v.active){const t=THREE.MathUtils.clamp((now-v.born)/v.rise,0,1),q=t*t*(3-2*t);v.g.position.y=THREE.MathUtils.lerp(v.gy-1.9,v.gy+.72,q);v.g.rotation.y+=.004}
+    if(now>=nextVisitor&&visitors.filter(v=>v.active).length<8){addVisitor(now);nextVisitor=now+850+rand(serial,9)*750}
+    for(const v of visitors)if(v.active){
+      const t=THREE.MathUtils.clamp((now-v.born)/v.rise,0,1),q=t*t*(3-2*t);
+      if(t<1)v.g.position.y=THREE.MathUtils.lerp(v.gy-1.9,v.gy+.72,q);
+      else{
+        // Once emerged, close rapidly on the node. No pathfinding yet: terrain-following pressure is the experiment.
+        const dt=Math.min(.05,Math.max(0,(now-v.last)/1000)),dx=-v.g.position.x,dz=-v.g.position.z,len=Math.hypot(dx,dz)||1;
+        v.g.position.x+=dx/len*v.speed*dt;v.g.position.z+=dz/len*v.speed*dt;
+        v.gy=terrain.groundHeight(v.g.position.x,v.g.position.z);v.g.position.y=v.gy+.72;
+      }
+      v.last=now;v.g.rotation.y+=.008;
+    }
     if(!focus||!sensed(focus))choose(now);
     if(focus){const aim=focus.g.position.clone().add(new THREE.Vector3(0,.45,0));look(aim);const d=aim.distanceTo(chassis.position);if(now-focusSince>=ACQUIRE_DWELL&&d<=LAUNCH_RANGE&&now>=nextArc)sendArc(now,focus)}
     else{const t=now*.001,q=new THREE.Quaternion().setFromEuler(new THREE.Euler(.10*Math.sin(t*.23),.52*Math.sin(t*.31),0,'YXZ'));eye.quaternion.slerp(q,.025);seat.quaternion.copy(eye.quaternion)}

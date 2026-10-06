@@ -1520,74 +1520,46 @@ globalThis.BeyondTerrain={
   inspect:()=>ensureBeyondTerrain().inspect()
 };
 
-let beyondArch=null;
-function ensureBeyondArch(){
-  if(beyondArch)return beyondArch;
-  const terrain=ensureBeyondTerrain(),root=new THREE.Group();root.name='beyond:snapped-monumental-castle';beyondPlace.add(root);
-  // Disposable architecture test: a few reusable parts + attachment frames, not hand-authored mesh.
-  const center={x:-8,z:5},datum=terrain.groundHeight(center.x,center.z)+.18;
-  terrain.seatRect({x:center.x,z:center.z,hx:9.8,hz:7.2,y:datum,falloff:1.15});
-
-  const stone=new THREE.MeshStandardMaterial({color:0xb8ad91,roughness:.88,metalness:.02});
-  const darkStone=new THREE.MeshStandardMaterial({color:0x766f63,roughness:.94,metalness:.01});
-  const roof=new THREE.MeshStandardMaterial({color:0x65706d,roughness:.72,metalness:.08});
-  const gold=new THREE.MeshStandardMaterial({color:0xb18a43,roughness:.62,metalness:.28});
-  const parts=[];
-
-  function box(name,x,y,z,w,h,d,mat=stone){
-    const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.name=name;m.position.set(center.x+x,datum+y,center.z+z);m.castShadow=true;m.receiveShadow=true;root.add(m);parts.push(m);return m;
+let beyondArena=null;
+function ensureBeyondArena(){
+  if(beyondArena)return beyondArena;
+  const terrain=ensureBeyondTerrain(),root=new THREE.Group();root.name='beyond:eye-arena';beyondPlace.add(root);
+  const steel=new THREE.MeshStandardMaterial({color:0x59636b,roughness:.52,metalness:.62}),brass=new THREE.MeshStandardMaterial({color:0xb18a43,roughness:.46,metalness:.58}),white=new THREE.MeshStandardMaterial({color:0xd9d7c9,roughness:.72}),dark=new THREE.MeshStandardMaterial({color:0x171b1c,roughness:.34}),red=new THREE.MeshStandardMaterial({color:0x7b3f35,roughness:.78}),gold=new THREE.MeshStandardMaterial({color:0xd6a24f,roughness:.38,metalness:.46}),bearingMat=new THREE.MeshStandardMaterial({color:0x8f9698,roughness:.24,metalness:.82});
+  const y0=terrain.groundHeight(0,0),base=new THREE.Mesh(new THREE.CylinderGeometry(.82,1.05,.48,12),steel);base.position.set(0,y0+.18,0);root.add(base);
+  const yaw=new THREE.Group();yaw.position.set(0,y0+.72,0);root.add(yaw);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(.72,.105,8,24),brass);ring.rotation.x=Math.PI/2;yaw.add(ring);
+  const pitch=new THREE.Group();yaw.add(pitch);const cage=new THREE.Mesh(new THREE.TorusGeometry(.55,.075,8,20),steel);cage.rotation.y=Math.PI/2;pitch.add(cage);
+  const eye=new THREE.Mesh(new THREE.SphereGeometry(.42,18,12),white);pitch.add(eye);const pupil=new THREE.Mesh(new THREE.SphereGeometry(.16,14,10),dark);pupil.position.z=-.385;pupil.scale.z=.42;pitch.add(pupil);
+  const visitors=[],arcs=[],bearings=[],arcGeo=new THREE.SphereGeometry(.105,7,5),bbGeo=new THREE.SphereGeometry(.075,6,4);
+  let nextVisitor=performance.now()+900,nextArc=0,serial=0,focus=null;
+  const rand=(n,k=0)=>{const q=Math.sin((n+1)*127.1+(k+1)*311.7+741*19.19)*43758.5453123;return q-Math.floor(q)};
+  function addVisitor(now){
+    const id=serial++,a=rand(id,1)*Math.PI*2,r=11+rand(id,2)*31,x=Math.cos(a)*r,z=Math.sin(a)*r,gy=terrain.groundHeight(x,z),g=new THREE.Group();g.position.set(x,gy-1.8,z);root.add(g);
+    const body=new THREE.Mesh(new THREE.IcosahedronGeometry(.58+rand(id,3)*.24,1),red);body.scale.y=1.35;g.add(body);const crown=new THREE.Mesh(new THREE.ConeGeometry(.34,.72,6),brass);crown.position.y=.82;g.add(crown);
+    visitors.push({id,g,gy,born:now,rise:650+rand(id,4)*500,active:true});
   }
-  function tower(name,x,z,r,h,spire=2.8){
-    const body=new THREE.Mesh(new THREE.CylinderGeometry(r,r*1.08,h,12),stone);body.name=name;body.position.set(center.x+x,datum+h/2-.28,center.z+z);body.castShadow=true;body.receiveShadow=true;root.add(body);parts.push(body);
-    const crown=new THREE.Mesh(new THREE.CylinderGeometry(r*1.18,r*1.18,.48,12),gold);crown.position.set(body.position.x,datum+h-.15,body.position.z);root.add(crown);parts.push(crown);
-    const cap=new THREE.Mesh(new THREE.ConeGeometry(r*.92,spire,12),roof);cap.position.set(body.position.x,datum+h+spire/2+.08,body.position.z);cap.castShadow=true;root.add(cap);parts.push(cap);
-    return body;
+  function choose(){let best=null,d0=Infinity;for(const v of visitors)if(v.active){const d=v.g.position.distanceTo(yaw.position);if(d<d0){best=v;d0=d}}focus=best}
+  function look(p){const d=p.clone().sub(yaw.position),flat=Math.hypot(d.x,d.z);yaw.rotation.y=Math.atan2(-d.x,-d.z);pitch.rotation.x=-Math.atan2(d.y,flat)}
+  function sendArc(now,v){
+    const a=yaw.position.clone(),b=v.g.position.clone().add(new THREE.Vector3(0,.42,0)),m=new THREE.Mesh(arcGeo,gold);root.add(m);arcs.push({m,a,b,v,born:now,duration:520+a.distanceTo(b)*17,apex:3.2+a.distanceTo(b)*.115});nextArc=now+780;
   }
-  function buttress(x,z,side,depth=2.15){
-    // A spoke snapped from nave wall outward, with a rising spike.
-    const sx=side<0?-1:1,b=box('buttress',x+sx*depth*.5,1.25,z,depth,2.5,.42,darkStone);
-    b.rotation.z=sx*.22;
-    const spike=new THREE.Mesh(new THREE.ConeGeometry(.34,2.25,6),gold);spike.position.set(center.x+x+sx*(depth+.12),datum+2.0,center.z+z);spike.castShadow=true;root.add(spike);parts.push(spike);
+  function shower(v,now){
+    if(!v.active)return;v.active=false;root.remove(v.g);const p=v.g.position.clone().add(new THREE.Vector3(0,.55,0));
+    for(let i=0;i<32;i++){const m=new THREE.Mesh(bbGeo,bearingMat);m.position.copy(p);root.add(m);const a=rand(v.id,i+20)*Math.PI*2,s=.9+rand(v.id,i+80)*3.2;bearings.push({m,v:new THREE.Vector3(Math.cos(a)*s,1.7+rand(v.id,i+140)*4.3,Math.sin(a)*s),born:now})}
+    if(focus===v)focus=null;
   }
-
-  // Continuous buried podium: architecture owns a clean datum; terrain owns the cut/fill transition.
-  box('podium',0,-.48,0,18.8,.96,13.4,darkStone);
-
-  // Cathedral: repeated bays along one spine.
-  const bays=7,bay=1.65,naveW=5.0;
-  for(let i=0;i<bays;i++){
-    const z=(i-(bays-1)/2)*bay;
-    box('nave-bay',0,2.25,z,naveW,4.5,bay*.92,stone);
-    if(i>0&&i<bays-1){buttress(-naveW/2,z,-1);buttress(naveW/2,z,1);}
+  function update(now){
+    if(now>=nextVisitor&&visitors.filter(v=>v.active).length<8){addVisitor(now);nextVisitor=now+1500+rand(serial,9)*1700}
+    for(const v of visitors)if(v.active){const t=THREE.MathUtils.clamp((now-v.born)/v.rise,0,1),q=t*t*(3-2*t);v.g.position.y=THREE.MathUtils.lerp(v.gy-1.8,v.gy+.72,q);v.g.rotation.y+=.006}
+    if(!focus||!focus.active)choose();
+    if(focus){look(focus.g.position.clone().add(new THREE.Vector3(0,.45,0)));if(now>=nextArc&&now-focus.born>focus.rise*.72)sendArc(now,focus)}else yaw.rotation.y+=.004;
+    for(let i=arcs.length-1;i>=0;i--){const p=arcs[i],t=THREE.MathUtils.clamp((now-p.born)/p.duration,0,1);p.m.position.lerpVectors(p.a,p.b,t);p.m.position.y+=4*p.apex*t*(1-t);if(t>=1){root.remove(p.m);arcs.splice(i,1);if(p.v.active)shower(p.v,now)}}
+    const dt=.016;for(let i=bearings.length-1;i>=0;i--){const b=bearings[i];b.v.y-=9.2*dt;b.m.position.addScaledVector(b.v,dt);const gy=terrain.groundHeight(b.m.position.x,b.m.position.z)+.075;if(b.m.position.y<gy){b.m.position.y=gy;if(Math.abs(b.v.y)>.42)b.v.y=-b.v.y*.46;else b.v.y=0;b.v.x*=.91;b.v.z*=.91}if(now-b.born>5200){root.remove(b.m);bearings.splice(i,1)}}
+    window.vestibuleDirty=true;
   }
-  // Clerestory and long roof ridge.
-  box('clerestory',0,5.15,0,2.65,1.55,bays*bay,stone);
-  const ridge=new THREE.Mesh(new THREE.CylinderGeometry(0,2.05,bays*bay,4),roof);ridge.name='nave-roof';ridge.rotation.x=Math.PI/2;ridge.rotation.z=Math.PI/4;ridge.position.set(center.x,datum+6.45,center.z);ridge.castShadow=true;root.add(ridge);parts.push(ridge);
-
-  // Transept spoke and apse hub.
-  box('transept',0,2.1,-.45,11.8,4.2,2.15,stone);
-  tower('apse-hub',0,5.95,2.0,5.6,2.5);
-
-  // Four great tower hubs establish the monumental silhouette.
-  tower('west-tower',-6.8,-4.7,1.55,8.4,3.5);
-  tower('east-tower', 6.8,-4.7,1.55,8.4,3.5);
-  tower('rear-west-tower',-6.7,4.55,1.2,6.6,2.8);
-  tower('rear-east-tower', 6.7,4.55,1.2,6.6,2.8);
-
-  // Snap the front towers back to the cathedral with elevated spokes.
-  box('west-gallery',-4.65,3.25,-4.7,4.3,1.15,1.15,stone);
-  box('east-gallery', 4.65,3.25,-4.7,4.3,1.15,1.15,stone);
-
-  // Rose/window voids are suggested as dark inset geometry; enough to read facade at miniature scale.
-  const facade=box('facade',0,3.25,-6.0,5.8,6.5,.55,stone);
-  for(const x of [-1.55,0,1.55]){
-    const w=box('window-inset',x,3.6,-6.31,.72,2.15,.08,darkStone);w.position.z-=.01;
-  }
-  const rose=new THREE.Mesh(new THREE.TorusGeometry(.82,.13,8,20),gold);rose.position.set(center.x,datum+5.35,center.z-6.34);rose.rotation.x=Math.PI/2;root.add(rose);parts.push(rose);
-
-  beyondArch={root,center:new THREE.Vector3(center.x,datum,center.z),inspect:()=>({kind:'snapped-monumental-castle',datum,parts:parts.length,bays,terrainContract:'seatRect',architecture:['podium','repeated bays','tower hubs','spokes','buttresses']})};
-  globalThis.BeyondArch=beyondArch;globalThis.BeyondCastle=beyondArch;window.vestibuleDirty=true;return beyondArch;
+  beyondArena={root,update,inspect:()=>({kind:'gimballed-eye-arena',focus:focus?.id??null,visitors:visitors.filter(v=>v.active).length,arcs:arcs.length,bearings:bearings.length})};globalThis.BeyondArena=beyondArena;return beyondArena;
 }
+function updateBeyondArena(now){if(currentPlace==='beyond')ensureBeyondArena().update(now)}
 
 let beyondTransfers=null;
 function ensureBeyondTransfers(){
@@ -1817,7 +1789,7 @@ function presentLocus(name){
   const next=placeDefinitions[name];if(!next)return false;
   for(const [id,{object}] of Object.entries(placeDefinitions))object.visible=id===name;
   floor.visible=name!=='beyond';
-  if(name==='beyond'){ensureBeyondTerrain();ensureBeyondTransfers();ensureBeyondArch();}
+  if(name==='beyond'){ensureBeyondTerrain();ensureBeyondTransfers();ensureBeyondArena();}
   currentPlace=name;
   if(name==='crucible'){
     workshopCrucibleEnabled=true;ensureWorkshopTerrain();installWorkshopCrucibleSpells();
@@ -5318,6 +5290,7 @@ renderer.setAnimationLoop((now)=>{
   window.__workshopGravityLast=now;
   updateFluidGlobes(now);
   updateBeyondTransfers(now);
+  updateBeyondArena(now);
   JupurnSystem(now);
   ExchangeSystem(now);
   OrbitalSystem(now);

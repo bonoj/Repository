@@ -35,15 +35,17 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   const materialColor=new THREE.Color();
   const populationRoot=new THREE.Group();populationRoot.name="functional-terrain:populations";root.add(populationRoot);
   const migrationRoot=new THREE.Group();migrationRoot.name="functional-terrain:migration";root.add(migrationRoot);
-  // Chosen deterministic sites are both ribs/purple jurisdiction in seed 741; migration moves material without changing its identity.
-  const migration={source:{x:-.95,z:.15},dest:{x:2.35,z:-1.55},radius:.88,depth:1.05,sourceAmount:0,destAmount:0,phase:"waiting",t0:0,running:false,sourceBase:0,destBase:0};
-  const migrationMaterial=materialColors.ribs.clone();
-  // T4 deliberately crosses provenance: orange/spirelet matter will be discovered at runtime and deposited into green/mounds substrate.
-  const alienMigration={source:{x:.14,z:2.38},dest:{x:-1.82,z:.14},sourceKind:"spirelet",destKind:"mounds",radius:.72,depth:.78,sourceAmount:0,destAmount:0,phase:"waiting",t0:0,running:false,sourceBase:0,destBase:0};
-  const bbCount=360,bbGeo=new THREE.SphereGeometry(.055,5,4),bbMat=new THREE.MeshStandardMaterial({color:migrationMaterial,roughness:.72,metalness:.18});
-  const bbMesh=new THREE.InstancedMesh(bbGeo,bbMat,bbCount);bbMesh.castShadow=true;bbMesh.receiveShadow=true;migrationRoot.add(bbMesh);
-  const alienMat=new THREE.MeshStandardMaterial({color:materialColors.spirelet,roughness:.72,metalness:.18});
-  const alienMesh=new THREE.InstancedMesh(bbGeo,alienMat,bbCount);alienMesh.castShadow=true;alienMesh.receiveShadow=true;migrationRoot.add(alienMesh);
+  // T3/T4 transfers are data. Both use the exact same transport engine.
+  const bbCount=360,bbGeo=new THREE.SphereGeometry(.055,5,4);
+  function makeTransfer({name,source,dest,kind,radius,depth,seedOffset}){
+    const mat=new THREE.MeshStandardMaterial({color:materialColors[kind],roughness:.72,metalness:.18});
+    const mesh=new THREE.InstancedMesh(bbGeo,mat,bbCount);mesh.name=name;mesh.castShadow=true;mesh.receiveShadow=true;mesh.visible=false;migrationRoot.add(mesh);
+    return{name,source,dest,kind,radius,depth,seedOffset,sourceAmount:0,destAmount:0,phase:"waiting",t0:0,running:false,sourceBase:0,destBase:0,mesh};
+  }
+  const migration=makeTransfer({name:"ribs-transfer",source:{x:-.95,z:.15},dest:{x:2.35,z:-1.55},kind:"ribs",radius:.88,depth:1.05,seedOffset:0});
+  // Fixed, visually interior semantic addresses for seed 741: spirelet/orange -> mounds/green.
+  const alienMigration=makeTransfer({name:"spirelet-to-mounds",source:{x:.14,z:2.38},dest:{x:-1.82,z:.14},kind:"spirelet",radius:.72,depth:.78,seedOffset:1009});
+  const transfers=[migration,alienMigration];
   const bbDummy=new THREE.Object3D();
   const bbSeeds=Array.from({length:bbCount},(_,i)=>({
     a:hash(i,17,seed+6101)*Math.PI*2,
@@ -111,19 +113,15 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
     return 0;
   }
   function migrationDelta(x,z){
-    const bell=(p,sign)=>{
-      const d=Math.hypot(x-p.x,z-p.z),u=clamp(1-d/migration.radius,0,1);
-      return sign*migration.depth*smooth(u)*(sign<0?migration.sourceAmount:migration.destAmount);
-    };
-    let d=bell(migration.source,-1)+bell(migration.dest,1);
-    if(alienMigration.source&&alienMigration.dest){
-      const bell2=(p,sign)=>{
-        const dist=Math.hypot(x-p.x,z-p.z),u=clamp(1-dist/alienMigration.radius,0,1);
-        return sign*alienMigration.depth*smooth(u)*(sign<0?alienMigration.sourceAmount:alienMigration.destAmount);
+    let total=0;
+    for(const tr of transfers){
+      const bell=(p,sign,amount)=>{
+        const d=Math.hypot(x-p.x,z-p.z),u=clamp(1-d/tr.radius,0,1);
+        return sign*tr.depth*smooth(u)*amount;
       };
-      d+=bell2(alienMigration.source,-1)+bell2(alienMigration.dest,1);
+      total+=bell(tr.source,-1,tr.sourceAmount)+bell(tr.dest,1,tr.destAmount);
     }
-    return d;
+    return total;
   }
   function sample(x,z){
     const en=fbm(x,z,seed+101),tier=Math.min(tiers.length-1,Math.floor(en*tiers.length)),E=tiers[tier];
@@ -169,95 +167,57 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   const pos=geo.attributes.position,colors=new Float32Array(pos.count*3);
   const color=new THREE.Color();
   function startMigration(now=performance.now()){
-    // Baselines are immutable receipts for this transfer. Never chase the deforming surface.
-    migration.sourceAmount=0;migration.destAmount=0;
-    migration.sourceBase=sample(migration.source.x,migration.source.z).H;
-    migration.destBase=sample(migration.dest.x,migration.dest.z).H;
-    migration.running=true;migration.t0=now;migration.phase="excavate";
-    if(alienMigration.source&&alienMigration.dest){
-      alienMigration.sourceAmount=0;alienMigration.destAmount=0;
-      alienMigration.sourceBase=sample(alienMigration.source.x,alienMigration.source.z).H;
-      alienMigration.destBase=sample(alienMigration.dest.x,alienMigration.dest.z).H;
-      alienMigration.running=true;alienMigration.t0=now;alienMigration.phase="excavate";
+    // One focus event, one t0, identical lifecycle for every transfer.
+    for(const tr of transfers){
+      tr.sourceAmount=0;tr.destAmount=0;
+      tr.sourceBase=sample(tr.source.x,tr.source.z).H;
+      tr.destBase=sample(tr.dest.x,tr.dest.z).H;
+      tr.running=true;tr.t0=now;tr.phase="excavate";tr.mesh.visible=false;
     }
   }
-  function updateMigration(now=performance.now()){
-    if(!migration.running){bbMesh.visible=false;}
-    const duration=13500,t=clamp((now-migration.t0)/duration,0,1);
-    if(!migration.running){ /* preserve settled first transfer while second may continue */ }
-    // Each parcel has its own launch time. The resulting train stretches, clumps and catches up rather than moving as one rigid blob.
+  function updateTransfer(tr,now){
+    if(!tr.running){tr.mesh.visible=false;return false;}
+    const duration=13500,t=clamp((now-tr.t0)/duration,0,1);
     let sourceGone=0,destArrived=0,visibleCount=0;
-    const sx=migration.source.x,sz=migration.source.z,dx=migration.dest.x,dz=migration.dest.z;
-    const srcBase=migration.sourceBase;
-    const dstBase=migration.destBase;
+    const sx=tr.source.x,sz=tr.source.z,dx=tr.dest.x,dz=tr.dest.z;
+    const len=Math.hypot(dx-sx,dz-sz),nx=-(dz-sz)/len,nz=(dx-sx)/len;
     for(let i=0;i<bbCount;i++){
       const b=bbSeeds[i],order=i/(bbCount-1);
-      const launch=.08+order*.38+(.025*Math.sin(i*.71+b.wobble));
-      const speed=.43+hash(i,67,seed+6173)*.16;
+      const launch=.08+order*.38+.025*Math.sin(i*.71+b.wobble);
+      const speed=.43+hash(i,67,seed+6173+tr.seedOffset)*.16;
       const p=clamp((t-launch)/speed,0,1);
-      if(t>=launch)sourceGone++;
-      if(p>=1)destArrived++;
-      const active=t>=launch&&p<1;
-      if(active){
+      if(t>=launch)sourceGone++;if(p>=1)destArrived++;
+      if(t>=launch&&p<1){
         visibleCount++;
-        // Elastic stream: longitudinal phase oscillation makes local blobs and strings while endpoints stay deterministic.
         const rubber=.045*Math.sin(p*Math.PI)*Math.sin(i*.43+t*34+b.wobble);
         const u=clamp(p+rubber,0,1);
-        const len=Math.hypot(dx-sx,dz-sz),tx=(dx-sx)/len,tz=(dz-sz)/len,nx=-tz,nz=tx;
         const cx=THREE.MathUtils.lerp(sx,dx,u),cz=THREE.MathUtils.lerp(sz,dz,u);
-        const ground=THREE.MathUtils.lerp(srcBase,dstBase,u);
-        // Sunspot-field silhouette: steep emergence, tall magnetic arch, helical twist, then steep re-entry.
-        const envelope=Math.pow(Math.sin(Math.PI*u),.62);
-        const arch=1.55*envelope;
+        const ground=THREE.MathUtils.lerp(tr.sourceBase,tr.destBase,u);
+        const envelope=Math.pow(Math.sin(Math.PI*u),.62),arch=1.55*envelope;
         const twistAngle=u*Math.PI*3.25+b.wobble*.32;
         const twistRadius=(.10+.16*envelope)*(Math.sin(Math.PI*u)**.45);
-        const stringing=.055*Math.sin(i*.37+t*18+b.wobble)*envelope;
-        const lateral=Math.cos(twistAngle)*twistRadius+stringing+Math.cos(b.a)*b.r*.10;
+        const lateral=Math.cos(twistAngle)*twistRadius+.055*Math.sin(i*.37+t*18+b.wobble)*envelope+Math.cos(b.a)*b.r*.10;
         const verticalTwist=Math.sin(twistAngle)*twistRadius;
-        // Tangent curl makes both ends rise/dive nearly normal to the terrain before bending into the long arch.
         const endCurl=.34*Math.sin(Math.PI*u)*Math.cos(Math.PI*u);
         const buryOut=p<.075?THREE.MathUtils.lerp(-.28,.05,p/.075):0;
         const buryIn=p>.91?THREE.MathUtils.lerp(0,-.30,(p-.91)/.09):0;
         bbDummy.position.set(cx+nx*(lateral+endCurl),ground+.10+arch+verticalTwist+b.y*.12+buryOut+buryIn,cz+nz*(lateral+endCurl));
-        const edge=Math.min(1,Math.max(0,(p)/.035),Math.max(0,(1-p)/.035));
-        bbDummy.scale.setScalar(Math.max(.001,edge));bbDummy.updateMatrix();bbMesh.setMatrixAt(i,bbDummy.matrix);
+        const edge=Math.min(1,Math.max(0,p/.035),Math.max(0,(1-p)/.035));
+        bbDummy.scale.setScalar(Math.max(.001,edge));bbDummy.updateMatrix();tr.mesh.setMatrixAt(i,bbDummy.matrix);
       }else{
-        bbDummy.scale.setScalar(.001);bbDummy.position.set(sx,srcBase-.3,sz);bbDummy.updateMatrix();bbMesh.setMatrixAt(i,bbDummy.matrix);
+        bbDummy.scale.setScalar(.001);bbDummy.position.set(sx,tr.sourceBase-.3,sz);bbDummy.updateMatrix();tr.mesh.setMatrixAt(i,bbDummy.matrix);
       }
     }
-    migration.sourceAmount=sourceGone/bbCount;
-    migration.destAmount=destArrived/bbCount;
-    migration.phase=t<.08?"excavate":destArrived===bbCount?"settled":sourceGone<bbCount?"streaming-out":"streaming-in";
-    bbMesh.visible=visibleCount>0&&mode===4;bbMesh.instanceMatrix.needsUpdate=true;
-    paint(false);
-    if(t>=1){migration.running=false;migration.phase="settled";bbMesh.visible=false;paint(false);}
-    updateAlienMigration(now);
+    tr.sourceAmount=sourceGone/bbCount;tr.destAmount=destArrived/bbCount;
+    tr.phase=t<.08?"excavate":destArrived===bbCount?"settled":sourceGone<bbCount?"streaming-out":"streaming-in";
+    tr.mesh.visible=visibleCount>0&&mode===4;tr.mesh.instanceMatrix.needsUpdate=true;
+    if(t>=1){tr.running=false;tr.phase="settled";tr.mesh.visible=false;}
+    return true;
   }
-  function updateAlienMigration(now=performance.now()){
-    if(!alienMigration.running||!alienMigration.source||now<alienMigration.t0){alienMesh.visible=false;return;}
-    const duration=13500,t=clamp((now-alienMigration.t0)/duration,0,1);
-    let sourceGone=0,destArrived=0,visibleCount=0;
-    const sx=alienMigration.source.x,sz=alienMigration.source.z,dx=alienMigration.dest.x,dz=alienMigration.dest.z;
-    for(let i=0;i<bbCount;i++){
-      const b=bbSeeds[i],order=i/(bbCount-1),launch=.08+order*.38+.025*Math.sin(i*.71+b.wobble),speed=.43+hash(i,79,seed+7103)*.16;
-      const p=clamp((t-launch)/speed,0,1);if(t>=launch)sourceGone++;if(p>=1)destArrived++;
-      if(t>=launch&&p<1){
-        visibleCount++;
-        const rubber=.045*Math.sin(p*Math.PI)*Math.sin(i*.41+t*32+b.wobble),u=clamp(p+rubber,0,1);
-        const len=Math.hypot(dx-sx,dz-sz),nx=-(dz-sz)/len,nz=(dx-sx)/len;
-        const cx=THREE.MathUtils.lerp(sx,dx,u),cz=THREE.MathUtils.lerp(sz,dz,u),ground=THREE.MathUtils.lerp(alienMigration.sourceBase,alienMigration.destBase,u);
-        const env=Math.pow(Math.sin(Math.PI*u),.62),tw=u*Math.PI*3.25+b.wobble*.32,tr=(.10+.16*env)*(Math.sin(Math.PI*u)**.45);
-        const lateral=Math.cos(tw)*tr+.055*Math.sin(i*.35+t*17+b.wobble)*env+Math.cos(b.a)*b.r*.10;
-        const ytw=Math.sin(tw)*tr,endCurl=.34*Math.sin(Math.PI*u)*Math.cos(Math.PI*u);
-        const buryOut=p<.075?THREE.MathUtils.lerp(-.28,.05,p/.075):0,burIn=p>.91?THREE.MathUtils.lerp(0,-.30,(p-.91)/.09):0;
-        bbDummy.position.set(cx+nx*(lateral+endCurl),ground+.10+1.42*env+ytw+b.y*.12+buryOut+burIn,cz+nz*(lateral+endCurl));
-        bbDummy.scale.setScalar(1);bbDummy.updateMatrix();alienMesh.setMatrixAt(i,bbDummy.matrix);
-      }else{bbDummy.scale.setScalar(.001);bbDummy.position.set(sx,alienMigration.sourceBase-.3,sz);bbDummy.updateMatrix();alienMesh.setMatrixAt(i,bbDummy.matrix);}
-    }
-    alienMigration.sourceAmount=sourceGone/bbCount;alienMigration.destAmount=destArrived/bbCount;
-    alienMigration.phase=destArrived===bbCount?"settled":sourceGone<bbCount?"streaming-out":"streaming-in";
-    alienMesh.visible=visibleCount>0&&mode===4;alienMesh.instanceMatrix.needsUpdate=true;paint(false);
-    if(t>=1){alienMigration.running=false;alienMigration.phase="settled";alienMesh.visible=false;paint(false);}
+  function updateMigration(now=performance.now()){
+    let changed=false;
+    for(const tr of transfers)changed=updateTransfer(tr,now)||changed;
+    if(changed)paint(false);
   }
   function paint(updatePopVisibility=true){
     for(let i=0;i<pos.count;i++){
@@ -291,6 +251,6 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   const mesh=new THREE.Mesh(geo,mat);mesh.castShadow=true;mesh.receiveShadow=true;root.add(mesh);
   const base=new THREE.Mesh(new THREE.BoxGeometry(size+.18,.12,size+.18),new THREE.MeshStandardMaterial({color:0x34383a,roughness:.62,metalness:.35}));
   base.position.y=-.92;root.add(base);
-  paint();rebuildPopulations();bbMesh.visible=false;alienMesh.visible=false;
+  paint();rebuildPopulations();for(const tr of transfers)tr.mesh.visible=false;
   return{root,mesh,populationRoot,migrationRoot,update:updateMigration,startMigration,migration,alienMigration,setMode(n){mode=((n%5)+5)%5;paint();return mode},next(){return this.setMode(mode+1)},mode:()=>mode,sample};
 }

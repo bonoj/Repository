@@ -2452,28 +2452,27 @@ registerRelationalNode('observer-eye',{object:observerTwixt,bounds:()=>observerT
 registerRelationalNode('crucible-twixt',{object:workshopCrucibleBetwixtable,bounds:()=>workshopCrucibleBetwixtable.userData.betwixtable.bounds()});
 relateSpatial({subject:'observer-eye',kind:'above',reference:'crucible-twixt',gap:2.0});
 
-// OBSERVER CARDINAL VESSEL — seven pilots, six visible docks, one invisible central dock.
+// OBSERVER CARDINAL VESSEL — cardinal molecule realized as two perpendicular spherical great circles.
 const observerVessel=buildBetwixtable({
   name:'observer-cardinal-vessel',parent:betwixtPlace,at:new THREE.Vector3(0,4.35,-5.4),padding:.28,
   build:(root)=>{
-    const cage=new THREE.Group();cage.name='observer-vessel:cage';root.add(cage);
-    const portClearRadius=.66,cageRadius=1.72,portTube=.055;
+    const shell=new THREE.Group();shell.name='observer-vessel:spherical-shell';root.add(shell);
+    // Molecule: invisible center node with six cardinal nodes at ±X ±Y ±Z.
+    const shellRadius=1.72,portClearRadius=.66,tube=.055;
     const axes=[new THREE.Vector3(1,0,0),new THREE.Vector3(-1,0,0),new THREE.Vector3(0,1,0),new THREE.Vector3(0,-1,0),new THREE.Vector3(0,0,1),new THREE.Vector3(0,0,-1)];
     const zAxis=new THREE.Vector3(0,0,1);
+    // Realization: two perpendicular great circles imply the spherical chassis. No straight cage struts.
+    const greatXY=new THREE.Mesh(new THREE.TorusGeometry(shellRadius,tube,10,64),workshopCrucibleStandMat);greatXY.name='observer-vessel:great-circle:xy';greatXY.castShadow=true;shell.add(greatXY);
+    const greatYZ=new THREE.Mesh(new THREE.TorusGeometry(shellRadius,tube,10,64),workshopCrucibleStandMat);greatYZ.name='observer-vessel:great-circle:yz';greatYZ.rotation.y=Math.PI/2;greatYZ.castShadow=true;shell.add(greatYZ);
     axes.forEach((axis,i)=>{
-      const dock=new THREE.Group();dock.name='observer-vessel:dock:'+i;dock.position.copy(axis).multiplyScalar(cageRadius);dock.quaternion.setFromUnitVectors(zAxis,axis);cage.add(dock);
-      const ring=new THREE.Mesh(new THREE.TorusGeometry(portClearRadius,portTube,10,40),workshopCrucibleStandMat);ring.castShadow=true;dock.add(ring);
-      // sparse cardinal ribs: connect each port toward the four perpendicular neighboring port regions
-      const tangentA=Math.abs(axis.y)<.9?new THREE.Vector3().crossVectors(axis,new THREE.Vector3(0,1,0)).normalize():new THREE.Vector3(1,0,0);
-      const tangentB=new THREE.Vector3().crossVectors(axis,tangentA).normalize();
-      for(const tangent of [tangentA,tangentA.clone().negate(),tangentB,tangentB.clone().negate()]){
-        const a=axis.clone().multiplyScalar(cageRadius-portClearRadius*.15),b=axis.clone().add(tangent).normalize().multiplyScalar(cageRadius),d=b.clone().sub(a);
-        const rib=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,d.length(),8),workshopCrucibleStandMat);rib.position.copy(a).add(b).multiplyScalar(.5);rib.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());rib.castShadow=true;cage.add(rib);
-      }
+      const dock=new THREE.Group();dock.name='observer-vessel:dock:'+i;dock.position.copy(axis).multiplyScalar(shellRadius);dock.quaternion.setFromUnitVectors(zAxis,axis);shell.add(dock);
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(portClearRadius,tube,10,40),workshopCrucibleStandMat);ring.castShadow=true;dock.add(ring);
     });
-    const pilotRadius=1.18;
-    axes.forEach((axis,i)=>{const agent=makeObserverAgent({name:'observer-vessel:pilot:'+i,parent:root,at:axis.clone().multiplyScalar(pilotRadius),betwixtable:false});agent.node.quaternion.setFromUnitVectors(zAxis,axis);});
+    // Seven possible docks, deliberately only three occupied: two cardinal pilots and the invisible central station.
+    const occupied=[axes[0],axes[2]];
+    occupied.forEach((axis,i)=>{const agent=makeObserverAgent({name:'observer-vessel:pilot:'+i,parent:root,at:axis.clone().multiplyScalar(shellRadius),betwixtable:false});agent.node.quaternion.setFromUnitVectors(zAxis,axis);});
     makeObserverAgent({name:'observer-vessel:pilot:center',parent:root,at:new THREE.Vector3(),betwixtable:false});
+    root.userData.cardinalMolecule={center:true,nodes:axes.map(v=>v.toArray())};
     root.userData.cardinalDockCount=6;root.userData.invisibleCentralDock=true;root.userData.portClearRadius=portClearRadius;
   }
 });

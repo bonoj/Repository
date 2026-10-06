@@ -4,7 +4,12 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   const root=new THREE.Group();root.name="functional-terrain:v0";
   let mode=3;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-  const hash=(x,z,s)=>{const xi=Math.trunc(x),zi=Math.trunc(z);let h=(Math.imul(xi^s,374761393)+Math.imul(zi^(s>>>8),668265263));h=Math.imul(h^(h>>>13),1274126177);const u=(h^(h>>>16))>>>0;return u/4294967295};
+  const hash=(x,z,s)=>{
+    const xi=Math.trunc(x),zi=Math.trunc(z);
+    let h=Math.imul(xi+s,374761393)+Math.imul(zi+s*17,668265263);
+    h=Math.imul(h-Math.floor(h/8192)*8192,1274126177);
+    return Math.abs(h%1000003)/1000003;
+  };
   const smooth=t=>t*t*(3-2*t);
   function valueNoise(x,z,s,scale){
     x/=scale;z/=scale;const ix=Math.floor(x),iz=Math.floor(z),tx=smooth(x-ix),tz=smooth(z-iz);

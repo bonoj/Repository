@@ -36,7 +36,7 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   const populationRoot=new THREE.Group();populationRoot.name="functional-terrain:populations";root.add(populationRoot);
   const migrationRoot=new THREE.Group();migrationRoot.name="functional-terrain:migration";root.add(migrationRoot);
   // Chosen deterministic sites are both ribs/purple jurisdiction in seed 741; migration moves material without changing its identity.
-  const migration={source:{x:-.95,z:.15},dest:{x:2.35,z:-1.55},radius:.62,depth:.58,amount:0,phase:"source",t0:0};
+  const migration={source:{x:-.95,z:.15},dest:{x:2.35,z:-1.55},radius:.62,depth:.58,sourceAmount:0,destAmount:0,phase:"waiting",t0:0,running:false};
   const migrationMaterial=materialColors.ribs.clone();
   const bbCount=360,bbGeo=new THREE.SphereGeometry(.055,5,4),bbMat=new THREE.MeshStandardMaterial({color:migrationMaterial,roughness:.72,metalness:.18});
   const bbMesh=new THREE.InstancedMesh(bbGeo,bbMat,bbCount);bbMesh.castShadow=true;bbMesh.receiveShadow=true;migrationRoot.add(bbMesh);
@@ -109,7 +109,7 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   function migrationDelta(x,z){
     const bell=(p,sign)=>{
       const d=Math.hypot(x-p.x,z-p.z),u=clamp(1-d/migration.radius,0,1);
-      return sign*migration.depth*smooth(u)*migration.amount;
+      return sign*migration.depth*smooth(u)*(sign<0?migration.sourceAmount:migration.destAmount);
     };
     return bell(migration.source,-1)+bell(migration.dest,1);
   }
@@ -156,29 +156,50 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   const geo=new THREE.PlaneGeometry(size,size,resolution-1,resolution-1);geo.rotateX(-Math.PI/2);
   const pos=geo.attributes.position,colors=new Float32Array(pos.count*3);
   const color=new THREE.Color();
+  function startMigration(now=performance.now()){
+    migration.running=true;migration.t0=now;migration.phase="excavate";migration.sourceAmount=0;migration.destAmount=0;
+  }
   function updateMigration(now=performance.now()){
-    if(!migration.t0)migration.t0=now;
-    const cycle=16000,t=((now-migration.t0)%cycle)/cycle;
-    let travel=0,visible=false;
-    if(t<.22){migration.phase="excavate";migration.amount=smooth(t/.22);}
-    else if(t<.32){migration.phase="emerge";migration.amount=1;travel=smooth((t-.22)/.10);visible=true;}
-    else if(t<.66){migration.phase="travel";migration.amount=1;travel=(t-.32)/.34;visible=true;}
-    else if(t<.78){migration.phase="accrete";migration.amount=1-smooth((t-.66)/.12);travel=1;visible=true;}
-    else{migration.phase="settled";migration.amount=0;travel=1;}
-    // During the settled beat, destination remains accreted; reset only as the next cycle begins.
-    if(t>=.78)migration.amount=0;
-    const src=sample(migration.source.x,migration.source.z),dst=sample(migration.dest.x,migration.dest.z);
+    if(!migration.running){bbMesh.visible=false;return;}
+    const duration=13500,t=clamp((now-migration.t0)/duration,0,1);
+    // Each parcel has its own launch time. The resulting train stretches, clumps and catches up rather than moving as one rigid blob.
+    let sourceGone=0,destArrived=0,visibleCount=0;
     const sx=migration.source.x,sz=migration.source.z,dx=migration.dest.x,dz=migration.dest.z;
+    const srcBase=sample(sx,sz).H+migration.depth*migration.sourceAmount;
+    const dstBase=sample(dx,dz).H-migration.depth*migration.destAmount;
     for(let i=0;i<bbCount;i++){
-      const b=bbSeeds[i],arc=Math.sin(Math.PI*travel)*(.55+Math.sin(b.wobble+i)*.08);
-      const cx=THREE.MathUtils.lerp(sx,dx,travel),cz=THREE.MathUtils.lerp(sz,dz,travel);
-      const ground=THREE.MathUtils.lerp(src.H,dst.H,travel);
-      bbDummy.position.set(cx+Math.cos(b.a)*b.r,ground+.28+b.y+arc,cz+Math.sin(b.a)*b.r);
-      const pulse=visible?(travel<.08?travel/.08:travel>.92?(1-travel)/.08:1):0;
-      bbDummy.scale.setScalar(Math.max(.001,pulse));bbDummy.updateMatrix();bbMesh.setMatrixAt(i,bbDummy.matrix);
+      const b=bbSeeds[i],order=i/(bbCount-1);
+      const launch=.08+order*.38+(.025*Math.sin(i*.71+b.wobble));
+      const speed=.43+hash(i,67,seed+6173)*.16;
+      const p=clamp((t-launch)/speed,0,1);
+      if(t>=launch)sourceGone++;
+      if(p>=1)destArrived++;
+      const active=t>=launch&&p<1;
+      if(active){
+        visibleCount++;
+        // Elastic stream: longitudinal phase oscillation makes local blobs and strings while endpoints stay deterministic.
+        const rubber=.055*Math.sin(p*Math.PI)*Math.sin(i*.43+t*34+b.wobble);
+        const u=clamp(p+rubber,0,1),arc=Math.sin(Math.PI*u)*(.34+.16*Math.sin(i*.19+b.wobble));
+        const side=.10*Math.sin(i*.37+t*19+b.wobble)+Math.cos(b.a)*b.r*.22;
+        const cx=THREE.MathUtils.lerp(sx,dx,u),cz=THREE.MathUtils.lerp(sz,dz,u);
+        const len=Math.hypot(dx-sx,dz-sz),nx=-(dz-sz)/len,nz=(dx-sx)/len;
+        const ground=THREE.MathUtils.lerp(srcBase,dstBase,u);
+        // Individual parcels begin just below source surface and end just below destination surface.
+        const buryOut=p<.08?THREE.MathUtils.lerp(-.18,.16,p/.08):0;
+        const buryIn=p>.90?THREE.MathUtils.lerp(0,-.22,(p-.90)/.10):0;
+        bbDummy.position.set(cx+nx*side,ground+.12+arc+b.y*.18+buryOut+buryIn,cz+nz*side);
+        const edge=Math.min(1,Math.max(0,(p)/.035),Math.max(0,(1-p)/.035));
+        bbDummy.scale.setScalar(Math.max(.001,edge));bbDummy.updateMatrix();bbMesh.setMatrixAt(i,bbDummy.matrix);
+      }else{
+        bbDummy.scale.setScalar(.001);bbDummy.position.set(sx,srcBase-.3,sz);bbDummy.updateMatrix();bbMesh.setMatrixAt(i,bbDummy.matrix);
+      }
     }
-    bbMesh.visible=visible&&mode===4;bbMesh.instanceMatrix.needsUpdate=true;
+    migration.sourceAmount=sourceGone/bbCount;
+    migration.destAmount=destArrived/bbCount;
+    migration.phase=t<.08?"excavate":destArrived===bbCount?"settled":sourceGone<bbCount?"streaming-out":"streaming-in";
+    bbMesh.visible=visibleCount>0&&mode===4;bbMesh.instanceMatrix.needsUpdate=true;
     paint(false);
+    if(t>=1){migration.running=false;migration.phase="settled";bbMesh.visible=false;paint(false);}
   }
   function paint(updatePopVisibility=true){
     for(let i=0;i<pos.count;i++){
@@ -206,6 +227,6 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   const mesh=new THREE.Mesh(geo,mat);mesh.castShadow=true;mesh.receiveShadow=true;root.add(mesh);
   const base=new THREE.Mesh(new THREE.BoxGeometry(size+.18,.12,size+.18),new THREE.MeshStandardMaterial({color:0x34383a,roughness:.62,metalness:.35}));
   base.position.y=-.92;root.add(base);
-  paint();rebuildPopulations();updateMigration(performance.now());
-  return{root,mesh,populationRoot,migrationRoot,update:updateMigration,migration,setMode(n){mode=((n%5)+5)%5;paint();return mode},next(){return this.setMode(mode+1)},mode:()=>mode,sample};
+  paint();rebuildPopulations();bbMesh.visible=false;
+  return{root,mesh,populationRoot,migrationRoot,update:updateMigration,startMigration,migration,setMode(n){mode=((n%5)+5)%5;paint();return mode},next(){return this.setMode(mode+1)},mode:()=>mode,sample};
 }

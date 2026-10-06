@@ -1510,6 +1510,52 @@ globalThis.BeyondTerrain={
   inspect:()=>ensureBeyondTerrain().inspect()
 };
 
+let beyondTransfers=null;
+function ensureBeyondTransfers(){
+  if(beyondTransfers)return beyondTransfers;
+  const terrain=ensureBeyondTerrain(),root=new THREE.Group();root.name='beyond:material-transfers';beyondPlace.add(root);
+  const parcelGeo=new THREE.SphereGeometry(.085,5,4),dummy=new THREE.Object3D(),COUNT=38,TRANSFER_COUNT=14;
+  const rand=(i,k)=>{const q=Math.sin(i*127.1+k*311.7+741*19.19)*43758.5453123;return q-Math.floor(q)};
+  const transfers=[];
+  for(let n=0;n<TRANSFER_COUNT;n++){
+    const ar=7+rand(n,1)*43,aa=rand(n,2)*Math.PI*2,br=7+rand(n,3)*43,ba=aa+(1.2+rand(n,4)*3.8)*(rand(n,5)>.5?1:-1);
+    const source=new THREE.Vector3(Math.cos(aa)*ar,0,Math.sin(aa)*ar),dest=new THREE.Vector3(Math.cos(ba)*br,0,Math.sin(ba)*br);
+    source.y=terrain.groundHeight(source.x,source.z);dest.y=terrain.groundHeight(dest.x,dest.z);
+    const m=terrain.maps(source.x,source.z),mat=new THREE.MeshStandardMaterial({color:m.material,roughness:.62,metalness:.18});
+    const mesh=new THREE.InstancedMesh(parcelGeo,mat,COUNT);mesh.name='beyond:transfer-'+n;mesh.castShadow=true;mesh.receiveShadow=true;root.add(mesh);
+    const chord=dest.clone().sub(source),side=new THREE.Vector3(-chord.z,0,chord.x).normalize(),bend=(rand(n,6)-.5)*22;
+    const c1=source.clone().lerp(dest,.28).addScaledVector(side,bend).add(new THREE.Vector3(0,2.5+rand(n,7)*7,0));
+    const c2=source.clone().lerp(dest,.68).addScaledVector(side,-bend*.65).add(new THREE.Vector3(0,2+rand(n,8)*8,0));
+    const curve=new THREE.CatmullRomCurve3([source.clone().add(new THREE.Vector3(0,.12,0)),c1,c2,dest.clone().add(new THREE.Vector3(0,.12,0))],false,'catmullrom',.55);
+    transfers.push({source,dest,mesh,curve,offset:rand(n,9)*.34,seed:n,departed:new Uint8Array(COUNT),arrived:new Uint8Array(COUNT)});
+  }
+  let t0=performance.now(),running=true;
+  function reset(now=performance.now()){t0=now;running=true;for(const tr of transfers){tr.departed.fill(0);tr.arrived.fill(0);tr.mesh.visible=true}}
+  function update(now){
+    if(!running)return false;
+    const t=(now-t0)/11500;let alive=0;
+    for(const tr of transfers){
+      let visible=0;
+      for(let i=0;i<COUNT;i++){
+        const launch=.03+tr.offset+i/COUNT*.32+rand(i,tr.seed+20)*.025,p=(t-launch)/(.32+rand(i,tr.seed+40)*.20);
+        if(p>=0&&!tr.departed[i]){tr.departed[i]=1;terrain.excavate(tr.source,{radius:.28,depth:.012})}
+        if(p>=1&&!tr.arrived[i]){tr.arrived[i]=1;terrain.raise(tr.dest,{radius:.30,height:.012})}
+        if(p>=0&&p<1){
+          visible++;alive++;const u=THREE.MathUtils.clamp(p,0,1),q=tr.curve.getPoint(u),tan=tr.curve.getTangent(u),side=new THREE.Vector3(-tan.z,0,tan.x).normalize();
+          const twist=u*Math.PI*(4.5+tr.seed%4)+i*.91,env=Math.sin(Math.PI*u),r=.12+.28*env;
+          q.addScaledVector(side,Math.cos(twist)*r);q.y+=Math.sin(twist)*r+.07*Math.sin(now*.012+i);
+          dummy.position.copy(q);dummy.scale.setScalar(.65+rand(i,tr.seed+60)*.7);dummy.updateMatrix();tr.mesh.setMatrixAt(i,dummy.matrix);
+        }else{dummy.position.set(0,-100,0);dummy.scale.setScalar(.001);dummy.updateMatrix();tr.mesh.setMatrixAt(i,dummy.matrix)}
+      }
+      tr.mesh.count=COUNT;tr.mesh.visible=visible>0;tr.mesh.instanceMatrix.needsUpdate=true;
+    }
+    if(t>1.25){running=false;for(const tr of transfers)tr.mesh.visible=false}
+    window.vestibuleDirty=true;return alive>0;
+  }
+  beyondTransfers={root,transfers,update,reset};return beyondTransfers;
+}
+function updateBeyondTransfers(now){if(currentPlace==='beyond')ensureBeyondTransfers().update(now)}
+
 function setWorkshopTerrainVisible(visible){
   const terrain=visible?ensureWorkshopTerrain():workshopTerrain;
   if(!terrain)return false;
@@ -1679,7 +1725,7 @@ function presentLocus(name){
   const next=placeDefinitions[name];if(!next)return false;
   for(const [id,{object}] of Object.entries(placeDefinitions))object.visible=id===name;
   floor.visible=name!=='beyond';
-  if(name==='beyond')ensureBeyondTerrain();
+  if(name==='beyond'){ensureBeyondTerrain();ensureBeyondTransfers().reset();}
   currentPlace=name;
   if(name==='crucible'){
     workshopCrucibleEnabled=true;ensureWorkshopTerrain();installWorkshopCrucibleSpells();
@@ -4622,7 +4668,8 @@ function applyCamera(){
     phi=Math.acos(THREE.MathUtils.clamp(off.y/radius,-1,1));
     theta=Math.atan2(off.x,off.z);
   }
-  camera.position.y=Math.max(GROUND_Y+.18,camera.position.y);
+  const locusGround=currentPlace==='beyond'?ensureBeyondTerrain().groundHeight(camera.position.x,camera.position.z):GROUND_Y;
+  camera.position.y=Math.max((Number.isFinite(locusGround)?locusGround:GROUND_Y)+.18,camera.position.y);
   const targetHorizontal=Math.hypot(target.x,target.z);
   if(targetHorizontal>CAMERA_BOUNDARY*.72){
     const k=CAMERA_BOUNDARY*.72/targetHorizontal;target.x*=k;target.z*=k;
@@ -5178,6 +5225,7 @@ renderer.setAnimationLoop((now)=>{
   WorkshopGravity.update(Math.min(0.05,Math.max(0,(now-(window.__workshopGravityLast||now))/1000)));
   window.__workshopGravityLast=now;
   updateFluidGlobes(now);
+  updateBeyondTransfers(now);
   JupurnSystem(now);
   ExchangeSystem(now);
   OrbitalSystem(now);
@@ -5191,7 +5239,8 @@ renderer.setAnimationLoop((now)=>{
     camera.position.copy(m.fromCamera).addScaledVector(toward,m.distance*.92*t);
     const len=camera.position.length();
     if(len>CAMERA_BOUNDARY)camera.position.multiplyScalar(CAMERA_BOUNDARY/len);
-    camera.position.y=Math.max(GROUND_Y+.18,camera.position.y);
+    const locusGround=currentPlace==='beyond'?ensureBeyondTerrain().groundHeight(camera.position.x,camera.position.z):GROUND_Y;
+    camera.position.y=Math.max((Number.isFinite(locusGround)?locusGround:GROUND_Y)+.18,camera.position.y);
     target.copy(tr.position);camera.lookAt(target);
     window.vestibuleDirty=true;
     if(raw>=1)finishEntry(m.id);

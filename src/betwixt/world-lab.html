@@ -2521,9 +2521,13 @@ const observerVessel=buildBetwixtable({
     const cartridgeRadius=1.72,ringRadius=.66,tube=.055,zAxis=new THREE.Vector3(0,0,1);
     const cage=buildCardinalCage({parent:root,name:'observer-vessel:cartridge',nodeRadius:cartridgeRadius,ringRadius,tube});
     const nodes=cage.nodes;
-    // Receiver is the same ring standard displaced outward for payload clearance.
-    // +X is deliberately absent: the sixth direction is the insertion mouth.
-    const receiver=buildCardinalCage({parent:root,name:'observer-vessel:receiver',nodeRadius:cartridgeRadius+.18,ringRadius,tube,omitNode:'xp'});
+    // A docked cartridge may gimbal arbitrarily. Size the receiver from its swept envelope:
+    // outer dock center + the shared port radius + a small non-contact clearance.
+    const cartridgeSweptRadius=cartridgeRadius+ringRadius;
+    const receiverClearance=.18;
+    const receiverRadius=cartridgeSweptRadius+receiverClearance;
+    // Same-size rings remain traversable ports; only their distance from center grows.
+    const receiver=buildCardinalCage({parent:root,name:'observer-vessel:receiver',nodeRadius:receiverRadius,ringRadius,tube,omitNode:'xp'});
     receiver.shell.userData.molecule={kind:'asymmetric-6-node-receiver',centerExpects:'7-node-rotor-cartridge',mouth:'xp'};
     const occupied=[nodes.xp,nodes.yp];
     occupied.forEach((p,i)=>{const axis=p.clone().normalize(),agent=makeObserverAgent({name:'observer-vessel:pilot:'+i,parent:root,at:p.clone(),betwixtable:false});agent.node.quaternion.setFromUnitVectors(zAxis,axis);});

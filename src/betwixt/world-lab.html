@@ -450,8 +450,13 @@ cruciblePlace.name='place:crucible';
 cruciblePlace.visible=false;
 scene.add(cruciblePlace);
 
+const beyondPlace=new THREE.Group();
+beyondPlace.name='place:beyond';
+beyondPlace.visible=false;
+scene.add(beyondPlace);
+
 // Places are visibility/interaction boundaries, never pick targets themselves.
-const betwixtPlaces=new Set([betwixtPlace,observatoryPlace,legacyWorkshop,cruciblePlace]);
+const betwixtPlaces=new Set([betwixtPlace,observatoryPlace,legacyWorkshop,cruciblePlace,beyondPlace]);
 function owningBetwixtPlace(object){
   for(let o=object;o;o=o.parent)if(betwixtPlaces.has(o))return o;
   return null;
@@ -1412,6 +1417,31 @@ function ensureWorkshopTerrain(){
   workshopTerrain.apparatus.visible=contentWorkshopHidden;
   return workshopTerrain;
 }
+let beyondTerrain=null;
+function ensureBeyondTerrain(){
+  if(beyondTerrain)return beyondTerrain;
+  if(typeof createTerrainSystem!=='function')return null;
+  const owner=new THREE.Group();owner.name='beyond:terrain-owner';beyondPlace.add(owner);
+  globalThis.__workshopTerrainOwner=owner;
+  try{beyondTerrain=createTerrainSystem({THREE,scene})}
+  finally{delete globalThis.__workshopTerrainOwner}
+  beyondTerrain.owner=owner;
+  owner.position.y=0;
+  beyondTerrain.initializeFunctionalBiomes?.();
+  beyondTerrain.mesh.name='beyond:deformable-terrain';
+  beyondTerrain.apparatus.name='beyond:deformable-terrain-apparatus';
+  // No faction/population poly-greeble layer in Beyond.
+  return beyondTerrain;
+}
+globalThis.BeyondTerrain={
+  ensure:ensureBeyondTerrain,
+  reset:()=>{const t=ensureBeyondTerrain();t?.loadLandCandidate();return t?.inspect()},
+  raise:(x,z,options={})=>ensureBeyondTerrain()?.raise({x,z},options),
+  carve:(x,z,options={})=>ensureBeyondTerrain()?.excavate({x,z},options),
+  groundHeight:(x,z)=>ensureBeyondTerrain()?.groundHeight(x,z),
+  inspect:()=>ensureBeyondTerrain()?.inspect()
+};
+
 function setWorkshopTerrainVisible(visible){
   const terrain=visible?ensureWorkshopTerrain():workshopTerrain;
   if(!terrain)return false;
@@ -1546,7 +1576,6 @@ function setWorkshopCrucibleEnabled(enabled,button){
   workshopBearingLast=performance.now();window.vestibuleDirty=true;return workshopCrucibleEnabled;
 }
 function toggleWorkshopCrucible(button){return workshopCrucibleEnabled?enterBetwixt():enterPlace('crucible')}
-const beyondPlace=new THREE.Group();beyondPlace.name='place:beyond';beyondPlace.visible=false;scene.add(beyondPlace);
 let currentPlace='betwixt';
 const placeDefinitions={
   betwixt:{object:betwixtPlace,title:'🌀 BETWIXT'},
@@ -1581,6 +1610,8 @@ function installPlaceSpells(){
 function presentLocus(name){
   const next=placeDefinitions[name];if(!next)return false;
   for(const [id,{object}] of Object.entries(placeDefinitions))object.visible=id===name;
+  floor.visible=name!=='beyond';
+  if(name==='beyond')ensureBeyondTerrain();
   currentPlace=name;
   if(name==='crucible'){
     workshopCrucibleEnabled=true;ensureWorkshopTerrain();installWorkshopCrucibleSpells();

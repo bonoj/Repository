@@ -25,6 +25,12 @@ Current working law:
 
 This law is architectural pressure, not a claim that the code has fully generalized it.
 
+## Vocabulary resolution
+
+In collaboration, **fundamentals**, **fundaments**, **funda**, and **funds** all resolve to the same Repository-level reusable Fundamentals substrate.
+
+They never mean a Betwixt-local implementation merely because Betwixt is currently exercising or proving the capability. Betwixt may consume a fundamental, or executable pressure in Betwixt may earn promotion of a capability into Fundamentals; ownership remains at Repository level.
+
 ## Current executable
 
 The published Betwixt executable is built from `src/betwixt/world-lab.html`.

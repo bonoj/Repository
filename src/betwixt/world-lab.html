@@ -2452,42 +2452,49 @@ registerRelationalNode('observer-eye',{object:observerTwixt,bounds:()=>observerT
 registerRelationalNode('crucible-twixt',{object:workshopCrucibleBetwixtable,bounds:()=>workshopCrucibleBetwixtable.userData.betwixtable.bounds()});
 relateSpatial({subject:'observer-eye',kind:'above',reference:'crucible-twixt',gap:2.0});
 
-// OBSERVER CARDINAL VESSEL — cardinal molecule realized as two perpendicular spherical great circles.
+// OBSERVER CARDINAL VESSEL — cardinal molecule; shell is snapped dock-to-dock.
 const observerVessel=buildBetwixtable({
   name:'observer-cardinal-vessel',parent:betwixtPlace,at:new THREE.Vector3(0,4.35,-5.4),padding:.28,
   build:(root)=>{
     const shell=new THREE.Group();shell.name='observer-vessel:spherical-shell';root.add(shell);
-    // Molecule: invisible center node with six cardinal nodes at ±X ±Y ±Z.
-    const shellRadius=1.72,portClearRadius=.66,tube=.055;
-    const axes=[new THREE.Vector3(1,0,0),new THREE.Vector3(-1,0,0),new THREE.Vector3(0,1,0),new THREE.Vector3(0,-1,0),new THREE.Vector3(0,0,1),new THREE.Vector3(0,0,-1)];
-    const zAxis=new THREE.Vector3(0,0,1);
-    // Realization: two perpendicular great circles, interrupted by the cardinal apertures.
-    // The port rings are structural holes in the shell; no member crosses a clear aperture.
-    const gapHalf=Math.asin(Math.min(.98,(portClearRadius+tube*1.8)/shellRadius));
-    function greatCircleSegments(name,plane){
-      const quarter=Math.PI/2;
-      for(let q=0;q<4;q++){
-        const start=q*quarter+gapHalf,end=(q+1)*quarter-gapHalf,arc=end-start,mid=(start+end)*.5;
-        const seg=new THREE.Mesh(new THREE.TorusGeometry(shellRadius,tube,10,28,arc),workshopCrucibleStandMat);
-        seg.name='observer-vessel:great-circle:'+name+':segment:'+q;
-        // TorusGeometry arc begins on +X; rotate the segment to the desired spherical interval.
-        if(plane==='xy')seg.rotation.z=start;
-        else{seg.rotation.y=Math.PI/2;seg.rotation.x=start;}
-        seg.castShadow=true;shell.add(seg);
-      }
+    const shellRadius=1.72,portRadius=.66,tube=.055,zAxis=new THREE.Vector3(0,0,1);
+    const nodes={
+      xp:new THREE.Vector3(shellRadius,0,0),xn:new THREE.Vector3(-shellRadius,0,0),
+      yp:new THREE.Vector3(0,shellRadius,0),yn:new THREE.Vector3(0,-shellRadius,0),
+      zp:new THREE.Vector3(0,0,shellRadius),zn:new THREE.Vector3(0,0,-shellRadius)
+    };
+    const axes=Object.values(nodes);
+    // Docks are authoritative geometry. Their local XY circumference supplies shell snap points.
+    const docks={};
+    for(const [id,p] of Object.entries(nodes)){
+      const normal=p.clone().normalize(),dock=new THREE.Group();dock.name='observer-vessel:dock:'+id;dock.position.copy(p);dock.quaternion.setFromUnitVectors(zAxis,normal);shell.add(dock);
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(portRadius,tube,10,40),workshopCrucibleStandMat);ring.castShadow=true;dock.add(ring);docks[id]=dock;
     }
-    greatCircleSegments('xy','xy');
-    greatCircleSegments('yz','yz');
-    axes.forEach((axis,i)=>{
-      const dock=new THREE.Group();dock.name='observer-vessel:dock:'+i;dock.position.copy(axis).multiplyScalar(shellRadius);dock.quaternion.setFromUnitVectors(zAxis,axis);shell.add(dock);
-      const ring=new THREE.Mesh(new THREE.TorusGeometry(portClearRadius,tube,10,40),workshopCrucibleStandMat);ring.castShadow=true;dock.add(ring);
-    });
-    // Seven possible docks, deliberately only three occupied: two cardinal pilots and the invisible central station.
-    const occupied=[axes[0],axes[2]];
-    occupied.forEach((axis,i)=>{const agent=makeObserverAgent({name:'observer-vessel:pilot:'+i,parent:root,at:axis.clone().multiplyScalar(shellRadius),betwixtable:false});agent.node.quaternion.setFromUnitVectors(zAxis,axis);});
+    function snap(id,towardId){
+      const center=nodes[id],toward=nodes[towardId].clone().sub(center).normalize(),normal=center.clone().normalize();
+      // Project the neighbor direction into this dock's plane; the resulting point lies exactly on its ring.
+      const tangent=toward.addScaledVector(normal,-toward.dot(normal)).normalize();
+      return center.clone().addScaledVector(tangent,portRadius);
+    }
+    function sphericalArc(name,aId,bId){
+      const a=snap(aId,bId),b=snap(bId,aId),ra=a.length(),rb=b.length(),r=(ra+rb)*.5;
+      const ua=a.clone().normalize(),ub=b.clone().normalize(),angle=Math.acos(THREE.MathUtils.clamp(ua.dot(ub),-1,1));
+      const curve=new THREE.Curve();
+      curve.getPoint=(t,target=new THREE.Vector3())=>{
+        const sin=Math.sin(angle),w0=Math.sin((1-t)*angle)/sin,w1=Math.sin(t*angle)/sin;
+        return target.copy(ua).multiplyScalar(w0).addScaledVector(ub,w1).normalize().multiplyScalar(r);
+      };
+      const member=new THREE.Mesh(new THREE.TubeGeometry(curve,20,tube,8,false),workshopCrucibleStandMat);member.name='observer-vessel:shell:'+name;member.castShadow=true;shell.add(member);
+    }
+    // Two perpendicular shell rings expressed only as dock-to-dock relations.
+    [['xp','yp'],['yp','xn'],['xn','yn'],['yn','xp'],
+     ['yp','zp'],['zp','yn'],['yn','zn'],['zn','yp']].forEach(([a,b],i)=>sphericalArc(String(i),a,b));
+    // Seven possible stations; three occupied so empty apertures remain legible.
+    const occupied=[nodes.xp,nodes.yp];
+    occupied.forEach((p,i)=>{const axis=p.clone().normalize(),agent=makeObserverAgent({name:'observer-vessel:pilot:'+i,parent:root,at:p.clone(),betwixtable:false});agent.node.quaternion.setFromUnitVectors(zAxis,axis);});
     makeObserverAgent({name:'observer-vessel:pilot:center',parent:root,at:new THREE.Vector3(),betwixtable:false});
-    root.userData.cardinalMolecule={center:true,nodes:axes.map(v=>v.toArray())};
-    root.userData.cardinalDockCount=6;root.userData.invisibleCentralDock=true;root.userData.portClearRadius=portClearRadius;
+    root.userData.cardinalMolecule={center:[0,0,0],nodes:Object.fromEntries(Object.entries(nodes).map(([k,v])=>[k,v.toArray()]))};
+    root.userData.cardinalDockCount=6;root.userData.invisibleCentralDock=true;root.userData.portClearRadius=portRadius;
   }
 });
 

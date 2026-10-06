@@ -1523,41 +1523,68 @@ globalThis.BeyondTerrain={
 let beyondArena=null;
 function ensureBeyondArena(){
   if(beyondArena)return beyondArena;
-  const terrain=ensureBeyondTerrain(),root=new THREE.Group();root.name='beyond:eye-arena';beyondPlace.add(root);
-  const steel=new THREE.MeshStandardMaterial({color:0x59636b,roughness:.52,metalness:.62}),brass=new THREE.MeshStandardMaterial({color:0xb18a43,roughness:.46,metalness:.58}),white=new THREE.MeshStandardMaterial({color:0xd9d7c9,roughness:.72}),dark=new THREE.MeshStandardMaterial({color:0x171b1c,roughness:.34}),red=new THREE.MeshStandardMaterial({color:0x7b3f35,roughness:.78}),gold=new THREE.MeshStandardMaterial({color:0xd6a24f,roughness:.38,metalness:.46}),bearingMat=new THREE.MeshStandardMaterial({color:0x8f9698,roughness:.24,metalness:.82});
-  const y0=terrain.groundHeight(0,0),base=new THREE.Mesh(new THREE.CylinderGeometry(.82,1.05,.48,12),steel);base.position.set(0,y0+.18,0);root.add(base);
-  const yaw=new THREE.Group();yaw.position.set(0,y0+.72,0);root.add(yaw);
-  const ring=new THREE.Mesh(new THREE.TorusGeometry(.72,.105,8,24),brass);ring.rotation.x=Math.PI/2;yaw.add(ring);
-  const pitch=new THREE.Group();yaw.add(pitch);const cage=new THREE.Mesh(new THREE.TorusGeometry(.55,.075,8,20),steel);cage.rotation.y=Math.PI/2;pitch.add(cage);
-  const eye=new THREE.Mesh(new THREE.SphereGeometry(.42,18,12),white);pitch.add(eye);const pupil=new THREE.Mesh(new THREE.SphereGeometry(.16,14,10),dark);pupil.position.z=-.385;pupil.scale.z=.42;pitch.add(pupil);
+  const terrain=ensureBeyondTerrain(),root=new THREE.Group();root.name='beyond:observer-arena';beyondPlace.add(root);
+  const red=new THREE.MeshStandardMaterial({color:0x7b3f35,roughness:.78}),gold=new THREE.MeshStandardMaterial({color:0xd6a24f,roughness:.38,metalness:.46}),bearingMat=new THREE.MeshStandardMaterial({color:0x8f9698,roughness:.24,metalness:.82});
+  const y0=terrain.groundHeight(0,0),hoverY=y0+4.2;
+
+  // Copy the earned Observer presentation: glass icosphere, +Z ocular axis,
+  // paired brass carriage rings and three clocked bindings. It floats here;
+  // combat is a new use of the existing chassis, not a replacement visual grammar.
+  const chassis=new THREE.Group();chassis.name='beyond:observer-copy';chassis.position.set(0,hoverY,0);root.add(chassis);
+  const glass=new THREE.Mesh(new THREE.IcosahedronGeometry(.50,3),workshopCrucibleOrbGlass);glass.castShadow=true;chassis.add(glass);
+  const eye=new THREE.Group();eye.name='observer:eye';chassis.add(eye);
+  const white=new THREE.Mesh(new THREE.SphereGeometry(.20,22,14),new THREE.MeshStandardMaterial({color:0xe8e5dc,roughness:.48}));eye.add(white);
+  const iris=new THREE.Mesh(new THREE.CircleGeometry(.105,24),new THREE.MeshStandardMaterial({color:0x596d6d,roughness:.42,side:THREE.DoubleSide}));iris.position.z=.188;eye.add(iris);
+  const pupil=new THREE.Mesh(new THREE.CircleGeometry(.052,24),new THREE.MeshStandardMaterial({color:0x151817,roughness:.36,side:THREE.DoubleSide}));pupil.position.z=.191;eye.add(pupil);
+  const seat=new THREE.Group();seat.name='observer:ocular-seat';chassis.add(seat);
+  const seatRadius=.535,seatAft=-.11;
+  const frontRing=new THREE.Mesh(new THREE.TorusGeometry(seatRadius,.035,8,32),workshopCrucibleStandMat);frontRing.castShadow=true;seat.add(frontRing);
+  const backRing=new THREE.Mesh(new THREE.TorusGeometry(seatRadius,.035,8,32),workshopCrucibleStandMat);backRing.position.z=seatAft;backRing.castShadow=true;seat.add(backRing);
+  for(let i=0;i<3;i++){const a=Math.PI/2+i*Math.PI*2/3,x=Math.cos(a)*seatRadius,y=Math.sin(a)*seatRadius,front=new THREE.Vector3(x,y,0),back=new THREE.Vector3(x,y,seatAft),d=back.clone().sub(front),binding=new THREE.Mesh(new THREE.CylinderGeometry(.027,.034,d.length(),8),workshopCrucibleStandMat);binding.position.copy(front).add(back).multiplyScalar(.5);binding.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());binding.castShadow=true;seat.add(binding)}
+
   const visitors=[],arcs=[],bearings=[],arcGeo=new THREE.SphereGeometry(.105,7,5),bbGeo=new THREE.SphereGeometry(.075,6,4);
-  let nextVisitor=performance.now()+900,nextArc=0,serial=0,focus=null;
+  const SENSOR_RANGE=18,LAUNCH_RANGE=16,ACQUIRE_DWELL=850;
+  let nextVisitor=performance.now()+1100,nextArc=0,serial=0,focus=null,focusSince=0;
   const rand=(n,k=0)=>{const q=Math.sin((n+1)*127.1+(k+1)*311.7+741*19.19)*43758.5453123;return q-Math.floor(q)};
   function addVisitor(now){
-    const id=serial++,a=rand(id,1)*Math.PI*2,r=11+rand(id,2)*31,x=Math.cos(a)*r,z=Math.sin(a)*r,gy=terrain.groundHeight(x,z),g=new THREE.Group();g.position.set(x,gy-1.8,z);root.add(g);
-    const body=new THREE.Mesh(new THREE.IcosahedronGeometry(.58+rand(id,3)*.24,1),red);body.scale.y=1.35;g.add(body);const crown=new THREE.Mesh(new THREE.ConeGeometry(.34,.72,6),brass);crown.position.y=.82;g.add(crown);
-    visitors.push({id,g,gy,born:now,rise:650+rand(id,4)*500,active:true});
+    const id=serial++,a=rand(id,1)*Math.PI*2,r=8+rand(id,2)*14,x=Math.cos(a)*r,z=Math.sin(a)*r,gy=terrain.groundHeight(x,z),g=new THREE.Group();g.position.set(x,gy-1.9,z);root.add(g);
+    const body=new THREE.Mesh(new THREE.IcosahedronGeometry(.58+rand(id,3)*.24,1),red);body.scale.y=1.35;body.castShadow=true;g.add(body);
+    const crown=new THREE.Mesh(new THREE.ConeGeometry(.34,.72,6),workshopCrucibleStandMat);crown.position.y=.82;crown.castShadow=true;g.add(crown);
+    visitors.push({id,g,gy,born:now,rise:1500+rand(id,4)*900,active:true});
   }
-  function choose(){let best=null,d0=Infinity;for(const v of visitors)if(v.active){const d=v.g.position.distanceTo(yaw.position);if(d<d0){best=v;d0=d}}focus=best}
-  function look(p){const d=p.clone().sub(yaw.position),flat=Math.hypot(d.x,d.z);yaw.rotation.y=Math.atan2(-d.x,-d.z);pitch.rotation.x=-Math.atan2(d.y,flat)}
-  function sendArc(now,v){
-    const a=yaw.position.clone(),b=v.g.position.clone().add(new THREE.Vector3(0,.42,0)),m=new THREE.Mesh(arcGeo,gold);root.add(m);arcs.push({m,a,b,v,born:now,duration:520+a.distanceTo(b)*17,apex:3.2+a.distanceTo(b)*.115});nextArc=now+780;
+  function exposed(v){
+    if(!v.active)return false;
+    const ground=terrain.groundHeight(v.g.position.x,v.g.position.z);
+    const top=v.g.position.y+1.18;
+    return top>ground+.04;
   }
-  function shower(v,now){
-    if(!v.active)return;v.active=false;root.remove(v.g);const p=v.g.position.clone().add(new THREE.Vector3(0,.55,0));
-    for(let i=0;i<32;i++){const m=new THREE.Mesh(bbGeo,bearingMat);m.position.copy(p);root.add(m);const a=rand(v.id,i+20)*Math.PI*2,s=.9+rand(v.id,i+80)*3.2;bearings.push({m,v:new THREE.Vector3(Math.cos(a)*s,1.7+rand(v.id,i+140)*4.3,Math.sin(a)*s),born:now})}
-    if(focus===v)focus=null;
+  function sensed(v){
+    if(!exposed(v))return false;
+    const p=v.g.position.clone().add(new THREE.Vector3(0,.45,0)),d=p.distanceTo(chassis.position);
+    if(d>SENSOR_RANGE)return false;
+    // Terrain line-of-sight: sample the chord; a ridge higher than the gaze line hides the target.
+    for(let i=1;i<12;i++){const t=i/12,x=THREE.MathUtils.lerp(chassis.position.x,p.x,t),z=THREE.MathUtils.lerp(chassis.position.z,p.z,t),y=THREE.MathUtils.lerp(chassis.position.y,p.y,t);if(terrain.groundHeight(x,z)>y-.08)return false}
+    return true;
   }
+  function choose(now){
+    let best=null,d0=Infinity;for(const v of visitors)if(sensed(v)){const d=v.g.position.distanceTo(chassis.position);if(d<d0){best=v;d0=d}}
+    if(best!==focus){focus=best;focusSince=now}
+  }
+  const qAim=new THREE.Quaternion(),forward=new THREE.Vector3(0,0,1);
+  function look(p){const d=p.clone().sub(chassis.position).normalize();qAim.setFromUnitVectors(forward,d);eye.quaternion.slerp(qAim,.10);seat.quaternion.copy(eye.quaternion)}
+  function sendArc(now,v){const a=chassis.position.clone().add(new THREE.Vector3(0,0,.34).applyQuaternion(eye.quaternion)),b=v.g.position.clone().add(new THREE.Vector3(0,.42,0)),m=new THREE.Mesh(arcGeo,gold);m.castShadow=true;root.add(m);arcs.push({m,a,b,v,born:now,duration:950+a.distanceTo(b)*24,apex:2.8+a.distanceTo(b)*.10});nextArc=now+1450}
+  function shower(v,now){if(!v.active)return;v.active=false;root.remove(v.g);const p=v.g.position.clone().add(new THREE.Vector3(0,.55,0));for(let i=0;i<32;i++){const m=new THREE.Mesh(bbGeo,bearingMat);m.position.copy(p);m.castShadow=true;root.add(m);const a=rand(v.id,i+20)*Math.PI*2,s=.9+rand(v.id,i+80)*3.2;bearings.push({m,v:new THREE.Vector3(Math.cos(a)*s,1.7+rand(v.id,i+140)*4.3,Math.sin(a)*s),born:now})}if(focus===v){focus=null;focusSince=0}}
   function update(now){
-    if(now>=nextVisitor&&visitors.filter(v=>v.active).length<8){addVisitor(now);nextVisitor=now+1500+rand(serial,9)*1700}
-    for(const v of visitors)if(v.active){const t=THREE.MathUtils.clamp((now-v.born)/v.rise,0,1),q=t*t*(3-2*t);v.g.position.y=THREE.MathUtils.lerp(v.gy-1.8,v.gy+.72,q);v.g.rotation.y+=.006}
-    if(!focus||!focus.active)choose();
-    if(focus){look(focus.g.position.clone().add(new THREE.Vector3(0,.45,0)));if(now>=nextArc&&now-focus.born>focus.rise*.72)sendArc(now,focus)}else yaw.rotation.y+=.004;
+    if(now>=nextVisitor&&visitors.filter(v=>v.active).length<6){addVisitor(now);nextVisitor=now+2400+rand(serial,9)*2200}
+    for(const v of visitors)if(v.active){const t=THREE.MathUtils.clamp((now-v.born)/v.rise,0,1),q=t*t*(3-2*t);v.g.position.y=THREE.MathUtils.lerp(v.gy-1.9,v.gy+.72,q);v.g.rotation.y+=.004}
+    if(!focus||!sensed(focus))choose(now);
+    if(focus){const aim=focus.g.position.clone().add(new THREE.Vector3(0,.45,0));look(aim);const d=aim.distanceTo(chassis.position);if(now-focusSince>=ACQUIRE_DWELL&&d<=LAUNCH_RANGE&&now>=nextArc)sendArc(now,focus)}
+    else{const t=now*.001,q=new THREE.Quaternion().setFromEuler(new THREE.Euler(.10*Math.sin(t*.23),.52*Math.sin(t*.31),0,'YXZ'));eye.quaternion.slerp(q,.025);seat.quaternion.copy(eye.quaternion)}
     for(let i=arcs.length-1;i>=0;i--){const p=arcs[i],t=THREE.MathUtils.clamp((now-p.born)/p.duration,0,1);p.m.position.lerpVectors(p.a,p.b,t);p.m.position.y+=4*p.apex*t*(1-t);if(t>=1){root.remove(p.m);arcs.splice(i,1);if(p.v.active)shower(p.v,now)}}
     const dt=.016;for(let i=bearings.length-1;i>=0;i--){const b=bearings[i];b.v.y-=9.2*dt;b.m.position.addScaledVector(b.v,dt);const gy=terrain.groundHeight(b.m.position.x,b.m.position.z)+.075;if(b.m.position.y<gy){b.m.position.y=gy;if(Math.abs(b.v.y)>.42)b.v.y=-b.v.y*.46;else b.v.y=0;b.v.x*=.91;b.v.z*=.91}if(now-b.born>5200){root.remove(b.m);bearings.splice(i,1)}}
     window.vestibuleDirty=true;
   }
-  beyondArena={root,update,inspect:()=>({kind:'gimballed-eye-arena',focus:focus?.id??null,visitors:visitors.filter(v=>v.active).length,arcs:arcs.length,bearings:bearings.length})};globalThis.BeyondArena=beyondArena;return beyondArena;
+  beyondArena={root,update,inspect:()=>({kind:'observer-copy-arena',sensorRange:SENSOR_RANGE,launchRange:LAUNCH_RANGE,focus:focus?.id??null,exposed:visitors.filter(exposed).length,sensed:visitors.filter(sensed).length,arcs:arcs.length,bearings:bearings.length})};globalThis.BeyondArena=beyondArena;return beyondArena;
 }
 function updateBeyondArena(now){if(currentPlace==='beyond')ensureBeyondArena().update(now)}
 

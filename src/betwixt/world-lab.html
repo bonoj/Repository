@@ -2529,6 +2529,75 @@ registerRelationalNode('observer-eye',{object:observerTwixt,bounds:()=>observerT
 registerRelationalNode('crucible-twixt',{object:workshopCrucibleBetwixtable,bounds:()=>workshopCrucibleBetwixtable.userData.betwixtable.bounds()});
 relateSpatial({subject:'observer-eye',kind:'above',reference:'crucible-twixt',gap:2.0});
 
+// SIX CITIES — CIVILIZATION FIELD T1
+// v1 is archived uninstantiated in six-cities-box/v1.md.
+// The live question is now vocabulary breadth: 42 native constructions in 6/12/24 rings.
+const quietCityBrass=workshopCrucibleStandMat;
+const quietCityGlass=workshopCrucibleOrbGlass;
+const quietCityDark=new THREE.MeshStandardMaterial({color:0x282a28,roughness:.62,metalness:.28});
+const quietCityNodes=[];
+function quietCityCylinder(parent,a,b,r,mat=quietCityBrass,segments=8){
+  const d=b.clone().sub(a),m=a.clone().add(b).multiplyScalar(.5);
+  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),segments),mat);mesh.position.copy(m);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());mesh.castShadow=true;parent.add(mesh);return mesh;
+}
+function quietCityBox(parent,size,pos,mat=quietCityBrass){
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(size.x,size.y,size.z),mat);mesh.position.copy(pos);mesh.castShadow=true;parent.add(mesh);return mesh;
+}
+function quietCityRing(parent,r,y=.56,tube=.035){
+  const mesh=new THREE.Mesh(new THREE.TorusGeometry(r,tube,8,28),quietCityBrass);mesh.rotation.x=Math.PI/2;mesh.position.y=y;mesh.castShadow=true;parent.add(mesh);return mesh;
+}
+function quietCityOrb(parent,r,pos,mat=quietCityGlass){
+  const mesh=new THREE.Mesh(new THREE.IcosahedronGeometry(r,2),mat);mesh.position.copy(pos);mesh.castShadow=true;parent.add(mesh);return mesh;
+}
+function buildQuietCityBody(root,variant=0){
+  quietCityOrb(root,.42,new THREE.Vector3(0,.47,0));
+  quietCityRing(root,.455,.47,.032);
+  const feet=3+(variant%3);
+  for(let i=0;i<feet;i++){const a=i*Math.PI*2/feet;quietCityCylinder(root,new THREE.Vector3(Math.cos(a)*.30,.03,Math.sin(a)*.30),new THREE.Vector3(Math.cos(a)*.41,.36,Math.sin(a)*.41),.025)}
+}
+const civilizationKinds=[
+ 'launcher','drone-nest','splitter','thumper','reservoir','link-hub',
+ 'observatory','cistern','crane','gate','kiln','archive','garden','pump','lift','beacon','mill','collector',
+ 'aqueduct','bridge','dock','well','foundry','greenhouse','antenna','relay','excavator','derrick','forge','granary',
+ 'turbine','lock','shipyard','terrace','monument','watchtower','condenser','hopper','tram','harvester','temple','vault'
+];
+function buildCivilizationVerb(kind,root,index){
+  const h=.88+(index%4)*.10;
+  if(kind==='launcher'){quietCityCylinder(root,new THREE.Vector3(-.28,.42,0),new THREE.Vector3(.92,1.18,0),.060);quietCityRing(root,.16,1.13,.028)}
+  else if(kind==='drone-nest'){for(let i=0;i<6;i++){const a=i*Math.PI/3,p=new THREE.Vector3(Math.cos(a)*.68,.82,Math.sin(a)*.68);quietCityCylinder(root,new THREE.Vector3(Math.cos(a)*.18,.76,Math.sin(a)*.18),p,.022);quietCityOrb(root,.08,p,quietCityBrass)}}
+  else if(kind==='splitter'){quietCityCylinder(root,new THREE.Vector3(-.82,.50,0),new THREE.Vector3(-.18,.50,0),.075,quietCityDark);for(const z of [-.38,0,.38])quietCityCylinder(root,new THREE.Vector3(.12,.50,0),new THREE.Vector3(.86,.40,z),.038)}
+  else if(kind==='thumper'){quietCityCylinder(root,new THREE.Vector3(.16,.66,0),new THREE.Vector3(.84,1.03,0),.085);quietCityCylinder(root,new THREE.Vector3(.84,1.03,0),new THREE.Vector3(1.18,.20,0),.070);quietCityBox(root,new THREE.Vector3(.32,.25,.34),new THREE.Vector3(1.18,.18,0))}
+  else if(kind==='reservoir'||kind==='cistern'||kind==='condenser'){quietCityOrb(root,.48,new THREE.Vector3(0,1.02,0));quietCityRing(root,.49,1.02,.040);for(const x of [-.34,.34])quietCityCylinder(root,new THREE.Vector3(x,.08,0),new THREE.Vector3(x,.96,0),.025)}
+  else if(kind==='link-hub'||kind==='relay'||kind==='antenna'){for(let i=0;i<(kind==='antenna'?4:6);i++){const a=i*Math.PI*2/(kind==='antenna'?4:6);quietCityCylinder(root,new THREE.Vector3(0,.74,0),new THREE.Vector3(Math.cos(a)*.90,h+(i%2)*.20,Math.sin(a)*.90),.026);quietCityRing(root,.11,h+(i%2)*.20,.022).position.x=Math.cos(a)*.90;}}
+  else if(kind==='observatory'||kind==='watchtower'||kind==='beacon'){quietCityCylinder(root,new THREE.Vector3(0,.15,0),new THREE.Vector3(0,1.42,0),.065);quietCityOrb(root,kind==='observatory'?.30:.16,new THREE.Vector3(0,1.48,0));quietCityRing(root,.34,1.42,.026)}
+  else if(kind==='crane'||kind==='derrick'||kind==='excavator'){quietCityCylinder(root,new THREE.Vector3(-.18,.10,0),new THREE.Vector3(-.18,1.38,0),.055);quietCityCylinder(root,new THREE.Vector3(-.18,1.34,0),new THREE.Vector3(.92,1.34,0),.045);quietCityCylinder(root,new THREE.Vector3(.72,1.34,0),new THREE.Vector3(.72,.32,0),.018);quietCityBox(root,new THREE.Vector3(.20,.16,.22),new THREE.Vector3(.72,.25,0),quietCityDark)}
+  else if(kind==='gate'||kind==='lock'||kind==='vault'){for(const x of [-.48,.48])quietCityCylinder(root,new THREE.Vector3(x,.05,0),new THREE.Vector3(x,1.12,0),.055);const arch=new THREE.Mesh(new THREE.TorusGeometry(.48,.055,8,24,Math.PI),quietCityBrass);arch.rotation.z=Math.PI;arch.position.y=1.12;arch.castShadow=true;root.add(arch)}
+  else if(kind==='kiln'||kind==='forge'||kind==='foundry'){const body=new THREE.Mesh(new THREE.CylinderGeometry(.42,.52,.72,10),quietCityDark);body.position.y=.48;body.castShadow=true;root.add(body);quietCityCylinder(root,new THREE.Vector3(.20,.70,0),new THREE.Vector3(.20,1.42,0),.075);quietCityRing(root,.25,.88,.030)}
+  else if(kind==='archive'||kind==='granary'||kind==='temple'||kind==='monument'){for(let y=.18;y<1.15;y+=.26)quietCityRing(root,.34+(y-.18)*.10,y,.028);quietCityCylinder(root,new THREE.Vector3(0,.08,0),new THREE.Vector3(0,1.42,0),.040)}
+  else if(kind==='garden'||kind==='greenhouse'||kind==='terrace'){for(let y=.14,r=.62;y<.78;y+=.18,r-=.11)quietCityRing(root,r,y,.030);quietCityOrb(root,.27,new THREE.Vector3(0,.78,0))}
+  else if(kind==='pump'||kind==='well'||kind==='hopper'){quietCityRing(root,.42,.22,.045);quietCityCylinder(root,new THREE.Vector3(0,.20,0),new THREE.Vector3(0,1.20,0),.070,quietCityDark);for(let i=0;i<3;i++){const a=i*Math.PI*2/3;quietCityCylinder(root,new THREE.Vector3(0,.44,0),new THREE.Vector3(Math.cos(a)*.78,.18,Math.sin(a)*.78),.030)}}
+  else if(kind==='lift'||kind==='tram'){for(const x of [-.30,.30])quietCityCylinder(root,new THREE.Vector3(x,.05,0),new THREE.Vector3(x,1.45,0),.030);quietCityBox(root,new THREE.Vector3(.46,.34,.38),new THREE.Vector3(0,.82,0),quietCityGlass)}
+  else if(kind==='mill'||kind==='turbine'||kind==='harvester'){quietCityCylinder(root,new THREE.Vector3(0,.48,-.18),new THREE.Vector3(0,.48,.18),.050);const wheel=new THREE.Mesh(new THREE.TorusGeometry(.52,.045,8,28),quietCityBrass);wheel.rotation.y=Math.PI/2;wheel.position.y=.74;wheel.castShadow=true;root.add(wheel);for(let i=0;i<6;i++){const a=i*Math.PI/3;quietCityCylinder(root,new THREE.Vector3(0,.74,0),new THREE.Vector3(0,.74+Math.sin(a)*.48,Math.cos(a)*.48),.020)}}
+  else if(kind==='collector'){for(let i=0;i<5;i++){const a=(i-2)*.25;quietCityCylinder(root,new THREE.Vector3(0,.34,0),new THREE.Vector3(Math.sin(a)*.92,1.10+Math.cos(a)*.18,0),.025)}quietCityRing(root,.28,.40,.030)}
+  else if(kind==='aqueduct'||kind==='bridge'){for(const x of [-.78,0,.78])quietCityCylinder(root,new THREE.Vector3(x,.04,0),new THREE.Vector3(x,.62,0),.035);quietCityBox(root,new THREE.Vector3(1.85,.10,.24),new THREE.Vector3(0,.68,0));for(const x of [-.39,.39])quietCityRing(root,.22,.42,.025).position.x=x}
+  else if(kind==='dock'||kind==='shipyard'){quietCityBox(root,new THREE.Vector3(1.65,.08,.38),new THREE.Vector3(.35,.10,0));for(const x of [-.15,.35,.85])quietCityCylinder(root,new THREE.Vector3(x,.08,-.28),new THREE.Vector3(x,.52,-.28),.028);quietCityRing(root,.25,.55,.025)}
+  else{ // distinct fallback for any future vocabulary word
+    const spokes=3+(index%5);for(let i=0;i<spokes;i++){const a=i*Math.PI*2/spokes;quietCityCylinder(root,new THREE.Vector3(0,.48,0),new THREE.Vector3(Math.cos(a)*(.55+(index%3)*.12),h,Math.sin(a)*(.55+(index%3)*.12)),.025)}
+    quietCityRing(root,.22+(index%4)*.07,h,.025);
+  }
+}
+const civilizationRings=[{count:6,radius:3.8,offset:0},{count:12,radius:6.7,offset:Math.PI/12},{count:24,radius:10.2,offset:Math.PI/24}];
+let civilizationCursor=0;
+for(const ring of civilizationRings){
+  for(let i=0;i<ring.count;i++){
+    const kind=civilizationKinds[civilizationCursor],a=-Math.PI/2+ring.offset+i*Math.PI*2/ring.count,index=civilizationCursor++;
+    const node=buildBetwixtable({name:'civilization:'+kind,parent:betwixtPlace,at:new THREE.Vector3(Math.cos(a)*ring.radius,GROUND_Y,Math.sin(a)*ring.radius),padding:.22,build:(root)=>{buildQuietCityBody(root,index);buildCivilizationVerb(kind,root,index)}});
+    node.rotation.y=-a+Math.PI;quietCityNodes.push(node);
+  }
+}
+globalThis.QuietCities={nodes:quietCityNodes,kinds:civilizationKinds,rings:civilizationRings,inspect:()=>quietCityNodes.map((node,i)=>({kind:civilizationKinds[i],position:node.position.toArray()}))};
+
 function tapObserverTwixt(){
   if(focusedWorkshopObject!==observerTwixt){
     if(focusedWorkshopObject)dismissWorkshopFocus();

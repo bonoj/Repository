@@ -32,7 +32,7 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
         if(od<bd){bd=od;best={i,j,cx,cz,d:od}}
       }
     }
-    const key=((best.i*73856093)^(best.j*19349663)^seed)>>>0;
+    const key=Math.abs((best.i*73856093)+(best.j*19349663)+seed*83492791);
     best.kind=biomeKinds[key%biomeKinds.length];return best;
   }
   function biome(kind,x,z,cx,cz){

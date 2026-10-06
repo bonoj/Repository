@@ -138,13 +138,13 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
     let src=null,dst=null;
     for(let z=-3.5;z<=3.5;z+=.28)for(let x=-3.5;x<=3.5;x+=.28){
       const q=sample(x,z);
-      if(q.featureKind===alienMigration.sourceKind&&q.featureStrength>.22){
+      if(q.featureKind===alienMigration.sourceKind){
         if(!src||q.featureStrength>src.score)src={x,z,score:q.featureStrength};
       }
     }
     if(src)for(let z=-3.5;z<=3.5;z+=.28)for(let x=-3.5;x<=3.5;x+=.28){
       const q=sample(x,z),sep=Math.hypot(x-src.x,z-src.z);
-      if(q.featureKind===alienMigration.destKind&&q.featureStrength>.16&&sep>2.2){
+      if(q.featureKind===alienMigration.destKind&&sep>2.2){
         const score=q.featureStrength+sep*.025;if(!dst||score>dst.score)dst={x,z,score};
       }
     }

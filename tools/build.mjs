@@ -10,7 +10,8 @@ await mkdir("dist/crucible",{recursive:true});
 const donor=await readFile("src/betwixt/world-lab.html","utf8");
 const shell=await readFile("src/shell/repository-shell.js","utf8");
 const ecs=await readFile("src/core/ecs.js","utf8");
-const mirror=await readFile("src/betwixt/mirror.js","utf8");\nconst factionWar=await readFile("src/betwixt/faction-war.js","utf8");
+const mirror=await readFile("src/betwixt/mirror.js","utf8");
+const factionWar=await readFile("src/betwixt/faction-war.js","utf8");
 const shallowWater=await readFile("src/cargo/crucible/source/src/runtime/shallow-water-system.js","utf8");
 const bearingSystem=await readFile("src/cargo/crucible/source/src/runtime/bearing-system.js","utf8");
 const meteorSystem=await readFile("src/cargo/crucible/source/src/runtime/meteor-system.js","utf8");
@@ -22,7 +23,8 @@ const ecsInline=ecs.replace("export function createWorld","function createWorld"
 const mirrorInline=mirror
   .replace('import {createWorld} from "../core/ecs.js";',"")
   .replace("export function attachBetwixtMirror","function attachBetwixtMirror");
-const factionWarInline=factionWar.replace("export function createFactionWarSystem","function createFactionWarSystem");\nconst shallowWaterInline=shallowWater.replace("export function createShallowWaterSystem","function createShallowWaterSystem");
+const factionWarInline=factionWar.replace("export function createFactionWarSystem","function createFactionWarSystem");
+const shallowWaterInline=shallowWater.replace("export function createShallowWaterSystem","function createShallowWaterSystem");
 const terrainInline=terrainSystem
   .replace("export function createTerrainSystem","function createTerrainSystem")
   // Workshop supplies an ownership group; the transported terrain remains otherwise intact.

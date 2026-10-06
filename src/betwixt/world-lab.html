@@ -1529,27 +1529,40 @@ function ensureBeyondTransfers(){
     const curve=new THREE.CatmullRomCurve3([source.clone().add(new THREE.Vector3(0,.12,0)),c1,c2,dest.clone().add(new THREE.Vector3(0,.12,0))],false,'catmullrom',.55);
     transfers.push({source,dest,mesh,curve,offset:rand(n,9)*.34,seed:n,departed:new Uint8Array(COUNT),arrived:new Uint8Array(COUNT)});
   }
-  let t0=performance.now(),running=true;
-  function reset(now=performance.now()){t0=now;running=true;for(const tr of transfers){tr.departed.fill(0);tr.arrived.fill(0);tr.mesh.visible=true}}
+  let t0=performance.now(),lastCycle=-1;
+  const CYCLE_MS=6200;
+  function reset(now=performance.now()){t0=now;lastCycle=-1;for(const tr of transfers)tr.mesh.visible=true}
   function update(now){
-    if(!running)return false;
-    const t=(now-t0)/11500;let alive=0;
+    const elapsed=Math.max(0,now-t0),cycle=Math.floor(elapsed/CYCLE_MS),phase=(elapsed%CYCLE_MS)/CYCLE_MS;
+    // Each completed cycle transfers another finite parcel batch. There is deliberately
+    // no depletion/accretion cap: source relief can continue downward and receipt upward.
+    if(cycle!==lastCycle){
+      if(lastCycle>=0)for(const tr of transfers){
+        terrain.excavate(tr.source,{radius:.72,depth:.19});
+        terrain.raise(tr.dest,{radius:.78,height:.19});
+        tr.source.y=terrain.groundHeight(tr.source.x,tr.source.z);
+        tr.dest.y=terrain.groundHeight(tr.dest.x,tr.dest.z);
+      }
+      lastCycle=cycle;
+    }
+    let alive=0;
     for(const tr of transfers){
       let visible=0;
       for(let i=0;i<COUNT;i++){
-        const launch=.03+tr.offset+i/COUNT*.32+rand(i,tr.seed+20)*.025,p=(t-launch)/(.32+rand(i,tr.seed+40)*.20);
-        if(p>=0&&!tr.departed[i]){tr.departed[i]=1;terrain.excavate(tr.source,{radius:.28,depth:.012})}
-        if(p>=1&&!tr.arrived[i]){tr.arrived[i]=1;terrain.raise(tr.dest,{radius:.30,height:.012})}
-        if(p>=0&&p<1){
-          visible++;alive++;const u=THREE.MathUtils.clamp(p,0,1),q=tr.curve.getPoint(u),tan=tr.curve.getTangent(u),side=new THREE.Vector3(-tan.z,0,tan.x).normalize();
-          const twist=u*Math.PI*(4.5+tr.seed%4)+i*.91,env=Math.sin(Math.PI*u),r=.12+.28*env;
-          q.addScaledVector(side,Math.cos(twist)*r);q.y+=Math.sin(twist)*r+.07*Math.sin(now*.012+i);
-          dummy.position.copy(q);dummy.scale.setScalar(.65+rand(i,tr.seed+60)*.7);dummy.updateMatrix();tr.mesh.setMatrixAt(i,dummy.matrix);
-        }else{dummy.position.set(0,-100,0);dummy.scale.setScalar(.001);dummy.updateMatrix();tr.mesh.setMatrixAt(i,dummy.matrix)}
+        const lane=(i/COUNT+tr.offset)%1;
+        // Parcels circulate forever. Wrap is the next parcel cohort, not the same matter teleporting.
+        const p=(phase*1.34-lane+1)%1;
+        visible++;alive++;
+        const u=THREE.MathUtils.clamp(p,0,1),q=tr.curve.getPoint(u),tan=tr.curve.getTangent(u),side=new THREE.Vector3(-tan.z,0,tan.x).normalize();
+        const sourceNow=terrain.groundHeight(tr.source.x,tr.source.z),destNow=terrain.groundHeight(tr.dest.x,tr.dest.z);
+        const baseline=THREE.MathUtils.lerp(sourceNow,destNow,u),originalBaseline=THREE.MathUtils.lerp(tr.source.y,tr.dest.y,u);
+        q.y+=baseline-originalBaseline;
+        const twist=u*Math.PI*(4.5+tr.seed%4)+i*.91+cycle*.37,env=Math.sin(Math.PI*u),r=.12+.28*env;
+        q.addScaledVector(side,Math.cos(twist)*r);q.y+=Math.sin(twist)*r+.07*Math.sin(now*.012+i);
+        dummy.position.copy(q);dummy.scale.setScalar(.65+rand(i,tr.seed+60)*.7);dummy.updateMatrix();tr.mesh.setMatrixAt(i,dummy.matrix);
       }
       tr.mesh.count=COUNT;tr.mesh.visible=visible>0;tr.mesh.instanceMatrix.needsUpdate=true;
     }
-    if(t>1.25){running=false;for(const tr of transfers)tr.mesh.visible=false}
     window.vestibuleDirty=true;return alive>0;
   }
   beyondTransfers={root,transfers,update,reset};return beyondTransfers;

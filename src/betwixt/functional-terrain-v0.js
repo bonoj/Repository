@@ -239,7 +239,7 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
         if(alienMigration.dest&&alienMigration.destAmount>0){
           const dd=Math.hypot(x-alienMigration.dest.x,z-alienMigration.dest.z),u=clamp(1-dd/alienMigration.radius,0,1);
           const claim=smooth(u)*alienMigration.destAmount;
-          if(claim>0)color.lerp(materialColors[alienMigration.sourceKind],claim*.92);
+          if(claim>0)color.lerp(materialColors[alienMigration.kind],claim*.92);
         }
       }
       pos.setY(i,y);colors[i*3]=color.r;colors[i*3+1]=color.g;colors[i*3+2]=color.b;

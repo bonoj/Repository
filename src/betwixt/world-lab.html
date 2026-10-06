@@ -1418,28 +1418,96 @@ function ensureWorkshopTerrain(){
   return workshopTerrain;
 }
 let beyondTerrain=null;
+function createBeyondTerrain(){
+  // Beyond is not a Crucible specimen. Its entire bounded room floor is mutable world substance.
+  // Virgin shape is compiled from independent deterministic maps; later deformation is ordinary state.
+  const radius=WORLD_RADIUS-.65,segments=128,rings=48;
+  const root=new THREE.Group();root.name='beyond:world-substance';beyondPlace.add(root);
+  const positions=[],colors=[],indices=[],baseHeights=[],deltaHeights=[];
+  const materialPalette=[
+    new THREE.Color(0x70715f), // quiet
+    new THREE.Color(0x77736d), // stone
+    new THREE.Color(0x9a7652), // ochre
+    new THREE.Color(0x765f78), // violet
+    new THREE.Color(0x5f795d), // green
+    new THREE.Color(0x547b7d)  // cyan mineral
+  ];
+  const hash=(x,z,k)=>{const q=Math.sin(x*127.1+z*311.7+k*74.7+741*19.19)*43758.5453123;return q-Math.floor(q)};
+  const smooth=t=>t*t*(3-2*t);
+  function noise(x,z,k,scale){
+    x/=scale;z/=scale;const ix=Math.floor(x),iz=Math.floor(z),tx=smooth(x-ix),tz=smooth(z-iz);
+    const a=hash(ix,iz,k),b=hash(ix+1,iz,k),c=hash(ix,iz+1,k),d=hash(ix+1,iz+1,k);
+    return THREE.MathUtils.lerp(THREE.MathUtils.lerp(a,b,tx),THREE.MathUtils.lerp(c,d,tx),tz);
+  }
+  const fbm=(x,z,k)=>.58*noise(x,z,k,15)+.29*noise(x,z,k+17,7.2)+.13*noise(x,z,k+43,3.1);
+  function maps(x,z){
+    const elevation=fbm(x,z,101);
+    const permission=THREE.MathUtils.smoothstep(fbm(x,z,911),.28,.76);
+    const jurisdiction=Math.min(5,Math.floor(fbm(x,z,2711)*6));
+    const material=materialPalette[jurisdiction];
+    return{elevation,permission,jurisdiction,material};
+  }
+  function virginHeight(x,z){
+    const m=maps(x,z),r=Math.hypot(x,z)/radius;
+    // Broad continents + smaller relief. Boundary eases back to datum so the room closes cleanly.
+    const macro=(m.elevation-.5)*7.4;
+    const ridge=(Math.abs(Math.sin(x*.18+z*.11+(m.jurisdiction+1)*.73))-.42)*2.1*m.permission;
+    const basin=-2.5*Math.exp(-((x+14)**2+(z-10)**2)/150);
+    const highland=3.0*Math.exp(-((x-17)**2+(z+13)**2)/190);
+    const edge=1-smooth(THREE.MathUtils.clamp((r-.82)/.18,0,1));
+    return (macro+ridge+basin+highland)*edge;
+  }
+  // Center plus concentric rings gives us one continuous circular floor all the way to the room boundary.
+  positions.push(0,virginHeight(0,0),0);baseHeights.push(positions[1]);deltaHeights.push(0);
+  const mc=maps(0,0);colors.push(mc.material.r,mc.material.g,mc.material.b);
+  for(let j=1;j<=rings;j++){
+    const rr=radius*j/rings;
+    for(let i=0;i<segments;i++){
+      const a=i/segments*Math.PI*2,x=Math.cos(a)*rr,z=Math.sin(a)*rr,y=virginHeight(x,z),m=maps(x,z);
+      positions.push(x,y,z);baseHeights.push(y);deltaHeights.push(0);
+      const relief=.84+.18*m.permission,c=m.material.clone().multiplyScalar(relief);
+      colors.push(c.r,c.g,c.b);
+    }
+  }
+  const ringIndex=(j,i)=>1+(j-1)*segments+((i%segments)+segments)%segments;
+  for(let i=0;i<segments;i++)indices.push(0,ringIndex(1,i+1),ringIndex(1,i));
+  for(let j=1;j<rings;j++)for(let i=0;i<segments;i++){
+    const a=ringIndex(j,i),b=ringIndex(j,i+1),c=ringIndex(j+1,i),d=ringIndex(j+1,i+1);
+    indices.push(a,d,c,a,b,d);
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+  geometry.setIndex(indices);geometry.computeVertexNormals();
+  const material=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.94,metalness:.015,side:THREE.DoubleSide});
+  const mesh=new THREE.Mesh(geometry,material);mesh.name='beyond:deformable-floor';mesh.receiveShadow=true;mesh.castShadow=true;root.add(mesh);
+  const pos=geometry.attributes.position;
+  function deform({x,z},amount,r=.9){
+    for(let i=0;i<pos.count;i++){
+      const dx=pos.getX(i)-x,dz=pos.getZ(i)-z,d=Math.hypot(dx,dz);if(d>=r)continue;
+      const u=1-d/r,w=smooth(u);deltaHeights[i]+=amount*w;pos.setY(i,baseHeights[i]+deltaHeights[i]);
+    }
+    pos.needsUpdate=true;geometry.computeVertexNormals();window.vestibuleDirty=true;
+  }
+  function reset(){for(let i=0;i<pos.count;i++){deltaHeights[i]=0;pos.setY(i,baseHeights[i])}pos.needsUpdate=true;geometry.computeVertexNormals();window.vestibuleDirty=true;}
+  function groundHeight(x,z){
+    if(Math.hypot(x,z)>radius)return-Infinity;
+    // Geometry is authoritative; nearest vertex is sufficient for this first room-floor consumer.
+    let best=Infinity,y=0;for(let i=0;i<pos.count;i++){const dx=pos.getX(i)-x,dz=pos.getZ(i)-z,q=dx*dx+dz*dz;if(q<best){best=q;y=pos.getY(i)}}return y;
+  }
+  return{root,mesh,maps,reset,raise:(p,o={})=>deform(p,Math.max(.04,o.height??.55),Math.max(.3,o.radius??1.15)),excavate:(p,o={})=>deform(p,-Math.max(.04,o.depth??.55),Math.max(.3,o.radius??1.15)),groundHeight,inspect:()=>({kind:'bounded-deformable-room-floor',radius,datumY:0,vertices:pos.count,maps:['elevation','permission','jurisdiction','material'],populations:false})};
+}
 function ensureBeyondTerrain(){
-  if(beyondTerrain)return beyondTerrain;
-  if(typeof createTerrainSystem!=='function')return null;
-  const owner=new THREE.Group();owner.name='beyond:terrain-owner';beyondPlace.add(owner);
-  globalThis.__workshopTerrainOwner=owner;
-  try{beyondTerrain=createTerrainSystem({THREE,scene})}
-  finally{delete globalThis.__workshopTerrainOwner}
-  beyondTerrain.owner=owner;
-  owner.position.y=0;
-  beyondTerrain.initializeFunctionalBiomes?.();
-  beyondTerrain.mesh.name='beyond:deformable-terrain';
-  beyondTerrain.apparatus.name='beyond:deformable-terrain-apparatus';
-  // No faction/population poly-greeble layer in Beyond.
+  if(!beyondTerrain)beyondTerrain=createBeyondTerrain();
   return beyondTerrain;
 }
 globalThis.BeyondTerrain={
   ensure:ensureBeyondTerrain,
-  reset:()=>{const t=ensureBeyondTerrain();t?.loadLandCandidate();return t?.inspect()},
-  raise:(x,z,options={})=>ensureBeyondTerrain()?.raise({x,z},options),
-  carve:(x,z,options={})=>ensureBeyondTerrain()?.excavate({x,z},options),
-  groundHeight:(x,z)=>ensureBeyondTerrain()?.groundHeight(x,z),
-  inspect:()=>ensureBeyondTerrain()?.inspect()
+  reset:()=>ensureBeyondTerrain().reset(),
+  raise:(x,z,options={})=>ensureBeyondTerrain().raise({x,z},options),
+  carve:(x,z,options={})=>ensureBeyondTerrain().excavate({x,z},options),
+  groundHeight:(x,z)=>ensureBeyondTerrain().groundHeight(x,z),
+  inspect:()=>ensureBeyondTerrain().inspect()
 };
 
 function setWorkshopTerrainVisible(visible){

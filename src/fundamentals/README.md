@@ -9,6 +9,7 @@ A Fundamental may be internally complex. Independence from a particular project 
 Current vocabulary grows vertically from things that have earned reuse:
 - `materials.js`, `cameras.js`, `lights.js` — inert/runtime descriptors.
 - `liquids/` — authoritative liquid state, behavior, queries, and presentation.
+- `terrain/` — deformable scalar-field terrain plus earned initialization treatments; Functional Biomes compiles bounded heterogeneous virgin functions into ordinary mutable terrain under a frame budget.
 - `bearings/` — high-count matter behavior and presentation.
 - `consequences/` — compositional runtime consequences of Fundamentals encountering one another.
 - `relations/` — semantic nodes, ports, connections, composition, and projections. This is the substrate for snapping-point construction.

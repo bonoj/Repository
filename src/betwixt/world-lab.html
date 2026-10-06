@@ -1399,6 +1399,7 @@ function ensureWorkshopTerrain(){
   try{workshopTerrain=createTerrainSystem({THREE,scene})}
   finally{delete globalThis.__workshopTerrainOwner}
   workshopTerrain.owner=owner;
+  workshopTerrain.initializeFunctionalBiomes?.();
   if(typeof createTerrainGenesis==='function')workshopTerrainGenesis=createTerrainGenesis({terrain:workshopTerrain});
   // Present the intact Crucible apparatus as a raised specimen in Workshop.
   // Its terrain/plinth relationship remains untouched inside this owner transform.
@@ -5022,6 +5023,7 @@ renderer.setAnimationLoop((now)=>{
 
   updateWorkshop(now);
   if(workshopCrucibleEnabled){
+    workshopTerrain?.updateInitialization?.(now);
     const workshopDt=Math.min(.05,Math.max(.001,(now-workshopBearingLast)/1000));
     if(workshopWater||workshopLava){workshopWater?.update(now);workshopLava?.update(now);updateWorkshopSteam(now,workshopDt)}
     workshopMeteors?.update(now);workshopMeteors?.syncRender?.();

@@ -1,6 +1,7 @@
 // Functional Terrain v0 — independent 2D maps compiled into one height surface.
 // T1 adds a fourth paint map: feature jurisdiction selects surface-greeble functions.
 // T2 adds deterministic populations that consume semantic material + terrain conditions rather than authored placement.
+// T3 makes material migrate: terrain volume -> provenance-bearing BB mass -> terrain volume.
 export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741}={}){
   const root=new THREE.Group();root.name="functional-terrain:v0";
   let mode=4;
@@ -33,6 +34,19 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   };
   const materialColor=new THREE.Color();
   const populationRoot=new THREE.Group();populationRoot.name="functional-terrain:populations";root.add(populationRoot);
+  const migrationRoot=new THREE.Group();migrationRoot.name="functional-terrain:migration";root.add(migrationRoot);
+  // Chosen deterministic sites are both ribs/purple jurisdiction in seed 741; migration moves material without changing its identity.
+  const migration={source:{x:-.95,z:.15},dest:{x:2.35,z:-1.55},radius:.62,depth:.58,amount:0,phase:"source",t0:0};
+  const migrationMaterial=materialColors.ribs.clone();
+  const bbCount=360,bbGeo=new THREE.SphereGeometry(.055,5,4),bbMat=new THREE.MeshStandardMaterial({color:migrationMaterial,roughness:.72,metalness:.18});
+  const bbMesh=new THREE.InstancedMesh(bbGeo,bbMat,bbCount);bbMesh.castShadow=true;bbMesh.receiveShadow=true;migrationRoot.add(bbMesh);
+  const bbDummy=new THREE.Object3D();
+  const bbSeeds=Array.from({length:bbCount},(_,i)=>({
+    a:hash(i,17,seed+6101)*Math.PI*2,
+    r:Math.sqrt(hash(i,29,seed+6107))*.48,
+    y:(hash(i,41,seed+6113)-.5)*.38,
+    wobble:hash(i,53,seed+6121)*Math.PI*2
+  }));
   const populationGeometries={
     trunk:new THREE.CylinderGeometry(.045,.065,.38,5),
     crown:new THREE.ConeGeometry(.18,.46,6),
@@ -92,13 +106,20 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
     if(kind==="alien")return strength*.62*Math.max(0,1-r/.58)*(.35+.65*Math.abs(Math.sin(Math.atan2(Z,X)*3+r*9)));
     return 0;
   }
+  function migrationDelta(x,z){
+    const bell=(p,sign)=>{
+      const d=Math.hypot(x-p.x,z-p.z),u=clamp(1-d/migration.radius,0,1);
+      return sign*migration.depth*smooth(u)*migration.amount;
+    };
+    return bell(migration.source,-1)+bell(migration.dest,1);
+  }
   function sample(x,z){
     const en=fbm(x,z,seed+101),tier=Math.min(tiers.length-1,Math.floor(en*tiers.length)),E=tiers[tier];
     const mn=fbm(x,z,seed+911),M=clamp((mn-.28)/.56,0,1);
     const cell=octCell(x,z),A=cell.d>=1?0:smooth(clamp((1-cell.d)/.24,0,1));
     const F=biome(cell.kind,x,z,cell.cx,cell.cz);
     const fp=featurePaint(x,z),G=feature(fp.kind,x,z,fp.strength);
-    return{E,M,A,F,G,H:E+M*A*F+G,tier,kind:cell.kind,featureKind:fp.kind,featureStrength:fp.strength,featureValue:fp.value};
+    return{E,M,A,F,G,H:E+M*A*F+G+migrationDelta(x,z),tier,kind:cell.kind,featureKind:fp.kind,featureStrength:fp.strength,featureValue:fp.value};
   }
   function slopeAt(x,z){
     const e=.07,h=sample(x,z).H;
@@ -135,7 +156,31 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   const geo=new THREE.PlaneGeometry(size,size,resolution-1,resolution-1);geo.rotateX(-Math.PI/2);
   const pos=geo.attributes.position,colors=new Float32Array(pos.count*3);
   const color=new THREE.Color();
-  function paint(){
+  function updateMigration(now=performance.now()){
+    if(!migration.t0)migration.t0=now;
+    const cycle=16000,t=((now-migration.t0)%cycle)/cycle;
+    let travel=0,visible=false;
+    if(t<.22){migration.phase="excavate";migration.amount=smooth(t/.22);}
+    else if(t<.32){migration.phase="emerge";migration.amount=1;travel=smooth((t-.22)/.10);visible=true;}
+    else if(t<.66){migration.phase="travel";migration.amount=1;travel=(t-.32)/.34;visible=true;}
+    else if(t<.78){migration.phase="accrete";migration.amount=1-smooth((t-.66)/.12);travel=1;visible=true;}
+    else{migration.phase="settled";migration.amount=0;travel=1;}
+    // During the settled beat, destination remains accreted; reset only as the next cycle begins.
+    if(t>=.78)migration.amount=0;
+    const src=sample(migration.source.x,migration.source.z),dst=sample(migration.dest.x,migration.dest.z);
+    const sx=migration.source.x,sz=migration.source.z,dx=migration.dest.x,dz=migration.dest.z;
+    for(let i=0;i<bbCount;i++){
+      const b=bbSeeds[i],arc=Math.sin(Math.PI*travel)*(.55+Math.sin(b.wobble+i)*.08);
+      const cx=THREE.MathUtils.lerp(sx,dx,travel),cz=THREE.MathUtils.lerp(sz,dz,travel);
+      const ground=THREE.MathUtils.lerp(src.H,dst.H,travel);
+      bbDummy.position.set(cx+Math.cos(b.a)*b.r,ground+.28+b.y+arc,cz+Math.sin(b.a)*b.r);
+      const pulse=visible?(travel<.08?travel/.08:travel>.92?(1-travel)/.08:1):0;
+      bbDummy.scale.setScalar(Math.max(.001,pulse));bbDummy.updateMatrix();bbMesh.setMatrixAt(i,bbDummy.matrix);
+    }
+    bbMesh.visible=visible&&mode===4;bbMesh.instanceMatrix.needsUpdate=true;
+    paint(false);
+  }
+  function paint(updatePopVisibility=true){
     for(let i=0;i<pos.count;i++){
       const x=pos.getX(i),z=pos.getZ(i),q=sample(x,z);
       let y=0;
@@ -155,12 +200,12 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
       pos.setY(i,y);colors[i*3]=color.r;colors[i*3+1]=color.g;colors[i*3+2]=color.b;
     }
     geo.setAttribute("color",new THREE.BufferAttribute(colors,3));pos.needsUpdate=true;geo.attributes.color.needsUpdate=true;geo.computeVertexNormals();
-    populationRoot.visible=mode===4;
+    if(updatePopVisibility)populationRoot.visible=mode===4;
   }
   const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.88,metalness:.02,side:THREE.DoubleSide,flatShading:false});
   const mesh=new THREE.Mesh(geo,mat);mesh.castShadow=true;mesh.receiveShadow=true;root.add(mesh);
   const base=new THREE.Mesh(new THREE.BoxGeometry(size+.18,.12,size+.18),new THREE.MeshStandardMaterial({color:0x34383a,roughness:.62,metalness:.35}));
   base.position.y=-.92;root.add(base);
-  paint();rebuildPopulations();
-  return{root,mesh,populationRoot,setMode(n){mode=((n%5)+5)%5;paint();return mode},next(){return this.setMode(mode+1)},mode:()=>mode,sample};
+  paint();rebuildPopulations();updateMigration(performance.now());
+  return{root,mesh,populationRoot,migrationRoot,update:updateMigration,migration,setMode(n){mode=((n%5)+5)%5;paint();return mode},next(){return this.setMode(mode+1)},mode:()=>mode,sample};
 }

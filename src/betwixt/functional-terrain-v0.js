@@ -21,6 +21,16 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   const biomeKinds=["dunes","ridges","crater","canyon","knolls","waves","spire","terraces"];
   const octR=1.72,dx=octR*1.72,dz=octR*1.42;
   const featureKinds=["quiet","boulder","spirelet","ribs","mounds","alien"];
+  // Composite material palette mirrors the feature-paint categories so semantic jurisdiction survives manifestation.
+  const materialColors={
+    quiet:new THREE.Color(0x70715f),
+    boulder:new THREE.Color(0x77736d),
+    spirelet:new THREE.Color(0x9a7652),
+    ribs:new THREE.Color(0x765f78),
+    mounds:new THREE.Color(0x5f795d),
+    alien:new THREE.Color(0x547b7d)
+  };
+  const materialColor=new THREE.Color();
   function octCell(x,z){
     let best=null,bd=1e9;
     const rz=Math.round(z/dz);
@@ -87,7 +97,15 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
       else if(mode===1){y=-.8+q.M*1.6;color.setHSL(.58,.18,.18+.55*q.M)}
       else if(mode===2){y=.04;color.setHSL(((biomeKinds.indexOf(q.kind)*.117)%1),.52,.42+q.A*.12)}
       else if(mode===3){y=-.72+q.featureValue*1.44;color.setHSL(((featureKinds.indexOf(q.featureKind)*.137+.03)%1),.5,.28+q.featureStrength*.3)}
-      else{y=q.H;color.setHSL(.26-q.E*.025+.035*q.featureStrength,.34+.12*q.featureStrength,.28+q.M*.18+q.featureStrength*.12)}
+      else{
+        y=q.H;
+        // Material identity comes from the same semantic paint map that selected the feature function.
+        // Keep relief readable with a small tier/permission luminance modulation; never collapse back to one green terrain wash.
+        const baseColor=materialColors[q.featureKind]||materialColors.quiet;
+        materialColor.copy(baseColor);
+        const relief=.78+.07*q.tier+.10*q.M;
+        color.copy(materialColor).multiplyScalar(relief);
+      }
       pos.setY(i,y);colors[i*3]=color.r;colors[i*3+1]=color.g;colors[i*3+2]=color.b;
     }
     geo.setAttribute("color",new THREE.BufferAttribute(colors,3));pos.needsUpdate=true;geo.attributes.color.needsUpdate=true;geo.computeVertexNormals();

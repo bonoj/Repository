@@ -2461,9 +2461,23 @@ const observerVessel=buildBetwixtable({
     const shellRadius=1.72,portClearRadius=.66,tube=.055;
     const axes=[new THREE.Vector3(1,0,0),new THREE.Vector3(-1,0,0),new THREE.Vector3(0,1,0),new THREE.Vector3(0,-1,0),new THREE.Vector3(0,0,1),new THREE.Vector3(0,0,-1)];
     const zAxis=new THREE.Vector3(0,0,1);
-    // Realization: two perpendicular great circles imply the spherical chassis. No straight cage struts.
-    const greatXY=new THREE.Mesh(new THREE.TorusGeometry(shellRadius,tube,10,64),workshopCrucibleStandMat);greatXY.name='observer-vessel:great-circle:xy';greatXY.castShadow=true;shell.add(greatXY);
-    const greatYZ=new THREE.Mesh(new THREE.TorusGeometry(shellRadius,tube,10,64),workshopCrucibleStandMat);greatYZ.name='observer-vessel:great-circle:yz';greatYZ.rotation.y=Math.PI/2;greatYZ.castShadow=true;shell.add(greatYZ);
+    // Realization: two perpendicular great circles, interrupted by the cardinal apertures.
+    // The port rings are structural holes in the shell; no member crosses a clear aperture.
+    const gapHalf=Math.asin(Math.min(.98,(portClearRadius+tube*1.8)/shellRadius));
+    function greatCircleSegments(name,plane){
+      const quarter=Math.PI/2;
+      for(let q=0;q<4;q++){
+        const start=q*quarter+gapHalf,end=(q+1)*quarter-gapHalf,arc=end-start,mid=(start+end)*.5;
+        const seg=new THREE.Mesh(new THREE.TorusGeometry(shellRadius,tube,10,28,arc),workshopCrucibleStandMat);
+        seg.name='observer-vessel:great-circle:'+name+':segment:'+q;
+        // TorusGeometry arc begins on +X; rotate the segment to the desired spherical interval.
+        if(plane==='xy')seg.rotation.z=start;
+        else{seg.rotation.y=Math.PI/2;seg.rotation.x=start;}
+        seg.castShadow=true;shell.add(seg);
+      }
+    }
+    greatCircleSegments('xy','xy');
+    greatCircleSegments('yz','yz');
     axes.forEach((axis,i)=>{
       const dock=new THREE.Group();dock.name='observer-vessel:dock:'+i;dock.position.copy(axis).multiplyScalar(shellRadius);dock.quaternion.setFromUnitVectors(zAxis,axis);shell.add(dock);
       const ring=new THREE.Mesh(new THREE.TorusGeometry(portClearRadius,tube,10,40),workshopCrucibleStandMat);ring.castShadow=true;dock.add(ring);

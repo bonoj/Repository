@@ -3236,7 +3236,7 @@ function updateRocketChase(now){
   const look=p.clone().addScaledVector(forward,.68);
   camera.position.lerp(desired,.15);target.lerp(look,.18);camera.up.lerp(chaseUp,.1).normalize();camera.lookAt(target);
 }
-function updateWorldD20(now){if(worldD20Animators.length){for(const animate of worldD20Animators)animate(now);}updateRocketChase(now);window.vestibuleDirty=true;}
+function updateWorldD20(now){if(worldD20Animators.length){for(const animate of worldD20Animators)animate(now);}updateRocketChase(now);if(functionalTerrainV0?.update)functionalTerrainV0.update(now);window.vestibuleDirty=true;}
 
 
 /* Functional Terrain v0 — inspect the three maps independently, then their composition. */

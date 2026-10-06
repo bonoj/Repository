@@ -2391,143 +2391,92 @@ workshopCrucibleBetwixtable.visible=true;
 
 // Observer grammar probe: the Crucible sphere is the physical precedent, unchanged.
 // Only its contents differ: an eye with an explicit +Z gaze axis.
-const observerTwixt=buildBetwixtable({
-  name:'observer-eye',
-  parent:betwixtPlace,
-  padding:.18,
-  build:(root)=>{
-    const glass=new THREE.Mesh(new THREE.IcosahedronGeometry(.50,3),workshopCrucibleOrbGlass);
-    glass.castShadow=true;root.add(glass);
-
-    // Ocular seat: the Crucible stand's sphere-scale grammar turned perpendicular to gaze.
-    // The brass carriage encloses the entire .50 glass sphere, not the eyeball.
-    // Eye and carriage share gaze orientation; glass remains stationary.
-    const eye=new THREE.Group();eye.name='observer:eye';root.add(eye);
-    const white=new THREE.Mesh(
-      new THREE.SphereGeometry(.20,22,14),
-      new THREE.MeshStandardMaterial({color:0xe8e5dc,roughness:.48})
-    );
-    eye.add(white);
-    const iris=new THREE.Mesh(
-      new THREE.CircleGeometry(.105,24),
-      new THREE.MeshStandardMaterial({color:0x596d6d,roughness:.42,side:THREE.DoubleSide})
-    );
-    iris.position.z=.188;eye.add(iris);
-    const pupil=new THREE.Mesh(
-      new THREE.CircleGeometry(.052,24),
-      new THREE.MeshStandardMaterial({color:0x151817,roughness:.36,side:THREE.DoubleSide})
-    );
-    pupil.position.z=.191;eye.add(pupil);
-
-    const ocularSeat=new THREE.Group();ocularSeat.name='observer:ocular-seat';root.add(ocularSeat);
-    // Crucible precedent: .39 radius, .035 brass section around the same .50 sphere.
-    const seatRadius=.535,seatAft=-.11;
-    const seatFront=new THREE.Mesh(new THREE.TorusGeometry(seatRadius,.035,8,32),workshopCrucibleStandMat);
-    seatFront.name='observer:ocular-seat:meridian';seatFront.castShadow=true;ocularSeat.add(seatFront);
-    const seatBack=new THREE.Mesh(new THREE.TorusGeometry(seatRadius,.035,8,32),workshopCrucibleStandMat);
-    seatBack.name='observer:ocular-seat:aft';seatBack.position.z=seatAft;seatBack.castShadow=true;ocularSeat.add(seatBack);
-
-    // Same threefold clocking as the tripod, transposed onto the gaze plane:
-    // one binding at 12 o'clock, two at 4 and 8.
-    for(let i=0;i<3;i++){
-      const a=Math.PI/2+i*Math.PI*2/3;
-      const x=Math.cos(a)*seatRadius,y=Math.sin(a)*seatRadius;
-      const front=new THREE.Vector3(x,y,0),back=new THREE.Vector3(x,y,seatAft);
-      const d=back.clone().sub(front);
-      const binding=new THREE.Mesh(new THREE.CylinderGeometry(.027,.034,d.length(),8),workshopCrucibleStandMat);
-      binding.name='observer:ocular-seat:binding';
-      binding.position.copy(front).add(back).multiplyScalar(.5);
-      binding.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());
-      binding.castShadow=true;ocularSeat.add(binding);
-    }
-    root.userData.observerOcularSeat=ocularSeat;
-    root.userData.observerEye=eye;
-  }
-});
-const observerEye=observerTwixt.userData.betwixtable.presentation.userData.observerEye;
-const observerEyeWorld=new THREE.Vector3();
-const observerDesiredWorld=new THREE.Vector3();
-const observerDesiredLocal=new THREE.Vector3();
-const observerLocalForward=new THREE.Vector3(0,0,1); // iris/pupil are physically built on +Z
-const observerTargetPoint=new THREE.Vector3();
-const observerOrientFrom=new THREE.Quaternion();
-const observerOrientTo=new THREE.Quaternion();
-const observerParentWorldQuaternion=new THREE.Quaternion();
-let observerAttention='wander';
-let observerAttentionStarted=0;
-let observerAttentionUntil=0;
-let observerAttentionTarget=null;
-let observerNextNotice=performance.now()+4200+Math.random()*5200;
-
-function observerWorldTargetToLocalQuaternion(worldPoint,out){
-  observerEye.getWorldPosition(observerEyeWorld);
-  observerDesiredWorld.copy(worldPoint).sub(observerEyeWorld).normalize();
-  observerEye.parent.getWorldQuaternion(observerParentWorldQuaternion);
-  observerDesiredLocal.copy(observerDesiredWorld).applyQuaternion(observerParentWorldQuaternion.invert()).normalize();
-  out.setFromUnitVectors(observerLocalForward,observerDesiredLocal);
-  return out;
+function buildObserverPresentation(root){
+  const glass=new THREE.Mesh(new THREE.IcosahedronGeometry(.50,3),workshopCrucibleOrbGlass);
+  glass.castShadow=true;root.add(glass);
+  const eye=new THREE.Group();eye.name='observer:eye';root.add(eye);
+  const white=new THREE.Mesh(new THREE.SphereGeometry(.20,22,14),new THREE.MeshStandardMaterial({color:0xe8e5dc,roughness:.48}));eye.add(white);
+  const iris=new THREE.Mesh(new THREE.CircleGeometry(.105,24),new THREE.MeshStandardMaterial({color:0x596d6d,roughness:.42,side:THREE.DoubleSide}));iris.position.z=.188;eye.add(iris);
+  const pupil=new THREE.Mesh(new THREE.CircleGeometry(.052,24),new THREE.MeshStandardMaterial({color:0x151817,roughness:.36,side:THREE.DoubleSide}));pupil.position.z=.191;eye.add(pupil);
+  const ocularSeat=new THREE.Group();ocularSeat.name='observer:ocular-seat';root.add(ocularSeat);
+  const seatRadius=.535,seatAft=-.11;
+  const seatFront=new THREE.Mesh(new THREE.TorusGeometry(seatRadius,.035,8,32),workshopCrucibleStandMat);seatFront.name='observer:ocular-seat:meridian';seatFront.castShadow=true;ocularSeat.add(seatFront);
+  const seatBack=new THREE.Mesh(new THREE.TorusGeometry(seatRadius,.035,8,32),workshopCrucibleStandMat);seatBack.name='observer:ocular-seat:aft';seatBack.position.z=seatAft;seatBack.castShadow=true;ocularSeat.add(seatBack);
+  for(let i=0;i<3;i++){const a=Math.PI/2+i*Math.PI*2/3,x=Math.cos(a)*seatRadius,y=Math.sin(a)*seatRadius,front=new THREE.Vector3(x,y,0),back=new THREE.Vector3(x,y,seatAft),d=back.clone().sub(front);const binding=new THREE.Mesh(new THREE.CylinderGeometry(.027,.034,d.length(),8),workshopCrucibleStandMat);binding.name='observer:ocular-seat:binding';binding.position.copy(front).add(back).multiplyScalar(.5);binding.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());binding.castShadow=true;ocularSeat.add(binding);}
+  root.userData.observerOcularSeat=ocularSeat;root.userData.observerEye=eye;
 }
-function observerWanderQuaternion(now,out){
-  // Continuous idle life: predominantly side-to-side, with a smaller independent vertical drift.
-  const t=now*.001;
-  const yaw=.46*Math.sin(t*.34)+.13*Math.sin(t*.127+1.7);
-  const pitch=.105*Math.sin(t*.23+.8)+.035*Math.sin(t*.071+2.4);
-  return out.setFromEuler(new THREE.Euler(pitch,yaw,0,'YXZ'));
+const observerAgents=[];
+function makeObserverAgent({name,parent=betwixtPlace,at=null,betwixtable=true}={}){
+  let node,presentation;
+  if(betwixtable){node=buildBetwixtable({name,parent,at,padding:.18,build:buildObserverPresentation});presentation=node.userData.betwixtable.presentation;}
+  else{node=new THREE.Group();node.name=name;parent.add(node);if(at)node.position.copy(at);presentation=node;buildObserverPresentation(presentation);}
+  const eye=presentation.userData.observerEye,seat=presentation.userData.observerOcularSeat;
+  const state={node,presentation,eye,seat,attention:'wander',started:0,until:0,target:null,nextNotice:performance.now()+4200+Math.random()*5200,
+    eyeWorld:new THREE.Vector3(),desiredWorld:new THREE.Vector3(),desiredLocal:new THREE.Vector3(),targetPoint:new THREE.Vector3(),from:new THREE.Quaternion(),to:new THREE.Quaternion(),parentQ:new THREE.Quaternion()};
+  observerAgents.push(state);return state;
 }
-function beginObserverAttention(now,target){
-  observerAttention='orient';
-  observerAttentionStarted=now;
-  observerAttentionTarget=target;
-  observerOrientFrom.copy(observerEye.quaternion);
-  if(target==='camera')observerTargetPoint.copy(camera.position);
-  else workshopCrucibleBetwixtable.userData.betwixtable.bounds().getCenter(observerTargetPoint);
-  observerWorldTargetToLocalQuaternion(observerTargetPoint,observerOrientTo);
-  observerAttentionUntil=now+720+Math.random()*380; // legible orient, never a snap
+const observerLocalForward=new THREE.Vector3(0,0,1);
+function observerWorldTargetToLocalQuaternion(agent,worldPoint,out){
+  agent.eye.getWorldPosition(agent.eyeWorld);agent.desiredWorld.copy(worldPoint).sub(agent.eyeWorld).normalize();
+  agent.eye.parent.getWorldQuaternion(agent.parentQ);agent.desiredLocal.copy(agent.desiredWorld).applyQuaternion(agent.parentQ.invert()).normalize();
+  return out.setFromUnitVectors(observerLocalForward,agent.desiredLocal);
 }
-function updateObserverEye(now){
-  if(!betwixtPlace.visible||!observerEye)return;
-
-  if(observerAttention==='wander'){
-    observerWanderQuaternion(now,observerOrientTo);
-    observerEye.quaternion.slerp(observerOrientTo,.035);
-    observerTwixt.userData.betwixtable.presentation.userData.observerOcularSeat.quaternion.copy(observerEye.quaternion);
-    if(now>=observerNextNotice){
-      // The room catches attention more often than the human does.
-      beginObserverAttention(now,Math.random()<.24?'camera':'crucible');
-    }
-  }else if(observerAttention==='orient'){
-    // Target was sampled when attention was caught; orient deliberately toward that encounter.
-    const t=THREE.MathUtils.smoothstep(
-      THREE.MathUtils.clamp((now-observerAttentionStarted)/(observerAttentionUntil-observerAttentionStarted),0,1),0,1
-    );
-    observerEye.quaternion.copy(observerOrientFrom).slerp(observerOrientTo,t);
-    observerTwixt.userData.betwixtable.presentation.userData.observerOcularSeat.quaternion.copy(observerEye.quaternion);
-    if(now>=observerAttentionUntil){
-      observerAttention='attend';
-      observerAttentionStarted=now;
-      observerAttentionUntil=now+850+Math.random()*1150;
-    }
+function observerWanderQuaternion(now,out,phase=0){const t=now*.001+phase;return out.setFromEuler(new THREE.Euler(.105*Math.sin(t*.23+.8)+.035*Math.sin(t*.071+2.4),.46*Math.sin(t*.34)+.13*Math.sin(t*.127+1.7),0,'YXZ'));}
+function beginObserverAttention(agent,now,target){
+  agent.attention='orient';agent.started=now;agent.target=target;agent.from.copy(agent.eye.quaternion);
+  if(target==='camera')agent.targetPoint.copy(camera.position);else workshopCrucibleBetwixtable.userData.betwixtable.bounds().getCenter(agent.targetPoint);
+  observerWorldTargetToLocalQuaternion(agent,agent.targetPoint,agent.to);agent.until=now+720+Math.random()*380;
+}
+function updateObserverAgent(agent,now,index){
+  if(!betwixtPlace.visible||!agent.eye)return;
+  if(agent.attention==='wander'){
+    observerWanderQuaternion(now,agent.to,index*.73);agent.eye.quaternion.slerp(agent.to,.035);agent.seat.quaternion.copy(agent.eye.quaternion);
+    if(now>=agent.nextNotice)beginObserverAttention(agent,now,Math.random()<.24?'camera':'crucible');
+  }else if(agent.attention==='orient'){
+    const t=THREE.MathUtils.smoothstep(THREE.MathUtils.clamp((now-agent.started)/(agent.until-agent.started),0,1),0,1);
+    agent.eye.quaternion.copy(agent.from).slerp(agent.to,t);agent.seat.quaternion.copy(agent.eye.quaternion);
+    if(now>=agent.until){agent.attention='attend';agent.started=now;agent.until=now+850+Math.random()*1150;}
   }else{
-    // While attention is held, a moving target may be pursued; fixation itself retains tiny living drift.
-    if(observerAttentionTarget==='camera')observerTargetPoint.copy(camera.position);
-    else workshopCrucibleBetwixtable.userData.betwixtable.bounds().getCenter(observerTargetPoint);
-    observerWorldTargetToLocalQuaternion(observerTargetPoint,observerOrientTo);
-    const microYaw=.008*Math.sin(now*.0041);
-    const microPitch=.005*Math.sin(now*.0033+1.1);
-    observerOrientTo.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(microPitch,microYaw,0,'YXZ')));
-    observerEye.quaternion.slerp(observerOrientTo,.09);
-    observerTwixt.userData.betwixtable.presentation.userData.observerOcularSeat.quaternion.copy(observerEye.quaternion);
-    if(now>=observerAttentionUntil){
-      observerAttention='wander';
-      observerAttentionTarget=null;
-      observerNextNotice=now+4200+Math.random()*6200;
-    }
+    if(agent.target==='camera')agent.targetPoint.copy(camera.position);else workshopCrucibleBetwixtable.userData.betwixtable.bounds().getCenter(agent.targetPoint);
+    observerWorldTargetToLocalQuaternion(agent,agent.targetPoint,agent.to);
+    agent.to.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(.005*Math.sin(now*.0033+1.1),.008*Math.sin(now*.0041),0,'YXZ')));
+    agent.eye.quaternion.slerp(agent.to,.09);agent.seat.quaternion.copy(agent.eye.quaternion);
+    if(now>=agent.until){agent.attention='wander';agent.target=null;agent.nextNotice=now+4200+Math.random()*6200;}
   }
   window.vestibuleDirty=true;
 }
+function updateObserverEye(now){observerAgents.forEach((agent,i)=>updateObserverAgent(agent,now,i));}
+const primaryObserver=makeObserverAgent({name:'observer-eye'});
+const observerTwixt=primaryObserver.node,observerEye=primaryObserver.eye;
 registerRelationalNode('observer-eye',{object:observerTwixt,bounds:()=>observerTwixt.userData.betwixtable.bounds()});
 registerRelationalNode('crucible-twixt',{object:workshopCrucibleBetwixtable,bounds:()=>workshopCrucibleBetwixtable.userData.betwixtable.bounds()});
 relateSpatial({subject:'observer-eye',kind:'above',reference:'crucible-twixt',gap:2.0});
+
+// OBSERVER CARDINAL VESSEL — seven pilots, six visible docks, one invisible central dock.
+const observerVessel=buildBetwixtable({
+  name:'observer-cardinal-vessel',parent:betwixtPlace,at:new THREE.Vector3(0,4.35,-5.4),padding:.28,
+  build:(root)=>{
+    const cage=new THREE.Group();cage.name='observer-vessel:cage';root.add(cage);
+    const portClearRadius=.66,cageRadius=1.72,portTube=.055;
+    const axes=[new THREE.Vector3(1,0,0),new THREE.Vector3(-1,0,0),new THREE.Vector3(0,1,0),new THREE.Vector3(0,-1,0),new THREE.Vector3(0,0,1),new THREE.Vector3(0,0,-1)];
+    const zAxis=new THREE.Vector3(0,0,1);
+    axes.forEach((axis,i)=>{
+      const dock=new THREE.Group();dock.name='observer-vessel:dock:'+i;dock.position.copy(axis).multiplyScalar(cageRadius);dock.quaternion.setFromUnitVectors(zAxis,axis);cage.add(dock);
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(portClearRadius,portTube,10,40),workshopCrucibleStandMat);ring.castShadow=true;dock.add(ring);
+      // sparse cardinal ribs: connect each port toward the four perpendicular neighboring port regions
+      const tangentA=Math.abs(axis.y)<.9?new THREE.Vector3().crossVectors(axis,new THREE.Vector3(0,1,0)).normalize():new THREE.Vector3(1,0,0);
+      const tangentB=new THREE.Vector3().crossVectors(axis,tangentA).normalize();
+      for(const tangent of [tangentA,tangentA.clone().negate(),tangentB,tangentB.clone().negate()]){
+        const a=axis.clone().multiplyScalar(cageRadius-portClearRadius*.15),b=axis.clone().add(tangent).normalize().multiplyScalar(cageRadius),d=b.clone().sub(a);
+        const rib=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,d.length(),8),workshopCrucibleStandMat);rib.position.copy(a).add(b).multiplyScalar(.5);rib.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());rib.castShadow=true;cage.add(rib);
+      }
+    });
+    const pilotRadius=1.18;
+    axes.forEach((axis,i)=>{const agent=makeObserverAgent({name:'observer-vessel:pilot:'+i,parent:root,at:axis.clone().multiplyScalar(pilotRadius),betwixtable:false});agent.node.quaternion.setFromUnitVectors(zAxis,axis);});
+    makeObserverAgent({name:'observer-vessel:pilot:center',parent:root,at:new THREE.Vector3(),betwixtable:false});
+    root.userData.cardinalDockCount=6;root.userData.invisibleCentralDock=true;root.userData.portClearRadius=portClearRadius;
+  }
+});
 
 // SIX CITIES — CIVILIZATION FIELD T1 archived uninstantiated as v2; live field intentionally clear.
 

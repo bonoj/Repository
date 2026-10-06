@@ -34,6 +34,14 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   };
   const materialColor=new THREE.Color();
   const populationRoot=new THREE.Group();populationRoot.name="functional-terrain:populations";root.add(populationRoot);
+  const gasRoot=new THREE.Group();gasRoot.name="functional-terrain:gas";root.add(gasRoot);
+  const gas={source:{x:1.42,z:2.10},kind:"spirelet",radius:.64,depth:.68,amount:0,t0:0,running:false,sourceBase:0};
+  const gasN=28,gasCount=gasN*gasN;
+  const gasGeo=new THREE.IcosahedronGeometry(.16,1);
+  const gasMat=new THREE.MeshBasicMaterial({color:materialColors.spirelet,transparent:true,opacity:.16,depthWrite:false,blending:THREE.NormalBlending});
+  const gasMesh=new THREE.InstancedMesh(gasGeo,gasMat,gasCount);gasMesh.name="atmospheric-density:spirelet";gasMesh.frustumCulled=false;gasRoot.add(gasMesh);
+  const gasDummy=new THREE.Object3D();
+  const gasCells=Array.from({length:gasCount},(_,i)=>({i:i%gasN,j:Math.floor(i/gasN),jitter:hash(i,83,seed+8201)*Math.PI*2}));
   const migrationRoot=new THREE.Group();migrationRoot.name="functional-terrain:migration";root.add(migrationRoot);
   // T3/T4 transfers are data. Both use the exact same transport engine.
   const bbCount=360,bbGeo=new THREE.SphereGeometry(.055,5,4);
@@ -121,6 +129,11 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
       };
       total+=bell(tr.source,-1,tr.sourceAmount)+bell(tr.dest,1,tr.destAmount);
     }
+    // G1 direct field -> atmospheric field conversion. No parcel intermediate.
+    if(gas.amount>0){
+      const d=Math.hypot(x-gas.source.x,z-gas.source.z),u=clamp(1-d/gas.radius,0,1);
+      total-=gas.depth*smooth(u)*gas.amount;
+    }
     return total;
   }
   function sample(x,z){
@@ -168,6 +181,7 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   const color=new THREE.Color();
   function startMigration(now=performance.now()){
     // One focus event, one t0, identical lifecycle for every transfer.
+    gas.amount=0;gas.sourceBase=sample(gas.source.x,gas.source.z).H;gas.running=true;gas.t0=now;gasMesh.visible=false;
     for(const tr of transfers){
       tr.sourceAmount=0;tr.destAmount=0;
       tr.sourceBase=sample(tr.source.x,tr.source.z).H;
@@ -214,9 +228,43 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
     if(t>=1){tr.running=false;tr.phase="settled";tr.mesh.visible=false;}
     return true;
   }
+  function updateGas(now){
+    if(!gas.running){gasMesh.visible=false;return false;}
+    const t=clamp((now-gas.t0)/15000,0,1);
+    // Liberation ramps for the first half; atmospheric mass then remains conserved in the field.
+    gas.amount=smooth(clamp(t/.52,0,1));
+    let visible=0;
+    for(let n=0;n<gasCount;n++){
+      const cell=gasCells[n],u=cell.i/(gasN-1),v=cell.j/(gasN-1);
+      // Advected density packet: rising buoyant column bends into deterministic crosswind and curls.
+      const age=clamp(t*1.34-u*.72-v*.16,0,1);
+      const spine=age*4.7;
+      const curl=Math.sin(age*10.5+cell.j*.43+cell.jitter)*(.18+.42*age);
+      const cross=Math.cos(age*7.3+cell.i*.31)*(.10+.30*age);
+      const px=gas.source.x+spine*.48+curl+(u-.5)*(.32+age*.9);
+      const pz=gas.source.z-spine*.34+cross+(v-.5)*(.30+age*.82);
+      const base=gas.sourceBase;
+      const rise=.12+age*2.35+Math.sin(age*Math.PI)*.72+(v-.5)*.42;
+      // Soft density envelope: many overlapping translucent cells read as volume, not beads.
+      const head=Math.exp(-Math.pow((u-.46-age*.18)*2.2,2)-Math.pow((v-.5)*1.8,2));
+      const filament=.42+.58*Math.abs(Math.sin((u*2.1-v*1.7+age)*Math.PI*2));
+      const density=gas.amount*age*head*filament;
+      if(density>.018){
+        visible++;
+        gasDummy.position.set(px,base+rise,pz);
+        const s=.34+density*.72+age*.18;
+        gasDummy.scale.set(s*1.35,s*(.72+age*.35),s);
+      }else{gasDummy.position.set(gas.source.x,base-.5,gas.source.z);gasDummy.scale.setScalar(.001);}
+      gasDummy.updateMatrix();gasMesh.setMatrixAt(n,gasDummy.matrix);
+    }
+    gasMesh.visible=visible>0&&mode===4;gasMesh.instanceMatrix.needsUpdate=true;
+    if(t>=1){gas.running=false;gasMesh.visible=mode===4;}
+    return true;
+  }
   function updateMigration(now=performance.now()){
     let changed=false;
     for(const tr of transfers)changed=updateTransfer(tr,now)||changed;
+    changed=updateGas(now)||changed;
     if(changed)paint(false);
   }
   function paint(updatePopVisibility=true){
@@ -251,6 +299,6 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   const mesh=new THREE.Mesh(geo,mat);mesh.castShadow=true;mesh.receiveShadow=true;root.add(mesh);
   const base=new THREE.Mesh(new THREE.BoxGeometry(size+.18,.12,size+.18),new THREE.MeshStandardMaterial({color:0x34383a,roughness:.62,metalness:.35}));
   base.position.y=-.92;root.add(base);
-  paint();rebuildPopulations();for(const tr of transfers)tr.mesh.visible=false;
+  paint();rebuildPopulations();for(const tr of transfers)tr.mesh.visible=false;gasMesh.visible=false;
   return{root,mesh,populationRoot,migrationRoot,update:updateMigration,startMigration,migration,alienMigration,setMode(n){mode=((n%5)+5)%5;paint();return mode},next(){return this.setMode(mode+1)},mode:()=>mode,sample};
 }

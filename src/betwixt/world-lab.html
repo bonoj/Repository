@@ -1401,7 +1401,7 @@ function ensureWorkshopTerrain(){
   finally{delete globalThis.__workshopTerrainOwner}
   workshopTerrain.owner=owner;
   workshopTerrain.initializeFunctionalBiomes?.();
-  if(typeof createFactionWarSystem==='function')workshopFactionWar=createFactionWarSystem({THREE,terrain:workshopTerrain,owner,seed:741});
+  // Faction-war machinery retained dormant for later work.
   if(typeof createTerrainGenesis==='function')workshopTerrainGenesis=createTerrainGenesis({terrain:workshopTerrain});
   // Present the intact Crucible apparatus as a raised specimen in Workshop.
   // Its terrain/plinth relationship remains untouched inside this owner transform.
@@ -3239,7 +3239,7 @@ function updateRocketChase(now){
 function updateWorldD20(now){if(worldD20Animators.length){for(const animate of worldD20Animators)animate(now);}updateRocketChase(now);window.vestibuleDirty=true;}
 
 
-/* Rendezvous cairn laboratory — disposable transport pressure.
+/* Functional Terrain v0 — inspect the three maps independently, then their composition. */\nlet functionalTerrainV0=null;\nconst functionalTerrainV0Table=buildBetwixtable({\n  name:'functional-terrain-v0',parent:legacyWorkshop,\n  at:new THREE.Vector3(-7.2,GROUND_Y+.08,5.8),padding:.42,\n  interact:()=>{functionalTerrainV0?.next();window.vestibuleDirty=true},\n  build(root){\n    functionalTerrainV0=createFunctionalTerrainV0({THREE,size:8.4,resolution:45,seed:741});\n    root.add(functionalTerrainV0.root);\n  }\n});\nglobalThis.FunctionalTerrainV0=()=>({mode:functionalTerrainV0?.mode(),sample:functionalTerrainV0?.sample(0,0)});\n\n/* Rendezvous cairn laboratory — disposable transport pressure.
    This is intentionally a physical Betwixtable rather than a networking framework.
    The browser owns ntfy transport; the reconstructed scar log owns apparent shared state. */
 const CAIRN_TOPIC='worldlab-cairn-741-rendezvous-a3f9c2e7';

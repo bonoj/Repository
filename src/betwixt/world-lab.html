@@ -1387,7 +1387,7 @@ globalThis.WorkshopGravity=WorkshopGravity;
 
 // Workshop terrain is the intact transported Crucible implementation. It is one
 // useful terrain, not Workshop's definition of terrain.
-let workshopTerrain=null,workshopTerrainGenesis=null,workshopTerrainSeed=741;
+let workshopTerrain=null,workshopTerrainGenesis=null,workshopTerrainSeed=741;\nlet workshopFactionWar=null;
 const workshopCrucible=new THREE.Group();workshopCrucible.name='crucible:apparatus';workshopCrucible.visible=true;cruciblePlace.add(workshopCrucible);
 let workshopCrucibleEnabled=false;
 const workshopCrucibleSpellIds=['crucible-meteor','crucible-terrain-next','crucible-bearings','crucible-water','crucible-lava','crucible-carve','crucible-raise'];
@@ -5023,7 +5023,7 @@ renderer.setAnimationLoop((now)=>{
 
   updateWorkshop(now);
   if(workshopCrucibleEnabled){
-    workshopTerrain?.updateInitialization?.(now);
+    workshopTerrain?.updateInitialization?.(now);\n    workshopFactionWar?.update(now);
     const workshopDt=Math.min(.05,Math.max(.001,(now-workshopBearingLast)/1000));
     if(workshopWater||workshopLava){workshopWater?.update(now);workshopLava?.update(now);updateWorkshopSteam(now,workshopDt)}
     workshopMeteors?.update(now);workshopMeteors?.syncRender?.();

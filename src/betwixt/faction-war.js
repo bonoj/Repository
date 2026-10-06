@@ -2,7 +2,7 @@
 // Each faction owns a genuinely different expansion policy; visuals expose state rather than script a scene.
 export function createFactionWarSystem({THREE,terrain,owner,seed=741}){
   const root=new THREE.Group();root.name="war:three-factions";owner.add(root);
-  let state=seed>>>0,last=0,acc=0,startedAt=performance.now(),winner=null;
+  let state=seed>>>0,last=0,acc=0,winner=null,warStarted=false;
   const rand=()=>((state=(Math.imul(state,1664525)+1013904223)>>>0)/4294967296);
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const ground=(x,z)=>terrain.groundHeight?.(x,z)??0;
@@ -57,7 +57,7 @@ export function createFactionWarSystem({THREE,terrain,owner,seed=741}){
   }
   function kill(u){u.alive=false;u.mesh.visible=false}
   function tick(dt,now){
-    if(now-startedAt<5200)return; // let Functional Biomes finish becoming ordinary matter first.
+    // Terrain owns readiness. No wall-clock guess: war cannot begin until manifestation has actually baked.\n    if(!warStarted){const init=terrain.inspectInitialization?.();if(!init||init.active)return;warStarted=true;last=now;return;}
     for(const u of units){
       if(!u.alive)continue;u.cool-=dt;
       const enemy=nearestEnemy(u);
@@ -81,7 +81,7 @@ export function createFactionWarSystem({THREE,terrain,owner,seed=741}){
   }
   return{
     root,
-    update(now){if(!last)last=now;const dt=Math.min(.1,(now-last)/1000);last=now;acc+=dt;if(acc<.05)return;const step=acc;acc=0;tick(step,now)},
-    inspect(){return{kind:"three-faction-war",winner:winner?.name??null,factions:factions.map(f=>({id:f.id,name:f.name,policy:f.policy,alive:units.filter(u=>u.alive&&u.f===f).length,posts:posts.filter(p=>p.f===f).length}))}}
+    update(now){if(!warStarted){tick(0,now);return}if(!last)last=now;const dt=Math.min(.1,(now-last)/1000);last=now;acc+=dt;if(acc<.05)return;const step=acc;acc=0;tick(step,now)},
+    inspect(){return{kind:"three-faction-war",started:warStarted,winner:winner?.name??null,factions:factions.map(f=>({id:f.id,name:f.name,policy:f.policy,alive:units.filter(u=>u.alive&&u.f===f).length,posts:posts.filter(p=>p.f===f).length}))}}
   };
 }

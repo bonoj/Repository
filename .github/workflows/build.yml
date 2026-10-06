@@ -40,8 +40,6 @@ jobs:
           if-no-files-found: error
       - name: Promote verified executable
         if: github.ref == 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           git fetch origin live || true
           git worktree add /tmp/repository-live --detach
@@ -50,5 +48,5 @@ jobs:
           git rm -rf . >/dev/null 2>&1 || true
           cp -R "$GITHUB_WORKSPACE/dist/." .
           git add -A
-          git -c user.name=github-actions -c user.email=41898282+github-actions[bot]@users.noreply.github.com commit -m "deploy ${GITHUB_SHA}"
+          git -c user.name=github-actions -c user.email=actions@github.com commit -m "deploy $GITHUB_SHA"
           git push --force origin HEAD:live

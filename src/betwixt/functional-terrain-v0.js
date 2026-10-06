@@ -1,5 +1,6 @@
 // Functional Terrain v0 — independent 2D maps compiled into one height surface.
-// T1 adds a fourth paint map: feature jurisdiction selects surface-greeble functions. No placed prop meshes.
+// T1 adds a fourth paint map: feature jurisdiction selects surface-greeble functions.
+// T2 adds deterministic populations that consume semantic material + terrain conditions rather than authored placement.
 export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741}={}){
   const root=new THREE.Group();root.name="functional-terrain:v0";
   let mode=4;
@@ -31,6 +32,19 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
     alien:new THREE.Color(0x547b7d)
   };
   const materialColor=new THREE.Color();
+  const populationRoot=new THREE.Group();populationRoot.name="functional-terrain:populations";root.add(populationRoot);
+  const populationGeometries={
+    trunk:new THREE.CylinderGeometry(.045,.065,.38,5),
+    crown:new THREE.ConeGeometry(.18,.46,6),
+    rock:new THREE.DodecahedronGeometry(.15,0),
+    scrub:new THREE.ConeGeometry(.13,.22,5)
+  };
+  const populationMaterials={
+    trunk:new THREE.MeshStandardMaterial({color:0x574735,roughness:.95}),
+    crown:new THREE.MeshStandardMaterial({color:0x3f6540,roughness:.92}),
+    rock:new THREE.MeshStandardMaterial({color:0x67645f,roughness:.98}),
+    scrub:new THREE.MeshStandardMaterial({color:0x80643d,roughness:.98})
+  };
   function octCell(x,z){
     let best=null,bd=1e9;
     const rz=Math.round(z/dz);
@@ -86,6 +100,38 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
     const fp=featurePaint(x,z),G=feature(fp.kind,x,z,fp.strength);
     return{E,M,A,F,G,H:E+M*A*F+G,tier,kind:cell.kind,featureKind:fp.kind,featureStrength:fp.strength,featureValue:fp.value};
   }
+  function slopeAt(x,z){
+    const e=.07,h=sample(x,z).H;
+    return Math.hypot(sample(x+e,z).H-h,sample(x,z+e).H-h)/e;
+  }
+  function rebuildPopulations(){
+    populationRoot.clear();
+    // A deterministic candidate lattice is only an address generator. Material and local geometry decide habitation.
+    const step=.42,half=size*.5-.16;
+    for(let z=-half;z<=half;z+=step)for(let x=-half;x<=half;x+=step){
+      const gx=Math.round((x+half)/step),gz=Math.round((z+half)/step);
+      const jx=(hash(gx,gz,seed+5101)-.5)*step*.62,jz=(hash(gx,gz,seed+5107)-.5)*step*.62;
+      const px=x+jx,pz=z+jz,q=sample(px,pz),s=slopeAt(px,pz),chance=hash(gx,gz,seed+5113);
+      let object=null;
+      if(q.featureKind==="mounds"&&s<.72&&chance<.46){
+        object=new THREE.Group();
+        const trunk=new THREE.Mesh(populationGeometries.trunk,populationMaterials.trunk);trunk.position.y=.19;
+        const crown=new THREE.Mesh(populationGeometries.crown,populationMaterials.crown);crown.position.y=.54;
+        object.add(trunk,crown);
+      }else if(q.featureKind==="boulder"&&s>.18&&chance<.58){
+        object=new THREE.Mesh(populationGeometries.rock,populationMaterials.rock);
+        const sc=.7+hash(gx,gz,seed+5129)*1.25;object.scale.set(sc*.92,sc*.65,sc);
+        object.rotation.set(hash(gx,gz,seed+5131)*.7,hash(gx,gz,seed+5137)*Math.PI,hash(gx,gz,seed+5147)*.5);
+        object.position.y=.08*sc;
+      }else if(q.featureKind==="spirelet"&&s<1.05&&chance<.34){
+        object=new THREE.Mesh(populationGeometries.scrub,populationMaterials.scrub);
+        const sc=.7+hash(gx,gz,seed+5153)*.8;object.scale.set(sc,sc,sc);object.position.y=.11*sc;
+        object.rotation.y=hash(gx,gz,seed+5167)*Math.PI*2;
+      }
+      if(object){object.position.x=px;object.position.z=pz;object.position.y+=q.H;populationRoot.add(object);}
+    }
+    populationRoot.visible=mode===4;
+  }
   const geo=new THREE.PlaneGeometry(size,size,resolution-1,resolution-1);geo.rotateX(-Math.PI/2);
   const pos=geo.attributes.position,colors=new Float32Array(pos.count*3);
   const color=new THREE.Color();
@@ -109,11 +155,12 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
       pos.setY(i,y);colors[i*3]=color.r;colors[i*3+1]=color.g;colors[i*3+2]=color.b;
     }
     geo.setAttribute("color",new THREE.BufferAttribute(colors,3));pos.needsUpdate=true;geo.attributes.color.needsUpdate=true;geo.computeVertexNormals();
+    populationRoot.visible=mode===4;
   }
   const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.88,metalness:.02,side:THREE.DoubleSide,flatShading:false});
   const mesh=new THREE.Mesh(geo,mat);mesh.castShadow=true;mesh.receiveShadow=true;root.add(mesh);
   const base=new THREE.Mesh(new THREE.BoxGeometry(size+.18,.12,size+.18),new THREE.MeshStandardMaterial({color:0x34383a,roughness:.62,metalness:.35}));
   base.position.y=-.92;root.add(base);
-  paint();
-  return{root,mesh,setMode(n){mode=((n%5)+5)%5;paint();return mode},next(){return this.setMode(mode+1)},mode:()=>mode,sample};
+  paint();rebuildPopulations();
+  return{root,mesh,populationRoot,setMode(n){mode=((n%5)+5)%5;paint();return mode},next(){return this.setMode(mode+1)},mode:()=>mode,sample};
 }

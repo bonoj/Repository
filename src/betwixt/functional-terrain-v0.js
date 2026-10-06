@@ -124,6 +124,29 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
     if(kind==="alien")return strength*.62*Math.max(0,1-r/.58)*(.35+.65*Math.abs(Math.sin(Math.atan2(Z,X)*3+r*9)));
     return 0;
   }
+  // P1: population as world function. Deterministic boulder jurisdictions contribute directly to H.
+  // This deliberately remains 2.5D: fused/deformable surface first; volumetric undercuts are a later question.
+  function fieldRock(x,z){
+    const step=.84,half=size*.5-.16;
+    const gx=Math.round((x+half)/step),gz=Math.round((z+half)/step);
+    let total=0,claim=0;
+    for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++){
+      const ix=gx+dx,iz=gz+dz;
+      const bx=-half+ix*step+(hash(ix,iz,seed+7101)-.5)*step*.38;
+      const bz=-half+iz*step+(hash(ix,iz,seed+7107)-.5)*step*.38;
+      // Jurisdiction is granted only where the semantic material field is boulder-like.
+      const fp=featurePaint(bx,bz);
+      if(fp.kind!=="boulder"||hash(ix,iz,seed+7113)>.34)continue;
+      const rx=.24+hash(ix,iz,seed+7121)*.22,rz=.22+hash(ix,iz,seed+7127)*.20;
+      const X=(x-bx)/rx,Z=(z-bz)/rz,r=Math.hypot(X,Z);
+      if(r>=1)continue;
+      // Compact support: exactly zero at the jurisdiction edge. A lopsided cap keeps it visibly rock-like.
+      const u=1-r,edge=smooth(u),lobe=.72+.28*Math.sin(Math.atan2(Z,X)*3+hash(ix,iz,seed+7133)*6.283);
+      const h=(.28+hash(ix,iz,seed+7151)*.42)*Math.pow(edge,.62)*lobe;
+      total=Math.max(total,h);claim=Math.max(claim,edge);
+    }
+    return{h:total,claim};
+  }
   function migrationDelta(x,z){
     let total=0;
     for(const tr of transfers){
@@ -149,8 +172,8 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
     const mn=fbm(x,z,seed+911),M=clamp((mn-.28)/.56,0,1);
     const cell=octCell(x,z),A=cell.d>=1?0:smooth(clamp((1-cell.d)/.24,0,1));
     const F=biome(cell.kind,x,z,cell.cx,cell.cz);
-    const fp=featurePaint(x,z),G=feature(fp.kind,x,z,fp.strength);
-    return{E,M,A,F,G,H:E+M*A*F+G+migrationDelta(x,z),tier,kind:cell.kind,featureKind:fp.kind,featureStrength:fp.strength,featureValue:fp.value};
+    const fp=featurePaint(x,z),G=feature(fp.kind,x,z,fp.strength),R=fieldRock(x,z);
+    return{E,M,A,F,G,R:R.h,rockClaim:R.claim,H:E+M*A*F+G+R.h+migrationDelta(x,z),tier,kind:cell.kind,featureKind:fp.kind,featureStrength:fp.strength,featureValue:fp.value};
   }
   function slopeAt(x,z){
     const e=.07,h=sample(x,z).H;
@@ -171,10 +194,9 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
         const crown=new THREE.Mesh(populationGeometries.crown,populationMaterials.crown);crown.position.y=.54;
         object.add(trunk,crown);
       }else if(q.featureKind==="boulder"&&s>.18&&chance<.58){
-        object=new THREE.Mesh(populationGeometries.rock,populationMaterials.rock);
-        const sc=.7+hash(gx,gz,seed+5129)*1.25;object.scale.set(sc*.92,sc*.65,sc);
-        object.rotation.set(hash(gx,gz,seed+5131)*.7,hash(gx,gz,seed+5137)*Math.PI,hash(gx,gz,seed+5147)*.5);
-        object.position.y=.08*sc;
+        // P1 control boundary: boulder populations are no longer spawned meshes.
+        // Their visible geometry is already part of sample().H through fieldRock().
+        object=null;
       }else if(q.featureKind==="spirelet"&&s<1.05&&chance<.34){
         object=new THREE.Mesh(populationGeometries.scrub,populationMaterials.scrub);
         const sc=.7+hash(gx,gz,seed+5153)*.8;object.scale.set(sc,sc,sc);object.position.y=.11*sc;
@@ -311,6 +333,8 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
         materialColor.copy(baseColor);
         const relief=.78+.07*q.tier+.10*q.M;
         color.copy(materialColor).multiplyScalar(relief);
+        // Field-rock jurisdiction is part of the same reconstructed surface, but slightly emphasizes its material face.
+        if(q.rockClaim>0)color.lerp(materialColors.boulder,Math.min(.34,q.rockClaim*.34));
         // Foreign deposited matter keeps its provenance instead of being recolored by the host biome.
         if(gas.accreted>0){
           const gd=Math.hypot(x-gas.rainCenter.x,z-gas.rainCenter.z),gu=clamp(1-gd/.82,0,1);

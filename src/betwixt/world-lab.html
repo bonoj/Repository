@@ -2479,50 +2479,59 @@ function updatePropulsionModules(now){
   if(propulsionModules.length)window.vestibuleDirty=true;
 }
 
-// OBSERVER CARDINAL VESSEL — cardinal molecule; shell is snapped dock-to-dock.
+// CARDINAL CAGE GRAMMAR — same rings, topology determines cartridge vs receiver.
+function buildCardinalCage({parent,name='cardinal-cage',nodeRadius=1.72,ringRadius=.66,tube=.055,omitNode=null}={}){
+  const shell=new THREE.Group();shell.name=name;parent.add(shell);
+  const zAxis=new THREE.Vector3(0,0,1);
+  const nodes={
+    xp:new THREE.Vector3(nodeRadius,0,0),xn:new THREE.Vector3(-nodeRadius,0,0),
+    yp:new THREE.Vector3(0,nodeRadius,0),yn:new THREE.Vector3(0,-nodeRadius,0),
+    zp:new THREE.Vector3(0,0,nodeRadius),zn:new THREE.Vector3(0,0,-nodeRadius)
+  };
+  const docks={};
+  for(const [id,p] of Object.entries(nodes)){
+    if(id===omitNode)continue;
+    const normal=p.clone().normalize(),dock=new THREE.Group();dock.name=name+':dock:'+id;dock.position.copy(p);dock.quaternion.setFromUnitVectors(zAxis,normal);shell.add(dock);
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(ringRadius,tube,10,40),workshopCrucibleStandMat);ring.castShadow=true;dock.add(ring);docks[id]=dock;
+  }
+  function snap(id,towardId){
+    const center=nodes[id],toward=nodes[towardId].clone().sub(center).normalize(),normal=center.clone().normalize();
+    const tangent=toward.addScaledVector(normal,-toward.dot(normal)).normalize();
+    return center.clone().addScaledVector(tangent,ringRadius);
+  }
+  function sphericalArc(namePart,aId,bId){
+    if(aId===omitNode||bId===omitNode)return;
+    const a=snap(aId,bId),b=snap(bId,aId),r=(a.length()+b.length())*.5;
+    const ua=a.clone().normalize(),ub=b.clone().normalize(),angle=Math.acos(THREE.MathUtils.clamp(ua.dot(ub),-1,1));
+    const curve=new THREE.Curve();curve.getPoint=(t,target=new THREE.Vector3())=>{
+      const sin=Math.sin(angle),w0=Math.sin((1-t)*angle)/sin,w1=Math.sin(t*angle)/sin;
+      return target.copy(ua).multiplyScalar(w0).addScaledVector(ub,w1).normalize().multiplyScalar(r);
+    };
+    const member=new THREE.Mesh(new THREE.TubeGeometry(curve,20,tube,8,false),workshopCrucibleStandMat);member.name=name+':shell:'+namePart;member.castShadow=true;shell.add(member);
+  }
+  const edges=[['xp','yp'],['yp','xn'],['xn','yn'],['yn','xp'],['yp','zp'],['zp','yn'],['yn','zn'],['zn','yp']];
+  edges.forEach(([a,b],i)=>sphericalArc(String(i),a,b));
+  return{shell,nodes,docks,nodeRadius,ringRadius,omitNode};
+}
+
+// OBSERVER CARDINAL VESSEL — 7-node rotor cartridges seated in asymmetric 6-node receivers.
 const observerVessel=buildBetwixtable({
   name:'observer-cardinal-vessel',parent:betwixtPlace,at:new THREE.Vector3(0,4.35,-5.4),padding:.28,
   build:(root)=>{
-    const shell=new THREE.Group();shell.name='observer-vessel:spherical-shell';root.add(shell);
-    const shellRadius=1.72,portRadius=.66,tube=.055,zAxis=new THREE.Vector3(0,0,1);
-    const nodes={
-      xp:new THREE.Vector3(shellRadius,0,0),xn:new THREE.Vector3(-shellRadius,0,0),
-      yp:new THREE.Vector3(0,shellRadius,0),yn:new THREE.Vector3(0,-shellRadius,0),
-      zp:new THREE.Vector3(0,0,shellRadius),zn:new THREE.Vector3(0,0,-shellRadius)
-    };
-    const axes=Object.values(nodes);
-    // Docks are authoritative geometry. Their local XY circumference supplies shell snap points.
-    const docks={};
-    for(const [id,p] of Object.entries(nodes)){
-      const normal=p.clone().normalize(),dock=new THREE.Group();dock.name='observer-vessel:dock:'+id;dock.position.copy(p);dock.quaternion.setFromUnitVectors(zAxis,normal);shell.add(dock);
-      const ring=new THREE.Mesh(new THREE.TorusGeometry(portRadius,tube,10,40),workshopCrucibleStandMat);ring.castShadow=true;dock.add(ring);docks[id]=dock;
-    }
-    function snap(id,towardId){
-      const center=nodes[id],toward=nodes[towardId].clone().sub(center).normalize(),normal=center.clone().normalize();
-      // Project the neighbor direction into this dock's plane; the resulting point lies exactly on its ring.
-      const tangent=toward.addScaledVector(normal,-toward.dot(normal)).normalize();
-      return center.clone().addScaledVector(tangent,portRadius);
-    }
-    function sphericalArc(name,aId,bId){
-      const a=snap(aId,bId),b=snap(bId,aId),ra=a.length(),rb=b.length(),r=(ra+rb)*.5;
-      const ua=a.clone().normalize(),ub=b.clone().normalize(),angle=Math.acos(THREE.MathUtils.clamp(ua.dot(ub),-1,1));
-      const curve=new THREE.Curve();
-      curve.getPoint=(t,target=new THREE.Vector3())=>{
-        const sin=Math.sin(angle),w0=Math.sin((1-t)*angle)/sin,w1=Math.sin(t*angle)/sin;
-        return target.copy(ua).multiplyScalar(w0).addScaledVector(ub,w1).normalize().multiplyScalar(r);
-      };
-      const member=new THREE.Mesh(new THREE.TubeGeometry(curve,20,tube,8,false),workshopCrucibleStandMat);member.name='observer-vessel:shell:'+name;member.castShadow=true;shell.add(member);
-    }
-    // Two perpendicular shell rings expressed only as dock-to-dock relations.
-    [['xp','yp'],['yp','xn'],['xn','yn'],['yn','xp'],
-     ['yp','zp'],['zp','yn'],['yn','zn'],['zn','yp']].forEach(([a,b],i)=>sphericalArc(String(i),a,b));
-    // Seven possible stations; three occupied so empty apertures remain legible.
+    const cartridgeRadius=1.72,ringRadius=.66,tube=.055,zAxis=new THREE.Vector3(0,0,1);
+    const cage=buildCardinalCage({parent:root,name:'observer-vessel:cartridge',nodeRadius:cartridgeRadius,ringRadius,tube});
+    const nodes=cage.nodes;
+    // Receiver is the same ring standard displaced outward for payload clearance.
+    // +X is deliberately absent: the sixth direction is the insertion mouth.
+    const receiver=buildCardinalCage({parent:root,name:'observer-vessel:receiver',nodeRadius:cartridgeRadius+.18,ringRadius,tube,omitNode:'xp'});
+    receiver.shell.userData.molecule={kind:'asymmetric-6-node-receiver',centerExpects:'7-node-rotor-cartridge',mouth:'xp'};
     const occupied=[nodes.xp,nodes.yp];
     occupied.forEach((p,i)=>{const axis=p.clone().normalize(),agent=makeObserverAgent({name:'observer-vessel:pilot:'+i,parent:root,at:p.clone(),betwixtable:false});agent.node.quaternion.setFromUnitVectors(zAxis,axis);});
     makeObserverAgent({name:'observer-vessel:pilot:center',parent:root,at:new THREE.Vector3(),betwixtable:false});
     const thruster=makePropulsionModule({name:'observer-vessel:thruster:xn',parent:root,at:nodes.xn.clone()});thruster.node.quaternion.setFromUnitVectors(zAxis,nodes.xn.clone().normalize());
     root.userData.cardinalMolecule={center:[0,0,0],nodes:Object.fromEntries(Object.entries(nodes).map(([k,v])=>[k,v.toArray()]))};
-    root.userData.cardinalDockCount=6;root.userData.invisibleCentralDock=true;root.userData.portClearRadius=portRadius;
+    root.userData.cardinalDockCount=6;root.userData.invisibleCentralDock=true;root.userData.portClearRadius=ringRadius;
+    root.userData.receiverMolecule={center:[0,0,0],outerNodes:5,missing:'xp',expects:'7-node-rotor-cartridge'};
   }
 });
 

@@ -326,8 +326,7 @@ window.vestibuleFail=(scope,e)=>{
   clearTimeout(window.vestibuleWatch);
   const f=document.getElementById('fault');
   f.style.display='block';
-  f.textContent='WORLD LAB VESTIBULE — '+scope+'
-'+(e?.stack||e?.message||String(e));
+  f.textContent='WORLD LAB VESTIBULE — '+scope+'\\n'+(e?.stack||e?.message||String(e));
 };
 addEventListener('error',e=>vestibuleFail('startup / runtime',e.error||e.message));
 addEventListener('unhandledrejection',e=>vestibuleFail('promise',e.reason));
@@ -365,9 +364,7 @@ renderer.domElement.addEventListener('webglcontextlost',e=>{
   e.preventDefault(); vestibuleFail('WebGL context lost','Reload to reconstruct the vestibule.');
 });
 renderer.debug.onShaderError=(gl,p,vs,fs)=>{
-  vestibuleFail('shader',gl.getProgramInfoLog(p)+'
-'+gl.getShaderInfoLog(vs)+'
-'+gl.getShaderInfoLog(fs));
+  vestibuleFail('shader',gl.getProgramInfoLog(p)+'\\n'+gl.getShaderInfoLog(vs)+'\\n'+gl.getShaderInfoLog(fs));
 };
 
 scene.add(new THREE.HemisphereLight(0xfff9ef,0xc7c4be,1.7));
@@ -1390,7 +1387,8 @@ globalThis.WorkshopGravity=WorkshopGravity;
 
 // Workshop terrain is the intact transported Crucible implementation. It is one
 // useful terrain, not Workshop's definition of terrain.
-let workshopTerrain=null,workshopTerrainGenesis=null,workshopTerrainSeed=741;\nlet workshopFactionWar=null;
+let workshopTerrain=null,workshopTerrainGenesis=null,workshopTerrainSeed=741;
+let workshopFactionWar=null;
 const workshopCrucible=new THREE.Group();workshopCrucible.name='crucible:apparatus';workshopCrucible.visible=true;cruciblePlace.add(workshopCrucible);
 let workshopCrucibleEnabled=false;
 const workshopCrucibleSpellIds=['crucible-meteor','crucible-terrain-next','crucible-bearings','crucible-water','crucible-lava','crucible-carve','crucible-raise'];
@@ -1403,6 +1401,7 @@ function ensureWorkshopTerrain(){
   finally{delete globalThis.__workshopTerrainOwner}
   workshopTerrain.owner=owner;
   workshopTerrain.initializeFunctionalBiomes?.();
+  if(typeof createFactionWarSystem==='function')workshopFactionWar=createFactionWarSystem({THREE,terrain:workshopTerrain,owner,seed:741});
   if(typeof createTerrainGenesis==='function')workshopTerrainGenesis=createTerrainGenesis({terrain:workshopTerrain});
   // Present the intact Crucible apparatus as a raised specimen in Workshop.
   // Its terrain/plinth relationship remains untouched inside this owner transform.
@@ -5026,7 +5025,8 @@ renderer.setAnimationLoop((now)=>{
 
   updateWorkshop(now);
   if(workshopCrucibleEnabled){
-    workshopTerrain?.updateInitialization?.(now);\n    workshopFactionWar?.update(now);
+    workshopTerrain?.updateInitialization?.(now);
+    workshopFactionWar?.update(now);
     const workshopDt=Math.min(.05,Math.max(.001,(now-workshopBearingLast)/1000));
     if(workshopWater||workshopLava){workshopWater?.update(now);workshopLava?.update(now);updateWorkshopSteam(now,workshopDt)}
     workshopMeteors?.update(now);workshopMeteors?.syncRender?.();

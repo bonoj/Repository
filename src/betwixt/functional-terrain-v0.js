@@ -36,7 +36,7 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   const populationRoot=new THREE.Group();populationRoot.name="functional-terrain:populations";root.add(populationRoot);
   const migrationRoot=new THREE.Group();migrationRoot.name="functional-terrain:migration";root.add(migrationRoot);
   // Chosen deterministic sites are both ribs/purple jurisdiction in seed 741; migration moves material without changing its identity.
-  const migration={source:{x:-.95,z:.15},dest:{x:2.35,z:-1.55},radius:.62,depth:.58,sourceAmount:0,destAmount:0,phase:"waiting",t0:0,running:false};
+  const migration={source:{x:-.95,z:.15},dest:{x:2.35,z:-1.55},radius:.88,depth:1.05,sourceAmount:0,destAmount:0,phase:"waiting",t0:0,running:false,sourceBase:0,destBase:0};
   const migrationMaterial=materialColors.ribs.clone();
   const bbCount=360,bbGeo=new THREE.SphereGeometry(.055,5,4),bbMat=new THREE.MeshStandardMaterial({color:migrationMaterial,roughness:.72,metalness:.18});
   const bbMesh=new THREE.InstancedMesh(bbGeo,bbMat,bbCount);bbMesh.castShadow=true;bbMesh.receiveShadow=true;migrationRoot.add(bbMesh);
@@ -157,7 +157,11 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   const pos=geo.attributes.position,colors=new Float32Array(pos.count*3);
   const color=new THREE.Color();
   function startMigration(now=performance.now()){
-    migration.running=true;migration.t0=now;migration.phase="excavate";migration.sourceAmount=0;migration.destAmount=0;
+    // Baselines are immutable receipts for this transfer. Never chase the deforming surface.
+    migration.sourceAmount=0;migration.destAmount=0;
+    migration.sourceBase=sample(migration.source.x,migration.source.z).H;
+    migration.destBase=sample(migration.dest.x,migration.dest.z).H;
+    migration.running=true;migration.t0=now;migration.phase="excavate";
   }
   function updateMigration(now=performance.now()){
     if(!migration.running){bbMesh.visible=false;return;}
@@ -165,8 +169,8 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
     // Each parcel has its own launch time. The resulting train stretches, clumps and catches up rather than moving as one rigid blob.
     let sourceGone=0,destArrived=0,visibleCount=0;
     const sx=migration.source.x,sz=migration.source.z,dx=migration.dest.x,dz=migration.dest.z;
-    const srcBase=sample(sx,sz).H+migration.depth*migration.sourceAmount;
-    const dstBase=sample(dx,dz).H-migration.depth*migration.destAmount;
+    const srcBase=migration.sourceBase;
+    const dstBase=migration.destBase;
     for(let i=0;i<bbCount;i++){
       const b=bbSeeds[i],order=i/(bbCount-1);
       const launch=.08+order*.38+(.025*Math.sin(i*.71+b.wobble));
@@ -178,16 +182,24 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
       if(active){
         visibleCount++;
         // Elastic stream: longitudinal phase oscillation makes local blobs and strings while endpoints stay deterministic.
-        const rubber=.055*Math.sin(p*Math.PI)*Math.sin(i*.43+t*34+b.wobble);
-        const u=clamp(p+rubber,0,1),arc=Math.sin(Math.PI*u)*(.34+.16*Math.sin(i*.19+b.wobble));
-        const side=.10*Math.sin(i*.37+t*19+b.wobble)+Math.cos(b.a)*b.r*.22;
+        const rubber=.045*Math.sin(p*Math.PI)*Math.sin(i*.43+t*34+b.wobble);
+        const u=clamp(p+rubber,0,1);
+        const len=Math.hypot(dx-sx,dz-sz),tx=(dx-sx)/len,tz=(dz-sz)/len,nx=-tz,nz=tx;
         const cx=THREE.MathUtils.lerp(sx,dx,u),cz=THREE.MathUtils.lerp(sz,dz,u);
-        const len=Math.hypot(dx-sx,dz-sz),nx=-(dz-sz)/len,nz=(dx-sx)/len;
         const ground=THREE.MathUtils.lerp(srcBase,dstBase,u);
-        // Individual parcels begin just below source surface and end just below destination surface.
-        const buryOut=p<.08?THREE.MathUtils.lerp(-.18,.16,p/.08):0;
-        const buryIn=p>.90?THREE.MathUtils.lerp(0,-.22,(p-.90)/.10):0;
-        bbDummy.position.set(cx+nx*side,ground+.12+arc+b.y*.18+buryOut+buryIn,cz+nz*side);
+        // Sunspot-field silhouette: steep emergence, tall magnetic arch, helical twist, then steep re-entry.
+        const envelope=Math.pow(Math.sin(Math.PI*u),.62);
+        const arch=1.55*envelope;
+        const twistAngle=u*Math.PI*3.25+b.wobble*.32;
+        const twistRadius=(.10+.16*envelope)*(Math.sin(Math.PI*u)**.45);
+        const stringing=.055*Math.sin(i*.37+t*18+b.wobble)*envelope;
+        const lateral=Math.cos(twistAngle)*twistRadius+stringing+Math.cos(b.a)*b.r*.10;
+        const verticalTwist=Math.sin(twistAngle)*twistRadius;
+        // Tangent curl makes both ends rise/dive nearly normal to the terrain before bending into the long arch.
+        const endCurl=.34*Math.sin(Math.PI*u)*Math.cos(Math.PI*u);
+        const buryOut=p<.075?THREE.MathUtils.lerp(-.28,.05,p/.075):0;
+        const buryIn=p>.91?THREE.MathUtils.lerp(0,-.30,(p-.91)/.09):0;
+        bbDummy.position.set(cx+nx*(lateral+endCurl),ground+.10+arch+verticalTwist+b.y*.12+buryOut+buryIn,cz+nz*(lateral+endCurl));
         const edge=Math.min(1,Math.max(0,(p)/.035),Math.max(0,(1-p)/.035));
         bbDummy.scale.setScalar(Math.max(.001,edge));bbDummy.updateMatrix();bbMesh.setMatrixAt(i,bbDummy.matrix);
       }else{

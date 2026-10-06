@@ -107,29 +107,29 @@ export function createTerrainSystem({THREE,scene}){
   function worldBedHeight(x,z){if(!insideApparatus(x,z))return-Infinity;const terrainY=terrainHeight(x,z);return Number.isFinite(terrainY)?terrainY:APPARATUS_BOTTOM;}
 
 
-  function raise(center,{
-    if(initializationLocked())return{locked:true,reason:"terrain-initializing"};radius=3.2,height=2.2}={}){
+  function raise(center,{radius=3.2,height=2.2}={}){
+    if(initializationLocked())return{locked:true,reason:"terrain-initializing"};
     const r=Math.max(.3,radius),h=Math.max(.04,height),ix0=Math.max(1,Math.floor((center.x-r-MIN.x)/(MAX.x-MIN.x)*(NX-1))-1),ix1=Math.min(NX-2,Math.ceil((center.x+r-MIN.x)/(MAX.x-MIN.x)*(NX-1))+1),iz0=Math.max(1,Math.floor((center.z-r-MIN.z)/(MAX.z-MIN.z)*(NZ-1))-1),iz1=Math.min(NZ-2,Math.ceil((center.z+r-MIN.z)/(MAX.z-MIN.z)*(NZ-1))+1);
     for(let z=iz0;z<=iz1;z++)for(let x=ix0;x<=ix1;x++){const p=wp(x,0,z),radial=Math.hypot(p.x-center.x,p.z-center.z);if(radial>=r)continue;const w=1-radial/r,delta=h*w*w*(3-2*w);for(let y=1;y<NY-1;y++)field[idx(x,y,z)]+=delta;}
     const dirty={x0:ix0,x1:ix1,z0:iz0,z1:iz1};rebuild(dirty);rebuildSupport(dirty);return{radius:r,height:h};
   }
 
-  function lower(center,{
-    if(initializationLocked())return{locked:true,reason:"terrain-initializing"};radius=3.2,depth=2.2}={}){
+  function lower(center,{radius=3.2,depth=2.2}={}){
+    if(initializationLocked())return{locked:true,reason:"terrain-initializing"};
     const r=Math.max(.3,radius),d=Math.max(.04,depth),ix0=Math.max(1,Math.floor((center.x-r-MIN.x)/(MAX.x-MIN.x)*(NX-1))-1),ix1=Math.min(NX-2,Math.ceil((center.x+r-MIN.x)/(MAX.x-MIN.x)*(NX-1))+1),iz0=Math.max(1,Math.floor((center.z-r-MIN.z)/(MAX.z-MIN.z)*(NZ-1))-1),iz1=Math.min(NZ-2,Math.ceil((center.z+r-MIN.z)/(MAX.z-MIN.z)*(NZ-1))+1);
     for(let z=iz0;z<=iz1;z++)for(let x=ix0;x<=ix1;x++){const p=wp(x,0,z),radial=Math.hypot(p.x-center.x,p.z-center.z);if(radial>=r)continue;const w=1-radial/r,delta=d*w*w*(3-2*w);for(let y=1;y<NY-1;y++)field[idx(x,y,z)]-=delta;}
     const dirty={x0:ix0,x1:ix1,z0:iz0,z1:iz1};rebuild(dirty);rebuildSupport(dirty);return{radius:r,depth:d};
   }
 
-  function excavate(center,{
-    if(initializationLocked())return{locked:true,reason:"terrain-initializing"};radius=.62,depth=.34}={}){
+  function excavate(center,{radius=.62,depth=.34}={}){
+    if(initializationLocked())return{locked:true,reason:"terrain-initializing"};
     const r=Math.max(.3,radius),d=Math.max(.04,depth),ix0=Math.max(1,Math.floor((center.x-r-MIN.x)/(MAX.x-MIN.x)*(NX-1))-1),ix1=Math.min(NX-2,Math.ceil((center.x+r-MIN.x)/(MAX.x-MIN.x)*(NX-1))+1),iz0=Math.max(1,Math.floor((center.z-r-MIN.z)/(MAX.z-MIN.z)*(NZ-1))-1),iz1=Math.min(NZ-2,Math.ceil((center.z+r-MIN.z)/(MAX.z-MIN.z)*(NZ-1))+1);
     for(let z=iz0;z<=iz1;z++)for(let x=ix0;x<=ix1;x++){const p=wp(x,0,z),radial=Math.hypot(p.x-center.x,p.z-center.z);if(radial>=r)continue;const w=1-radial/r,delta=d*w*w;for(let y=1;y<NY-1;y++)field[idx(x,y,z)]-=delta;}
     const dirty={x0:ix0,x1:ix1,z0:iz0,z1:iz1};rebuild(dirty);rebuildSupport(dirty);return{radius:r,depth:d};
   }
 
-  function impact(center,{
-    if(initializationLocked())return{locked:true,reason:"terrain-initializing"};magnitude=1}={}){
+  function impact(center,{magnitude=1}={}){
+    if(initializationLocked())return{locked:true,reason:"terrain-initializing"};
     const e=Math.max(.02,magnitude),radius=.72+.62*Math.sqrt(e),depth=.16+.72*Math.pow(e,.82),rim=.035+.16*Math.pow(e,.72),peakStrength=e>=.72?(.035+.13*Math.pow((e-.72)/.83,.72)):0,peakRadius=radius*.24;
     const ix0=Math.max(1,Math.floor((center.x-radius-MIN.x)/(MAX.x-MIN.x)*(NX-1))-1),ix1=Math.min(NX-2,Math.ceil((center.x+radius-MIN.x)/(MAX.x-MIN.x)*(NX-1))+1);
     const iz0=Math.max(1,Math.floor((center.z-radius-MIN.z)/(MAX.z-MIN.z)*(NZ-1))-1),iz1=Math.min(NZ-2,Math.ceil((center.z+radius-MIN.z)/(MAX.z-MIN.z)*(NZ-1))+1);

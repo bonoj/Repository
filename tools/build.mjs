@@ -11,7 +11,7 @@ const donor=await readFile("src/betwixt/world-lab.html","utf8");
 const shell=await readFile("src/shell/repository-shell.js","utf8");
 const ecs=await readFile("src/core/ecs.js","utf8");
 const mirror=await readFile("src/betwixt/mirror.js","utf8");
-const factionWar=await readFile("src/betwixt/faction-war.js","utf8");
+const factionWar=await readFile("src/betwixt/faction-war.js","utf8");\nconst functionalTerrainV0=await readFile("src/betwixt/functional-terrain-v0.js","utf8");
 const shallowWater=await readFile("src/cargo/crucible/source/src/runtime/shallow-water-system.js","utf8");
 const bearingSystem=await readFile("src/cargo/crucible/source/src/runtime/bearing-system.js","utf8");
 const meteorSystem=await readFile("src/cargo/crucible/source/src/runtime/meteor-system.js","utf8");
@@ -23,7 +23,7 @@ const ecsInline=ecs.replace("export function createWorld","function createWorld"
 const mirrorInline=mirror
   .replace('import {createWorld} from "../core/ecs.js";',"")
   .replace("export function attachBetwixtMirror","function attachBetwixtMirror");
-const factionWarInline=factionWar.replace("export function createFactionWarSystem","function createFactionWarSystem");
+const factionWarInline=factionWar.replace("export function createFactionWarSystem","function createFactionWarSystem");\nconst functionalTerrainV0Inline=functionalTerrainV0.replace("export function createFunctionalTerrainV0","function createFunctionalTerrainV0");
 const shallowWaterInline=shallowWater.replace("export function createShallowWaterSystem","function createShallowWaterSystem");
 const terrainInline=terrainSystem
   .replace("export function createTerrainSystem","function createTerrainSystem")
@@ -56,7 +56,7 @@ for(const token of [
   'function updateLavaPops()',
   'lavaTransport.update(simNow)'
 ])if(!crucibleMain.includes(token))throw new Error(`Crucible lava organism evidence missing: ${token}`);
-const bridge=`<script>${shallowWaterInline}\n${terrainInline}\n${terrainRecipeGeneratorInline}\n${terrainGenesisInline}\n${meteorInline}\n${bearingInline}\n${factionWarInline}\n${ecsInline}\n${mirrorInline}\n(function attachMirrorWhenReady(){if(globalThis.vestibuleReady&&globalThis.vestibule?.presences?.length){attachBetwixtMirror();return}addEventListener("vestibule-ready",attachMirrorWhenReady,{once:true})})();<\/script>`;
+const bridge=`<script>${shallowWaterInline}\n${terrainInline}\n${terrainRecipeGeneratorInline}\n${terrainGenesisInline}\n${meteorInline}\n${bearingInline}\n${factionWarInline}\n${functionalTerrainV0Inline}\n${ecsInline}\n${mirrorInline}\n(function attachMirrorWhenReady(){if(globalThis.vestibuleReady&&globalThis.vestibule?.presences?.length){attachBetwixtMirror();return}addEventListener("vestibule-ready",attachMirrorWhenReady,{once:true})})();<\/script>`;
 const injection=`<script>globalThis.__REPOSITORY_SHA__=${JSON.stringify(sha)};globalThis.__REPOSITORY_BUILD__=${JSON.stringify(build)};<\/script><script>${shell}<\/script>`;
 const executable=donor.replace("<body>",`<body data-repository-build="${build}" data-repository-sha="${sha}">${injection}`).replace("</body>",`${bridge}</body>`);
 if(executable===donor)throw new Error("Repository shell injection point missing");

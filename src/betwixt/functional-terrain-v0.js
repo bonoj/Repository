@@ -124,26 +124,36 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
     if(kind==="alien")return strength*.62*Math.max(0,1-r/.58)*(.35+.65*Math.abs(Math.sin(Math.atan2(Z,X)*3+r*9)));
     return 0;
   }
-  // P1: population as world function. Deterministic boulder jurisdictions contribute directly to H.
-  // This deliberately remains 2.5D: fused/deformable surface first; volumetric undercuts are a later question.
+  // P1: population as world function. Use the exact T2 candidate lattice rather than inventing a second population map.
+  const fieldRocks=[];
+  function buildFieldRockAddresses(){
+    fieldRocks.length=0;
+    const step=.42,half=size*.5-.16;
+    // Suitability here intentionally uses the pre-population surface to avoid recursive sample() calls.
+    const baseSample=(x,z)=>{
+      const en=fbm(x,z,seed+101),tier=Math.min(tiers.length-1,Math.floor(en*tiers.length)),E=tiers[tier];
+      const mn=fbm(x,z,seed+911),M=clamp((mn-.28)/.56,0,1),cell=octCell(x,z),A=cell.d>=1?0:smooth(clamp((1-cell.d)/.24,0,1));
+      const fp=featurePaint(x,z),G=feature(fp.kind,x,z,fp.strength);
+      return{H:E+M*A*biome(cell.kind,x,z,cell.cx,cell.cz)+G+migrationDelta(x,z),featureKind:fp.kind};
+    };
+    const slope=(x,z)=>{const q=baseSample(x,z).H,ee=.07;return Math.hypot(baseSample(x+ee,z).H-q,baseSample(x,z+ee).H-q)/ee;};
+    for(let z=-half;z<=half;z+=step)for(let x=-half;x<=half;x+=step){
+      const gx=Math.round((x+half)/step),gz=Math.round((z+half)/step);
+      const px=x+(hash(gx,gz,seed+5101)-.5)*step*.62,pz=z+(hash(gx,gz,seed+5107)-.5)*step*.62;
+      const q=baseSample(px,pz),chance=hash(gx,gz,seed+5113);
+      if(q.featureKind==="boulder"&&slope(px,pz)>.18&&chance<.58){
+        const sc=.7+hash(gx,gz,seed+5129)*1.25;
+        fieldRocks.push({x:px,z:pz,rx:.19*sc,rz:.17*sc,h:.24+.28*sc,phase:hash(gx,gz,seed+5137)*6.283});
+      }
+    }
+  }
   function fieldRock(x,z){
-    const step=.84,half=size*.5-.16;
-    const gx=Math.round((x+half)/step),gz=Math.round((z+half)/step);
     let total=0,claim=0;
-    for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++){
-      const ix=gx+dx,iz=gz+dz;
-      const bx=-half+ix*step+(hash(ix,iz,seed+7101)-.5)*step*.38;
-      const bz=-half+iz*step+(hash(ix,iz,seed+7107)-.5)*step*.38;
-      // Jurisdiction is granted only where the semantic material field is boulder-like.
-      const fp=featurePaint(bx,bz);
-      if(fp.kind!=="boulder"||hash(ix,iz,seed+7113)>.34)continue;
-      const rx=.24+hash(ix,iz,seed+7121)*.22,rz=.22+hash(ix,iz,seed+7127)*.20;
-      const X=(x-bx)/rx,Z=(z-bz)/rz,r=Math.hypot(X,Z);
+    for(const rock of fieldRocks){
+      const X=(x-rock.x)/rock.rx,Z=(z-rock.z)/rock.rz,r=Math.hypot(X,Z);
       if(r>=1)continue;
-      // Compact support: exactly zero at the jurisdiction edge. A lopsided cap keeps it visibly rock-like.
-      const u=1-r,edge=smooth(u),lobe=.72+.28*Math.sin(Math.atan2(Z,X)*3+hash(ix,iz,seed+7133)*6.283);
-      const h=(.28+hash(ix,iz,seed+7151)*.42)*Math.pow(edge,.62)*lobe;
-      total=Math.max(total,h);claim=Math.max(claim,edge);
+      const u=1-r,edge=smooth(u),lobe=.78+.22*Math.sin(Math.atan2(Z,X)*3+rock.phase);
+      total=Math.max(total,rock.h*Math.pow(edge,.62)*lobe);claim=Math.max(claim,edge);
     }
     return{h:total,claim};
   }
@@ -167,6 +177,7 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
     }
     return total;
   }
+  buildFieldRockAddresses();
   function sample(x,z){
     const en=fbm(x,z,seed+101),tier=Math.min(tiers.length-1,Math.floor(en*tiers.length)),E=tiers[tier];
     const mn=fbm(x,z,seed+911),M=clamp((mn-.28)/.56,0,1);

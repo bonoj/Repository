@@ -1510,6 +1510,58 @@ globalThis.BeyondTerrain={
   inspect:()=>ensureBeyondTerrain().inspect()
 };
 
+let beyondArch=null;
+function ensureBeyondArch(){
+  if(beyondArch)return beyondArch;
+  const terrain=ensureBeyondTerrain(),root=new THREE.Group();root.name='beyond:focal-volumetric-arch';beyondPlace.add(root);
+  // Focal representation only: the rest of Beyond remains the 2.5D deformable floor.
+  // The arch is an implicit solid sampled locally, then surfaced with voxel boundary faces.
+  const center=new THREE.Vector3(-8,0,5),ground=terrain.groundHeight(center.x,center.z),cell=.32;
+  center.y=ground;
+  const NX=31,NY=23,NZ=17,occ=new Uint8Array(NX*NY*NZ);
+  const idx=(x,y,z)=>x+NX*(y+NY*z);
+  const wx=x=>center.x+(x-(NX-1)/2)*cell,wy=y=>center.y+(y+.5)*cell,wz=z=>center.z+(z-(NZ-1)/2)*cell;
+  function solid(x,y,z){
+    const X=wx(x)-center.x,Y=wy(y)-center.y,Z=wz(z)-center.z;
+    // Stone arch = broad outer body minus a rounded portal void. Feet merge below local ground.
+    const outer=Math.abs(X)<4.15&&Math.abs(Z)<1.18&&Y<5.9&&Y>-.55;
+    const portal=(X/2.25)**2+((Y-2.15)/2.55)**2<1&&Y>.05;
+    const crown=Y>4.15&&((X/4.15)**2+((Y-4.15)/1.8)**2<1.05);
+    return (outer||crown)&&!portal;
+  }
+  for(let z=0;z<NZ;z++)for(let y=0;y<NY;y++)for(let x=0;x<NX;x++)occ[idx(x,y,z)]=solid(x,y,z)?1:0;
+  const positions=[],normals=[],colors=[],indices=[];let vi=0;
+  const dirs=[
+    [1,0,0, 1,0,0],[-1,0,0,-1,0,0],[0,1,0,0,1,0],[0,-1,0,0,-1,0],[0,0,1,0,0,1],[0,0,-1,0,0,-1]
+  ];
+  const faceCorners=[
+    [[1,0,0],[1,1,0],[1,1,1],[1,0,1]],[[0,0,1],[0,1,1],[0,1,0],[0,0,0]],
+    [[0,1,1],[1,1,1],[1,1,0],[0,1,0]],[[0,0,0],[1,0,0],[1,0,1],[0,0,1]],
+    [[1,0,1],[1,1,1],[0,1,1],[0,0,1]],[[0,0,0],[0,1,0],[1,1,0],[1,0,0]]
+  ];
+  const stone=terrain.maps(center.x,center.z).material;
+  for(let z=0;z<NZ;z++)for(let y=0;y<NY;y++)for(let x=0;x<NX;x++){
+    if(!occ[idx(x,y,z)])continue;
+    for(let d=0;d<6;d++){
+      const [dx,dy,dz,nx,ny,nz]=dirs[d],xx=x+dx,yy=y+dy,zz=z+dz;
+      if(xx>=0&&xx<NX&&yy>=0&&yy<NY&&zz>=0&&zz<NZ&&occ[idx(xx,yy,zz)])continue;
+      for(const c of faceCorners[d]){
+        positions.push(center.x+(x-(NX-1)/2+c[0]) *cell,center.y+(y+c[1])*cell,center.z+(z-(NZ-1)/2+c[2])*cell);
+        normals.push(nx,ny,nz);colors.push(stone.r,stone.g,stone.b);
+      }
+      indices.push(vi,vi+1,vi+2,vi,vi+2,vi+3);vi+=4;
+    }
+  }
+  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geometry.setIndex(indices);
+  const material=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.96,metalness:.01,side:THREE.DoubleSide});
+  const mesh=new THREE.Mesh(geometry,material);mesh.name='beyond:focal-arch-surface';mesh.castShadow=true;mesh.receiveShadow=true;root.add(mesh);
+  // Feather the two feet into the authoritative floor so the representation handoff is spatially legible.
+  terrain.raise({x:center.x-3.15,z:center.z},{radius:1.55,height:.42});
+  terrain.raise({x:center.x+3.15,z:center.z},{radius:1.55,height:.42});
+  beyondArch={root,mesh,center,inspect:()=>({kind:'focal-volumetric-arch',cell,NX,NY,NZ,faces:indices.length/6,terrainOutsideRemainsHeightField:true})};
+  globalThis.BeyondArch=beyondArch;window.vestibuleDirty=true;return beyondArch;
+}
+
 let beyondTransfers=null;
 function ensureBeyondTransfers(){
   if(beyondTransfers)return beyondTransfers;
@@ -1565,9 +1617,9 @@ function ensureBeyondTransfers(){
     }
     window.vestibuleDirty=true;return alive>0;
   }
-  beyondTransfers={root,transfers,update,reset};return beyondTransfers;
+  beyondTransfers={root,transfers,update,reset,enabled:false,setEnabled(v){this.enabled=!!v;root.visible=this.enabled;if(this.enabled)reset();return this.enabled}};root.visible=false;return beyondTransfers;
 }
-function updateBeyondTransfers(now){if(currentPlace==='beyond')ensureBeyondTransfers().update(now)}
+function updateBeyondTransfers(now){if(currentPlace==='beyond'&&beyondTransfers?.enabled)beyondTransfers.update(now)}
 
 function setWorkshopTerrainVisible(visible){
   const terrain=visible?ensureWorkshopTerrain():workshopTerrain;
@@ -1738,7 +1790,7 @@ function presentLocus(name){
   const next=placeDefinitions[name];if(!next)return false;
   for(const [id,{object}] of Object.entries(placeDefinitions))object.visible=id===name;
   floor.visible=name!=='beyond';
-  if(name==='beyond'){ensureBeyondTerrain();ensureBeyondTransfers().reset();}
+  if(name==='beyond'){ensureBeyondTerrain();ensureBeyondTransfers();ensureBeyondArch();}
   currentPlace=name;
   if(name==='crucible'){
     workshopCrucibleEnabled=true;ensureWorkshopTerrain();installWorkshopCrucibleSpells();

@@ -39,7 +39,7 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   const migration={source:{x:-.95,z:.15},dest:{x:2.35,z:-1.55},radius:.88,depth:1.05,sourceAmount:0,destAmount:0,phase:"waiting",t0:0,running:false,sourceBase:0,destBase:0};
   const migrationMaterial=materialColors.ribs.clone();
   // T4 deliberately crosses provenance: orange/spirelet matter will be discovered at runtime and deposited into green/mounds substrate.
-  const alienMigration={source:null,dest:null,sourceKind:"spirelet",destKind:"mounds",radius:.72,depth:.78,sourceAmount:0,destAmount:0,phase:"waiting",t0:0,running:false,sourceBase:0,destBase:0,delay:3100};
+  const alienMigration={source:null,dest:null,sourceKind:"spirelet",destKind:"mounds",radius:.72,depth:.78,sourceAmount:0,destAmount:0,phase:"waiting",t0:0,running:false,sourceBase:0,destBase:0,delay:0};
   const bbCount=360,bbGeo=new THREE.SphereGeometry(.055,5,4),bbMat=new THREE.MeshStandardMaterial({color:migrationMaterial,roughness:.72,metalness:.18});
   const bbMesh=new THREE.InstancedMesh(bbGeo,bbMat,bbCount);bbMesh.castShadow=true;bbMesh.receiveShadow=true;migrationRoot.add(bbMesh);
   const alienMat=new THREE.MeshStandardMaterial({color:materialColors.spirelet,roughness:.72,metalness:.18});
@@ -191,12 +191,11 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
     migration.sourceBase=sample(migration.source.x,migration.source.z).H;
     migration.destBase=sample(migration.dest.x,migration.dest.z).H;
     migration.running=true;migration.t0=now;migration.phase="excavate";
-    chooseAlienSites();
     if(alienMigration.source&&alienMigration.dest){
       alienMigration.sourceAmount=0;alienMigration.destAmount=0;
       alienMigration.sourceBase=sample(alienMigration.source.x,alienMigration.source.z).H;
       alienMigration.destBase=sample(alienMigration.dest.x,alienMigration.dest.z).H;
-      alienMigration.running=true;alienMigration.t0=now+alienMigration.delay;alienMigration.phase="waiting";
+      alienMigration.running=true;alienMigration.t0=now;alienMigration.phase="excavate";
     }
   }
   function updateMigration(now=performance.now()){
@@ -309,6 +308,6 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   const mesh=new THREE.Mesh(geo,mat);mesh.castShadow=true;mesh.receiveShadow=true;root.add(mesh);
   const base=new THREE.Mesh(new THREE.BoxGeometry(size+.18,.12,size+.18),new THREE.MeshStandardMaterial({color:0x34383a,roughness:.62,metalness:.35}));
   base.position.y=-.92;root.add(base);
-  paint();rebuildPopulations();bbMesh.visible=false;alienMesh.visible=false;
+  chooseAlienSites();paint();rebuildPopulations();bbMesh.visible=false;alienMesh.visible=false;
   return{root,mesh,populationRoot,migrationRoot,update:updateMigration,startMigration,migration,alienMigration,setMode(n){mode=((n%5)+5)%5;paint();return mode},next(){return this.setMode(mode+1)},mode:()=>mode,sample};
 }

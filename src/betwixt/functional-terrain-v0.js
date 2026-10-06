@@ -35,7 +35,7 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   const materialColor=new THREE.Color();
   const populationRoot=new THREE.Group();populationRoot.name="functional-terrain:populations";root.add(populationRoot);
   const gasRoot=new THREE.Group();gasRoot.name="functional-terrain:gas";root.add(gasRoot);
-  const gas={source:{x:1.42,z:2.10},kind:"spirelet",radius:.64,depth:.68,amount:0,t0:0,running:false,sourceBase:0};
+  const gas={source:{x:.14,z:2.38},kind:"spirelet",radius:.64,depth:.68,amount:0,t0:0,running:false,sourceBase:0};
   const gasN=28,gasCount=gasN*gasN;
   const gasGeo=new THREE.IcosahedronGeometry(.16,1);
   const gasMat=new THREE.MeshBasicMaterial({color:materialColors.spirelet,transparent:true,opacity:.16,depthWrite:false,blending:THREE.NormalBlending});

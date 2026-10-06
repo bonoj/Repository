@@ -58,7 +58,7 @@ for(const token of [
   'function updateLavaPops()',
   'lavaTransport.update(simNow)'
 ])if(!crucibleMain.includes(token))throw new Error(`Crucible lava organism evidence missing: ${token}`);
-const bridge=`<script>${shallowWaterInline}\n${terrainInline}\n${terrainRecipeGeneratorInline}\n${terrainGenesisInline}\n${meteorInline}\n${bearingInline}\n${ecsInline}\n${mirrorInline}\n(function attachMirrorWhenReady(){if(globalThis.vestibuleReady&&globalThis.vestibule?.presences?.length){attachBetwixtMirror();return}addEventListener("vestibule-ready",attachMirrorWhenReady,{once:true})})();<\/script>`;
+const bridge=`<script>${shallowWaterInline}\n${terrainInline}\n${terrainRecipeGeneratorInline}\n${terrainGenesisInline}\n${meteorInline}\n${bearingInline}\n${ecsInline}\n${functionalTerrainV0Inline}\n${mirrorInline}\n(function attachMirrorWhenReady(){if(globalThis.vestibuleReady&&globalThis.vestibule?.presences?.length){attachBetwixtMirror();return}addEventListener("vestibule-ready",attachMirrorWhenReady,{once:true})})();<\/script>`;
 const injection=`<script>globalThis.__REPOSITORY_SHA__=${JSON.stringify(sha)};globalThis.__REPOSITORY_BUILD__=${JSON.stringify(build)};<\/script><script>${shell}<\/script>`;
 const executable=donor.replace("<body>",`<body data-repository-build="${build}" data-repository-sha="${sha}">${injection}`).replace("</body>",`${bridge}</body>`);
 if(executable===donor)throw new Error("Repository shell injection point missing");

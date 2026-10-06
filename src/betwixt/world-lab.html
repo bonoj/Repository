@@ -3244,7 +3244,7 @@ let functionalTerrainV0=null;
 const functionalTerrainV0Table=buildBetwixtable({
   name:'functional-terrain-v0',parent:legacyWorkshop,
   at:new THREE.Vector3(-7.2,GROUND_Y+.08,5.8),padding:.42,
-  interact:()=>{functionalTerrainV0?.next();window.vestibuleDirty=true},
+  interact:()=>{if(functionalTerrainV0?.mode()===4&&!functionalTerrainV0?.migration?.running&&functionalTerrainV0?.migration?.phase!=="settled")functionalTerrainV0.startMigration(performance.now());else functionalTerrainV0?.next();window.vestibuleDirty=true},
   build(root){
     functionalTerrainV0=createFunctionalTerrainV0({THREE,size:8.4,resolution:45,seed:741});
     root.add(functionalTerrainV0.root);

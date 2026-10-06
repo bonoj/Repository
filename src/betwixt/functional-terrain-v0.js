@@ -35,12 +35,16 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   const materialColor=new THREE.Color();
   const populationRoot=new THREE.Group();populationRoot.name="functional-terrain:populations";root.add(populationRoot);
   const gasRoot=new THREE.Group();gasRoot.name="functional-terrain:gas";root.add(gasRoot);
-  const gas={source:{x:.14,z:2.38},kind:"spirelet",radius:.64,depth:.68,amount:0,t0:0,running:false,sourceBase:0};
+  const gas={source:{x:.14,z:2.38},kind:"spirelet",radius:.64,depth:.68,amount:0,condensed:0,accreted:0,t0:0,running:false,sourceBase:0,rainCenter:{x:2.35,z:-1.55},rainBase:0};
   const gasN=28,gasCount=gasN*gasN;
   const gasGeo=new THREE.IcosahedronGeometry(.16,1);
   const gasMat=new THREE.MeshBasicMaterial({color:materialColors.spirelet,transparent:true,opacity:.16,depthWrite:false,blending:THREE.NormalBlending});
   const gasMesh=new THREE.InstancedMesh(gasGeo,gasMat,gasCount);gasMesh.name="atmospheric-density:spirelet";gasMesh.frustumCulled=false;gasRoot.add(gasMesh);
   const gasDummy=new THREE.Object3D();
+  const rainMat=new THREE.MeshStandardMaterial({color:materialColors.spirelet,roughness:.72,metalness:.18});
+  const rainMesh=new THREE.InstancedMesh(new THREE.SphereGeometry(.055,5,4),rainMat,360);rainMesh.name="gas-condensate:spirelet";rainMesh.castShadow=true;rainMesh.receiveShadow=true;rainMesh.visible=false;gasRoot.add(rainMesh);
+  const rainDummy=new THREE.Object3D();
+  const rainSeeds=Array.from({length:360},(_,i)=>({x:(hash(i,91,seed+8301)-.5)*1.45,z:(hash(i,97,seed+8311)-.5)*1.25,delay:hash(i,101,seed+8321)*.36,bounce:.24+hash(i,103,seed+8339)*.22}));
   const gasCells=Array.from({length:gasCount},(_,i)=>({i:i%gasN,j:Math.floor(i/gasN),jitter:hash(i,83,seed+8201)*Math.PI*2}));
   const migrationRoot=new THREE.Group();migrationRoot.name="functional-terrain:migration";root.add(migrationRoot);
   // T3/T4 transfers are data. Both use the exact same transport engine.
@@ -130,9 +134,13 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
       total+=bell(tr.source,-1,tr.sourceAmount)+bell(tr.dest,1,tr.destAmount);
     }
     // G1 direct field -> atmospheric field conversion. No parcel intermediate.
-    if(gas.amount>0){
+    if(gas.amount>0||gas.condensed>0){
       const d=Math.hypot(x-gas.source.x,z-gas.source.z),u=clamp(1-d/gas.radius,0,1);
-      total-=gas.depth*smooth(u)*gas.amount;
+      total-=gas.depth*smooth(u)*Math.max(gas.amount,gas.condensed);
+    }
+    if(gas.accreted>0){
+      const d=Math.hypot(x-gas.rainCenter.x,z-gas.rainCenter.z),u=clamp(1-d/.82,0,1);
+      total+=.72*smooth(u)*gas.accreted;
     }
     return total;
   }
@@ -181,7 +189,7 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   const color=new THREE.Color();
   function startMigration(now=performance.now()){
     // One focus event, one t0, identical lifecycle for every transfer.
-    gas.amount=0;gas.sourceBase=sample(gas.source.x,gas.source.z).H;gas.running=true;gas.t0=now;gasMesh.visible=false;
+    gas.amount=0;gas.condensed=0;gas.accreted=0;gas.sourceBase=sample(gas.source.x,gas.source.z).H;gas.rainBase=sample(gas.rainCenter.x,gas.rainCenter.z).H;gas.running=true;gas.t0=now;gasMesh.visible=false;rainMesh.visible=false;
     for(const tr of transfers){
       tr.sourceAmount=0;tr.destAmount=0;
       tr.sourceBase=sample(tr.source.x,tr.source.z).H;
@@ -229,36 +237,56 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
     return true;
   }
   function updateGas(now){
-    if(!gas.running){gasMesh.visible=false;return false;}
-    const t=clamp((now-gas.t0)/15000,0,1);
-    // Liberation ramps for the first half; atmospheric mass then remains conserved in the field.
-    gas.amount=smooth(clamp(t/.52,0,1));
+    if(!gas.running){return false;}
+    // G2 is intentionally quick: liberation/drift, then atmospheric density condenses into provenance BB rain.
+    const t=clamp((now-gas.t0)/10500,0,1);
+    const liberated=smooth(clamp(t/.34,0,1));
+    const condense=smooth(clamp((t-.43)/.24,0,1));
+    gas.condensed=condense;
+    gas.amount=liberated*(1-condense);
     let visible=0;
     for(let n=0;n<gasCount;n++){
       const cell=gasCells[n],u=cell.i/(gasN-1),v=cell.j/(gasN-1);
-      // Advected density packet: rising buoyant column bends into deterministic crosswind and curls.
-      const age=clamp(t*1.34-u*.72-v*.16,0,1);
-      const spine=age*4.7;
-      const curl=Math.sin(age*10.5+cell.j*.43+cell.jitter)*(.18+.42*age);
-      const cross=Math.cos(age*7.3+cell.i*.31)*(.10+.30*age);
-      const px=gas.source.x+spine*.48+curl+(u-.5)*(.32+age*.9);
-      const pz=gas.source.z-spine*.34+cross+(v-.5)*(.30+age*.82);
-      const base=gas.sourceBase;
-      const rise=.12+age*2.35+Math.sin(age*Math.PI)*.72+(v-.5)*.42;
-      // Soft density envelope: many overlapping translucent cells read as volume, not beads.
-      const head=Math.exp(-Math.pow((u-.46-age*.18)*2.2,2)-Math.pow((v-.5)*1.8,2));
+      const age=clamp(t*2.0-u*.58-v*.12,0,1);
+      // Steer the atmospheric field directly toward the chosen rain zone; no waiting for emergent weather.
+      const travel=smooth(clamp(t/.50,0,1));
+      const cx=THREE.MathUtils.lerp(gas.source.x,gas.rainCenter.x,travel);
+      const cz=THREE.MathUtils.lerp(gas.source.z,gas.rainCenter.z,travel);
+      const curl=Math.sin(age*10.5+cell.j*.43+cell.jitter)*(.16+.34*age);
+      const cross=Math.cos(age*7.3+cell.i*.31)*(.10+.24*age);
+      const px=cx+curl+(u-.5)*(.32+age*.72),pz=cz+cross+(v-.5)*(.30+age*.64);
+      const base=THREE.MathUtils.lerp(gas.sourceBase,gas.rainBase,travel);
+      const rise=.16+age*2.2+Math.sin(age*Math.PI)*.62+(v-.5)*.38;
+      const head=Math.exp(-Math.pow((u-.48-age*.10)*2.2,2)-Math.pow((v-.5)*1.8,2));
       const filament=.42+.58*Math.abs(Math.sin((u*2.1-v*1.7+age)*Math.PI*2));
       const density=gas.amount*age*head*filament;
-      if(density>.018){
-        visible++;
-        gasDummy.position.set(px,base+rise,pz);
-        const s=.34+density*.72+age*.18;
-        gasDummy.scale.set(s*1.35,s*(.72+age*.35),s);
-      }else{gasDummy.position.set(gas.source.x,base-.5,gas.source.z);gasDummy.scale.setScalar(.001);}
+      if(density>.018){visible++;gasDummy.position.set(px,base+rise,pz);const s=.34+density*.72+age*.16;gasDummy.scale.set(s*1.35,s*(.72+age*.35),s);}
+      else{gasDummy.position.set(gas.source.x,base-.5,gas.source.z);gasDummy.scale.setScalar(.001);}
       gasDummy.updateMatrix();gasMesh.setMatrixAt(n,gasDummy.matrix);
     }
     gasMesh.visible=visible>0&&mode===4;gasMesh.instanceMatrix.needsUpdate=true;
-    if(t>=1){gas.running=false;gasMesh.visible=mode===4;}
+
+    let raining=0,settled=0;
+    for(let i=0;i<360;i++){
+      const s=rainSeeds[i],birth=.46+s.delay*.48,p=clamp((t-birth)/(.25+s.delay*.18),0,1);
+      if(p>0&&p<1){
+        raining++;
+        const x=gas.rainCenter.x+s.x,z=gas.rainCenter.z+s.z;
+        const ground=sample(x,z).H+.07;
+        const startY=gas.rainBase+2.55+hash(i,107,seed+8353)*.75;
+        // Two rapidly damping bounces. Geometry is still individual and addressable after condensation.
+        const fall=1-Math.pow(1-p,2.15);
+        let y=THREE.MathUtils.lerp(startY,ground,fall);
+        if(p>.62){const bp=(p-.62)/.38;y=ground+Math.abs(Math.sin(bp*Math.PI*4))*s.bounce*(1-bp);}
+        rainDummy.position.set(x,y,z);rainDummy.scale.setScalar(1);rainDummy.updateMatrix();rainMesh.setMatrixAt(i,rainDummy.matrix);
+      }else{
+        if(p>=1)settled++;
+        rainDummy.position.set(gas.rainCenter.x,gas.rainBase-.5,gas.rainCenter.z);rainDummy.scale.setScalar(.001);rainDummy.updateMatrix();rainMesh.setMatrixAt(i,rainDummy.matrix);
+      }
+    }
+    gas.accreted=settled/360;
+    rainMesh.visible=raining>0&&mode===4;rainMesh.instanceMatrix.needsUpdate=true;
+    if(t>=1){gas.running=false;gasMesh.visible=false;rainMesh.visible=false;gas.amount=0;gas.condensed=1;gas.accreted=1;}
     return true;
   }
   function updateMigration(now=performance.now()){
@@ -284,6 +312,11 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
         const relief=.78+.07*q.tier+.10*q.M;
         color.copy(materialColor).multiplyScalar(relief);
         // Foreign deposited matter keeps its provenance instead of being recolored by the host biome.
+        if(gas.accreted>0){
+          const gd=Math.hypot(x-gas.rainCenter.x,z-gas.rainCenter.z),gu=clamp(1-gd/.82,0,1);
+          const gclaim=smooth(gu)*gas.accreted;
+          if(gclaim>0)color.lerp(materialColors[gas.kind],gclaim*.94);
+        }
         if(alienMigration.dest&&alienMigration.destAmount>0){
           const dd=Math.hypot(x-alienMigration.dest.x,z-alienMigration.dest.z),u=clamp(1-dd/alienMigration.radius,0,1);
           const claim=smooth(u)*alienMigration.destAmount;
@@ -299,6 +332,6 @@ export function createFunctionalTerrainV0({THREE,size=8.4,resolution=45,seed=741
   const mesh=new THREE.Mesh(geo,mat);mesh.castShadow=true;mesh.receiveShadow=true;root.add(mesh);
   const base=new THREE.Mesh(new THREE.BoxGeometry(size+.18,.12,size+.18),new THREE.MeshStandardMaterial({color:0x34383a,roughness:.62,metalness:.35}));
   base.position.y=-.92;root.add(base);
-  paint();rebuildPopulations();for(const tr of transfers)tr.mesh.visible=false;gasMesh.visible=false;
+  paint();rebuildPopulations();for(const tr of transfers)tr.mesh.visible=false;gasMesh.visible=false;rainMesh.visible=false;
   return{root,mesh,populationRoot,migrationRoot,update:updateMigration,startMigration,migration,alienMigration,setMode(n){mode=((n%5)+5)%5;paint();return mode},next(){return this.setMode(mode+1)},mode:()=>mode,sample};
 }

@@ -88,6 +88,15 @@ Workshop context does not own Crucible's fluids merely because the fluid machine
 Do not build a fabrication framework merely because the bench is empty. Let construction pressure earn operations.
 
 
+### Functional Terrain Workshop evidence
+
+Workshop currently contains a Functional Terrain Twixt that keeps elevation regime, extrusion permission, biome jurisdiction, and feature/material paint as independently inspectable 2D authoring signals before composing them into one terrain surface.
+
+The current specimen has established a narrow executable fact: categorical feature/material jurisdiction can remain perceptually legible in the final composed terrain while geometry varies independently across it. Treat geometry and material identity as separate concerns. The current colors and feature families are diagnostic vocabulary, not a promoted material ontology or final terrain architecture.
+
+This remains Workshop evidence. It has not yet earned promotion into Fundamentals.
+
+
 ## Betwixtable spatial boundary
 
 Repeated Workshop pressure has earned one small spatial contract.

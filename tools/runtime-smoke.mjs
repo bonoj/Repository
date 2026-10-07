@@ -32,13 +32,13 @@ try{
   if(first.presences<1||second.presences<1)failures.push("runtime exposed no presences");
   if(!first.build||first.build!==second.build)failures.push("repository build identity missing or unstable");
 
-  // Beyond is an experimental failure boundary. T4 is born complete from geological history:
+  // Beyond is an experimental failure boundary. T5 is born complete from geological history:
   // continuous strata, no terrain jurisdictions, and no behavior window or Four Brothers.
   await page.evaluate(()=>globalThis.RepositoryShell?.button?.("beyond-place")?.click());
-  await page.waitForFunction(()=>globalThis.BeyondTerrain?.inspect?.()?.kind==="beyond-geological-history-t4",{timeout:8000});
+  await page.waitForFunction(()=>globalThis.BeyondTerrain?.inspect?.()?.kind==="beyond-geological-history-t5",{timeout:8000});
   await page.waitForTimeout(1200);
   const beyond=await page.evaluate(()=>globalThis.BeyondTerrain?.inspect?.());
-  if(!beyond||beyond.size<80||beyond.resolution<100||beyond.strata<5||beyond.jurisdictions!==0)failures.push("Beyond geological topology T4 did not survive startup: "+JSON.stringify(beyond));
+  if(!beyond||beyond.size<80||beyond.resolution<100||beyond.strata<5||beyond.jurisdictions!==0)failures.push("Beyond geological topology T5 did not survive startup: "+JSON.stringify(beyond));
 
   if(failures.length)throw new Error(failures.join("\n"));
   console.log("Betwixt runtime smoke passed:",second);

@@ -1419,32 +1419,66 @@ function ensureWorkshopTerrain(){
 }
 let beyondTerrain=null;
 function createBeyondTerrain(){
-  // Beyond now consumes the earned Functional Terrain grammar: bounded jurisdictions,
-  // legible feature populations and one mutable composed surface. The world is a specimen, not acreage.
-  const ft=createFunctionalTerrainV0({THREE,size:13.2,resolution:57,seed:741});
-  const root=new THREE.Group();root.name='beyond:world-substance';beyondPlace.add(root);root.add(ft.root);
-  ft.root.name='beyond:functional-terrain';
-  // Functional Terrain's composed mode is the useful world, not its diagnostic map sequence.
-  for(let i=0;i<4;i++)ft.next();
-  const half=6.6;
-  function groundHeight(x,z){const s=ft.sample(x,z);return Number.isFinite(s?.height)?s.height:0}
-  function deform(p,amount,r=.9){
-    // Keep the existing Beyond mutation contract while the Functional Terrain remains authoritative.
-    // Its migration delta is the ordinary mutable height channel.
-    if(typeof ft.deform==='function')ft.deform(p,amount,r);
-    else if(amount<0&&typeof ft.excavate==='function')ft.excavate(p,{depth:-amount,radius:r});
-    else if(amount>0&&typeof ft.raise==='function')ft.raise(p,{height:amount,radius:r});
-    window.vestibuleDirty=true;
+  // Beyond T0: topology is born complete. One continuous floor, many spatial truths.
+  // Macro geography and local functional jurisdictions are independent fields; neither is a tile.
+  const root=new THREE.Group();root.name='beyond:world-substance';beyondPlace.add(root);
+  const SIZE=104,HALF=SIZE*.5,N=145,seed=741;
+  const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),smooth=t=>t*t*(3-2*t),fract=v=>v-Math.floor(v);
+  const hash=(x,z,s=seed)=>fract(Math.sin(x*127.1+z*311.7+s*74.7)*43758.5453123);
+  function noise(x,z,s=seed){const ix=Math.floor(x),iz=Math.floor(z),fx=smooth(fract(x)),fz=smooth(fract(z)),mix=(a,b,t)=>a+(b-a)*t;return mix(mix(hash(ix,iz,s),hash(ix+1,iz,s),fx),mix(hash(ix,iz+1,s),hash(ix+1,iz+1,s),fx),fz)*2-1}
+  const segDist=(x,z,ax,az,bx,bz)=>{const dx=bx-ax,dz=bz-az,l=dx*dx+dz*dz||1,t=clamp(((x-ax)*dx+(z-az)*dz)/l);return Math.hypot(x-ax-dx*t,z-az-dz*t)};
+  function macroHeight(x,z){
+    // Continental gesture: ranges, watershed, rift, shelf and basin remain legible across the horizon.
+    let h=.85+1.55*noise(x*.026,z*.026,751)+.72*noise(x*.061+8,z*.057-5,769);
+    const range=segDist(x,z,-48,20,-18,8)+segDist(x,z,-18,8,9,15)+segDist(x,z,9,15,46,28);
+    h+=5.8*Math.exp(-.5*(range/7.4)**2);
+    const second=segDist(x,z,-42,-30,-12,-17)+segDist(x,z,-12,-17,22,-25)+segDist(x,z,22,-25,48,-12);
+    h+=3.4*Math.exp(-.5*(second/9.2)**2);
+    const river=segDist(x,z,-50,-2,-22,-6)+segDist(x,z,-22,-6,4,-1)+segDist(x,z,4,-1,28,-8)+segDist(x,z,28,-8,51,-3);
+    h-=3.0*Math.exp(-.5*(river/3.3)**2);
+    h-=4.6*Math.exp(-((x-26)**2/(2*11**2)+(z-18)**2/(2*8**2)));
+    h+=1.55*Math.tanh((x*.72-z*.34-21)/4.8);
+    return h;
   }
-  function reset(){ft.reset?.();window.vestibuleDirty=true}
-  function seatRect(){/* no construction seating needed in this experiment */ }
-  return{
-    root,mesh:ft.mesh||ft.root,maps:(x,z)=>ft.sample(x,z),reset,seatRect,
-    raise:(p,o={})=>deform(p,Math.max(.04,o.height??.18),Math.max(.3,o.radius??.8)),
-    excavate:(p,o={})=>deform(p,-Math.max(.04,o.depth??.18),Math.max(.3,o.radius??.8)),
-    groundHeight,
-    inspect:()=>({kind:'functional-terrain-beyond',size:13.2,seed:741,source:'Functional Terrain v0',sample:ft.sample(0,0)})
-  };
+  const kinds=['dunes','basin','ridges','terraces','crater','knolls','canyon','waves','spire'];
+  const sites=[];let rs=0x9e3779b9^seed;const rnd=()=>{rs=(rs+0x6D2B79F5)>>>0;let t=rs;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296};
+  // Jittered lattice prevents giant Voronoi countries while guaranteeing complete regional coverage.
+  for(let z=-42,iz=0;z<=42;z+=12,iz++)for(let x=-42,ix=0;x<=42;x+=12,ix++)sites.push({x:x+(rnd()-.5)*6,z:z+(rnd()-.5)*6,r:10.5+rnd()*5,kind:kinds[(ix*5+iz*7+Math.floor(rnd()*9))%kinds.length],amp:1.2+rnd()*2.4,phase:rnd()*Math.PI*2});
+  function localRaw(kind,x,z,p){const r=Math.hypot(x,z),a=Math.atan2(z,x);if(kind==='dunes')return .68*Math.sin(x*.78+p)+.22*Math.sin(x*.31+z*.24);if(kind==='basin')return-1.05*Math.exp(-r*r*.045)+.16*Math.cos(r*.85);if(kind==='ridges')return .68*Math.sin(x*.38+z*.62+.48*Math.sin(z*.28+p));if(kind==='terraces'){const q=.7*Math.sin(r*.32+p);return Math.round(q*5)/5}if(kind==='crater')return .82*Math.exp(-(r-5.1)**2*.13)-.78*Math.exp(-r*r*.065);if(kind==='knolls')return .62*Math.cos(x*.42+p)*Math.cos(z*.36-p*.3);if(kind==='canyon'){const path=z-1.7*Math.sin(x*.31+p);return-.98*Math.exp(-path*path*.19)+.16*Math.sin(x*.35)}if(kind==='waves')return .52*Math.sin(r*.62+p)+.18*Math.cos(a*5+r*.19);if(kind==='spire')return 1.1*Math.exp(-r*r*.075)+.25*Math.sin(a*6+p)*Math.exp(-r*.14);return 0}
+  function localField(x,z){
+    let first=null,second=null;
+    for(const s of sites){const d=Math.hypot(x-s.x,z-s.z);if(!first||d<first.d){second=first;first={s,d}}else if(!second||d<second.d)second={s,d}}
+    if(!first)return 0;
+    // Crucible's earned trick: jurisdiction goes hard to zero at the seam.
+    const gap=Math.max(0,(second?.d??first.s.r)-first.d),jur=smooth(clamp(gap/2.25)),outer=1-smooth(clamp((first.d-first.s.r*.72)/(first.s.r*.28)));
+    return first.s.amp*localRaw(first.s.kind,x-first.s.x,z-first.s.z,first.s.phase)*jur*outer;
+  }
+  function materialSignal(x,z,h){
+    // Geology deliberately cuts across topological jurisdictions.
+    const seam=Math.sin(x*.115+noise(x*.035,z*.035,811)*2.4)+.62*Math.sin(z*.16-x*.035);
+    const wet=clamp((-h+1.6)/5),high=clamp((h-3.4)/7),warm=clamp((seam+1.15)/2.3);
+    return{wet,high,warm};
+  }
+  const positions=new Float32Array(N*N*3),colors=new Float32Array(N*N*3),heights=new Float32Array(N*N);
+  const col=new THREE.Color();
+  function writeVertex(ix,iz){
+    const x=-HALF+SIZE*ix/(N-1),z=-HALF+SIZE*iz/(N-1),h=macroHeight(x,z)+localField(x,z),k=ix+N*iz,m=materialSignal(x,z,h);
+    heights[k]=h;positions[k*3]=x;positions[k*3+1]=h;positions[k*3+2]=z;
+    // Material is a continuous geological field, not biome paint.
+    const low=new THREE.Color(0x6f7665),stone=new THREE.Color(0x817568),ochre=new THREE.Color(0x9b7650),pale=new THREE.Color(0xa49b7d);
+    col.copy(low).lerp(stone,clamp(.34+m.high*.58)).lerp(ochre,m.warm*.42).lerp(pale,clamp(m.high*.26+(1-m.wet)*.08));
+    const grain=.9+.1*noise(x*.42,z*.42,887);col.multiplyScalar(grain);
+    colors[k*3]=col.r;colors[k*3+1]=col.g;colors[k*3+2]=col.b;
+  }
+  for(let z=0;z<N;z++)for(let x=0;x<N;x++)writeVertex(x,z);
+  const indices=[];for(let z=0;z<N-1;z++)for(let x=0;x<N-1;x++){const a=x+N*z,b=a+1,d=a+N,e=d+1;if((x+z)&1)indices.push(a,d,b,b,d,e);else indices.push(a,d,e,a,e,b)}
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setAttribute('color',new THREE.BufferAttribute(colors,3));geo.setIndex(indices);geo.computeVertexNormals();
+  const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.96,metalness:.015,flatShading:true});
+  const mesh=new THREE.Mesh(geo,mat);mesh.name='beyond:continuous-topology';mesh.receiveShadow=true;root.add(mesh);
+  function groundHeight(x,z){const fx=clamp((x+HALF)/SIZE*(N-1),0,N-1.001),fz=clamp((z+HALF)/SIZE*(N-1),0,N-1.001),x0=Math.floor(fx),z0=Math.floor(fz),tx=fx-x0,tz=fz-z0,A=heights[x0+N*z0],B=heights[x0+1+N*z0],C=heights[x0+N*(z0+1)],D=heights[x0+1+N*(z0+1)];return THREE.MathUtils.lerp(THREE.MathUtils.lerp(A,B,tx),THREE.MathUtils.lerp(C,D,tx),tz)}
+  // T0 is immutable topology. Mutation vocabulary remains callable but intentionally inert for this pass.
+  const inert=()=>({locked:true,reason:'beyond-topology-t0'});
+  return{root,mesh,maps:(x,z)=>({height:groundHeight(x,z),material:materialSignal(x,z,groundHeight(x,z))}),reset:()=>{},seatRect:()=>{},raise:inert,excavate:inert,groundHeight,inspect:()=>({kind:'beyond-continuous-topology-t0',size:SIZE,resolution:N,seed,sites:sites.length})};
 }
 function ensureBeyondTerrain(){
   if(!beyondTerrain)beyondTerrain=createBeyondTerrain();
@@ -1520,7 +1554,7 @@ function ensureFourBrothers(){
   }
   fourBrothers={root,domains,update,inspect:()=>({kind:'four-brothers-peace',elapsed:+((performance.now()-started)/1000).toFixed(1),greenGrowth,blueWork,yellowGrowth,coupled,legacyStreams:!!beyondTransfers?.enabled,red:false})};globalThis.FourBrothers=fourBrothers;return fourBrothers;
 }
-function updateFourBrothers(now){if(currentPlace==='beyond')ensureFourBrothers().update(now)}
+function updateFourBrothers(now){if(currentPlace==='beyond'&&fourBrothers)fourBrothers.update(now)}
 
 let beyondArena=null;
 function ensureBeyondArena(){
@@ -1847,7 +1881,7 @@ function presentLocus(name){
   const next=placeDefinitions[name];if(!next)return false;
   for(const [id,{object}] of Object.entries(placeDefinitions))object.visible=id===name;
   floor.visible=name!=='beyond';
-  if(name==='beyond'){ensureBeyondTerrain();ensureBeyondTransfers();ensureFourBrothers();}
+  if(name==='beyond'){ensureBeyondTerrain();if(beyondTransfers)beyondTransfers.setEnabled(false);}
   currentPlace=name;
   if(name==='crucible'){
     workshopCrucibleEnabled=true;ensureWorkshopTerrain();installWorkshopCrucibleSpells();

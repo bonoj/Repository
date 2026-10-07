@@ -13,6 +13,7 @@ const ecs=await readFile("src/core/ecs.js","utf8");
 const mirror=await readFile("src/betwixt/mirror.js","utf8");
 const factionWar=await readFile("src/betwixt/faction-war.js","utf8");
 const functionalTerrainV0=await readFile("src/betwixt/functional-terrain-v0.js","utf8");
+const geologicalHistoryTorture=await readFile("src/betwixt/geological-history-torture.js","utf8");
 const shallowWater=await readFile("src/cargo/crucible/source/src/runtime/shallow-water-system.js","utf8");
 const bearingSystem=await readFile("src/cargo/crucible/source/src/runtime/bearing-system.js","utf8");
 const meteorSystem=await readFile("src/cargo/crucible/source/src/runtime/meteor-system.js","utf8");
@@ -26,6 +27,7 @@ const mirrorInline=mirror
   .replace("export function attachBetwixtMirror","function attachBetwixtMirror");
 const factionWarInline=factionWar.replace("export function createFactionWarSystem","function createFactionWarSystem");
 const functionalTerrainV0Inline=functionalTerrainV0.replace("export function createFunctionalTerrainV0","function createFunctionalTerrainV0");
+const geologicalHistoryTortureInline=geologicalHistoryTorture.replace("export function createQuadrantHistory","function createQuadrantHistory");
 const shallowWaterInline=shallowWater.replace("export function createShallowWaterSystem","function createShallowWaterSystem");
 const terrainInline=terrainSystem
   .replace("export function createTerrainSystem","function createTerrainSystem")
@@ -58,9 +60,10 @@ for(const token of [
   'function updateLavaPops()',
   'lavaTransport.update(simNow)'
 ])if(!crucibleMain.includes(token))throw new Error(`Crucible lava organism evidence missing: ${token}`);
-const bridge=`<script>${shallowWaterInline}\n${terrainInline}\n${terrainRecipeGeneratorInline}\n${terrainGenesisInline}\n${meteorInline}\n${bearingInline}\n${ecsInline}\n${functionalTerrainV0Inline}\n${mirrorInline}\n(function attachMirrorWhenReady(){if(globalThis.vestibuleReady&&globalThis.vestibule?.presences?.length){attachBetwixtMirror();return}addEventListener("vestibule-ready",attachMirrorWhenReady,{once:true})})();<\/script>`;
+const bridge=`<script>${shallowWaterInline}\n${terrainInline}\n${terrainRecipeGeneratorInline}\n${terrainGenesisInline}\n${meteorInline}\n${bearingInline}\n${ecsInline}\n${functionalTerrainV0Inline}\n${geologicalHistoryTortureInline}\n${mirrorInline}\n(function attachMirrorWhenReady(){if(globalThis.vestibuleReady&&globalThis.vestibule?.presences?.length){attachBetwixtMirror();return}addEventListener("vestibule-ready",attachMirrorWhenReady,{once:true})})();<\/script>`;
 const injection=`<script>globalThis.__REPOSITORY_SHA__=${JSON.stringify(sha)};globalThis.__REPOSITORY_BUILD__=${JSON.stringify(build)};<\/script><script>${shell}<\/script>`;
-const executable=donor.replace("<body>",`<body data-repository-build="${build}" data-repository-sha="${sha}">${injection}`).replace("</body>",`${bridge}</body>`);
+const donorExecutable=donor.replace("import { createQuadrantHistory } from './geological-history-torture.js';","");
+const executable=donorExecutable.replace("<body>",`<body data-repository-build="${build}" data-repository-sha="${sha}">${injection}`).replace("</body>",`${bridge}</body>`);
 if(executable===donor)throw new Error("Repository shell injection point missing");
 await writeFile("dist/index.html",executable);
 await copyFile("vendor/crucible/dist/index.html","dist/crucible/index.html");

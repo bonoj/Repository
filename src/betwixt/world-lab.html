@@ -1452,10 +1452,10 @@ function populateBeyondFields(count=25000){
       x+=gauss(i*47.7)*.35;z+=gauss(i*53.1)*.35;
     }
     x=Math.max(-51.5,Math.min(51.5,x));z=Math.max(-51.5,Math.min(51.5,z));
-    const y=terrain.groundHeight(x,z)+.13;
+    const y=terrain.groundHeight(x,z)+.34;
     dummy.position.set(x,y,z);dummy.scale.setScalar(.72+rnd(i*59.7)*.58);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
   }
-  mesh.instanceMatrix.needsUpdate=true;terrain.root.add(mesh);beyondPopulation=mesh;window.vestibuleDirty=true;
+  mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();mesh.castShadow=true;mesh.receiveShadow=true;terrain.root.add(mesh);beyondPopulation=mesh;window.vestibuleDirty=true;
   return{count,fields:4};
 }
 function toggleBeyondPopulation(){
@@ -1620,9 +1620,13 @@ function ensureBeyondTerrain(){
   return beyondTerrain;
 }
 function rebuildBeyondTerrain(){
+  // Population is owned by the terrain root. Never retain a stale pointer after a world rebuild.
+  const repopulate=!!beyondPopulation;
+  beyondPopulation=null;
   if(beyondTerrain?.root)beyondPlace.remove(beyondTerrain.root);
   beyondTerrain=null;beyondObservationIndex=0;
   const terrain=ensureBeyondTerrain();
+  if(repopulate)populateBeyondFields();
   window.vestibuleDirty=true;
   return terrain.inspect();
 }

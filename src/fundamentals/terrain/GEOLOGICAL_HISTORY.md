@@ -29,3 +29,25 @@ Beyond T4 is preserved in three deliberately separate layers:
 3. **Seed:** `seeds/beyond-t4.js` contains only instance identity, seed `741`.
 
 Therefore reconstruction has an explicit hierarchy: **goodies + recipe + seed → instance**, while the frozen branch preserves the whole observed executable as ground truth. Later experiments must not move the frozen branch.
+
+
+## Four-history torture specimen
+
+Repository `0b692803c6ada95a0e96a14f99caaa2c28a27b14` is preserved immutably by branch `terrain/beyond-four-history-0b692803`.
+
+This specimen established a new capability: one layered crust can be subjected to several overlapping histories built from the same low-level vocabulary and produce substantially different large-scale consequences without requesting named landforms.
+
+The reusable pieces promoted from that experiment are:
+
+- fault displacement with a separate fracture signal
+- block tilt
+- compressive folding
+- resistance-weighted exposure erosion
+- collapse basin with bowl/rim signals
+- basin-sensitive deposition
+- later incision as a younger event
+- broad overlapping jurisdictions for adversarial history composition
+
+The four quadrant recipes themselves are **not** Fundamentals. They are an experimental composition and remain preserved in the frozen specimen. Likewise, the current visual artifacts are evidence for later refinement, not behavior to canonize.
+
+The important law is temporal composition: later processes consume the consequences of earlier processes. Different ordering and jurisdiction can create different terrain families from the same operator vocabulary. Preserve that causal freedom; do not turn the observed outputs into named terrain stamps.

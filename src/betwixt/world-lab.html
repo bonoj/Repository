@@ -1964,11 +1964,7 @@ function presentLocus(name){
   const next=placeDefinitions[name];if(!next)return false;
   for(const [id,{object}] of Object.entries(placeDefinitions))object.visible=id===name;
   floor.visible=name!=='beyond';
-  if(name==='beyond'){
-    ensureBeyondTerrain();if(beyondTransfers)beyondTransfers.setEnabled(false);
-    const shell=globalThis.RepositoryShell;
-    if(shell&&!shell.inspect().tools.includes('beyond-topology-scan'))shell.registerTool({id:'beyond-topology-scan',text:'🔬',label:'Download topology scan',onClick:downloadBeyondTopologyScan});
-  }
+  if(name==='beyond'){ensureBeyondTerrain();if(beyondTransfers)beyondTransfers.setEnabled(false);}
   currentPlace=name;
   if(name==='crucible'){
     workshopCrucibleEnabled=true;ensureWorkshopTerrain();installWorkshopCrucibleSpells();
@@ -1977,7 +1973,14 @@ function presentLocus(name){
   }
   setBetwixtTitle(next.title);
   if(name==='betwixt'){removeBetwixtPortal();installPlaceSpells()}
-  else{removePlaceSpells();installBetwixtPortal()}
+  else{
+    removePlaceSpells();installBetwixtPortal();
+    if(name==='beyond'){
+      // Install after place-spell cleanup: the scanner is a locus-local temporary spell.
+      const shell=globalThis.RepositoryShell;
+      if(shell&&!shell.inspect().tools.includes('beyond-topology-scan'))shell.registerTool({id:'beyond-topology-scan',text:'🔬',label:'Download topology scan',onClick:downloadBeyondTopologyScan});
+    }
+  }
   window.vestibuleDirty=true;return true;
 }
 function enterBetwixt(){return presentLocus('betwixt')}

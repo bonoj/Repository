@@ -1520,6 +1520,21 @@ globalThis.BeyondTerrain={
   inspect:()=>ensureBeyondTerrain().inspect()
 };
 
+let fourBrothers=null;
+function ensureFourBrothers(){
+  if(fourBrothers)return fourBrothers;
+  // Four Brothers begins as ownership/context only. The shared Beyond terrain and
+  // material streams remain ordinary world machinery; behavior must earn additions.
+  const root=new THREE.Group();root.name='beyond:four-brothers';beyondPlace.add(root);
+  const domains={};
+  for(const id of ['red','green','yellow','blue']){
+    const domain=new THREE.Group();domain.name='four-brothers:'+id;root.add(domain);domains[id]=domain;
+  }
+  fourBrothers={root,domains,inspect:()=>({kind:'four-brothers',domains:Object.keys(domains)})};
+  globalThis.FourBrothers=fourBrothers;
+  return fourBrothers;
+}
+
 let beyondArena=null;
 function ensureBeyondArena(){
   if(beyondArena)return beyondArena;
@@ -1615,7 +1630,7 @@ function ensureBeyondArena(){
   }
   beyondArena={root,update,inspect:()=>({kind:'observer-copy-arena',sensorRange:SENSOR_RANGE,launchRange:LAUNCH_RANGE,focus:focus?.id??null,exposed:visitors.filter(exposed).length,sensed:visitors.filter(sensed).length,arcs:arcs.length,bearings:bearings.length})};globalThis.BeyondArena=beyondArena;return beyondArena;
 }
-function updateBeyondArena(now){if(currentPlace==='beyond')ensureBeyondArena().update(now)}
+function updateBeyondArena(now){if(currentPlace==='beyond'&&beyondArena)beyondArena.update(now)}
 
 let beyondTransfers=null;
 function ensureBeyondTransfers(){
@@ -1845,7 +1860,7 @@ function presentLocus(name){
   const next=placeDefinitions[name];if(!next)return false;
   for(const [id,{object}] of Object.entries(placeDefinitions))object.visible=id===name;
   floor.visible=name!=='beyond';
-  if(name==='beyond'){ensureBeyondTerrain();ensureBeyondTransfers();ensureBeyondArena();}
+  if(name==='beyond'){ensureBeyondTerrain();ensureBeyondTransfers();ensureFourBrothers();}
   currentPlace=name;
   if(name==='crucible'){
     workshopCrucibleEnabled=true;ensureWorkshopTerrain();installWorkshopCrucibleSpells();

@@ -232,6 +232,25 @@ Current glass standard is intentionally cheap: a pale cyan-gray `THREE.MeshStand
 
 The accepted perceptual result came from translucent faces plus explicit edges, not refraction, transmission, environment mapping, Fresnel, thickness simulation, or a custom shader. Treat this as the local glass standard until executable evidence earns a replacement or family, not as a universal material abstraction.
 
+## Beyond geological-history capability
+
+Beyond has moved from terrain-shape iteration into geological-history experiments.
+
+The preserved four-history specimen at Repository `0b692803` demonstrated that one layered crust can undergo several overlapping causal histories and produce substantially different large-scale consequences without naming landforms. The exact specimen is frozen at `terrain/beyond-four-history-0b692803`. Earned low-level operators and laws live in `src/fundamentals/terrain/geological-history.js` and `GEOLOGICAL_HISTORY.md`.
+
+Current Beyond adds a deterministic **history genome** above that vocabulary. A world seed deterministically chooses disturbance positions, orientations, strengths, scales, depths, widths, wavelengths, jurisdiction softness, and process-local noise. A mutation ordinal walks a bounded deterministic neighborhood of the current genome while preserving its base seed.
+
+Current semantic controls are intentionally discrete:
+
+- `🎲` advances to another deterministic world seed.
+- `✣` mutates the current geological history into a nearby deterministic variation.
+
+Do not replace these with sliders. The human supplies semantic selection pressure, not continuous parameter micromanagement. When a single variable must be isolated for an experiment, expose a temporary discrete A/B or sweep instrument and remove it when the question is answered.
+
+The intended search grammar is **new world → nearby mutation → preserve interesting specimen**. Parameter values are implementation vocabulary. Named outputs such as canyon, mesa, ridge, or basin remain observations/adversaries, not generator primitives.
+
+The current smoke witness exercises seed and mutation transitions and checks that generated terrain remains finite. It is a witness, not authority: experimental intent and executable behavior outrank the test. If the witness constrains a legitimate experiment, change, narrow, disable, or remove the witness rather than shrinking the experiment.
+
 ## Publication
 
 Repository builds the executable.

@@ -57,3 +57,51 @@ export function gypsumDuneMantle(x,z,bedrock,noise){
   const dunes=envelope*(.58+.26*noise(x*.12,z*.09,911))*Math.max(0,.5+.5*Math.sin(axis*1.12));
   return{depth:Math.max(0,envelope*.48+dunes),sand:envelope,kind:envelope>.18?'gypsum-sand':'bedrock'};
 }
+
+
+// Earned by the four-history torture specimen at Repository 0b692803.
+// These remain low-level history operations: they do not name or request landforms.
+export function faultDisplacement(x,z,noise,{angle=.7,offset=0,throwHeight=5,warpScale=.028,warp=3.2,seed=1401}={}){
+  const c=Math.cos(angle),q=Math.sin(angle);
+  const d=x*c+z*q+offset+noise(x*warpScale,z*warpScale,seed)*warp;
+  const side=Math.tanh(d/1.6);
+  return{distance:d,side,delta:side*throwHeight,fracture:Math.exp(-Math.pow(d/2.3,2))};
+}
+
+export function blockTilt(x,z,{angle=0,magnitude=.12}={}){
+  return(x*Math.cos(angle)+z*Math.sin(angle))*magnitude;
+}
+
+export function compressiveFold(x,z,noise,{angle=.4,wavelength=19,amplitude=3,noiseScale=.02,noisePhase=1.2,seed=1421}={}){
+  const q=x*Math.cos(angle)+z*Math.sin(angle);
+  return Math.sin(q/wavelength*Math.PI*2+noise(x*noiseScale,z*noiseScale,seed)*noisePhase)*amplitude;
+}
+
+export function resistanceWeightedExposureErosion(height,resistance,intensity){
+  return intensity*(.35+.65*smooth(clamp((height+3)/12)))*(1.15-.65*resistance);
+}
+
+export function collapseBasin(x,z,noise,{cx=0,cz=0,radius=15,depth=7,seed=1451}={}){
+  const warp=noise(x*.045,z*.041,seed)*2.4,r=Math.hypot(x-cx,z-cz)+warp;
+  const bowl=smooth(clamp((radius-r)/(radius*.62)));
+  const rim=Math.exp(-Math.pow((r-radius*.78)/(radius*.14),2));
+  return{delta:-depth*bowl+rim*depth*.22,bowl,rim};
+}
+
+export function basinDeposit(x,z,low,noise,{cx=0,cz=0,spreadX=24,spreadZ=17,amount=4.5,seed=1471}={}){
+  const warp=noise(x*.025,z*.021,seed)*4;
+  const basin=Math.exp(-(Math.pow((x-cx+warp)/spreadX,2)+Math.pow((z-cz)/spreadZ,2)));
+  return basin*smooth(clamp(low))*amount*(.75+.25*noise(x*.07,z*.06,seed+2));
+}
+
+export function lateIncision(x,z,noise,{phase=0,width=4.2,depth=6,seed=1491}={}){
+  const course=z+Math.sin(x*.055+phase)*8+noise(x*.025,z*.02,seed)*4;
+  const d=Math.abs(course);
+  return depth*Math.exp(-Math.pow(d/width,1.65))+depth*.28*Math.exp(-Math.pow(d/(width*.23),1.4));
+}
+
+export function overlappingQuadrantJurisdictions(x,z,{softness=8}={}){
+  const field=v=>smooth(clamp(.5+.5*Math.tanh(v/softness)));
+  const east=field(x),north=field(z);
+  return{nw:(1-east)*north,ne:east*north,sw:(1-east)*(1-north),se:east*(1-north)};
+}

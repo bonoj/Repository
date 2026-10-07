@@ -61,6 +61,12 @@ select{width:100%;padding:0 12px;appearance:auto}
 #moleculeCard.visible{opacity:1;visibility:visible}#moleculeCard strong{display:block;font-size:15px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}#moleculeCard span{display:block;color:#343638}
 #ink{position:fixed;inset:0;z-index:61;pointer-events:none;touch-action:none}
 #ink.active{pointer-events:auto}
+
+<style id="relational-sketch-style">
+#relational-sketch{position:fixed;z-index:18;left:max(.6rem,env(safe-area-inset-left));right:max(.6rem,env(safe-area-inset-right));top:4.2rem;bottom:4.25rem;border:1px solid #8b846f88;border-radius:.65rem;background:#111317ee;box-shadow:0 .7rem 2.2rem #0008;display:none;overflow:hidden;pointer-events:auto;touch-action:none}
+#relational-sketch.open{display:block}
+#relational-sketch canvas{width:100%;height:100%;display:block;touch-action:none}
+</style>
 </style>
 </head>
 <body>
@@ -2129,12 +2135,31 @@ function installPlaceSpells(){
   // Temporary sister spell: unlike the resident place spells on the right, Beyond lives in the left temporary tray.
   if(!shell.inspect().tools.includes('beyond-place'))shell.registerTool({id:'beyond-place',text:'🚪',label:'Beyond',onClick:()=>presentLocus('beyond')});
 }
+
+let relationalSketch=null;
+function ensureRelationalSketch(){
+  if(relationalSketch)return relationalSketch;
+  const host=document.createElement('section');host.id='relational-sketch';host.setAttribute('aria-label','Relational construction sketch');
+  const canvas=document.createElement('canvas');host.append(canvas);document.body.append(host);
+  const ctx=canvas.getContext('2d');let drag=null;
+  const nodes=[{x:.50,y:.48,r:22,kind:'cage'},{x:.50,y:.18,r:14,kind:'ring'},{x:.50,y:.78,r:14,kind:'ring'},{x:.22,y:.48,r:14,kind:'ring'},{x:.78,y:.48,r:14,kind:'ring'}];
+  function size(){const d=devicePixelRatio||1,w=host.clientWidth,h=host.clientHeight;if(canvas.width!==Math.round(w*d)||canvas.height!==Math.round(h*d)){canvas.width=Math.round(w*d);canvas.height=Math.round(h*d)}ctx.setTransform(d,0,0,d,0,0);return {w,h}}
+  function draw(){const {w,h}=size();ctx.clearRect(0,0,w,h);ctx.fillStyle='#111317';ctx.fillRect(0,0,w,h);ctx.strokeStyle='#665f50';ctx.lineWidth=1;for(let x=24;x<w;x+=24){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=24;y<h;y+=24){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}const c=nodes[0];ctx.strokeStyle='#b69a58';ctx.lineWidth=5;for(let i=1;i<nodes.length;i++){ctx.beginPath();ctx.moveTo(c.x*w,c.y*h);ctx.lineTo(nodes[i].x*w,nodes[i].y*h);ctx.stroke()}for(const n of nodes){const x=n.x*w,y=n.y*h;ctx.beginPath();ctx.arc(x,y,n.r,0,Math.PI*2);ctx.fillStyle='#17191d';ctx.fill();ctx.strokeStyle='#d2b56e';ctx.lineWidth=n.kind==='cage'?6:4;ctx.stroke();if(n.kind==='cage'){ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);ctx.fillStyle='#d2b56e';ctx.fill()}}requestAnimationFrame(draw)}
+  function point(e){const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top,w:r.width,h:r.height}}
+  canvas.addEventListener('pointerdown',e=>{const p=point(e);let best=null,bd=34;for(const n of nodes){const d=Math.hypot(p.x-n.x*p.w,p.y-n.y*p.h);if(d<bd){best=n;bd=d}}if(best){drag=best;canvas.setPointerCapture(e.pointerId);e.preventDefault()}});
+  canvas.addEventListener('pointermove',e=>{if(!drag)return;const p=point(e);drag.x=Math.max(.03,Math.min(.97,p.x/p.w));drag.y=Math.max(.03,Math.min(.97,p.y/p.h));e.preventDefault()});
+  canvas.addEventListener('pointerup',e=>{drag=null;try{canvas.releasePointerCapture(e.pointerId)}catch(_){}});
+  relationalSketch={host,canvas,nodes,setOpen(open){host.classList.toggle('open',!!open);return !!open},toggle(){return this.setOpen(!host.classList.contains('open'))},close(){return this.setOpen(false)}};requestAnimationFrame(draw);return relationalSketch;
+}
+function installWorkshopSketchSpell(){const shell=globalThis.RepositoryShell;if(!shell||shell.inspect().tools.includes('relational-sketch'))return;shell.registerTool({id:'relational-sketch',text:'✎',label:'Relational sketch',onClick:b=>{const open=ensureRelationalSketch().toggle();b.classList.toggle('active',open);b.setAttribute('aria-pressed',open?'true':'false')}})}
+function removeWorkshopSketchSpell(){if(relationalSketch)relationalSketch.close();globalThis.RepositoryShell?.removeTool('relational-sketch')}
 function presentLocus(name){
   const next=placeDefinitions[name];if(!next)return false;
   for(const [id,{object}] of Object.entries(placeDefinitions))object.visible=id===name;
   floor.visible=name!=='beyond';
   if(name==='beyond'){ensureBeyondTerrain();if(beyondTransfers)beyondTransfers.setEnabled(false);}
   currentPlace=name;
+  if(name==='workshop')installWorkshopSketchSpell();else removeWorkshopSketchSpell();
   if(name==='crucible'){
     workshopCrucibleEnabled=true;ensureWorkshopTerrain();installWorkshopCrucibleSpells();
   }else if(workshopCrucibleEnabled){

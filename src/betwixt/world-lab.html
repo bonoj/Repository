@@ -1581,13 +1581,33 @@ function cameraProvenance(){
   return{position:camera.position.toArray().map(v=>+v.toFixed(4)),target:target.toArray().map(v=>+v.toFixed(4)),direction:dir.toArray().map(v=>+v.toFixed(5)),fov:camera.fov,arcball:arcballActive};
 }
 function beyondObservationViews(){
-  const terrain=ensureBeyondTerrain(),center=new THREE.Vector3(-29,terrain.groundHeight(-29,28)+2.1,28);
-  return[
-    {id:'mesa-establishing',label:'mesa establishing',position:[-8,18,48],target:center.toArray()},
-    {id:'mesa-rim',label:'mesa retreat rim',position:[-18,11,12],target:[-29,terrain.groundHeight(-29,20)+1.0,20]},
-    {id:'mesa-profile',label:'mesa cap and shoulder',position:[-49,13,20],target:[-29,terrain.groundHeight(-29,28)+.7,28]},
-    {id:'canyon-control',label:'canyon control',position:[16,10,13],target:[8,terrain.groundHeight(8,-5),-5]}
-  ];
+  const terrain=ensureBeyondTerrain(),m=terrain.maps,step=terrain.size/(terrain.n-1),half=terrain.size/2;
+  // Derive the retreat structure from the semantic field itself. No mesa coordinates
+  // or authored camera poses: the observer finds what the experiment made.
+  let sx=0,sz=0,w=0,minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
+  for(let z=1;z<terrain.n-1;z++)for(let x=1;x<terrain.n-1;x++){
+    const r=m[x+terrain.n*z]?.retreat;if(!r)continue;const q=Math.max(r.cap||0,r.shoulder||0);if(q<.18)continue;
+    const wx=-half+x*step,wz=-half+z*step;sx+=wx*q;sz+=wz*q;w+=q;minX=Math.min(minX,wx);maxX=Math.max(maxX,wx);minZ=Math.min(minZ,wz);maxZ=Math.max(maxZ,wz);
+  }
+  if(!w)return[];
+  const cx=sx/w,cz=sz/w,spanX=maxX-minX,spanZ=maxZ-minZ,span=Math.max(spanX,spanZ);
+  const centerH=terrain.groundHeight(cx,cz),center=new THREE.Vector3(cx,centerH,cz);
+  const candidates=[];
+  // Ring candidate cameras around the discovered structure. Score actual terrain
+  // visibility: useful views expose both summit and edge, with foreground clearance.
+  for(let k=0;k<16;k++){
+    const angle=k*Math.PI*2/16,dist=span*.78+10,px=cx+Math.cos(angle)*dist,pz=cz+Math.sin(angle)*dist;
+    const rimX=cx+Math.cos(angle)*spanX*.42,rimZ=cz+Math.sin(angle)*spanZ*.42;
+    const rimH=terrain.groundHeight(rimX,rimZ),py=Math.max(rimH+5.2,centerH+span*.24);
+    let clearance=Infinity;
+    for(let j=1;j<10;j++){const t=j/10,x=px+(cx-px)*t,z=pz+(cz-pz)*t,lineY=py+(centerH+1.1-py)*t;clearance=Math.min(clearance,lineY-terrain.groundHeight(x,z))}
+    const relief=Math.abs(centerH-rimH),side=Math.abs(Math.sin(angle))*.12;
+    candidates.push({angle,score:Math.min(clearance,4)*1.7+relief+side,position:[px,py,pz],target:[cx,centerH+1.1,cz]});
+  }
+  candidates.sort((a,b)=>b.score-a.score);
+  const chosen=[];
+  for(const c of candidates){if(chosen.every(v=>Math.abs(Math.atan2(Math.sin(c.angle-v.angle),Math.cos(c.angle-v.angle)))>.75))chosen.push(c);if(chosen.length===4)break}
+  return chosen.map((c,i)=>({id:'retreat-auto-'+(i+1),label:'derived retreat view '+(i+1),position:c.position.map(v=>+v.toFixed(3)),target:c.target.map(v=>+v.toFixed(3)),score:+c.score.toFixed(3),derived:true,bounds:{x:[+minX.toFixed(3),+maxX.toFixed(3)],z:[+minZ.toFixed(3),+maxZ.toFixed(3)]}}));
 }
 function presentBeyondObservation(index=0){
   const views=beyondObservationViews(),view=views[((index%views.length)+views.length)%views.length];

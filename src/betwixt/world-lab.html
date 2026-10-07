@@ -1447,22 +1447,13 @@ function createBeyondTerrain(){
     return continental+northRange+southRange+shelf+fold+tilt;
   }
   function drainage(x,z){
-    // T5: preserve the same connected watershed, but stop exposing its construction
-    // polyline. Warp the sampling domain continuously and vary incision width/depth
-    // coherently along the course. Sharp cliffs remain legal; repeated straight
-    // serration inherited from our primitive does not.
-    const wx=x+noise(x*.018,z*.021,1009)*2.8+noise(x*.047,z*.041,1013)*.75;
-    const wz=z+noise(x*.019+7,z*.017-4,1019)*2.2+noise(x*.043,z*.051,1021)*.65;
-    const trunk=Math.min(segDist(wx,wz,-54,-4,-27,-7),segDist(wx,wz,-27,-7,2,-2),segDist(wx,wz,2,-2,29,-9),segDist(wx,wz,29,-9,54,-4));
-    const t1=Math.min(segDist(wx,wz,-40,31,-25,13),segDist(wx,wz,-25,13,-17,-6));
-    const t2=Math.min(segDist(wx,wz,18,39,14,18),segDist(wx,wz,14,18,8,-3));
-    const t3=Math.min(segDist(wx,wz,43,-38,30,-23),segDist(wx,wz,30,-23,24,-8));
+    const trunk=Math.min(segDist(x,z,-54,-4,-27,-7),segDist(x,z,-27,-7,2,-2),segDist(x,z,2,-2,29,-9),segDist(x,z,29,-9,54,-4));
+    const t1=Math.min(segDist(x,z,-40,31,-25,13),segDist(x,z,-25,13,-17,-6));
+    const t2=Math.min(segDist(x,z,18,39,14,18),segDist(x,z,14,18,8,-3));
+    const t3=Math.min(segDist(x,z,43,-38,30,-23),segDist(x,z,30,-23,24,-8));
     const tributary=Math.min(t1,t2,t3);
-    const along=noise(x*.026,z*.012,1031);
-    const broadWidth=5.2*(1+along*.13),innerWidth=1.28*(1+along*.10);
-    const depth=1+noise(x*.021-3,z*.019+8,1033)*.075;
-    const trunkCut=depth*(5.9*Math.exp(-Math.pow(trunk/broadWidth,1.55))+2.5*Math.exp(-Math.pow(trunk/innerWidth,1.38)));
-    const branchCut=(2.65*Math.exp(-Math.pow(tributary/3.2,1.55))+.72*Math.exp(-Math.pow(tributary/.95,1.45)))*(1+along*.05);
+    const trunkCut=5.9*Math.exp(-Math.pow(trunk/5.2,1.55))+2.5*Math.exp(-Math.pow(trunk/1.28,1.38));
+    const branchCut=2.65*Math.exp(-Math.pow(tributary/3.2,1.55))+.72*Math.exp(-Math.pow(tributary/.95,1.45));
     return{trunk,tributary,cut:trunkCut+branchCut};
   }
   function stratumState(structuralHeight,erosion){
@@ -1490,6 +1481,18 @@ function createBeyondTerrain(){
     return{layer:strata.length-1,resistance:strata[strata.length-1].resist};
   }
   const exposedStratum=(structuralHeight,erosion)=>stratumState(structuralHeight,erosion).layer;
+  function mesaRetreat(x,z){
+    // T6 adversary: cliffs by survival, not incision. A coherent resistant cap survives
+    // regional retreat; the edge is warped continuously so no polygon is authored.
+    const cx=-29,cz=28;
+    const qx=(x-cx)/18,qz=(z-cz)/13;
+    const warp=noise(x*.035,z*.035,1109)*.22+noise(x*.081,z*.074,1117)*.055;
+    const radial=Math.sqrt(qx*qx+qz*qz)+warp;
+    const cap=smooth(clamp((1.03-radial)/.16));
+    const shoulder=smooth(clamp((1.30-radial)/.28))*(1-cap);
+    const capWeather=.18*noise(x*.065,z*.061,1123);
+    return{lift:cap*(4.35+capWeather)+shoulder*1.05,cap,shoulder,radial};
+  }
   function geology(x,z){
     const structural=deformation(x,z),d=drainage(x,z);
     const broadWeather=1.05+.78*(noise(x*.035,z*.035,821)+1)*.5;
@@ -1502,8 +1505,9 @@ function createBeyondTerrain(){
     const layer=state.layer,resistance=state.resistance;
     const beddingPhase=(structural-erosion)*2.2+noise(x*.025,z*.025,827)*.65;
     const bedRelief=(resistance-.48)*.48*Math.tanh(Math.sin(beddingPhase)*1.25);
-    const bedrock=structural-erosion+bedRelief;
-    return{bedrock,layer,resistance,drainage:d};
+    const retreat=mesaRetreat(x,z);
+    const bedrock=structural-erosion+bedRelief+retreat.lift;
+    return{bedrock,layer,resistance,drainage:d,retreat};
   }
   function mantle(x,z,g){
     // White-Sands adversary: a closed basin receives a mobile-material history.
@@ -1521,7 +1525,7 @@ function createBeyondTerrain(){
   }
   function sampleWorld(x,z){
     const g=geology(x,z),m=mantle(x,z,g);
-    return{height:g.bedrock+m.depth,bedrock:g.bedrock,layer:g.layer,resistance:g.resistance,mantle:m,drainage:g.drainage};
+    return{height:g.bedrock+m.depth,bedrock:g.bedrock,layer:g.layer,resistance:g.resistance,mantle:m,drainage:g.drainage,retreat:g.retreat};
   }
   const positions=new Float32Array(N*N*3),colors=new Float32Array(N*N*3),heights=new Float32Array(N*N);
   const col=new THREE.Color(),sandColor=new THREE.Color(0xd7d2bd);
@@ -1555,8 +1559,8 @@ function createBeyondTerrain(){
   const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.96,metalness:.012,flatShading:true});
   const mesh=new THREE.Mesh(geo,mat);mesh.name='beyond:geological-history-topology';mesh.receiveShadow=true;root.add(mesh);
   function groundHeight(x,z){const fx=clamp((x+HALF)/SIZE*(N-1),0,N-1.001),fz=clamp((z+HALF)/SIZE*(N-1),0,N-1.001),x0=Math.floor(fx),z0=Math.floor(fz),tx=fx-x0,tz=fz-z0,A=heights[x0+N*z0],B=heights[x0+1+N*z0],C=heights[x0+N*(z0+1)],D=heights[x0+1+N*(z0+1)];return THREE.MathUtils.lerp(THREE.MathUtils.lerp(A,B,tx),THREE.MathUtils.lerp(C,D,tx),tz)}
-  const inert=()=>({locked:true,reason:'beyond-geological-history-t5'});
-  return{root,mesh,maps:(x,z)=>{const w=sampleWorld(x,z);return{height:groundHeight(x,z),bedrock:w.bedrock,exposedStratum:w.layer,resistance:w.resistance,mantle:w.mantle,drainage:{trunk:w.drainage.trunk,tributary:w.drainage.tributary}}},reset:()=>{},seatRect:()=>{},raise:inert,excavate:inert,groundHeight,inspect:()=>({kind:'beyond-geological-history-t5',size:SIZE,resolution:N,seed,strata:STRATA,jurisdictions:0,representation:{bandlimit:'separable-121',bedReliefGain:1.25,resistance:'continuous-contact-blend',drainage:'continuous-domain-warp'},history:['stratigraphy','deformation','drainage','differential-erosion','deposition']})};
+  const inert=()=>({locked:true,reason:'beyond-geological-history-t6'});
+  return{root,mesh,maps:(x,z)=>{const w=sampleWorld(x,z);return{height:groundHeight(x,z),bedrock:w.bedrock,exposedStratum:w.layer,resistance:w.resistance,mantle:w.mantle,drainage:{trunk:w.drainage.trunk,tributary:w.drainage.tributary}}},reset:()=>{},seatRect:()=>{},raise:inert,excavate:inert,groundHeight,inspect:()=>({kind:'beyond-geological-history-t6',size:SIZE,resolution:N,seed,strata:STRATA,jurisdictions:0,representation:{bandlimit:'separable-121',bedReliefGain:1.25,resistance:'continuous-contact-blend',cliffs:'survival-retreat-adversary'},history:['stratigraphy','deformation','drainage','differential-erosion','deposition']})};
 }
 function ensureBeyondTerrain(){
   if(!beyondTerrain)beyondTerrain=createBeyondTerrain();

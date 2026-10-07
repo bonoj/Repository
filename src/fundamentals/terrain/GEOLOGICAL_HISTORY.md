@@ -51,3 +51,20 @@ The reusable pieces promoted from that experiment are:
 The four quadrant recipes themselves are **not** Fundamentals. They are an experimental composition and remain preserved in the frozen specimen. Likewise, the current visual artifacts are evidence for later refinement, not behavior to canonize.
 
 The important law is temporal composition: later processes consume the consequences of earlier processes. Different ordering and jurisdiction can create different terrain families from the same operator vocabulary. Preserve that causal freedom; do not turn the observed outputs into named terrain stamps.
+
+
+## Deterministic history exploration
+
+The later Beyond sampler adds a search layer above the earned geological operators. This layer is not itself a new landform vocabulary.
+
+A **world seed** deterministically chooses the history genome: disturbance locations, orientations, magnitudes, spatial scales, and process-local noise. A **mutation ordinal** deterministically perturbs that genome within a bounded neighborhood while retaining the base seed.
+
+This establishes three useful experimental motions:
+
+- change seed to sample a substantially different history;
+- mutate to explore the neighborhood of an interesting history;
+- temporarily isolate one operator variable when a causal question requires an A/B or discrete sweep.
+
+Continuous UI sliders are deliberately outside this grammar. Geological parameters belong to the compiler; human interaction supplies semantic selection pressure. Interesting worlds can be frozen whole and their genuinely reusable mechanisms promoted independently.
+
+The sampler is therefore a search instrument over causal histories, not a terrain editor.

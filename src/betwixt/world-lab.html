@@ -1418,7 +1418,51 @@ function ensureWorkshopTerrain(){
   workshopTerrain.apparatus.visible=contentWorkshopHidden;
   return workshopTerrain;
 }
-let beyondTerrain=null,beyondWorldSeed=741,beyondMutation=0;
+let beyondTerrain=null,beyondWorldSeed=741,beyondMutation=0,beyondPopulation=null;
+function populateBeyondFields(count=25000){
+  const terrain=ensureBeyondTerrain();if(!terrain)return null;
+  if(beyondPopulation){beyondPopulation.removeFromParent();beyondPopulation.geometry?.dispose();beyondPopulation.material?.dispose();beyondPopulation=null}
+  // Population Fields P0: direct visualization, not dynamics. Cheap matter is sampled
+  // into several overlapping local organization fields so we can inspect morphology + fps.
+  const geo=new THREE.SphereGeometry(.115,6,4);
+  const mat=new THREE.MeshStandardMaterial({color:0xd8d0b8,roughness:.72,metalness:.08});
+  const mesh=new THREE.InstancedMesh(geo,mat,count);mesh.name='population-fields:p0';mesh.frustumCulled=false;
+  const dummy=new THREE.Object3D(),fract=v=>v-Math.floor(v);
+  const rnd=n=>fract(Math.sin(n*91.733+beyondWorldSeed*17.17)*43758.5453123);
+  const gauss=(n)=>{const u=Math.max(1e-5,rnd(n)),v=rnd(n+17.31);return Math.sqrt(-2*Math.log(u))*Math.cos(Math.PI*2*v)};
+  const branch=[
+    [-34,-22,-27,-12],[-27,-12,-18,-3],[-18,-3,-8,9],[-18,-3,-27,8],[-8,9,2,21],[-8,9,-17,23],[-27,8,-39,18],
+    [9,-28,16,-17],[16,-17,27,-7],[27,-7,39,5],[27,-7,31,11],[16,-17,5,-9]
+  ];
+  const pointOnSeg=(seg,t,off)=>{const [ax,az,bx,bz]=seg,dx=bx-ax,dz=bz-az,l=Math.hypot(dx,dz)||1;return [ax+dx*t-dz/l*off,az+dz*t+dx/l*off]};
+  for(let i=0;i<count;i++){
+    const family=i%4;let x,z;
+    if(family===0){ // noisy clumps
+      const centers=[[-30,28],[-18,34],[-24,18],[36,25],[28,33]],c=centers[Math.floor(rnd(i*7.1)*centers.length)];
+      x=c[0]+gauss(i*13.7)*3.0;z=c[1]+gauss(i*19.3)*2.5;
+    }else if(family===1){ // branching / dendritic
+      const seg=branch[Math.floor(rnd(i*5.3)*branch.length)],p=pointOnSeg(seg,rnd(i*11.9),gauss(i*23.1)*.72);
+      x=p[0];z=p[1];
+    }else if(family===2){ // broken annuli / satellites
+      const cx=28,cz=-27,a=rnd(i*3.7)*Math.PI*2,r=7.2+(rnd(i*29.1)>.76?5.4:0)+gauss(i*31.7)*.55;
+      x=cx+Math.cos(a)*r;z=cz+Math.sin(a)*r*.72;
+    }else{ // sparse noisy sheet with holes
+      x=-2+rnd(i*37.1)*31;z=4+rnd(i*41.3)*25;
+      const hole=Math.hypot(x-5,z-15);if(hole<5.2){const a=Math.atan2(z-15,x-5),r=5.2+rnd(i*43.9)*2.8;x=5+Math.cos(a)*r;z=15+Math.sin(a)*r}
+      x+=gauss(i*47.7)*.35;z+=gauss(i*53.1)*.35;
+    }
+    x=Math.max(-51.5,Math.min(51.5,x));z=Math.max(-51.5,Math.min(51.5,z));
+    const y=terrain.groundHeight(x,z)+.13;
+    dummy.position.set(x,y,z);dummy.scale.setScalar(.72+rnd(i*59.7)*.58);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
+  }
+  mesh.instanceMatrix.needsUpdate=true;terrain.root.add(mesh);beyondPopulation=mesh;window.vestibuleDirty=true;
+  return{count,fields:4};
+}
+function toggleBeyondPopulation(){
+  if(beyondPopulation){beyondPopulation.removeFromParent();beyondPopulation.geometry.dispose();beyondPopulation.material.dispose();beyondPopulation=null;window.vestibuleDirty=true;return false}
+  populateBeyondFields();return true;
+}
+
 function createBeyondTerrain(){
   // Beyond T1: compile a cheap geological history into one authoritative terrain surface.
   // No terrain-type parcels. Continuous strata are deformed, incised, differentially
@@ -2105,6 +2149,7 @@ function presentLocus(name){
         shell.registerTool({id:'beyond-observe-next',text:'›',label:'Next observation',onClick:()=>cycleBeyondObservation(1)});
         shell.registerTool({id:'beyond-seed-next',text:'🎲',label:'Next deterministic world seed',onClick:()=>nextBeyondSeed(1)});
         shell.registerTool({id:'beyond-history-mutate',text:'✣',label:'Mutate geological history',onClick:()=>mutateBeyondHistory(1)});
+        shell.registerTool({id:'beyond-population-fields',text:'⁙',label:'Population fields: 25k',onClick:toggleBeyondPopulation});
       }
     }
   }

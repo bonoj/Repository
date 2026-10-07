@@ -32,12 +32,13 @@ try{
   if(first.presences<1||second.presences<1)failures.push("runtime exposed no presences");
   if(!first.build||first.build!==second.build)failures.push("repository build identity missing or unstable");
 
-  // Beyond is an experimental failure boundary, but it must survive its own startup and first behavior window.
+  // Beyond is an experimental failure boundary. T0 is born complete: terrain topology must
+  // instantiate synchronously and remain queryable; no behavior window or Four Brothers is required.
   await page.evaluate(()=>globalThis.RepositoryShell?.button?.("beyond-place")?.click());
-  await page.waitForFunction(()=>globalThis.FourBrothers?.inspect?.()?.kind==="four-brothers-peace",{timeout:5000});
-  await page.waitForTimeout(7000);
-  const beyond=await page.evaluate(()=>globalThis.FourBrothers?.inspect?.());
-  if(!beyond||beyond.red!==false||beyond.greenGrowth<1||beyond.yellowGrowth<1||!beyond.coupled)failures.push("Beyond Four Brothers did not survive through first entanglement: "+JSON.stringify(beyond));
+  await page.waitForFunction(()=>globalThis.BeyondTerrain?.inspect?.()?.kind==="beyond-continuous-topology-t0",{timeout:8000});
+  await page.waitForTimeout(1200);
+  const beyond=await page.evaluate(()=>globalThis.BeyondTerrain?.inspect?.());
+  if(!beyond||beyond.size<80||beyond.resolution<100||beyond.sites<25)failures.push("Beyond topology T0 did not survive startup: "+JSON.stringify(beyond));
 
   if(failures.length)throw new Error(failures.join("\n"));
   console.log("Betwixt runtime smoke passed:",second);

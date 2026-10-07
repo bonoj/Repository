@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Six Cities — Parts Bench</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080a0c;color:#d9dde0;font-family:system-ui,sans-serif;touch-action:none}canvas{display:block}
+#mark{position:fixed;z-index:4;left:12px;top:10px;font:10px/1.4 ui-monospace,monospace;color:#9aa2a8;letter-spacing:.08em;pointer-events:none}
+#mark b{display:block;color:#e5e8e9;font:600 12px/1.4 system-ui,sans-serif;letter-spacing:.12em}
+#hint{position:fixed;z-index:4;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);font:11px/1.3 system-ui,sans-serif;color:#aab0b4;background:#0b0e11c9;border:1px solid #ffffff18;border-radius:999px;padding:8px 12px;white-space:nowrap;pointer-events:none}
+#name{position:fixed;z-index:4;right:12px;top:12px;text-align:right;font:600 12px/1.3 system-ui,sans-serif;color:#e6e1d5;pointer-events:none}
+</style></head><body>
+<div id="mark"><b>SIX CITIES · PARTS BENCH</b>BUILD BUILD_PENDING</div><div id="name">whole bench</div><div id="hint">tap a part · drag to orbit · pinch to zoom · tap floor for bench</div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js';
+
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x080a0c);scene.fog=new THREE.FogExp2(0x080a0c,.018);
+const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.05,180);camera.position.set(13,11,18);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;document.body.append(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.075;controls.target.set(0,2.1,0);controls.minDistance=3;controls.maxDistance=45;
+scene.add(new THREE.HemisphereLight(0xb9c5cf,0x21180e,1.35));const sun=new THREE.DirectionalLight(0xffe5ba,3.0);sun.position.set(-8,14,7);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);scene.add(sun);
+
+const brass=new THREE.MeshStandardMaterial({color:0x8b6730,roughness:.4,metalness:.72});
+const dark=new THREE.MeshStandardMaterial({color:0x292d2f,roughness:.5,metalness:.65});
+const eyeWhite=new THREE.MeshStandardMaterial({color:0xd6d9d6,roughness:.34,metalness:.08});
+const iris=new THREE.MeshStandardMaterial({color:0x222a2c,roughness:.28,metalness:.25});
+const fieldMat=new THREE.MeshBasicMaterial({color:0x9ab9c7,transparent:true,opacity:.13,wireframe:true});
+const floorMat=new THREE.MeshStandardMaterial({color:0x17191a,roughness:.95,metalness:.05});
+const floor=new THREE.Mesh(new THREE.CylinderGeometry(15.5,15.5,.24,12),floorMat);floor.position.y=-.14;floor.receiveShadow=true;scene.add(floor);
+
+const R=.58,T=.055,Z=new THREE.Vector3(0,0,1),Y=new THREE.Vector3(0,1,0);
+const pickables=[];const specimens=[];
+function cylinder(a,b,r=.055,mat=brass,parent){const d=b.clone().sub(a),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),8),mat);m.position.copy(a).add(b).multiplyScalar(.5);m.quaternion.setFromUnitVectors(Y,d.clone().normalize());m.castShadow=true;(parent||scene).add(m);return m}
+function ring(parent,pos,normal=Z,r=R){const g=new THREE.Group();g.position.copy(pos);g.quaternion.setFromUnitVectors(Z,normal.clone().normalize());parent.add(g);const m=new THREE.Mesh(new THREE.TorusGeometry(r,T,10,40),brass);m.castShadow=true;g.add(m);return g}
+function node(parent,p,r=.105){const m=new THREE.Mesh(new THREE.SphereGeometry(r,14,10),dark);m.position.copy(p);m.castShadow=true;parent.add(m);return m}
+function specimen(name,pos,build){const g=new THREE.Group();g.position.copy(pos);scene.add(g);build(g);g.userData.specimen={name};g.traverse(o=>{if(o.isMesh){o.userData.specimen=g;pickables.push(o)}});specimens.push(g);return g}
+function cardinalCage(parent,{radius=1.18,omit=null}={}){const pts={xp:new THREE.Vector3(radius,0,0),xn:new THREE.Vector3(-radius,0,0),yp:new THREE.Vector3(0,radius,0),yn:new THREE.Vector3(0,-radius,0),zp:new THREE.Vector3(0,0,radius),zn:new THREE.Vector3(0,0,-radius)};node(parent,new THREE.Vector3(),.13);for(const [k,p] of Object.entries(pts)){if(k===omit)continue;node(parent,p);ring(parent,p,p);cylinder(new THREE.Vector3(),p.clone().multiplyScalar(.62),.04,brass,parent)}return pts}
+function eye(parent,scale=.52){const g=new THREE.Group();parent.add(g);const ball=new THREE.Mesh(new THREE.SphereGeometry(scale,24,16),eyeWhite);ball.castShadow=true;g.add(ball);const pupil=new THREE.Mesh(new THREE.SphereGeometry(scale*.31,18,12,0,Math.PI*2,0,Math.PI*.48),iris);pupil.position.z=scale*.88;g.add(pupil);return g}
+function seat(parent,payload=true){ring(parent,new THREE.Vector3(0,0,-.78),Z);ring(parent,new THREE.Vector3(0,0,.78),Z);if(payload)eye(parent,.42)}
+function cubeRotor(parent){const rotor=new THREE.Group();parent.add(rotor);for(let i=0;i<6;i++){const a=i*Math.PI/3,m=new THREE.Mesh(new THREE.BoxGeometry(.18,.18,.18),brass);m.position.set(Math.cos(a)*.38,Math.sin(a)*.38,0);m.rotation.set(a*.3,a*.5,a);m.castShadow=true;rotor.add(m)}rotor.userData.spin=true;return rotor}
+
+specimen('7-node · 6-ring junction',new THREE.Vector3(-6.5,2,-3.6),g=>cardinalCage(g));
+specimen('5-ring gimbal',new THREE.Vector3(-2.3,2,-3.6),g=>{cardinalCage(g,{radius:1.18});const outer=new THREE.Group();g.add(outer);cardinalCage(outer,{radius:1.78,omit:'xp'});outer.rotation.z=.24;outer.userData.slow=true});
+specimen('2-ring orb seat · eye',new THREE.Vector3(2.4,2,-3.6),g=>{seat(g,true)});
+specimen('spinning cube mechanism',new THREE.Vector3(6.3,2,-3.6),g=>{seat(g,false);cubeRotor(g)});
+
+specimen('spine / truss',new THREE.Vector3(-6.5,2,1),g=>{const a=new THREE.Vector3(0,0,-1.8),b=new THREE.Vector3(0,0,1.8);ring(g,a,new THREE.Vector3(0,0,-1));ring(g,b,Z);const offs=[[-.32,-.32],[.32,-.32],[-.32,.32],[.32,.32]];for(const [x,y] of offs)cylinder(new THREE.Vector3(x,y,-1.5),new THREE.Vector3(x,y,1.5),.045,brass,g);for(let z=-1.2;z<1.3;z+=.6){cylinder(new THREE.Vector3(-.32,-.32,z),new THREE.Vector3(.32,.32,z+.6),.035,dark,g);cylinder(new THREE.Vector3(.32,-.32,z),new THREE.Vector3(-.32,.32,z+.6),.035,dark,g)}});
+specimen('manifold / bus',new THREE.Vector3(-2.2,2,1),g=>{cylinder(new THREE.Vector3(0,-1.7,0),new THREE.Vector3(0,1.7,0),.12,dark,g);for(const y of [-1.45,-.48,.48,1.45]){ring(g,new THREE.Vector3(.72,y,0),new THREE.Vector3(1,0,0));cylinder(new THREE.Vector3(.1,y,0),new THREE.Vector3(.72,y,0),.055,brass,g)}ring(g,new THREE.Vector3(0,-2,0),new THREE.Vector3(0,-1,0));ring(g,new THREE.Vector3(0,2,0),new THREE.Vector3(0,1,0))});
+specimen('driver throat',new THREE.Vector3(2.2,2,1),g=>{ring(g,new THREE.Vector3(0,0,-1.25),Z);ring(g,new THREE.Vector3(0,0,1.25),new THREE.Vector3(0,0,-1));for(const x of [-.82,.82]){cylinder(new THREE.Vector3(x,-.55,-1),new THREE.Vector3(x,-.55,1),.065,dark,g);cylinder(new THREE.Vector3(x,.55,-1),new THREE.Vector3(x,.55,1),.065,dark,g)}const r=cubeRotor(g);r.position.x=.92;r.scale.setScalar(.72)});
+specimen('field frame + aperture',new THREE.Vector3(6.4,2,1),g=>{const pts=[new THREE.Vector3(-.9,-.9,0),new THREE.Vector3(.9,-.9,0),new THREE.Vector3(0,.95,-.7),new THREE.Vector3(0,.95,.7)];pts.forEach(p=>node(g,p,.13));for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++)cylinder(pts[i],pts[j],.028,dark,g);const bubble=new THREE.Mesh(new THREE.SphereGeometry(1.15,20,12),fieldMat);g.add(bubble);ring(g,new THREE.Vector3(0,0,1.15),Z,.43)});
+specimen('brace / tendon',new THREE.Vector3(-6.2,2,5.2),g=>{const a=new THREE.Vector3(-1.3,-1.25,0),b=new THREE.Vector3(-1.3,1.25,0),c=new THREE.Vector3(1.3,-1.25,0),d=new THREE.Vector3(1.3,1.25,0);[a,b,c,d].forEach(p=>node(g,p,.13));cylinder(a,b,.055,brass,g);cylinder(c,d,.055,brass,g);const curve=new THREE.CatmullRomCurve3([b,new THREE.Vector3(-.35,.25,.18),new THREE.Vector3(.35,-.25,-.18),c]);const t=new THREE.Mesh(new THREE.TubeGeometry(curve,28,.045,8,false),brass);t.castShadow=true;g.add(t)});
+
+// composition: sparse vertical civic skeleton assembled from the same grammar.
+specimen('tower composition',new THREE.Vector3(1.7,3.2,6.2),g=>{
+  const levels=[-2.3,0,2.3];for(const y of levels){const j=new THREE.Group();j.position.y=y;g.add(j);j.scale.setScalar(.62);cardinalCage(j,{radius:1.18})}
+  for(const x of [-.45,.45])for(const z of [-.45,.45])cylinder(new THREE.Vector3(x,-1.55,z),new THREE.Vector3(x,1.55,z),.05,brass,g);
+  const driver=new THREE.Group();driver.position.set(1.7,0,0);driver.rotation.y=Math.PI/2;g.add(driver);ring(driver,new THREE.Vector3(0,0,-.72),Z,.4);ring(driver,new THREE.Vector3(0,0,.72),new THREE.Vector3(0,0,-1),.4);
+  const drone=new THREE.Group();drone.position.set(-1.65,1.25,.3);drone.scale.setScalar(.52);g.add(drone);seat(drone,true);
+});
+
+const target=new THREE.Vector3(),camGoal=new THREE.Vector3(),targetGoal=new THREE.Vector3();let moving=false;
+function frame(g){const box=new THREE.Box3().setFromObject(g),sphere=new THREE.Sphere();box.getBoundingSphere(sphere);targetGoal.copy(sphere.center);const dir=camera.position.clone().sub(controls.target).normalize();camGoal.copy(sphere.center).addScaledVector(dir,Math.max(3.2,sphere.radius*3.0));moving=true;document.querySelector('#name').textContent=g.userData.specimen?.name||'whole bench'}
+function frameAll(){targetGoal.set(0,2.1,1);camGoal.set(13,11,18);moving=true;document.querySelector('#name').textContent='whole bench'}
+const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();let down=null,moved=false;
+renderer.domElement.addEventListener('pointerdown',e=>{down=[e.clientX,e.clientY];moved=false});
+renderer.domElement.addEventListener('pointermove',e=>{if(down&&Math.hypot(e.clientX-down[0],e.clientY-down[1])>7)moved=true});
+renderer.domElement.addEventListener('pointerup',e=>{if(moved)return;mouse.x=e.clientX/innerWidth*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;ray.setFromCamera(mouse,camera);const hit=ray.intersectObjects(pickables,false)[0];if(hit)frame(hit.object.userData.specimen);else frameAll();down=null});
+
+function animate(t){requestAnimationFrame(animate);scene.traverse(o=>{if(o.userData.spin)o.rotation.z=t*.0022;if(o.userData.slow)o.rotation.y=t*.00018});if(moving){camera.position.lerp(camGoal,.085);controls.target.lerp(targetGoal,.085);if(camera.position.distanceTo(camGoal)<.02&&controls.target.distanceTo(targetGoal)<.02)moving=false}controls.update();renderer.render(scene,camera)}
+animate(0);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script></body></html>

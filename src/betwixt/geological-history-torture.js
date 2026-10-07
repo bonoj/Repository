@@ -23,7 +23,7 @@ export function createQuadrantHistory({noise,clamp,smooth}){
     const warp=noise(x*.045,z*.041,seed)*2.4,r=Math.hypot(x-cx,z-cz)+warp;
     const bowl=smooth(clamp((radius-r)/(radius*.62)));
     const rim=Math.exp(-Math.pow((r-radius*.78)/(radius*.14),2));
-    return{-depth*bowl+rim*depth*.22,bowl,rim};
+    return{delta:-depth*bowl+rim*depth*.22,bowl,rim};
   };
   const deposit=(x,z,low,{cx=24,cz=25,spreadX=24,spreadZ=17,amount=4.5,seed=1471}={})=>{
     const warp=noise(x*.025,z*.021,seed)*4;
@@ -53,7 +53,7 @@ export function createQuadrantHistory({noise,clamp,smooth}){
     sw-=exposureErosion(baseHeight+sw,resistance,3.6)+swFault.fracture*2.6;
     // SE: uplift -> collapse -> mass transport/burial -> re-incision.
     const seCollapse=collapse(x,z,{cx:28,cz:-27,radius:17,depth:8.5,seed:1561});
-    let se=4.2+tilt(x,z,{angle:.8,magnitude:.08})+seCollapse;
+    let se=4.2+tilt(x,z,{angle:.8,magnitude:.08})+seCollapse.delta;
     const debris=deposit(x,z,clamp((2-(baseHeight+se))/9),{cx:36,cz:-37,spreadX:19,spreadZ:13,amount:6.2,seed:1571});
     se+=debris-incise(x,z,{phase:2.1,width:3.7,depth:5.5,seed:1581});
     // Broad overlap is intentional: boundaries are jurisdictions, not square seams.

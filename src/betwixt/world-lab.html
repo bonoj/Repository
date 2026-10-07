@@ -1560,7 +1560,7 @@ function createBeyondTerrain(){
   const mesh=new THREE.Mesh(geo,mat);mesh.name='beyond:geological-history-topology';mesh.receiveShadow=true;root.add(mesh);
   function groundHeight(x,z){const fx=clamp((x+HALF)/SIZE*(N-1),0,N-1.001),fz=clamp((z+HALF)/SIZE*(N-1),0,N-1.001),x0=Math.floor(fx),z0=Math.floor(fz),tx=fx-x0,tz=fz-z0,A=heights[x0+N*z0],B=heights[x0+1+N*z0],C=heights[x0+N*(z0+1)],D=heights[x0+1+N*(z0+1)];return THREE.MathUtils.lerp(THREE.MathUtils.lerp(A,B,tx),THREE.MathUtils.lerp(C,D,tx),tz)}
   const inert=()=>({locked:true,reason:'beyond-geological-history-t6'});
-  return{root,mesh,maps:(x,z)=>{const w=sampleWorld(x,z);return{height:groundHeight(x,z),bedrock:w.bedrock,exposedStratum:w.layer,resistance:w.resistance,mantle:w.mantle,drainage:{trunk:w.drainage.trunk,tributary:w.drainage.tributary}}},reset:()=>{},seatRect:()=>{},raise:inert,excavate:inert,groundHeight,inspect:()=>({kind:'beyond-geological-history-t6',size:SIZE,resolution:N,seed,strata:STRATA,jurisdictions:0,representation:{bandlimit:'separable-121',bedReliefGain:1.25,resistance:'continuous-contact-blend',cliffs:'survival-retreat-adversary'},history:['stratigraphy','deformation','drainage','differential-erosion','deposition']})};
+  return{root,mesh,maps:(x,z)=>{const w=sampleWorld(x,z);return{height:groundHeight(x,z),bedrock:w.bedrock,exposedStratum:w.layer,resistance:w.resistance,mantle:w.mantle,drainage:{trunk:w.drainage.trunk,tributary:w.drainage.tributary},retreat:w.retreat}},reset:()=>{},seatRect:()=>{},raise:inert,excavate:inert,groundHeight,inspect:()=>({kind:'beyond-geological-history-t6',size:SIZE,resolution:N,seed,strata:STRATA,jurisdictions:0,representation:{bandlimit:'separable-121',bedReliefGain:1.25,resistance:'continuous-contact-blend',cliffs:'survival-retreat-adversary'},history:['stratigraphy','deformation','drainage','differential-erosion','deposition']})};
 }
 function ensureBeyondTerrain(){
   if(!beyondTerrain)beyondTerrain=createBeyondTerrain();
@@ -1575,6 +1575,28 @@ globalThis.BeyondTerrain={
   inspect:()=>ensureBeyondTerrain().inspect()
 };
 
+let beyondObservationIndex=0;
+function cameraProvenance(){
+  const dir=new THREE.Vector3();camera.getWorldDirection(dir);
+  return{position:camera.position.toArray().map(v=>+v.toFixed(4)),target:target.toArray().map(v=>+v.toFixed(4)),direction:dir.toArray().map(v=>+v.toFixed(5)),fov:camera.fov,arcball:arcballActive};
+}
+function beyondObservationViews(){
+  const terrain=ensureBeyondTerrain(),center=new THREE.Vector3(-29,terrain.groundHeight(-29,28)+2.1,28);
+  return[
+    {id:'mesa-establishing',label:'mesa establishing',position:[-8,18,48],target:center.toArray()},
+    {id:'mesa-rim',label:'mesa retreat rim',position:[-18,11,12],target:[-29,terrain.groundHeight(-29,20)+1.0,20]},
+    {id:'mesa-profile',label:'mesa cap and shoulder',position:[-49,13,20],target:[-29,terrain.groundHeight(-29,28)+.7,28]},
+    {id:'canyon-control',label:'canyon control',position:[16,10,13],target:[8,terrain.groundHeight(8,-5),-5]}
+  ];
+}
+function presentBeyondObservation(index=0){
+  const views=beyondObservationViews(),view=views[((index%views.length)+views.length)%views.length];
+  beyondObservationIndex=((index%views.length)+views.length)%views.length;
+  setArcball(false);camera.position.fromArray(view.position);target.fromArray(view.target);camera.lookAt(target);
+  const off=camera.position.clone().sub(target);radius=off.length();phi=Math.acos(THREE.MathUtils.clamp(off.y/radius,-1,1));theta=Math.atan2(off.x,off.z);
+  window.vestibuleDirty=true;return view;
+}
+function cycleBeyondObservation(delta){return presentBeyondObservation(beyondObservationIndex+delta)}
 function scanBeyondTopology(){
   const terrain=ensureBeyondTerrain(),meta=terrain.inspect(),size=meta.size,n=meta.resolution,half=size*.5,step=size/(n-1);
   const heights=new Float32Array(n*n),samples=new Array(n*n);
@@ -1594,6 +1616,15 @@ function scanBeyondTopology(){
   }
   const quant=(arr,q)=>{const a=Array.from(arr).sort((a,b)=>a-b);return a[Math.min(a.length-1,Math.floor((a.length-1)*q))]||0};
   sharp.sort((a,b)=>b.neighborDelta-a.neighborDelta||b.slope-a.slope);
+  // Connected high-gradient structures: morphology rather than a leaderboard of pixels.
+  const steep=new Uint8Array(n*n);
+  for(let z=1;z<n-1;z++)for(let x=1;x<n-1;x++){const i=x+n*z,h=heights[i],dx=(heights[i+1]-heights[i-1])/(2*step),dz=(heights[i+n]-heights[i-n])/(2*step);if(Math.hypot(dx,dz)>1.35)steep[i]=1}
+  const seen=new Uint8Array(n*n),components=[];
+  for(let z=1;z<n-1;z++)for(let x=1;x<n-1;x++){const start=x+n*z;if(!steep[start]||seen[start])continue;const q=[start];seen[start]=1;let count=0,minX=x,maxX=x,minZ=z,maxZ=z,lo=Infinity,hi=-Infinity,sx=0,sz=0,retreat=0;
+    while(q.length){const i=q.pop(),ix=i%n,iz=(i/n)|0,h=heights[i];count++;minX=Math.min(minX,ix);maxX=Math.max(maxX,ix);minZ=Math.min(minZ,iz);maxZ=Math.max(maxZ,iz);lo=Math.min(lo,h);hi=Math.max(hi,h);sx+=ix;sz+=iz;retreat+=samples[i].retreat?.shoulder||samples[i].retreat?.cap||0;for(const d of [-1,1,-n,n]){const j=i+d,jx=j%n,jz=(j/n)|0;if(jx<1||jx>=n-1||jz<1||jz>=n-1||seen[j]||!steep[j])continue;seen[j]=1;q.push(j)}}
+    if(count>=4)components.push({samples:count,center:[+(-half+(sx/count)*step).toFixed(3),+(-half+(sz/count)*step).toFixed(3)],bounds:{x:[+(-half+minX*step).toFixed(3),+(-half+maxX*step).toFixed(3)],z:[+(-half+minZ*step).toFixed(3),+(-half+maxZ*step).toFixed(3)]},heightSpan:+(hi-lo).toFixed(3),retreatAffinity:+(retreat/count).toFixed(3)});
+  }
+  components.sort((a,b)=>b.samples-a.samples);
   const transects=[];
   const lines=[['x@z0','x',0],['z@x0','z',0],['x@z-18','x',-18],['x@z18','x',18],['z@x-27','z',-27],['z@x27','z',27]];
   for(const [name,axis,fixed] of lines){
@@ -1612,13 +1643,13 @@ function scanBeyondTopology(){
       slope:{mean:+(slopeSum/slopes.length).toFixed(4),sd:+Math.sqrt(Math.max(0,slope2/slopes.length-(slopeSum/slopes.length)**2)).toFixed(4),p50:+quant(slopes,.5).toFixed(4),p90:+quant(slopes,.9).toFixed(4),p99:+quant(slopes,.99).toFixed(4),max:+maxSlope.toFixed(4)},
       neighborDelta:{p50:+quant(neighborDelta,.5).toFixed(4),p90:+quant(neighborDelta,.9).toFixed(4),p99:+quant(neighborDelta,.99).toFixed(4),max:+maxDelta.toFixed(4)},
       laplacian:{p01:+quant(laplacian,.01).toFixed(4),p50:+quant(laplacian,.5).toFixed(4),p99:+quant(laplacian,.99).toFixed(4)}},
-    suspicious:sharp.slice(0,160),coarseCells:coarse,transects};
+    camera:cameraProvenance(),observations:beyondObservationViews(),gradientStructures:components.slice(0,40),suspicious:sharp.slice(0,160),coarseCells:coarse,transects};
 }
 function downloadBeyondTopologyScan(){
-  const report=scanBeyondTopology(),blob=new Blob([JSON.stringify(report)],{type:'application/json'}),a=document.createElement('a');
+  const report=scanBeyondTopology();presentBeyondObservation(0),blob=new Blob([JSON.stringify(report)],{type:'application/json'}),a=document.createElement('a');
   a.href=URL.createObjectURL(blob);a.download='beyond-topology-'+(report.build||'source').slice(0,8)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),0);return report;
 }
-globalThis.scanBeyondTopology=scanBeyondTopology;
+globalThis.scanBeyondTopology=scanBeyondTopology;globalThis.presentBeyondObservation=presentBeyondObservation;
 
 let fourBrothers=null;
 function ensureFourBrothers(){
@@ -1990,7 +2021,7 @@ function setBetwixtTitle(text){
 function removeBetwixtPortal(){globalThis.RepositoryShell?.removeTool('betwixt-portal')}
 function removePlaceSpells(){
   const shell=globalThis.RepositoryShell;if(!shell)return;
-  for(const id of ['observatory-place','workshop-place','crucible-container','beyond-place','beyond-topology-scan'])shell.removeTool(id);
+  for(const id of ['observatory-place','workshop-place','crucible-container','beyond-place','beyond-topology-scan','beyond-observe-prev','beyond-observe-next'])shell.removeTool(id);
 }
 function installBetwixtPortal(){
   const shell=globalThis.RepositoryShell;if(!shell||shell.inspect().tools.includes('betwixt-portal'))return;
@@ -2022,7 +2053,11 @@ function presentLocus(name){
     if(name==='beyond'){
       // Install after place-spell cleanup: the scanner is a locus-local temporary spell.
       const shell=globalThis.RepositoryShell;
-      if(shell&&!shell.inspect().tools.includes('beyond-topology-scan'))shell.registerTool({id:'beyond-topology-scan',text:'🔬',label:'Download topology scan',onClick:downloadBeyondTopologyScan});
+      if(shell&&!shell.inspect().tools.includes('beyond-topology-scan')){
+        shell.registerTool({id:'beyond-topology-scan',text:'🔬',label:'Scan and observe',onClick:downloadBeyondTopologyScan});
+        shell.registerTool({id:'beyond-observe-prev',text:'‹',label:'Previous observation',onClick:()=>cycleBeyondObservation(-1)});
+        shell.registerTool({id:'beyond-observe-next',text:'›',label:'Next observation',onClick:()=>cycleBeyondObservation(1)});
+      }
     }
   }
   window.vestibuleDirty=true;return true;

@@ -31,6 +31,14 @@ try{
   if(!first.ready||!second.ready)failures.push("runtime did not remain ready");
   if(first.presences<1||second.presences<1)failures.push("runtime exposed no presences");
   if(!first.build||first.build!==second.build)failures.push("repository build identity missing or unstable");
+
+  // Beyond is an experimental failure boundary, but it must survive its own startup and first behavior window.
+  await page.evaluate(()=>globalThis.RepositoryShell?.button?.("beyond-place")?.click());
+  await page.waitForFunction(()=>globalThis.FourBrothers?.inspect?.()?.kind==="four-brothers-peace",{timeout:5000});
+  await page.waitForTimeout(7000);
+  const beyond=await page.evaluate(()=>globalThis.FourBrothers?.inspect?.());
+  if(!beyond||beyond.red!==false||beyond.greenGrowth<1||beyond.yellowGrowth<1||!beyond.coupled)failures.push("Beyond Four Brothers did not survive through first entanglement: "+JSON.stringify(beyond));
+
   if(failures.length)throw new Error(failures.join("\n"));
   console.log("Betwixt runtime smoke passed:",second);
 }finally{

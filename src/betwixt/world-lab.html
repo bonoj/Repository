@@ -1559,7 +1559,7 @@ function ensureFourBrothers(){
   const bluePath=new THREE.CatmullRomCurve3([
     new THREE.Vector3(-5,0,-20),new THREE.Vector3(1,0,-17),new THREE.Vector3(8,0,-15),
     new THREE.Vector3(13,0,-9),new THREE.Vector3(11,0,-2),new THREE.Vector3(5,0,3)
-  ]);
+  ],false,'catmullrom',.5);
   for(let i=0;i<54;i++){const m=new THREE.Mesh(waterGeo,i%9===0?blueBright:blueMat);m.scale.set(1.55,.32,1);m.castShadow=false;domains.blue.add(m);blues.push({m,phase:i/54})}
   // Yellow begins as a conspicuous ordered ridge/crown: repeated geometry and verticality.
   for(let i=0;i<15;i++){

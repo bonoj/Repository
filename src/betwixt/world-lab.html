@@ -1504,8 +1504,13 @@ function createBeyondTerrain(){
     state=stratumState(structural,erosion);
     const layer=state.layer,resistance=state.resistance;
     const beddingPhase=(structural-erosion)*2.2+noise(x*.025,z*.025,827)*.65;
-    const bedRelief=(resistance-.48)*.48*Math.tanh(Math.sin(beddingPhase)*1.25);
+    const rawBedRelief=(resistance-.48)*.48*Math.tanh(Math.sin(beddingPhase)*1.25);
     const retreat=mesaRetreat(x,z);
+    // T7: retreat owns the large cliff. Suppress repeated bedding relief only where
+    // that younger survival process is actively shaping the face; keep sharpness and
+    // stratigraphic evidence everywhere else.
+    const retreatAuthority=clamp(retreat.cap+retreat.shoulder);
+    const bedRelief=rawBedRelief*(1-.82*retreatAuthority);
     const bedrock=structural-erosion+bedRelief+retreat.lift;
     return{bedrock,layer,resistance,drainage:d,retreat};
   }
@@ -1559,8 +1564,8 @@ function createBeyondTerrain(){
   const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.96,metalness:.012,flatShading:true});
   const mesh=new THREE.Mesh(geo,mat);mesh.name='beyond:geological-history-topology';mesh.receiveShadow=true;root.add(mesh);
   function groundHeight(x,z){const fx=clamp((x+HALF)/SIZE*(N-1),0,N-1.001),fz=clamp((z+HALF)/SIZE*(N-1),0,N-1.001),x0=Math.floor(fx),z0=Math.floor(fz),tx=fx-x0,tz=fz-z0,A=heights[x0+N*z0],B=heights[x0+1+N*z0],C=heights[x0+N*(z0+1)],D=heights[x0+1+N*(z0+1)];return THREE.MathUtils.lerp(THREE.MathUtils.lerp(A,B,tx),THREE.MathUtils.lerp(C,D,tx),tz)}
-  const inert=()=>({locked:true,reason:'beyond-geological-history-t6'});
-  return{root,mesh,maps:(x,z)=>{const w=sampleWorld(x,z);return{height:groundHeight(x,z),bedrock:w.bedrock,exposedStratum:w.layer,resistance:w.resistance,mantle:w.mantle,drainage:{trunk:w.drainage.trunk,tributary:w.drainage.tributary},retreat:w.retreat}},reset:()=>{},seatRect:()=>{},raise:inert,excavate:inert,groundHeight,inspect:()=>({kind:'beyond-geological-history-t6',size:SIZE,resolution:N,seed,strata:STRATA,jurisdictions:0,representation:{bandlimit:'separable-121',bedReliefGain:1.25,resistance:'continuous-contact-blend',cliffs:'survival-retreat-adversary'},history:['stratigraphy','deformation','drainage','differential-erosion','deposition']})};
+  const inert=()=>({locked:true,reason:'beyond-geological-history-t7'});
+  return{root,mesh,maps:(x,z)=>{const w=sampleWorld(x,z);return{height:groundHeight(x,z),bedrock:w.bedrock,exposedStratum:w.layer,resistance:w.resistance,mantle:w.mantle,drainage:{trunk:w.drainage.trunk,tributary:w.drainage.tributary},retreat:w.retreat}},reset:()=>{},seatRect:()=>{},raise:inert,excavate:inert,groundHeight,inspect:()=>({kind:'beyond-geological-history-t7',size:SIZE,resolution:N,seed,strata:STRATA,jurisdictions:0,representation:{bandlimit:'separable-121',bedReliefGain:1.25,resistance:'continuous-contact-blend',cliffs:'survival-retreat-bounded-bedding'},history:['stratigraphy','deformation','drainage','differential-erosion','deposition']})};
 }
 function ensureBeyondTerrain(){
   if(!beyondTerrain)beyondTerrain=createBeyondTerrain();

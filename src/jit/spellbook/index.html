@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><meta name="theme-color" content="#100d18"><title>Spellbook</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#100d18;color:#eadfc7;font-family:Georgia,serif;touch-action:none}canvas{display:block;width:100%;height:100%}
+#top{position:fixed;top:0;left:0;right:0;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;pointer-events:none;text-shadow:0 1px 5px #000}.title{font-size:17px;letter-spacing:.16em}.turn{font:12px system-ui;color:#a99e8c}
+#bar{position:fixed;left:8px;right:8px;bottom:8px;display:flex;gap:7px;overflow-x:auto;padding:4px;scrollbar-width:none}.spell{flex:0 0 auto;border:1px solid #625774;background:#17131fdd;color:#d9cfba;border-radius:14px;padding:9px 12px;min-width:74px;font:12px system-ui;font-weight:700}.spell b{display:block;font:22px Georgia;margin-bottom:2px}.spell.on{border-color:#d8b4ff;background:#2a1b39}.spell small{display:block;color:#8f8499;font-size:9px;margin-top:2px}
+#hint{position:fixed;left:0;right:0;bottom:83px;text-align:center;font:11px system-ui;color:#8e8495;pointer-events:none;transition:.3s}
+</style></head><body><canvas id="c"></canvas><div id="top"><div class="title">SPELLBOOK</div><div class="turn" id="turn">tap the field</div></div><div id="hint">cast a law into the room</div><div id="bar"></div>
+<script>
+const cv=document.querySelector('#c'),ctx=cv.getContext('2d'),bar=document.querySelector('#bar'),hint=document.querySelector('#hint'),turn=document.querySelector('#turn');
+let W,H,dpr,selected='hadar',time=0;
+const spells=[
+{id:'hadar',g:'✹',n:'Hadar',s:'dark · cold · difficult'},
+{id:'fire',g:'✦',n:'Fireball',s:'heat · impulse'},
+{id:'grease',g:'≈',n:'Grease',s:'slick · burns'},
+{id:'web',g:'⌘',n:'Web',s:'restrain · burns'},
+{id:'thunder',g:')))',n:'Thunderwave',s:'impulse'},
+{id:'misty',g:'∴',n:'Misty Step',s:'relocate'}
+];
+spells.forEach(x=>{let b=document.createElement('button');b.className='spell'+(x.id===selected?' on':'');b.innerHTML='<b>'+x.g+'</b>'+x.n+'<small>'+x.s+'</small>';b.onclick=()=>{selected=x.id;[...bar.children].forEach((q,i)=>q.classList.toggle('on',spells[i].id===selected));hint.textContent=selected==='misty'?'tap destination for the marked creature':'cast a law into the room'};bar.appendChild(b)});
+const actors=[
+{x:.24,y:.28,vx:.028,vy:.018,r:9,hp:1,mark:true},{x:.72,y:.25,vx:-.022,vy:.026,r:9,hp:1},{x:.69,y:.68,vx:-.025,vy:-.018,r:9,hp:1},{x:.29,y:.69,vx:.024,vy:-.023,r:9,hp:1}
+];
+const zones=[],bursts=[];
+function resize(){dpr=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}addEventListener('resize',resize);resize();
+function room(){return{x:18,y:50,w:W-36,h:H-150}}
+function world(px,py){let R=room();return{x:R.x+px*R.w,y:R.y+py*R.h}}
+function norm(x,y){let R=room();return{x:(x-R.x)/R.w,y:(y-R.y)/R.h}}
+cv.addEventListener('pointerdown',e=>{let p=norm(e.clientX,e.clientY);if(p.x<0||p.x>1||p.y<0||p.y>1)return;
+ if(selected==='misty'){let a=actors.find(a=>a.mark);a.x=p.x;a.y=p.y;bursts.push({x:p.x,y:p.y,t:time,type:'misty'});return}
+ const rad=selected==='fire'?.13:selected==='thunder'?.15:.17;zones.push({x:p.x,y:p.y,r:rad,type:selected,t:time,life:(selected==='fire'||selected==='thunder')?1.0:999});
+ if(selected==='fire')ignite(p.x,p.y,.16); if(selected==='thunder')push(p.x,p.y,.18,.15);
+});
+function inside(a,z){let dx=a.x-z.x,dy=a.y-z.y;return dx*dx+dy*dy<z.r*z.r}
+function push(x,y,r,f){actors.forEach(a=>{let dx=a.x-x,dy=a.y-y,d=Math.hypot(dx,dy);if(d<r&&d>.001){a.vx+=dx/d*f;a.vy+=dy/d*f}})}
+function ignite(x,y,r){zones.forEach(z=>{if((z.type==='grease'||z.type==='web')&&Math.hypot(z.x-x,z.y-y)<r+z.r){z.type='fire';z.t=time;z.life=1.8}});push(x,y,r,.08)}
+function update(dt){time+=dt;zones.forEach(z=>z.age=time-z.t);
+ actors.forEach(a=>{let slow=1;
+  zones.forEach(z=>{if(!inside(a,z))return;if(z.type==='hadar'){slow*=.28;let ang=Math.atan2(a.y-z.y,a.x-z.x);a.vx+=Math.cos(ang)*.001;a.vy+=Math.sin(ang)*.001}if(z.type==='grease'){a.vx*=1.018;a.vy*=1.018}if(z.type==='web'){slow*=.08}if(z.type==='fire'){let ang=Math.atan2(a.y-z.y,a.x-z.x);a.vx+=Math.cos(ang)*.002;a.vy+=Math.sin(ang)*.002}});
+  a.x+=a.vx*dt*slow;a.y+=a.vy*dt*slow;a.vx*=Math.pow(.996,dt);a.vy*=Math.pow(.996,dt);
+  if(a.x<.03||a.x>.97){a.vx*=-1;a.x=Math.max(.03,Math.min(.97,a.x))}if(a.y<.04||a.y>.96){a.vy*=-1;a.y=Math.max(.04,Math.min(.96,a.y))}
+ });
+ for(let i=zones.length-1;i>=0;i--)if(zones[i].age>zones[i].life)zones.splice(i,1);
+}
+function drawZone(z){let p=world(z.x,z.y),R=room(),rr=z.r*Math.min(R.w,R.h);ctx.save();
+ if(z.type==='hadar'){let g=ctx.createRadialGradient(p.x,p.y,2,p.x,p.y,rr);g.addColorStop(0,'#030207');g.addColorStop(.7,'#08050e');g.addColorStop(1,'#5c477544');ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,rr,0,7);ctx.fill();ctx.strokeStyle='#8565a855';ctx.setLineDash([2,7]);for(let k=0;k<3;k++){ctx.beginPath();ctx.arc(p.x,p.y,rr*(.4+k*.2),time*.2+k,time*.2+k+4.5);ctx.stroke()}}
+ if(z.type==='grease'){ctx.fillStyle='#8f794a44';ctx.strokeStyle='#c9ac6a88';ctx.beginPath();ctx.ellipse(p.x,p.y,rr,rr*.72,.3,0,7);ctx.fill();ctx.stroke()}
+ if(z.type==='web'){ctx.strokeStyle='#d8d2c688';for(let k=0;k<9;k++){let a=k*Math.PI*2/9;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+Math.cos(a)*rr,p.y+Math.sin(a)*rr);ctx.stroke()}for(let q=.3;q<1;q+=.25){ctx.beginPath();ctx.arc(p.x,p.y,rr*q,0,7);ctx.stroke()}}
+ if(z.type==='fire'){ctx.globalAlpha=Math.max(0,1-z.age/z.life);ctx.fillStyle='#b44b2d66';ctx.strokeStyle='#efb44b';ctx.beginPath();ctx.arc(p.x,p.y,rr*(1+.15*Math.sin(time*8)),0,7);ctx.fill();ctx.stroke()}
+ if(z.type==='thunder'){ctx.globalAlpha=Math.max(0,1-z.age/z.life);ctx.strokeStyle='#b6d6e8';ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,rr*(.2+z.age/z.life),0,7);ctx.stroke()}
+ ctx.restore()}
+function draw(){ctx.clearRect(0,0,W,H);ctx.fillStyle='#100d18';ctx.fillRect(0,0,W,H);let R=room();
+ ctx.fillStyle='#181421';ctx.strokeStyle='#75684f';ctx.lineWidth=1.5;ctx.fillRect(R.x,R.y,R.w,R.h);ctx.strokeRect(R.x,R.y,R.w,R.h);
+ // simple walls: physical truth, not decoration
+ ctx.strokeStyle='#8e8065';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(R.x+R.w*.5,R.y);ctx.lineTo(R.x+R.w*.5,R.y+R.h*.34);ctx.moveTo(R.x+R.w*.5,R.y+R.h*.62);ctx.lineTo(R.x+R.w*.5,R.y+R.h);ctx.stroke();
+ zones.forEach(drawZone);
+ actors.forEach((a,i)=>{let p=world(a.x,a.y);ctx.save();ctx.translate(p.x,p.y);ctx.fillStyle=a.mark?'#e3c77e':'#c8c1b3';ctx.strokeStyle='#29222f';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,a.r,0,7);ctx.fill();ctx.stroke();ctx.fillStyle='#29222f';ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(i===0?'◆':'•',0,0);ctx.restore()});
+ bursts.forEach(b=>{let p=world(b.x,b.y),age=time-b.t;if(age<1){ctx.strokeStyle='#a990d0';ctx.globalAlpha=1-age;ctx.beginPath();ctx.arc(p.x,p.y,age*35,0,7);ctx.stroke();ctx.globalAlpha=1}});
+ ctx.fillStyle='#766b78';ctx.font='10px system-ui';ctx.textAlign='right';ctx.fillText('laws compose; outcomes are not scripted',R.x+R.w-8,R.y+R.h-8);
+}
+let last=performance.now();function frame(n){let dt=Math.min(.04,(n-last)/1000);last=n;update(dt);draw();requestAnimationFrame(frame)}requestAnimationFrame(frame);
+</script></body></html>

@@ -62,11 +62,10 @@ select{width:100%;padding:0 12px;appearance:auto}
 #ink{position:fixed;inset:0;z-index:61;pointer-events:none;touch-action:none}
 #ink.active{pointer-events:auto}
 
-<style id="relational-sketch-style">
+
 #relational-sketch{position:fixed;z-index:18;left:max(.6rem,env(safe-area-inset-left));right:max(.6rem,env(safe-area-inset-right));top:4.2rem;bottom:4.25rem;border:1px solid #8b846f88;border-radius:.65rem;background:#111317ee;box-shadow:0 .7rem 2.2rem #0008;display:none;overflow:hidden;pointer-events:auto;touch-action:none}
 #relational-sketch.open{display:block}
 #relational-sketch canvas{width:100%;height:100%;display:block;touch-action:none}
-</style>
 </style>
 </head>
 <body>
@@ -2151,7 +2150,7 @@ function ensureRelationalSketch(){
   canvas.addEventListener('pointerup',e=>{drag=null;try{canvas.releasePointerCapture(e.pointerId)}catch(_){}});
   relationalSketch={host,canvas,nodes,setOpen(open){host.classList.toggle('open',!!open);return !!open},toggle(){return this.setOpen(!host.classList.contains('open'))},close(){return this.setOpen(false)}};requestAnimationFrame(draw);return relationalSketch;
 }
-function installWorkshopSketchSpell(){const shell=globalThis.RepositoryShell;if(!shell||shell.inspect().tools.includes('relational-sketch'))return;shell.registerTool({id:'relational-sketch',text:'✎',label:'Relational sketch',onClick:b=>{const open=ensureRelationalSketch().toggle();b.classList.toggle('active',open);b.setAttribute('aria-pressed',open?'true':'false')}})}
+function installWorkshopSketchSpell(){const shell=globalThis.RepositoryShell;if(!shell||shell.inspect().tools.includes('relational-sketch'))return;shell.registerTool({id:'relational-sketch',text:'✏️',label:'Relational sketch',onClick:b=>{const open=ensureRelationalSketch().toggle();b.classList.toggle('active',open);b.setAttribute('aria-pressed',open?'true':'false')}})}
 function removeWorkshopSketchSpell(){if(relationalSketch)relationalSketch.close();globalThis.RepositoryShell?.removeTool('relational-sketch')}
 function presentLocus(name){
   const next=placeDefinitions[name];if(!next)return false;

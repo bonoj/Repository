@@ -1418,13 +1418,13 @@ function ensureWorkshopTerrain(){
   workshopTerrain.apparatus.visible=contentWorkshopHidden;
   return workshopTerrain;
 }
-let beyondTerrain=null;
+let beyondTerrain=null,beyondWorldSeed=741,beyondMutation=0;
 function createBeyondTerrain(){
   // Beyond T1: compile a cheap geological history into one authoritative terrain surface.
   // No terrain-type parcels. Continuous strata are deformed, incised, differentially
   // eroded and mantled; dunes are terrain topology whose near-surface material is sand.
   const root=new THREE.Group();root.name='beyond:world-substance';beyondPlace.add(root);
-  const SIZE=104,HALF=SIZE*.5,N=289,seed=741,STRATA=7;
+  const SIZE=104,HALF=SIZE*.5,N=289,seed=beyondWorldSeed,STRATA=7;
   const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),smooth=t=>t*t*(3-2*t),fract=v=>v-Math.floor(v),mix=(a,b,t)=>a+(b-a)*t;
   const hash=(x,z,s=seed)=>fract(Math.sin(x*127.1+z*311.7+s*74.7)*43758.5453123);
   function noise(x,z,s=seed){const ix=Math.floor(x),iz=Math.floor(z),fx=smooth(fract(x)),fz=smooth(fract(z));return mix(mix(hash(ix,iz,s),hash(ix+1,iz,s),fx),mix(hash(ix,iz+1,s),hash(ix+1,iz+1,s),fx),fz)*2-1}
@@ -1482,7 +1482,7 @@ function createBeyondTerrain(){
     return{layer:strata.length-1,resistance:strata[strata.length-1].resist};
   }
   const exposedStratum=(structuralHeight,erosion)=>stratumState(structuralHeight,erosion).layer;
-  const torture=createQuadrantHistory({noise,clamp,smooth});
+  const torture=createQuadrantHistory({noise,clamp,smooth,seed,mutation:beyondMutation});
   function mesaRetreat(x,z){
     // T6 adversary: cliffs by survival, not incision. A coherent resistant cap survives
     // regional retreat; the edge is warped continuously so no polygon is authored.
@@ -1568,12 +1568,27 @@ function createBeyondTerrain(){
   const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.96,metalness:.012,flatShading:true});
   const mesh=new THREE.Mesh(geo,mat);mesh.name='beyond:geological-history-topology';mesh.receiveShadow=true;root.add(mesh);
   function groundHeight(x,z){const fx=clamp((x+HALF)/SIZE*(N-1),0,N-1.001),fz=clamp((z+HALF)/SIZE*(N-1),0,N-1.001),x0=Math.floor(fx),z0=Math.floor(fz),tx=fx-x0,tz=fz-z0,A=heights[x0+N*z0],B=heights[x0+1+N*z0],C=heights[x0+N*(z0+1)],D=heights[x0+1+N*(z0+1)];return THREE.MathUtils.lerp(THREE.MathUtils.lerp(A,B,tx),THREE.MathUtils.lerp(C,D,tx),tz)}
-  const inert=()=>({locked:true,reason:'beyond-geological-history-t8'});
-  return{root,mesh,maps:(x,z)=>{const w=sampleWorld(x,z);return{height:groundHeight(x,z),bedrock:w.bedrock,exposedStratum:w.layer,resistance:w.resistance,mantle:w.mantle,drainage:{trunk:w.drainage.trunk,tributary:w.drainage.tributary},retreat:w.retreat,jurisdictions:w.jurisdictions}},reset:()=>{},seatRect:()=>{},raise:inert,excavate:inert,groundHeight,inspect:()=>({kind:'beyond-geological-history-t8',size:SIZE,resolution:N,seed,strata:STRATA,jurisdictions:0,representation:{bandlimit:'separable-121',bedReliefGain:1.25,resistance:'continuous-contact-blend',cliffs:'four-history-torture-test'},history:['layered-crust','four-overlapping-jurisdictions','fault-displacement','block-tilt','fold-compression','exposure-erosion','subsidence-deposition','collapse-mass-transport','late-incision']})};
+  const inert=()=>({locked:true,reason:'beyond-geological-history-t9'});
+  return{root,mesh,maps:(x,z)=>{const w=sampleWorld(x,z);return{height:groundHeight(x,z),bedrock:w.bedrock,exposedStratum:w.layer,resistance:w.resistance,mantle:w.mantle,drainage:{trunk:w.drainage.trunk,tributary:w.drainage.tributary},retreat:w.retreat,jurisdictions:w.jurisdictions}},reset:()=>{},seatRect:()=>{},raise:inert,excavate:inert,groundHeight,inspect:()=>({kind:'beyond-geological-history-t9',size:SIZE,resolution:N,seed,mutation:beyondMutation,genome:torture.genome,strata:STRATA,jurisdictions:0,representation:{bandlimit:'separable-121',bedReliefGain:1.25,resistance:'continuous-contact-blend',cliffs:'four-history-genome-sampler'},history:['layered-crust','four-overlapping-jurisdictions','fault-displacement','block-tilt','fold-compression','exposure-erosion','subsidence-deposition','collapse-mass-transport','late-incision']})};
 }
 function ensureBeyondTerrain(){
   if(!beyondTerrain)beyondTerrain=createBeyondTerrain();
   return beyondTerrain;
+}
+function rebuildBeyondTerrain(){
+  if(beyondTerrain?.root)beyondPlace.remove(beyondTerrain.root);
+  beyondTerrain=null;beyondObservationIndex=0;
+  const terrain=ensureBeyondTerrain();
+  window.vestibuleDirty=true;
+  return terrain.inspect();
+}
+function nextBeyondSeed(direction=1){
+  beyondWorldSeed=Math.max(1,beyondWorldSeed+direction);beyondMutation=0;
+  return rebuildBeyondTerrain();
+}
+function mutateBeyondHistory(direction=1){
+  beyondMutation+=direction;
+  return rebuildBeyondTerrain();
 }
 globalThis.BeyondTerrain={
   ensure:ensureBeyondTerrain,
@@ -1581,7 +1596,9 @@ globalThis.BeyondTerrain={
   raise:(x,z,options={})=>ensureBeyondTerrain().raise({x,z},options),
   carve:(x,z,options={})=>ensureBeyondTerrain().excavate({x,z},options),
   groundHeight:(x,z)=>ensureBeyondTerrain().groundHeight(x,z),
-  inspect:()=>ensureBeyondTerrain().inspect()
+  inspect:()=>ensureBeyondTerrain().inspect(),
+  nextSeed:(direction=1)=>nextBeyondSeed(direction),
+  mutate:(direction=1)=>mutateBeyondHistory(direction)
 };
 
 let beyondObservationIndex=0;
@@ -2086,6 +2103,8 @@ function presentLocus(name){
         shell.registerTool({id:'beyond-topology-scan',text:'🔬',label:'Scan and observe',onClick:downloadBeyondTopologyScan});
         shell.registerTool({id:'beyond-observe-prev',text:'‹',label:'Previous observation',onClick:()=>cycleBeyondObservation(-1)});
         shell.registerTool({id:'beyond-observe-next',text:'›',label:'Next observation',onClick:()=>cycleBeyondObservation(1)});
+        shell.registerTool({id:'beyond-seed-next',text:'🎲',label:'Next deterministic world seed',onClick:()=>nextBeyondSeed(1)});
+        shell.registerTool({id:'beyond-history-mutate',text:'✣',label:'Mutate geological history',onClick:()=>mutateBeyondHistory(1)});
       }
     }
   }

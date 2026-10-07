@@ -1458,22 +1458,41 @@ function createBeyondTerrain(){
     const branchCut=2.65*Math.exp(-Math.pow(tributary/3.2,1.55))+.72*Math.exp(-Math.pow(tributary/.95,1.45));
     return{trunk,tributary,cut:trunkCut+branchCut};
   }
-  function exposedStratum(structuralHeight,erosion){
-    // Stratigraphic phase follows the deformed stack. Erosion advances downward through
-    // it; resistant layers produce persistent benches/cliffs when drainage exposes them.
+  function stratumState(structuralHeight,erosion){
+    // Identity remains categorical, but morphology consumes a continuous resistance
+    // field across contacts. This prevents a one-sample layer flip from becoming a
+    // one-sample erosion cliff while preserving the actual stratigraphic boundary.
     let phase=((structuralHeight-erosion)*.92+cycle*64)%cycle;if(phase<0)phase+=cycle;
-    let acc=0;for(let i=0;i<strata.length;i++){acc+=strata[i].thick;if(phase<=acc)return i}return strata.length-1;
+    let acc=0;
+    for(let i=0;i<strata.length;i++){
+      const start=acc,end=acc+strata[i].thick;
+      if(phase<=end){
+        const local=(phase-start)/strata[i].thick,edge=.22;
+        let resistance=strata[i].resist;
+        if(local<edge){
+          const prev=(i+strata.length-1)%strata.length,t=smooth(local/edge);
+          resistance=mix(strata[prev].resist,strata[i].resist,t);
+        }else if(local>1-edge){
+          const next=(i+1)%strata.length,t=smooth((local-(1-edge))/edge);
+          resistance=mix(strata[i].resist,strata[next].resist,t);
+        }
+        return{layer:i,resistance};
+      }
+      acc=end;
+    }
+    return{layer:strata.length-1,resistance:strata[strata.length-1].resist};
   }
+  const exposedStratum=(structuralHeight,erosion)=>stratumState(structuralHeight,erosion).layer;
   function geology(x,z){
     const structural=deformation(x,z),d=drainage(x,z);
     const broadWeather=1.05+.78*(noise(x*.035,z*.035,821)+1)*.5;
     let erosion=d.cut+broadWeather;
     // Two cheap differential-erosion passes: resistance of the newly exposed layer
     // feeds back into retreat. This makes benches and coherent tilted outcrops.
-    let layer=exposedStratum(structural,erosion);
-    erosion*=1.18-.54*strata[layer].resist;
-    layer=exposedStratum(structural,erosion);
-    const resistance=strata[layer].resist;
+    let state=stratumState(structural,erosion);
+    erosion*=1.18-.54*state.resistance;
+    state=stratumState(structural,erosion);
+    const layer=state.layer,resistance=state.resistance;
     const beddingPhase=(structural-erosion)*2.2+noise(x*.025,z*.025,827)*.65;
     const bedRelief=(resistance-.48)*.48*Math.tanh(Math.sin(beddingPhase)*1.25);
     const bedrock=structural-erosion+bedRelief;
@@ -1529,8 +1548,8 @@ function createBeyondTerrain(){
   const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.96,metalness:.012,flatShading:true});
   const mesh=new THREE.Mesh(geo,mat);mesh.name='beyond:geological-history-topology';mesh.receiveShadow=true;root.add(mesh);
   function groundHeight(x,z){const fx=clamp((x+HALF)/SIZE*(N-1),0,N-1.001),fz=clamp((z+HALF)/SIZE*(N-1),0,N-1.001),x0=Math.floor(fx),z0=Math.floor(fz),tx=fx-x0,tz=fz-z0,A=heights[x0+N*z0],B=heights[x0+1+N*z0],C=heights[x0+N*(z0+1)],D=heights[x0+1+N*(z0+1)];return THREE.MathUtils.lerp(THREE.MathUtils.lerp(A,B,tx),THREE.MathUtils.lerp(C,D,tx),tz)}
-  const inert=()=>({locked:true,reason:'beyond-geological-history-t2'});
-  return{root,mesh,maps:(x,z)=>{const w=sampleWorld(x,z);return{height:groundHeight(x,z),bedrock:w.bedrock,exposedStratum:w.layer,resistance:w.resistance,mantle:w.mantle,drainage:{trunk:w.drainage.trunk,tributary:w.drainage.tributary}}},reset:()=>{},seatRect:()=>{},raise:inert,excavate:inert,groundHeight,inspect:()=>({kind:'beyond-geological-history-t2',size:SIZE,resolution:N,seed,strata:STRATA,jurisdictions:0,representation:{bandlimit:'separable-121',bedReliefGain:1.25},history:['stratigraphy','deformation','drainage','differential-erosion','deposition']})};
+  const inert=()=>({locked:true,reason:'beyond-geological-history-t3'});
+  return{root,mesh,maps:(x,z)=>{const w=sampleWorld(x,z);return{height:groundHeight(x,z),bedrock:w.bedrock,exposedStratum:w.layer,resistance:w.resistance,mantle:w.mantle,drainage:{trunk:w.drainage.trunk,tributary:w.drainage.tributary}}},reset:()=>{},seatRect:()=>{},raise:inert,excavate:inert,groundHeight,inspect:()=>({kind:'beyond-geological-history-t3',size:SIZE,resolution:N,seed,strata:STRATA,jurisdictions:0,representation:{bandlimit:'separable-121',bedReliefGain:1.25,resistance:'continuous-contact-blend'},history:['stratigraphy','deformation','drainage','differential-erosion','deposition']})};
 }
 function ensureBeyondTerrain(){
   if(!beyondTerrain)beyondTerrain=createBeyondTerrain();

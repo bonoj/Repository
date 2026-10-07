@@ -6,12 +6,11 @@
 header{max-width:1100px;margin:auto;padding:32px 18px 20px}.ey{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--mint);font-weight:900}.title{font:clamp(40px,10vw,72px)/.92 Georgia,serif;margin:8px 0 10px}.dek{max-width:650px;color:var(--muted);font-size:17px}.search{position:sticky;top:0;z-index:10;background:#0b1011e8;backdrop-filter:blur(15px);border-block:1px solid var(--line);padding:10px 18px}.searchin{max-width:1064px;margin:auto;display:flex;gap:8px}.search input{width:100%;background:#151e20;border:1px solid #35484b;border-radius:12px;padding:12px 14px;color:var(--ink);outline:none}.search input:focus{border-color:var(--mint)}main{max-width:1100px;margin:auto;padding:18px}.cats{display:flex;gap:7px;overflow:auto;padding:2px 0 15px;scrollbar-width:none}.chip{white-space:nowrap;border:1px solid var(--line);background:#11191b;color:#bac8c5;border-radius:99px;padding:8px 11px;cursor:pointer}.chip.on{color:#08100e;background:var(--mint);border-color:var(--mint);font-weight:850}.hero{display:grid;grid-template-columns:1.3fr .7fr;gap:12px;margin-bottom:18px}.heroCard,.quick{border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,#172225,#101718);padding:18px}.heroCard h2{font:29px Georgia,serif;margin:0 0 5px}.heroCard p,.quick p{color:var(--muted)}.quick b{color:var(--gold)}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}.entry{border:1px solid var(--line);background:linear-gradient(145deg,#151e20,#101617);border-radius:15px;padding:15px;text-align:left;color:inherit;cursor:pointer;min-height:145px;transition:.15s}.entry:hover{transform:translateY(-2px);border-color:#52706b}.entry .ico{font-size:24px}.entry h3{font:20px Georgia,serif;margin:7px 0 3px}.entry p{color:var(--muted);margin:0}.formula{font:17px Georgia,serif;color:var(--gold);margin-top:9px}.tag{display:inline-block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);margin-top:10px}.empty{display:none;color:var(--muted);padding:35px 4px}.sheet{position:fixed;inset:0;z-index:20;background:#080d0edb;backdrop-filter:blur(8px);display:none;align-items:flex-end;justify-content:center}.sheet.open{display:flex}.page{width:min(760px,100%);max-height:92vh;overflow:auto;background:#121a1c;border:1px solid #324548;border-radius:24px 24px 0 0;padding:20px 20px 35px}.close{float:right;background:#202c2e;border:0;color:var(--ink);width:38px;height:38px;border-radius:50%;font-size:20px}.page .kicker{color:var(--mint);font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}.page h2{font:36px Georgia,serif;margin:6px 0}.plain{font-size:19px;max-width:630px}.box{background:#0d1415;border:1px solid var(--line);border-radius:13px;padding:14px;margin:12px 0}.box strong{color:var(--gold)}.eq{font:clamp(21px,6vw,30px) Georgia,serif;text-align:center;padding:18px;color:var(--gold)}.links button{border:1px solid var(--line);background:#172225;color:var(--mint);border-radius:99px;padding:7px 10px;margin:3px;cursor:pointer}.tool{border-top:1px solid var(--line);margin-top:17px;padding-top:15px}.tool h3{font:22px Georgia,serif;margin:0 0 8px}.row{display:flex;gap:8px;flex-wrap:wrap}.row input,.row select{min-width:0;flex:1;background:#0d1415;color:var(--ink);border:1px solid #35484b;border-radius:10px;padding:10px}.go{background:var(--mint);color:#07100d;border:0;border-radius:10px;padding:10px 14px;font-weight:900}.answer{font-size:20px;color:var(--gold);padding:9px 2px}.foot{color:#70817e;font-size:12px;margin:30px 0 10px}.el{border:1px solid #35484b;background:#172225;color:var(--ink);border-radius:7px;padding:3px;min-width:42px;min-height:48px;cursor:pointer}.el small{display:block;font-size:8px;color:var(--muted);text-align:left}.el b{font-size:15px}.el:focus,.el:hover{border-color:var(--mint);background:#20302e}.hide{display:none!important}
 @media(max-width:650px){.hero{grid-template-columns:1fr}.quick{display:none}.grid{grid-template-columns:repeat(2,1fr);gap:7px}.entry{min-height:155px;padding:12px}.entry h3{font-size:18px}.entry p{font-size:13px}.page{max-height:94vh}}
 </style></head><body>
-<header><div class="ey">UC Davis · CHE 001 scope</div><div class="title">Chemistry Field Guide</div><div class="dek">The small universe of chemistry you need right now. Browse a thing, get the definition, see the equation, use the tool, follow the connections.</div></header>
-<div class="search"><div class="searchin"><input id="q" placeholder="Search: mole, ion, molarity, sig figs…" autocomplete="off"></div></div>
+<header><div class="ey">UC Davis · CHE 001 scope</div><div class="title">Chemistry Field Guide</div></header>
+<div class="search"><div class="searchin"><input id="q" placeholder="Search anything: grams to moles, positive ion, NaCl, chlorine…" autocomplete="off"></div></div>
 <main><div class="cats" id="cats"></div>
-<div class="hero"><div class="heroCard"><h2>What are you stuck on?</h2><p>Don't read this front to back. Find the word, symbol, or calculation that's blocking you and open it. Chemistry is mostly a network of a few reusable ideas.</p></div><div class="quick"><b>Universal move</b><p>If units cancel until only the unit you want remains, you're usually on the right track.</p><div class="formula">given × conversion factor → wanted</div></div></div>
 <div class="grid" id="grid"></div><div class="empty" id="empty">Nothing by that name yet. Try a neighboring idea.</div>
-<div class="foot">CHE 001-sized on purpose. Definitions and tools are organized for fast reference, not as a substitute for your instructor or Canvas.</div></main>
+</main>
 <div class="sheet" id="sheet"><article class="page" id="page"></article></div>
 <script>
 const E=[
@@ -42,6 +41,13 @@ const E=[
 ["coefficient","Coefficient","✖️","Reactions","A number in front of a formula that scales the whole formula.","2 H₂O = 4 H atoms + 2 O atoms","Change coefficients to balance equations. Do not change subscripts.",["formula","balance","stoichiometry"],""],
 ["balance","Balancing equations","⚖️","Reactions","Choosing coefficients so each element has equal atom counts on both sides.","atoms in = atoms out","Count atoms, adjust coefficients, recount. Chemistry cannot create or destroy atoms in an ordinary reaction.",["equation","coefficient","stoichiometry"],"balance"],
 ["reaction","Reaction types","💥","Reactions","Patterns used to recognize common ways substances rearrange.","synthesis · decomposition · replacement · combustion","Classification helps predict products, but conservation still governs the equation.",["equation","balance"],""],
+["subscript","Subscript","₂","Compounds","The small lower number in a chemical formula: how many atoms of that element are present.","H₂O has 2 H atoms","Changing a subscript changes the substance itself. Do not change subscripts to balance equations.",["formula","coefficient","balance"],""],
+["reactant","Reactant","⬅️","Reactions","A starting substance consumed or changed by a chemical reaction.","reactants → products","Reactants are written on the left side of a conventional chemical equation.",["equation","product","stoichiometry"],""],
+["product","Product","➡️","Reactions","A substance formed by a chemical reaction.","reactants → products","Products are written on the right side of a conventional chemical equation.",["equation","reactant","yield"],""],
+["solute","Solute","•","Solutions","The substance dissolved in a solution.","solute + solvent = solution","In salt water, salt is the solute.",["solution","solvent","molarity"],""],
+["solvent","Solvent","💧","Solutions","The substance that dissolves the solute and usually makes up most of a solution.","solute + solvent = solution","In salt water, water is the solvent.",["solution","solute","dilution"],""],
+["atomic-number","Atomic number","№","Atoms","The number of protons in an atom's nucleus; it defines the element.","Z = number of protons","For a neutral atom, electron count equals atomic number too.",["element","proton","periodic"],""],
+["mass-number","Mass number","#","Atoms","The total number of protons and neutrons in one specific isotope.","A = protons + neutrons","Mass number is a whole number for one isotope; atomic mass on the periodic table is usually a decimal average.",["isotope","atomic-mass","proton"],""],
 ["stoichiometry","Stoichiometry","🔗","Stoichiometry","Using a balanced equation as a conversion map between amounts of substances.","g → mol → mole ratio → mol → g","The mole ratio comes only from coefficients in the balanced equation.",["mole","molar-mass","coefficient","limiting"],"stoich"],
 ["limiting","Limiting reactant","🚧","Stoichiometry","The reactant that runs out first and therefore caps product formation.","least product possible = limiting","Don't pick the smallest mass. Convert reactants through the balanced equation and compare.",["stoichiometry","yield"],""],
 ["yield","Percent yield","🎯","Stoichiometry","How much product you actually got compared with the theoretical maximum.","% yield = actual / theoretical × 100","Theoretical yield comes from stoichiometry; actual yield comes from the experiment.",["stoichiometry","limiting"],"yield"],
@@ -50,10 +56,65 @@ const E=[
 ["temperature","Kelvin","🌡️","Gases","The absolute temperature scale used in gas calculations.","K = °C + 273.15","Never plug Celsius directly into an ideal-gas-law calculation.",["gas"],"kelvin"],
 ["stp","STP","📍","Gases","A standard reference condition for comparing gases.","commonly 1 atm and 273.15 K","Always use the convention your course specifies; 'standard' definitions can vary by context.",["gas","pressure","temperature"],""]
 ];
+const SEARCH={
+mole:"mol amount particles particle count counting dozen grams to moles convert particles avogadro",
+avogadro:"6.022 10^23 6022 particles number na constant atoms molecules formula units",
+"molar-mass":"grams per mole g/mol molecular weight formula weight mass grams moles convert grams to moles periodic table add atomic masses",
+atom:"atomic structure nucleus particle protons neutrons electrons p n e",
+proton:"protons neutrons electrons p+ n0 e- charge nucleus how many neutrons subatomic particles",
+isotope:"mass number neutrons same element different mass isotope notation nuclear symbol",
+"atomic-mass":"average atomic mass atomic weight decimal periodic table isotope weighted average amu",
+element:"chemical element atomic number proton count identity",
+periodic:"periodic table elements groups periods families metals nonmetals metalloids alkali alkaline halogen noble gas atomic number symbol chlorine sodium carbon oxygen hydrogen cl na c o h",
+ion:"charged atom charge electron positive ion negative ion cation anion lose gain electrons",
+cation:"positive ion plus charge loses electrons metal",
+anion:"negative ion minus charge gains electrons nonmetal",
+ionic:"ionic compound salt metal nonmetal ions charge neutral formula unit nacl sodium chloride",
+molecule:"molecule molecular compound discrete covalent h2o co2 nh3 water carbon dioxide ammonia",
+covalent:"covalent bond sharing electrons nonmetal molecular",
+formula:"chemical formula subscripts little number lower number formula ratio h2o nacl co2 empirical molecular",
+sigfig:"sig figs significant figures precision measurement rounding leading trailing zeros decimal",
+scientific:"scientific notation exponent powers ten 10^ big small e notation",
+dimensional:"dimensional analysis factor label unit cancellation convert units conversion kg mg grams liters ml grams to moles",
+conversion:"conversion factor unit conversion factor label equality metric kg g mg l ml cm mm dimensional analysis",
+molarity:"molarity concentration molar M mol/L moles liters solution concentration calculate",
+solution:"solution solute solvent dissolve dissolved mixture aqueous aq concentration",
+dilution:"dilution dilute concentration add solvent m1v1 m2v2 stock solution",
+equation:"chemical equation reactants products arrow yields reaction left right conservation",
+coefficient:"coefficient big number front formula balance mole ratio multiply whole formula",
+balance:"balance balancing equation coefficients atom count conservation never change subscripts",
+reaction:"reaction types synthesis decomposition single replacement double replacement combustion classify",
+stoichiometry:"stoichiometry stoich grams to moles moles to grams mole ratio balanced equation conversion chain how much product reactant",
+limiting:"limiting reactant limiting reagent excess reactant runs out first theoretical product",
+yield:"percent yield actual theoretical percent efficiency product",
+gas:"ideal gas law pv=nrt p v n r t pressure volume moles temperature gas calculator",
+pressure:"pressure atm torr mmhg kpa pascal gas pressure conversion 760 101.325",
+temperature:"kelvin celsius temperature absolute zero convert c to k gas law",
+stp:"stp standard temperature pressure 1 atm 273.15 k 0 c gas molar volume",subscript:"subscript little number lower number h2o formula how many atoms balance",reactant:"reactant starting material left side equation reagent",product:"product result right side equation formed reaction",solute:"solute dissolved substance salt sugar solution",solvent:"solvent dissolves water solution", "atomic-number":"atomic number z proton count periodic table element number", "mass-number":"mass number a protons neutrons isotope whole number"
+};
+const NORMALIZE={"grams":"gram","gram":"gram","moles":"mole","mols":"mol","litres":"liter","litre":"liter","liters":"liter","ions":"ion","atoms":"atom","electrons":"electron","protons":"proton","neutrons":"neutron","equations":"equation","reactions":"reaction","gasses":"gas","gases":"gas","concentration":"molarity"};
+function norm(s){return s.toLowerCase().replace(/[₀₁₂₃₄₅₆₇₈₉]/g,c=>"0123456789"["₀₁₂₃₄₅₆₇₈₉".indexOf(c)]).replace(/[^a-z0-9+\-/.]+/g," ").trim()}
+function tokens(s){return norm(s).split(/\s+/).filter(Boolean).map(x=>NORMALIZE[x]||x)}
+function searchScore(e,query){
+ const ts=tokens(query);if(!ts.length)return 1;
+ const title=norm(e[1]), body=norm(e.slice(1,7).join(" ")+" "+(SEARCH[e[0]]||"")+" "+e[7].join(" "));
+ let score=0;
+ for(const t of ts){if(title===t)score+=12;else if(title.includes(t))score+=8;else if(body.includes(t))score+=3;else return 0}
+ const phrase=norm(query);if(body.includes(phrase))score+=10;if(title.includes(phrase))score+=12;return score
+}
 const cats=["All",...new Set(E.map(x=>x[3]))];let active="All";
 const grid=document.querySelector("#grid"), q=document.querySelector("#q"), catbox=document.querySelector("#cats");
 function drawCats(){catbox.innerHTML=cats.map(c=>'<button class="chip '+(c===active?'on':'')+'" data-c="'+c+'">'+c+'</button>').join("");catbox.querySelectorAll("button").forEach(b=>b.onclick=()=>{active=b.dataset.c;drawCats();draw()})}
-function draw(){let s=q.value.trim().toLowerCase();let xs=E.filter(e=>(active==="All"||e[3]===active)&&(!s||e.slice(1,7).join(" ").toLowerCase().includes(s)));grid.innerHTML=xs.map(e=>'<button class="entry" data-id="'+e[0]+'"><div class="ico">'+e[2]+'</div><h3>'+e[1]+'</h3><p>'+e[4]+'</p><div class="formula">'+e[5]+'</div><span class="tag">'+e[3]+'</span></button>').join("");document.querySelector("#empty").style.display=xs.length?"none":"block";grid.querySelectorAll(".entry").forEach(b=>b.onclick=()=>openEntry(b.dataset.id))}
+function draw(){
+ let s=q.value.trim(), rows=[];
+ E.forEach(e=>{if(active!=="All"&&e[3]!==active)return;let score=s?searchScore(e,s):1;if(score)rows.push({kind:"entry",e,score})});
+ if(s&&active==="All"&&typeof PT!=="undefined"){let nt=norm(s);PT.forEach(el=>{let hay=norm(el[1]+" "+el[2]+" "+el[0]+" atomic number "+el[3]+" atomic mass");let ts=tokens(s);if(ts.every(t=>hay.includes(t)))rows.push({kind:"element",el,score:20})})}
+ if(s)rows.sort((a,b)=>b.score-a.score);
+ grid.innerHTML=rows.map(r=>r.kind==="entry"?'<button class="entry" data-id="'+r.e[0]+'"><div class="ico">'+r.e[2]+'</div><h3>'+r.e[1]+'</h3><p>'+r.e[4]+'</p><div class="formula">'+r.e[5]+'</div><span class="tag">'+r.e[3]+'</span></button>':'<button class="entry" data-element="'+r.el[0]+'"><div class="ico">⚛️</div><h3>'+r.el[1]+' · '+r.el[2]+'</h3><p>Atomic number '+r.el[0]+' · atomic mass '+r.el[3]+' g/mol</p><span class="tag">Periodic Table</span></button>').join("");
+ document.querySelector("#empty").style.display=rows.length?"none":"block";
+ grid.querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>openEntry(b.dataset.id));
+ grid.querySelectorAll("[data-element]").forEach(b=>b.onclick=()=>{openEntry("periodic");setTimeout(()=>{let x=document.querySelector('.el[data-z="'+b.dataset.element+'"]');if(x)x.click()},0)})
+}
 q.oninput=draw;
 function tool(id){
 if(id==="molar")return '<div class="tool"><h3>Molar mass calculator</h3><p>Enter element counts for a quick common-compound calculation.</p><div class="row"><select id="cmp"><option value="18.015">H₂O</option><option value="58.44">NaCl</option><option value="44.01">CO₂</option><option value="180.156">C₆H₁₂O₆</option><option value="17.031">NH₃</option></select><button class="go" onclick="document.querySelector(\'#ans\').textContent=document.querySelector(\'#cmp\').value+\' g/mol\'">Calculate</button></div><div class="answer" id="ans"></div></div>';

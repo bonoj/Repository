@@ -1573,11 +1573,11 @@ function ensureFourBrothers(){
     const q=p.clone().add(new THREE.Vector2(Math.cos(angle),Math.sin(angle)).multiplyScalar(1.25));
     const stem=new THREE.Mesh(vineGeo,greenMat);placeCylinder(stem,p,q);stem.castShadow=true;domains.green.add(stem);
     const leaf=new THREE.Mesh(leafGeo,greenTip);leaf.position.set(q.x,ground(q)+.30,q.y);leaf.rotation.z=Math.PI*.5;leaf.rotation.y=-angle;leaf.castShadow=true;domains.green.add(leaf);
-    greens.push({stem,leaf,a:p,b:q,arm,j:6+greenGrowth});terrain.raise(q.x,q.y,{radius:1.0,height:.12});greenGrowth++;
+    greens.push({stem,leaf,a:p,b:q,arm,j:6+greenGrowth});terrain.raise({x:q.x,z:q.y},{radius:1.0,height:.12});greenGrowth++;
   }
   function buildYellow(){
     const i=yellowGrowth++,ring=1+Math.floor(i/8),a=i*.93,p=new THREE.Vector2(anchors.yellow.x+Math.cos(a)*(4+ring*.45),anchors.yellow.y+Math.sin(a)*(3+ring*.38));
-    const h=.7+(i%5)*.13,m=new THREE.Mesh(crystalGeo,i%3?yellowMat:yellowDark);m.scale.set(.65,h*2.2,.65);m.position.set(p.x,ground(p)+h*.30,p.y);m.rotation.y=a;m.castShadow=true;domains.yellow.add(m);yellows.push({m,p,baseY:m.position.y,i:15+i});terrain.raise(p.x,p.y,{radius:1.35,height:.24});
+    const h=.7+(i%5)*.13,m=new THREE.Mesh(crystalGeo,i%3?yellowMat:yellowDark);m.scale.set(.65,h*2.2,.65);m.position.set(p.x,ground(p)+h*.30,p.y);m.rotation.y=a;m.castShadow=true;domains.yellow.add(m);yellows.push({m,p,baseY:m.position.y,i:15+i});terrain.raise({x:p.x,z:p.y},{radius:1.35,height:.24});
   }
   function update(now){
     const dt=Math.min(.06,Math.max(0,(now-last)/1000));last=now,t=(now-started)/1000;

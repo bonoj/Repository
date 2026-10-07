@@ -67,3 +67,44 @@ No sliders.
 This expedition may freely use local experimental machinery. Promote only mechanisms that demonstrate reusable capability across materially different organizations.
 
 Do not promote "clump," "tree," "web," or any other observed morphology as a primitive merely because it appeared.
+
+
+## P0 visual probe
+
+A first deliberately non-dynamic probe placed **25,000 instanced bearing-like elements** across the current Beyond geological surface in four directly sampled organizations: noisy clumps, branching/dendritic traces, broken annuli/satellites, and a sparse sheet with exclusion holes.
+
+This was not yet a field simulation. It asked two cheaper questions first: whether cheap granular occupation is visually legible on the geological world, and whether the phone has enough rendering budget to continue.
+
+Observed result: the population remained legible across steep terrain and held **60 fps on john's phone**. The important visual read was occupation rather than vegetation: matter appeared to trace invisible organization across the surface. This is enough to continue toward genuinely causal local fields rather than authoring more arrangements.
+
+## Six Cities pressure
+
+Do not interpret population fields as a replacement for constructed geometry.
+
+The existing poly vocabulary—baubles, domes, rings, brass structures, conduits and other crisp machinery—fits the same world. A useful emerging loop is:
+
+**fields organize cheap matter → organization creates structural pressure → construction answers that pressure → structures alter fields and flows → population reorganizes**
+
+Six Cities may therefore be grown from shared world machinery rather than modeled as six themed assets. The six city identities can begin as persistent semantic pressures/functions; their recognizable architecture may be an earned consequence.
+
+Current functional handles:
+- **Index** — route / relate / distribute
+- **Catch** — arrest / dissipate / deliver
+- **Gut** — transform / refine / convert
+- **Well** — store / regulate / buffer
+- **Spine** — lift / connect / elevate
+- **Clock** — synchronize / compose / govern
+
+A particularly generative Catch input is **meteors / ships**. Treat ships as structured incoming matter, not necessarily a bespoke scripted category: Catch's interesting problem is to arrest incoming momentum without simply erasing it, then expose the captured thing to the rest of the civilization.
+
+Use the Six Cities image as an adversarial prophecy rather than a blueprint: can general executable machinery eventually produce settlements with those functional characters without being told their silhouettes?
+
+## Camera pressure — deliberately deferred
+
+Do not default to ubiquitous thumbsticks as these worlds become explorable.
+
+A promising future direction is a reusable spatial navigation substrate analogous to grapple points: derive candidate camera nodes from semantic objects, bounds, surfaces, openings, relationships, visibility and framing rather than authoring camera points per scene.
+
+Possible interaction grammar: **look → choose → travel**. Different camera behaviors may consume one automatically derived spatial graph.
+
+This is not a current implementation task. Let world pressure sharpen the first experiment before building it.

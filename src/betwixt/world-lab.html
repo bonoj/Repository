@@ -1531,6 +1531,51 @@ globalThis.BeyondTerrain={
   inspect:()=>ensureBeyondTerrain().inspect()
 };
 
+function scanBeyondTopology(){
+  const terrain=ensureBeyondTerrain(),meta=terrain.inspect(),size=meta.size,n=meta.resolution,half=size*.5,step=size/(n-1);
+  const heights=new Float32Array(n*n),samples=new Array(n*n);
+  let min=Infinity,max=-Infinity,sum=0,sum2=0;
+  for(let z=0;z<n;z++)for(let x=0;x<n;x++){
+    const wx=-half+x*step,wz=-half+z*step,m=terrain.maps(wx,wz),i=x+n*z,h=m.height;
+    heights[i]=h;samples[i]=m;min=Math.min(min,h);max=Math.max(max,h);sum+=h;sum2+=h*h;
+  }
+  const slopes=[],neighborDelta=[],laplacian=[],sharp=[];
+  let slopeSum=0,slope2=0,maxSlope=0,maxDelta=0;
+  for(let z=1;z<n-1;z++)for(let x=1;x<n-1;x++){
+    const i=x+n*z,h=heights[i],dx=(heights[i+1]-heights[i-1])/(2*step),dz=(heights[i+n]-heights[i-n])/(2*step),sl=Math.hypot(dx,dz);
+    const ds=[Math.abs(h-heights[i-1]),Math.abs(h-heights[i+1]),Math.abs(h-heights[i-n]),Math.abs(h-heights[i+n])],md=Math.max(...ds);
+    const lap=(heights[i-1]+heights[i+1]+heights[i-n]+heights[i+n]-4*h)/(step*step);
+    slopes.push(sl);neighborDelta.push(md);laplacian.push(lap);slopeSum+=sl;slope2+=sl*sl;maxSlope=Math.max(maxSlope,sl);maxDelta=Math.max(maxDelta,md);
+    if(md>1.35||sl>2.2)sharp.push({x:+(-half+x*step).toFixed(3),z:+(-half+z*step).toFixed(3),h:+h.toFixed(3),slope:+sl.toFixed(3),neighborDelta:+md.toFixed(3),laplacian:+lap.toFixed(3),stratum:samples[i].exposedStratum,mantle:+(samples[i].mantle?.depth||0).toFixed(3)});
+  }
+  const quant=(arr,q)=>{const a=Array.from(arr).sort((a,b)=>a-b);return a[Math.min(a.length-1,Math.floor((a.length-1)*q))]||0};
+  sharp.sort((a,b)=>b.neighborDelta-a.neighborDelta||b.slope-a.slope);
+  const transects=[];
+  const lines=[['x@z0','x',0],['z@x0','z',0],['x@z-18','x',-18],['x@z18','x',18],['z@x-27','z',-27],['z@x27','z',27]];
+  for(const [name,axis,fixed] of lines){
+    const points=[];for(let k=0;k<65;k++){const v=-half+size*k/64,x=axis==='x'?v:fixed,z=axis==='z'?v:fixed,m=terrain.maps(x,z);points.push([+v.toFixed(3),+m.height.toFixed(3),m.exposedStratum,+(m.mantle?.depth||0).toFixed(3)]);}
+    transects.push({name,axis,fixed,columns:['position','height','stratum','mantleDepth'],points});
+  }
+  const coarse=[];
+  for(let gz=0;gz<12;gz++)for(let gx=0;gx<12;gx++){
+    const x0=Math.floor(gx*n/12),x1=Math.min(n,Math.floor((gx+1)*n/12)),z0=Math.floor(gz*n/12),z1=Math.min(n,Math.floor((gz+1)*n/12));
+    let lo=Infinity,hi=-Infinity,ss=0,c=0,sand=0;const strata={};
+    for(let z=z0;z<z1;z++)for(let x=x0;x<x1;x++){const i=x+n*z,h=heights[i],m=samples[i];lo=Math.min(lo,h);hi=Math.max(hi,h);ss+=h;c++;sand+=m.mantle?.sand||0;strata[m.exposedStratum]=(strata[m.exposedStratum]||0)+1}
+    coarse.push({gx,gz,center:[+(-half+(gx+.5)*size/12).toFixed(2),+(-half+(gz+.5)*size/12).toFixed(2)],min:+lo.toFixed(3),max:+hi.toFixed(3),mean:+(ss/c).toFixed(3),relief:+(hi-lo).toFixed(3),sand:+(sand/c).toFixed(3),strata});
+  }
+  return{schema:'beyond-topology-scan/1',build:globalThis.__REPOSITORY_BUILD__||'source',createdAt:new Date().toISOString(),terrain:meta,
+    grid:{size,n,step:+step.toFixed(6),height:{min:+min.toFixed(4),max:+max.toFixed(4),mean:+(sum/heights.length).toFixed(4),sd:+Math.sqrt(Math.max(0,sum2/heights.length-(sum/heights.length)**2)).toFixed(4)},
+      slope:{mean:+(slopeSum/slopes.length).toFixed(4),sd:+Math.sqrt(Math.max(0,slope2/slopes.length-(slopeSum/slopes.length)**2)).toFixed(4),p50:+quant(slopes,.5).toFixed(4),p90:+quant(slopes,.9).toFixed(4),p99:+quant(slopes,.99).toFixed(4),max:+maxSlope.toFixed(4)},
+      neighborDelta:{p50:+quant(neighborDelta,.5).toFixed(4),p90:+quant(neighborDelta,.9).toFixed(4),p99:+quant(neighborDelta,.99).toFixed(4),max:+maxDelta.toFixed(4)},
+      laplacian:{p01:+quant(laplacian,.01).toFixed(4),p50:+quant(laplacian,.5).toFixed(4),p99:+quant(laplacian,.99).toFixed(4)}},
+    suspicious:sharp.slice(0,160),coarseCells:coarse,transects};
+}
+function downloadBeyondTopologyScan(){
+  const report=scanBeyondTopology(),blob=new Blob([JSON.stringify(report)],{type:'application/json'}),a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='beyond-topology-'+(report.build||'source').slice(0,8)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),0);return report;
+}
+globalThis.scanBeyondTopology=scanBeyondTopology;
+
 let fourBrothers=null;
 function ensureFourBrothers(){
   if(fourBrothers)return fourBrothers;
@@ -1901,7 +1946,7 @@ function setBetwixtTitle(text){
 function removeBetwixtPortal(){globalThis.RepositoryShell?.removeTool('betwixt-portal')}
 function removePlaceSpells(){
   const shell=globalThis.RepositoryShell;if(!shell)return;
-  for(const id of ['observatory-place','workshop-place','crucible-container','beyond-place'])shell.removeTool(id);
+  for(const id of ['observatory-place','workshop-place','crucible-container','beyond-place','beyond-topology-scan'])shell.removeTool(id);
 }
 function installBetwixtPortal(){
   const shell=globalThis.RepositoryShell;if(!shell||shell.inspect().tools.includes('betwixt-portal'))return;
@@ -1919,7 +1964,11 @@ function presentLocus(name){
   const next=placeDefinitions[name];if(!next)return false;
   for(const [id,{object}] of Object.entries(placeDefinitions))object.visible=id===name;
   floor.visible=name!=='beyond';
-  if(name==='beyond'){ensureBeyondTerrain();if(beyondTransfers)beyondTransfers.setEnabled(false);}
+  if(name==='beyond'){
+    ensureBeyondTerrain();if(beyondTransfers)beyondTransfers.setEnabled(false);
+    const shell=globalThis.RepositoryShell;
+    if(shell&&!shell.inspect().tools.includes('beyond-topology-scan'))shell.registerTool({id:'beyond-topology-scan',text:'🔬',label:'Download topology scan',onClick:downloadBeyondTopologyScan});
+  }
   currentPlace=name;
   if(name==='crucible'){
     workshopCrucibleEnabled=true;ensureWorkshopTerrain();installWorkshopCrucibleSpells();

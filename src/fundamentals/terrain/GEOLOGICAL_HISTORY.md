@@ -18,3 +18,14 @@ The first preserved set comes from Beyond T4 at Repository `55036d8f`: 289² top
 `geological-history.js` currently holds the earned T4 ingredients: segment distance, stratigraphic state with blended contact resistance, bounded stratigraphic erosion, bedding relief, the 1-2-1 representation filter, and gypsum dune mantle/deposition.
 
 Beyond may continue experimenting freely. Promote further goodies here only when the experiment teaches a reusable law or capability. Do not mutate this baseline merely to make the next Beyond pass look better.
+
+
+## Frozen reconstruction point
+
+Beyond T4 is preserved in three deliberately separate layers:
+
+1. **Whole executable:** branch `terrain/beyond-t4-baseline` points exactly at Repository `55036d8fec8fc2a2ea6b2880aefc9e1c0fbfec62`. This is the escape hatch: the complete known-good world, scanner integration, composition, and presentation remain recoverable even if later experiments paint themselves into a corner.
+2. **Recipe:** `recipes/beyond-t4.js` records the T4 composition and parameters independently of the reusable operators.
+3. **Seed:** `seeds/beyond-t4.js` contains only instance identity, seed `741`.
+
+Therefore reconstruction has an explicit hierarchy: **goodies + recipe + seed → instance**, while the frozen branch preserves the whole observed executable as ground truth. Later experiments must not move the frozen branch.

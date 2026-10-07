@@ -1580,7 +1580,7 @@ function ensureFourBrothers(){
     const h=.7+(i%5)*.13,m=new THREE.Mesh(crystalGeo,i%3?yellowMat:yellowDark);m.scale.set(.65,h*2.2,.65);m.position.set(p.x,ground(p)+h*.30,p.y);m.rotation.y=a;m.castShadow=true;domains.yellow.add(m);yellows.push({m,p,baseY:m.position.y,i:15+i});terrain.raise({x:p.x,z:p.y},{radius:1.35,height:.24});
   }
   function update(now){
-    const dt=Math.min(.06,Math.max(0,(now-last)/1000));last=now,t=(now-started)/1000;
+    const dt=Math.min(.06,Math.max(0,(now-last)/1000));last=now;const t=(now-started)/1000;
     if(now>=nextGreen&&greenGrowth<30){growGreen();nextGreen=now+260}
     if(now>=nextYellow&&yellowGrowth<22){buildYellow();nextYellow=now+430}
     // Blue visibly seeks terrain: its coherent body hugs the live floor while flowing through itself.

@@ -1,8 +1,8 @@
 // Geological History Torture Test v0
 // Four overlapping jurisdictions, one operator vocabulary. No named landforms.
 export function createQuadrantHistory({noise,clamp,smooth}){
-  const mix=(a,b,t)=>a+(b-a)*t;
   const field=(x,z,sx,sz,soft=7)=>smooth(clamp(.5+.5*Math.tanh((x*sx+z*sz)/soft)));
+  const finite=v=>Number.isFinite(v)?v:0;
   const jurisdictions=(x,z)=>{
     const east=field(x,z,1,0,8),north=field(x,z,0,1,8);
     return{nw:(1-east)*north,ne:east*north,sw:(1-east)*(1-north),se:east*(1-north)};
@@ -59,7 +59,7 @@ export function createQuadrantHistory({noise,clamp,smooth}){
     // Broad overlap is intentional: boundaries are jurisdictions, not square seams.
     const sum=q.nw+q.ne+q.sw+q.se||1;
     const delta=(nw*q.nw+ne*q.ne+sw*q.sw+se*q.se)/sum;
-    return{delta,jurisdictions:q,signals:{nwFault,neFault,swFault,collapse:seCollapse,debris}};
+    return{delta:finite(delta),jurisdictions:q,signals:{nwFault,neFault,swFault,collapse:seCollapse,debris:finite(debris)}};
   }
   return{apply,jurisdictions,operators:{fault,tilt,fold,exposureErosion,collapse,deposit,incise}};
 }

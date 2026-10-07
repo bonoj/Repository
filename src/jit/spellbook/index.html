@@ -1,62 +1,49 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><meta name="theme-color" content="#090812"><title>Hunger of Hadar — Spellbook</title>
-<style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090812;color:#eee4d0;font-family:Georgia,serif}canvas{display:block;width:100%;height:100%;touch-action:none}
-#sigil{position:fixed;left:14px;top:12px;pointer-events:none;text-shadow:0 2px 10px #000}.name{font-size:13px;letter-spacing:.2em;color:#d8c9aa}.sub{font:10px system-ui;color:#847b88;margin-top:3px;letter-spacing:.06em}
-#note{position:fixed;right:12px;bottom:12px;text-align:right;font:9px/1.35 system-ui;color:#6f6875;pointer-events:none}
-</style></head><body><canvas id="c"></canvas><div id="sigil"><div class="name">HUNGER OF HADAR</div><div class="sub">a region of the world has become wrong</div></div><div id="note">darkness · difficult terrain · exposure<br>the boundary is known by consequence</div>
-<script>
-const c=document.querySelector('#c'),x=c.getContext('2d');let W,H,D,seed=741;
-function rnd(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}
-function resize(){D=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;c.width=W*D;c.height=H*D;x.setTransform(D,0,0,D,0,0);paint()}addEventListener('resize',resize);
-function path(points,close=false){x.beginPath();x.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i++)x.lineTo(points[i][0],points[i][1]);if(close)x.closePath()}
-function stone(poly,fill,stroke='#665e68'){path(poly,true);x.fillStyle=fill;x.fill();x.strokeStyle=stroke;x.lineWidth=1;x.stroke()}
-function figure(px,py,scale,inside=false,lean=0){
- x.save();x.translate(px,py);x.rotate(lean);x.lineCap='round';x.lineJoin='round';
- x.strokeStyle=inside?'#30283c':'#cbbd9d';x.fillStyle=inside?'#17131f':'#b7a987';x.lineWidth=2.2*scale;
- x.beginPath();x.arc(0,-11*scale,3.2*scale,0,7);x.fill();x.stroke();
- x.beginPath();x.moveTo(0,-7*scale);x.lineTo(-1,5*scale);x.moveTo(-1,-2*scale);x.lineTo(-7*scale,3*scale);x.moveTo(-1,-1*scale);x.lineTo(6*scale,-5*scale);x.moveTo(-1,5*scale);x.lineTo(-6*scale,13*scale);x.moveTo(-1,5*scale);x.lineTo(5*scale,13*scale);x.stroke();
- x.restore()
-}
-function paint(){seed=741;x.clearRect(0,0,W,H);
- let bg=x.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#15131c');bg.addColorStop(1,'#080810');x.fillStyle=bg;x.fillRect(0,0,W,H);
- const top=55,bottom=H-38,cx=W*.53,cy=top+(bottom-top)*.52,R=Math.min(W*.34,(bottom-top)*.32);
- // floor: one connected architectural field, not tiled rectangles
- let floor=[[18,top+15],[W-18,top],[W-8,bottom-8],[26,bottom]];stone(floor,'#24212a','#817665');
- // perspective masonry seams
- x.save();path(floor,true);x.clip();x.strokeStyle='#39343c';x.lineWidth=.8;
- for(let i=-4;i<10;i++){let yy=top+i*42;x.beginPath();x.moveTo(0,yy);x.lineTo(W,yy+18);x.stroke()}
- for(let i=-3;i<10;i++){let xx=i*62;x.beginPath();x.moveTo(xx,top);x.lineTo(W*.5+(xx-W*.5)*1.35,bottom);x.stroke()}x.restore();
- // broken connected wall / choke, with aperture centered on Hadar
- const wx=W*.28; x.strokeStyle='#746b61';x.lineWidth=12;x.lineCap='butt';
- x.beginPath();x.moveTo(wx,top+8);x.lineTo(wx,cy-R*.72);x.moveTo(wx,cy+R*.75);x.lineTo(wx,bottom-10);x.stroke();
- x.strokeStyle='#2d2930';x.lineWidth=7;x.setLineDash([18,3]);x.beginPath();x.moveTo(wx,top+8);x.lineTo(wx,cy-R*.72);x.moveTo(wx,cy+R*.75);x.lineTo(wx,bottom-10);x.stroke();x.setLineDash([]);
- // cold spill outside boundary: consequences precede the hole
- let cold=x.createRadialGradient(cx,cy,R*.72,cx,cy,R*1.32);cold.addColorStop(0,'#604f7860');cold.addColorStop(.62,'#342b4840');cold.addColorStop(1,'#11101a00');x.fillStyle=cold;x.beginPath();x.arc(cx,cy,R*1.32,0,7);x.fill();
- // objects cut by boundary: weapon and fallen standard vanish rather than tint
- x.strokeStyle='#b8a77e';x.lineWidth=3;x.beginPath();x.moveTo(cx-R*1.15,cy+R*.48);x.lineTo(cx-R*.55,cy+R*.18);x.stroke();
- // Hadar: layered irregular silhouette; gameplay truth may be circular, perception isn't
- x.save();x.translate(cx,cy);
- for(let layer=0;layer<5;layer++){let rr=R*(1.04-layer*.012);x.beginPath();for(let i=0;i<=96;i++){let a=i/96*Math.PI*2,noise=Math.sin(a*7+layer)*.018+Math.sin(a*13+1.7)*.009+(rnd()-.5)*.008;let r=rr*(1+noise);let px=Math.cos(a)*r,py=Math.sin(a)*r;if(i)x.lineTo(px,py);else x.moveTo(px,py)}x.closePath();x.fillStyle=layer<2?'#120d1d':'#020207';x.fill()}
- // rim: not a neon circle; sparse stellar/cold fractures
- x.globalCompositeOperation='screen';
- for(let i=0;i<70;i++){let a=rnd()*Math.PI*2,r=R*(.96+rnd()*.12),len=2+rnd()*10;x.strokeStyle=rnd()>.45?'#79629b55':'#b6d9dd44';x.lineWidth=.5+rnd();x.beginPath();x.moveTo(Math.cos(a)*r,Math.sin(a)*r);x.lineTo(Math.cos(a)*(r+len),Math.sin(a)*(r+len));x.stroke()}
- for(let i=0;i<34;i++){let a=rnd()*Math.PI*2,r=R*(.35+rnd()*.58),s=.4+rnd()*1.4;x.fillStyle=rnd()>.75?'#d7c4e4aa':'#71668788';x.fillRect(Math.cos(a)*r,Math.sin(a)*r,s,s)}
- x.globalCompositeOperation='source-over';
- // tendrils / impossible depth
- x.strokeStyle='#46355366';x.lineWidth=1;for(let i=0;i<9;i++){let a=i/9*Math.PI*2+rnd()*.3;x.beginPath();x.moveTo(Math.cos(a)*R*.9,Math.sin(a)*R*.9);x.bezierCurveTo(Math.cos(a+1)*R*.45,Math.sin(a+1)*R*.45,Math.cos(a-1.2)*R*.28,Math.sin(a-1.2)*R*.28,0,0);x.stroke()}
- x.restore();
- // frost / residue accumulates against the inaccessible boundary
- x.strokeStyle='#a9c4c777';x.lineWidth=1.2;for(let i=0;i<45;i++){let a=Math.PI*.58+rnd()*Math.PI*.72,r=R*(1.015+rnd()*.035),px=cx+Math.cos(a)*r,py=cy+Math.sin(a)*r;x.beginPath();x.moveTo(px,py);x.lineTo(px+(rnd()-.5)*8,py+2+rnd()*7);x.stroke()}
- // figures: posture and disappearance tell the rules
- figure(cx-R*1.33,cy-R*.18,1.05,false,.12); // approaching / bracing
- figure(cx-R*.82,cy+R*.08,1,true,-.25);    // swallowed at edge
- figure(cx+R*.74,cy-R*.18,.95,true,.22);   // barely legible within
- figure(cx+R*1.22,cy+R*.62,1,false,-.1);   // escaping
- // one dragged footprint trail that terminates at darkness
- x.strokeStyle='#8d7e6c88';x.lineWidth=1;for(let i=0;i<5;i++){let px=cx-R*(1.38-i*.1),py=cy+R*(.42-i*.045);x.beginPath();x.ellipse(px,py,2.3,4,.7,0,7);x.stroke()}
- // subtle vignette
- let vg=x.createRadialGradient(W*.5,H*.5,Math.min(W,H)*.2,W*.5,H*.5,Math.max(W,H)*.7);vg.addColorStop(.55,'#0000');vg.addColorStop(1,'#000b');x.fillStyle=vg;x.fillRect(0,0,W,H)
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><meta name="theme-color" content="#090811"><title>Hunger of Hadar — painted in JS</title><style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090811}canvas{display:block;width:100%;height:100%}#t{position:fixed;left:14px;top:12px;color:#e7dac2;font:12px Georgia;letter-spacing:.2em;text-shadow:0 2px 8px #000}#s{font:9px system-ui;color:#8f8795;letter-spacing:.06em;margin-top:4px}</style></head><body><canvas id="c"></canvas><div id="t">HUNGER OF HADAR<div id="s">painted entirely by the runtime</div></div><script>
+const c=document.querySelector('#c'),g=c.getContext('2d',{alpha:false});let W,H,D,S=0x741c0de;
+const R=()=>((S=Math.imul(S^S>>>15,1|S),S^=S+Math.imul(S^S>>>7,61|S),((S^S>>>14)>>>0)/4294967296));
+function resize(){D=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;c.width=W*D;c.height=H*D;g.setTransform(D,0,0,D,0,0);paint()}addEventListener('resize',resize);
+function wash(x,y,r,col,a,n=90){g.save();g.globalCompositeOperation='source-over';for(let i=0;i<n;i++){let q=R()*Math.PI*2,d=Math.sqrt(R())*r,rr=r*(.08+R()*.24),gr=g.createRadialGradient(x+Math.cos(q)*d,y+Math.sin(q)*d,0,x+Math.cos(q)*d,y+Math.sin(q)*d,rr);gr.addColorStop(0,col.replace('A',a*(.25+R()*.75)));gr.addColorStop(1,col.replace('A','0'));g.fillStyle=gr;g.fillRect(x-r*1.3,y-r*1.3,r*2.6,r*2.6)}g.restore()}
+function poly(p,fill){g.beginPath();g.moveTo(...p[0]);p.slice(1).forEach(q=>g.lineTo(...q));g.closePath();g.fillStyle=fill;g.fill()}
+function strokePath(points,col,w){g.beginPath();g.moveTo(...points[0]);points.slice(1).forEach(p=>g.lineTo(...p));g.strokeStyle=col;g.lineWidth=w;g.lineCap='round';g.stroke()}
+function person(x,y,k,pose=0){g.save();g.translate(x,y);g.rotate(pose);g.fillStyle='#15131a';g.strokeStyle='#d0b98c';g.lineWidth=1.2*k;g.beginPath();g.arc(0,-10*k,3*k,0,7);g.fill();g.stroke();g.beginPath();g.moveTo(0,-7*k);g.quadraticCurveTo(-4*k,1*k,-2*k,10*k);g.lineTo(-8*k,17*k);g.moveTo(-2*k,9*k);g.lineTo(5*k,17*k);g.moveTo(-2*k,-2*k);g.lineTo(-9*k,5*k);g.moveTo(-1*k,-2*k);g.lineTo(8*k,-6*k);g.stroke();g.restore()}
+function paint(){S=0x741c0de;g.fillStyle='#090811';g.fillRect(0,0,W,H);let horizon=H*.18,cx=W*.58,cy=H*.52,rad=Math.min(W*.36,H*.31);
+ // painterly ground underpainting
+ let sky=g.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#17172a');sky.addColorStop(.32,'#252333');sky.addColorStop(1,'#171218');g.fillStyle=sky;g.fillRect(0,0,W,H);
+ wash(W*.35,H*.62,Math.max(W,H)*.65,'rgba(83,70,74,A)',.055,160);
+ // perspective ruin masses
+ poly([[0,horizon],[W*.18,H*.14],[W*.22,H],[0,H]],'#17151a');poly([[W*.82,H*.12],[W,H*.18],[W,H],[W*.87,H]],'#151319');
+ poly([[0,H*.68],[W*.29,H*.43],[W*.37,H],[0,H]],'#302822');poly([[W,H*.66],[W*.76,H*.42],[W*.67,H],[W,H]],'#29221f');
+ // stone face washes + warm torch pools
+ wash(W*.08,H*.55,W*.28,'rgba(205,111,43,A)',.11,80);wash(W*.92,H*.52,W*.25,'rgba(180,82,35,A)',.08,60);
+ // floor plane and broken masonry strokes
+ poly([[W*.13,H*.33],[W*.84,H*.34],[W*.96,H],[W*.03,H]],'#302b30');
+ for(let i=0;i<95;i++){let y=H*(.38+R()*.58),pers=(y-H*.34)/(H*.66),x= W*(.06+R()*.88),len=(6+R()*32)*(0.35+pers);strokePath([[x,y],[x+len,y+(R()-.5)*4]],'rgba(126,112,104,'+(.12+R()*.18)+')',.5+R()*1.3)}
+ // arches/pillars as connected silhouettes
+ for(const px of [W*.22,W*.82]){poly([[px-W*.045,H*.12],[px+W*.045,H*.12],[px+W*.055,H*.68],[px-W*.055,H*.68]],'#211e24');for(let i=0;i<18;i++){let yy=H*(.16+i*.028);strokePath([[px-W*.04,yy],[px+W*.04,yy+(R()-.5)*3]],'#49434a',.7)}}
+ // cold atmosphere before void
+ wash(cx,cy,rad*1.55,'rgba(81,77,153,A)',.075,150);wash(cx,cy,rad*1.25,'rgba(55,103,145,A)',.045,90);
+ // void built as hundreds of translucent brush dabs
+ g.save();g.beginPath();for(let i=0;i<=180;i++){let a=i/180*Math.PI*2,n=Math.sin(a*5)*.055+Math.sin(a*11+1)*.026+(R()-.5)*.035,r=rad*(1+n),px=cx+Math.cos(a)*r,py=cy+Math.sin(a)*r;if(i)g.lineTo(px,py);else g.moveTo(px,py)}g.closePath();g.clip();
+ g.fillStyle='#020207';g.fillRect(cx-rad*1.2,cy-rad*1.2,rad*2.4,rad*2.4);
+ wash(cx,cy,rad*1.05,'rgba(38,23,75,A)',.16,180);wash(cx+rad*.28,cy-rad*.12,rad*.72,'rgba(47,62,130,A)',.12,110);
+ // broad curved tentacular strokes, painted not outlined
+ g.globalCompositeOperation='screen';for(let i=0;i<24;i++){let a=R()*Math.PI*2,r0=rad*(.1+R()*.65),sx=cx+Math.cos(a)*r0,sy=cy+Math.sin(a)*r0,ex=cx+Math.cos(a+.7+R())*rad*.95,ey=cy+Math.sin(a+.7+R())*rad*.95;g.strokeStyle='rgba('+(55+R()*45|0)+','+(42+R()*40|0)+','+(90+R()*75|0)+','+(.025+R()*.08)+')';g.lineWidth=4+R()*20;g.beginPath();g.moveTo(sx,sy);g.bezierCurveTo(cx+(R()-.5)*rad,cy+(R()-.5)*rad,cx+(R()-.5)*rad,cy+(R()-.5)*rad,ex,ey);g.stroke()}
+ // stars mostly swallowed, sparse
+ for(let i=0;i<85;i++){let a=R()*7,r=Math.sqrt(R())*rad*.9,px=cx+Math.cos(a)*r,py=cy+Math.sin(a)*r,s=.25+R()*1.3;g.fillStyle='rgba(200,205,240,'+(.15+R()*.55)+')';g.fillRect(px,py,s,s)}g.restore();
+ // ragged rim painted by dabs
+ for(let i=0;i<150;i++){let a=R()*Math.PI*2,r=rad*(.94+R()*.14),px=cx+Math.cos(a)*r,py=cy+Math.sin(a)*r,rr=2+R()*12;let q=g.createRadialGradient(px,py,0,px,py,rr);q.addColorStop(0,R()>.55?'rgba(121,106,194,.16)':'rgba(133,178,192,.12)');q.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=q;g.fillRect(px-rr,py-rr,rr*2,rr*2)}
+ // frost tells where the boundary is
+ for(let i=0;i<115;i++){let a=Math.PI*.1+R()*Math.PI*1.25,r=rad*(1.01+R()*.12),px=cx+Math.cos(a)*r,py=cy+Math.sin(a)*r,l=2+R()*11;strokePath([[px,py],[px+(R()-.5)*l,py+l*.55]],'rgba(183,205,207,'+(.08+R()*.26)+')',.4+R())}
+ // torch flames + reflected warmth
+ for(const [tx,ty] of [[W*.09,H*.46],[W*.91,H*.44]]){wash(tx,ty,45,'rgba(255,135,42,A)',.18,35);for(let j=0;j<8;j++){g.fillStyle=j<3?'#ffe0a0':'#d66c2f';g.beginPath();g.ellipse(tx+(R()-.5)*5,ty-R()*13,2+R()*4,5+R()*11,(R()-.5)*.5,0,7);g.fill()}}
+ // figures outside, one half-erased at threshold
+ person(W*.16,H*.72,1.15,.1);person(W*.28,H*.79,1,-.15);person(cx-rad*.88,cy+rad*.22,1.05,.3);
+ g.save();g.beginPath();g.arc(cx,cy,rad*.99,0,7);g.clip();g.globalAlpha=.78;g.fillStyle='#030208';g.fillRect(0,0,W,H);g.restore();
+ // foreground debris
+ for(let i=0;i<28;i++){let px=W*(.08+R()*.84),py=H*(.72+R()*.23),s=3+R()*13;poly([[px-s,py],[px,py-s*.45],[px+s,py],[px+s*.4,py+s*.45]],R()>.5?'#211d20':'#3a3029')}
+ // glaze/vignette/grain
+ let v=g.createRadialGradient(W*.52,H*.54,Math.min(W,H)*.22,W*.52,H*.54,Math.max(W,H)*.72);v.addColorStop(.48,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.72)');g.fillStyle=v;g.fillRect(0,0,W,H);
+ g.globalAlpha=.035;for(let i=0;i<900;i++){let q=R()*255|0;g.fillStyle='rgb('+q+','+q+','+q+')';g.fillRect(R()*W,R()*H,1,1)}g.globalAlpha=1;
 }
 resize();
 </script></body></html>

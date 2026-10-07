@@ -2988,6 +2988,19 @@ const microFocus=new THREE.Mesh(new THREE.CylinderGeometry(.10,.10,.16,10),micro
 dynamite.position.set(-.48,.52,0);dynamite.rotation.z=.12;dynamite.scale.setScalar(.92);
 microscope.position.set(.48,.10,0);microscope.rotation.y=-.28;
 // These are retired Workshop specimens. No interaction, spell, resident tool, phase, or explosion behavior survives.
+// Six Cities construction specimen: two orb-seat-radius rings rigidly joined by exactly two rails.
+// Spec is intentionally literal: identical coaxial rings, two rails, nothing else.
+const twoRingRail=new THREE.Group();twoRingRail.name='workshop:six-cities:two-ring-two-rail';legacyWorkshop.add(twoRingRail);
+{
+  const ringRadius=.535,ringTube=.035,halfLength=1.25,railRadius=.035;
+  for(const z of [-halfLength,halfLength]){
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(ringRadius,ringTube,10,36),workshopCrucibleStandMat);
+    ring.position.z=z;ring.castShadow=true;twoRingRail.add(ring);
+  }
+  for(const x of [-ringRadius,ringRadius])workshopCyl(twoRingRail,new THREE.Vector3(x,0,-halfLength),new THREE.Vector3(x,0,halfLength),railRadius,workshopCrucibleStandMat,10);
+  twoRingRail.position.set(0,1.05,0);
+}
+
 // First Workshop pressure: one semantic request becomes a visible 7x7 possibility field.
 // This is deliberately local evidence, not a generalized fabrication protocol.
 const workshopField=new THREE.Group();

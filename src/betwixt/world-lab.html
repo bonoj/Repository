@@ -1423,7 +1423,7 @@ function createBeyondTerrain(){
   // No terrain-type parcels. Continuous strata are deformed, incised, differentially
   // eroded and mantled; dunes are terrain topology whose near-surface material is sand.
   const root=new THREE.Group();root.name='beyond:world-substance';beyondPlace.add(root);
-  const SIZE=104,HALF=SIZE*.5,N=145,seed=741,STRATA=7;
+  const SIZE=104,HALF=SIZE*.5,N=289,seed=741,STRATA=7;
   const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),smooth=t=>t*t*(3-2*t),fract=v=>v-Math.floor(v),mix=(a,b,t)=>a+(b-a)*t;
   const hash=(x,z,s=seed)=>fract(Math.sin(x*127.1+z*311.7+s*74.7)*43758.5453123);
   function noise(x,z,s=seed){const ix=Math.floor(x),iz=Math.floor(z),fx=smooth(fract(x)),fz=smooth(fract(z));return mix(mix(hash(ix,iz,s),hash(ix+1,iz,s),fx),mix(hash(ix,iz+1,s),hash(ix+1,iz+1,s),fx),fz)*2-1}
@@ -1475,7 +1475,7 @@ function createBeyondTerrain(){
     layer=exposedStratum(structural,erosion);
     const resistance=strata[layer].resist;
     const beddingPhase=(structural-erosion)*2.2+noise(x*.025,z*.025,827)*.65;
-    const bedRelief=(resistance-.48)*.62*Math.tanh(Math.sin(beddingPhase)*3.1);
+    const bedRelief=(resistance-.48)*.48*Math.tanh(Math.sin(beddingPhase)*1.25);
     const bedrock=structural-erosion+bedRelief;
     return{bedrock,layer,resistance,drainage:d};
   }
@@ -1510,13 +1510,27 @@ function createBeyondTerrain(){
     colors[k*3]=col.r;colors[k*3+1]=col.g;colors[k*3+2]=col.b;
   }
   for(let z=0;z<N;z++)for(let x=0;x<N;x++)writeVertex(x,z);
+  // T2 representation pass: geology remains the generator; this only band-limits its
+  // projection to the spatial vocabulary of the mesh. A tiny separable kernel spreads
+  // sub-cell stratigraphic/incision jumps across several triangles without inventing
+  // parcels or changing the large-scale geological history.
+  const filtered=new Float32Array(N*N),tmp=new Float32Array(N*N);
+  const kernel=[1,2,1],ks=4;
+  for(let z=0;z<N;z++)for(let x=0;x<N;x++){
+    let v=0,w=0;for(let o=-1;o<=1;o++){const xx=Math.max(0,Math.min(N-1,x+o)),kw=kernel[o+1];v+=heights[xx+N*z]*kw;w+=kw}tmp[x+N*z]=v/w;
+  }
+  for(let z=0;z<N;z++)for(let x=0;x<N;x++){
+    let v=0,w=0;for(let o=-1;o<=1;o++){const zz=Math.max(0,Math.min(N-1,z+o)),kw=kernel[o+1];v+=tmp[x+N*zz]*kw;w+=kw}filtered[x+N*z]=v/w;
+  }
+  heights.set(filtered);
+  for(let i=0;i<N*N;i++)positions[i*3+1]=heights[i];
   const indices=[];for(let z=0;z<N-1;z++)for(let x=0;x<N-1;x++){const a=x+N*z,b=a+1,d=a+N,e=d+1;if((x+z)&1)indices.push(a,d,b,b,d,e);else indices.push(a,d,e,a,e,b)}
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setAttribute('color',new THREE.BufferAttribute(colors,3));geo.setIndex(indices);geo.computeVertexNormals();
   const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.96,metalness:.012,flatShading:true});
   const mesh=new THREE.Mesh(geo,mat);mesh.name='beyond:geological-history-topology';mesh.receiveShadow=true;root.add(mesh);
   function groundHeight(x,z){const fx=clamp((x+HALF)/SIZE*(N-1),0,N-1.001),fz=clamp((z+HALF)/SIZE*(N-1),0,N-1.001),x0=Math.floor(fx),z0=Math.floor(fz),tx=fx-x0,tz=fz-z0,A=heights[x0+N*z0],B=heights[x0+1+N*z0],C=heights[x0+N*(z0+1)],D=heights[x0+1+N*(z0+1)];return THREE.MathUtils.lerp(THREE.MathUtils.lerp(A,B,tx),THREE.MathUtils.lerp(C,D,tx),tz)}
-  const inert=()=>({locked:true,reason:'beyond-geological-history-t1'});
-  return{root,mesh,maps:(x,z)=>{const w=sampleWorld(x,z);return{height:groundHeight(x,z),bedrock:w.bedrock,exposedStratum:w.layer,resistance:w.resistance,mantle:w.mantle,drainage:{trunk:w.drainage.trunk,tributary:w.drainage.tributary}}},reset:()=>{},seatRect:()=>{},raise:inert,excavate:inert,groundHeight,inspect:()=>({kind:'beyond-geological-history-t1',size:SIZE,resolution:N,seed,strata:STRATA,jurisdictions:0,history:['stratigraphy','deformation','drainage','differential-erosion','deposition']})};
+  const inert=()=>({locked:true,reason:'beyond-geological-history-t2'});
+  return{root,mesh,maps:(x,z)=>{const w=sampleWorld(x,z);return{height:groundHeight(x,z),bedrock:w.bedrock,exposedStratum:w.layer,resistance:w.resistance,mantle:w.mantle,drainage:{trunk:w.drainage.trunk,tributary:w.drainage.tributary}}},reset:()=>{},seatRect:()=>{},raise:inert,excavate:inert,groundHeight,inspect:()=>({kind:'beyond-geological-history-t2',size:SIZE,resolution:N,seed,strata:STRATA,jurisdictions:0,representation:{bandlimit:'separable-121',bedReliefGain:1.25},history:['stratigraphy','deformation','drainage','differential-erosion','deposition']})};
 }
 function ensureBeyondTerrain(){
   if(!beyondTerrain)beyondTerrain=createBeyondTerrain();

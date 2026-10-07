@@ -32,13 +32,15 @@ try{
   if(first.presences<1||second.presences<1)failures.push("runtime exposed no presences");
   if(!first.build||first.build!==second.build)failures.push("repository build identity missing or unstable");
 
-  // Beyond is an experimental failure boundary. T8 is born complete from geological history:
+  // Beyond is an experimental failure boundary. T9 is born complete from geological history:
   // continuous strata, no terrain jurisdictions, and no behavior window or Four Brothers.
   await page.evaluate(()=>globalThis.RepositoryShell?.button?.("beyond-place")?.click());
-  await page.waitForFunction(()=>globalThis.BeyondTerrain?.inspect?.()?.kind==="beyond-geological-history-t8",{timeout:8000});
+  await page.waitForFunction(()=>globalThis.BeyondTerrain?.inspect?.()?.kind==="beyond-geological-history-t9",{timeout:8000});
   await page.waitForTimeout(1200);
   const beyond=await page.evaluate(()=>globalThis.BeyondTerrain?.inspect?.());
-  if(!beyond||beyond.size<80||beyond.resolution<100||beyond.strata<5||beyond.jurisdictions!==0)failures.push("Beyond geological topology T8 did not survive startup: "+JSON.stringify(beyond));
+  if(!beyond||beyond.size<80||beyond.resolution<100||beyond.strata<5||beyond.jurisdictions!==0||!beyond.genome)failures.push("Beyond geological topology T9 did not survive startup: "+JSON.stringify(beyond));
+  const sampled=await page.evaluate(()=>{const a=globalThis.BeyondTerrain.inspect(),b=globalThis.BeyondTerrain.nextSeed(1),c=globalThis.BeyondTerrain.mutate(1);return{a:{seed:a.seed,mutation:a.mutation},b:{seed:b.seed,mutation:b.mutation},c:{seed:c.seed,mutation:c.mutation},finite:Number.isFinite(globalThis.BeyondTerrain.groundHeight(0,0))}});
+  if(sampled.b.seed===sampled.a.seed||sampled.b.mutation!==0||sampled.c.seed!==sampled.b.seed||sampled.c.mutation===0||!sampled.finite)failures.push("Beyond geological sampler did not survive seed/mutate walk: "+JSON.stringify(sampled));
 
   if(failures.length)throw new Error(failures.join("\n"));
   console.log("Betwixt runtime smoke passed:",second);

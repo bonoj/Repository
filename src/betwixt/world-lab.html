@@ -1556,7 +1556,7 @@ function ensureFourBrothers(){
     }
   }
   // Blue is a low coherent stream/pool: beads are presentation of one moving body, not units.
-  const bluePath=new THREE.CatmullRomCurve3([
+  let bluePath=new THREE.CatmullRomCurve3([
     new THREE.Vector3(-5,0,-20),new THREE.Vector3(1,0,-17),new THREE.Vector3(8,0,-15),
     new THREE.Vector3(13,0,-9),new THREE.Vector3(11,0,-2),new THREE.Vector3(5,0,3)
   ],false,'catmullrom',.5);
@@ -1593,7 +1593,7 @@ function ensureFourBrothers(){
       // while Yellow raises a paired bank. All three use the same ordinary terrain state.
       for(let i=0;i<7;i++){const x=-2+i*1.25,z=-1.5+i*.58;terrain.excavate({x,z},{radius:1.55,depth:.42})}
       for(let i=0;i<6;i++){const x=5+i*1.15,z=3+i*.48;terrain.raise({x,z},{radius:1.4,height:.38})}
-      bluePath.points.push(new THREE.Vector3(-3,0,-1),new THREE.Vector3(-9,0,3),new THREE.Vector3(-13,0,7));
+      bluePath=new THREE.CatmullRomCurve3([...bluePath.points.map(p=>p.clone()),new THREE.Vector3(-3,0,-1),new THREE.Vector3(-9,0,3),new THREE.Vector3(-13,0,7)],false,'catmullrom',.5);
       const transfers=ensureBeyondTransfers();transfers.setEnabled(true);
     }
     window.vestibuleDirty=true;

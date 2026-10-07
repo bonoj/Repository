@@ -1646,7 +1646,7 @@ function scanBeyondTopology(){
     camera:cameraProvenance(),observations:beyondObservationViews(),gradientStructures:components.slice(0,40),suspicious:sharp.slice(0,160),coarseCells:coarse,transects};
 }
 function downloadBeyondTopologyScan(){
-  const report=scanBeyondTopology();presentBeyondObservation(0),blob=new Blob([JSON.stringify(report)],{type:'application/json'}),a=document.createElement('a');
+  const report=scanBeyondTopology();presentBeyondObservation(0);const blob=new Blob([JSON.stringify(report)],{type:'application/json'}),a=document.createElement('a');
   a.href=URL.createObjectURL(blob);a.download='beyond-topology-'+(report.build||'source').slice(0,8)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),0);return report;
 }
 globalThis.scanBeyondTopology=scanBeyondTopology;globalThis.presentBeyondObservation=presentBeyondObservation;

@@ -2533,15 +2533,12 @@ const observerVessel=buildBetwixtable({
     const occupied=[nodes.xp,nodes.yp];
     occupied.forEach((p,i)=>{const axis=p.clone().normalize(),agent=makeObserverAgent({name:'observer-vessel:pilot:'+i,parent:root,at:p.clone(),betwixtable:false});agent.node.quaternion.setFromUnitVectors(zAxis,axis);});
     makeObserverAgent({name:'observer-vessel:pilot:center',parent:root,at:new THREE.Vector3(),betwixtable:false});
-    // Free gimbal cage: a small observer rides the cartridge's own cardinal windows.
-    // It alternates the two great-circle tracks only at their aligned ±X windows,
-    // stepping through every outer node before the route repeats.
-    const orbitalGimbal=new THREE.Group();orbitalGimbal.name='observer-vessel:orbital-gimbal';root.add(orbitalGimbal);
-    buildObserverPresentation(orbitalGimbal);
-    orbitalGimbal.scale.setScalar(.78);orbitalGimbal.position.copy(nodes.xp);
+    // The asymmetric five-ring receiver itself swivels around the central 7-node cartridge.
+    // Its open mouth follows the cartridge's aligned cardinal windows, changing great-circle
+    // track only where meridian and equator meet at ±X.
     observerVesselOrbiter={
-      node:orbitalGimbal,radius:cartridgeRadius,started:performance.now(),duration:1450,dwell:260,index:0,
-      forward:new THREE.Vector3(0,0,1),radial:new THREE.Vector3(),inward:new THREE.Vector3(),from:new THREE.Vector3(),to:new THREE.Vector3(),
+      node:receiver.shell,radius:0,started:performance.now(),duration:1450,dwell:260,index:0,
+      forward:new THREE.Vector3(1,0,0),radial:new THREE.Vector3(),outward:new THREE.Vector3(),from:new THREE.Vector3(),to:new THREE.Vector3(),
       route:[
         ['equator','xp','zp'],['equator','zp','xn'],
         ['meridian','xn','yp'],['meridian','yp','xp'],
@@ -2568,9 +2565,10 @@ function updateObserverVesselOrbiter(now){
   const angle=Math.acos(THREE.MathUtils.clamp(o.from.dot(o.to),-1,1)),sin=Math.sin(angle);
   const w0=Math.sin((1-t)*angle)/sin,w1=Math.sin(t*angle)/sin;
   o.radial.copy(o.from).multiplyScalar(w0).addScaledVector(o.to,w1).normalize();
-  o.node.position.copy(o.radial).multiplyScalar(o.radius);
-  o.inward.copy(o.radial).multiplyScalar(-1);
-  o.node.quaternion.setFromUnitVectors(o.forward,o.inward);
+  // Receiver remains concentric with the 7-node cartridge; swivel its missing +X mouth
+  // toward the current cardinal direction rather than translating a passenger around it.
+  o.outward.copy(o.radial);
+  o.node.quaternion.setFromUnitVectors(o.forward,o.outward);
   o.node.userData.orbitTrack=seg[0];o.node.userData.windowFrom=seg[1];o.node.userData.windowTo=seg[2];
   if(elapsed>=o.duration+o.dwell){o.index=(o.index+1)%o.route.length;o.started=now;}
   window.vestibuleDirty=true;

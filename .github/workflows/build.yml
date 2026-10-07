@@ -31,6 +31,8 @@ jobs:
           GITHUB_SHA=d1c5e437197e72b16624c0b7104c6e9d9cbb0d0f node tools/build.mjs
           printf '%s  %s\n' '3355df58812cab9afabbfc33464ee67bf3a736912a1ff9edac7a3afc48ab6c12' 'dist/index.html' | sha256sum -c -
       - run: npm test
+      - name: Install smoke browser
+        run: npx playwright install --with-deps chromium
       - name: Smoke executable runtime including Beyond
         run: npm run smoke:runtime
       - name: Verify executable artifact

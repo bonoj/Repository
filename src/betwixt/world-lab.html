@@ -1523,17 +1523,85 @@ globalThis.BeyondTerrain={
 let fourBrothers=null;
 function ensureFourBrothers(){
   if(fourBrothers)return fourBrothers;
-  // Four Brothers begins as ownership/context only. The shared Beyond terrain and
-  // material streams remain ordinary world machinery; behavior must earn additions.
-  const root=new THREE.Group();root.name='beyond:four-brothers';beyondPlace.add(root);
+  const terrain=ensureBeyondTerrain(),root=new THREE.Group();root.name='beyond:four-brothers';beyondPlace.add(root);
   const domains={};
-  for(const id of ['red','green','yellow','blue']){
-    const domain=new THREE.Group();domain.name='four-brothers:'+id;root.add(domain);domains[id]=domain;
+  for(const id of ['red','green','yellow','blue']){const g=new THREE.Group();g.name='four-brothers:'+id;root.add(g);domains[id]=g}
+  // Red exists as an empty jurisdiction. This first crossing is the three-brother peace.
+  domains.red.visible=false;
+
+  const greenMat=new THREE.MeshStandardMaterial({color:0x477b45,roughness:.88,metalness:0});
+  const greenTip=new THREE.MeshStandardMaterial({color:0x8fb86d,roughness:.72,metalness:0});
+  const blueMat=new THREE.MeshStandardMaterial({color:0x3c788d,roughness:.24,metalness:.08,transparent:true,opacity:.82});
+  const blueBright=new THREE.MeshStandardMaterial({color:0x8bc5ce,roughness:.18,metalness:.04,transparent:true,opacity:.88});
+  const yellowMat=new THREE.MeshStandardMaterial({color:0xcaa94e,roughness:.38,metalness:.48});
+  const yellowDark=new THREE.MeshStandardMaterial({color:0x806628,roughness:.64,metalness:.34});
+  const vineGeo=new THREE.CylinderGeometry(.09,.13,1,7),leafGeo=new THREE.ConeGeometry(.18,.46,6);
+  const waterGeo=new THREE.SphereGeometry(.22,10,7),crystalGeo=new THREE.OctahedronGeometry(.28,0);
+  const greens=[],blues=[],yellows=[];
+  const anchors={green:new THREE.Vector2(-17,9),blue:new THREE.Vector2(5,-16),yellow:new THREE.Vector2(17,10)};
+  const ground=(p)=>terrain.groundHeight(p.x,p.y);
+  const placeCylinder=(mesh,a,b)=>{
+    const va=new THREE.Vector3(a.x,ground(a)+.10,a.y),vb=new THREE.Vector3(b.x,ground(b)+.14,b.y),d=vb.clone().sub(va);
+    mesh.position.copy(va).add(vb).multiplyScalar(.5);mesh.scale.y=Math.max(.18,d.length());mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());
+  };
+  // t=0 identity: Green is a rooted branching organism, already materially unlike either sibling.
+  const gRoot=anchors.green;
+  for(let arm=0;arm<7;arm++){
+    let p=gRoot.clone(),angle=arm/7*Math.PI*2+.25*Math.sin(arm*2.1);
+    for(let j=0;j<6;j++){
+      const q=p.clone().add(new THREE.Vector2(Math.cos(angle),Math.sin(angle)).multiplyScalar(1.05+j*.16));
+      const stem=new THREE.Mesh(vineGeo,greenMat);placeCylinder(stem,p,q);stem.castShadow=true;domains.green.add(stem);
+      const leaf=new THREE.Mesh(leafGeo,greenTip);leaf.position.set(q.x,ground(q)+.30,q.y);leaf.rotation.z=Math.PI*.5;leaf.rotation.y=-angle;leaf.castShadow=true;domains.green.add(leaf);
+      greens.push({stem,leaf,a:p.clone(),b:q.clone(),arm,j});p=q;angle+=.18*Math.sin(arm*1.7+j*.9);
+    }
   }
-  fourBrothers={root,domains,inspect:()=>({kind:'four-brothers',domains:Object.keys(domains)})};
-  globalThis.FourBrothers=fourBrothers;
-  return fourBrothers;
+  // Blue is a low coherent stream/pool: beads are presentation of one moving body, not units.
+  const bluePath=new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-5,0,-20),new THREE.Vector3(1,0,-17),new THREE.Vector3(8,0,-15),
+    new THREE.Vector3(13,0,-9),new THREE.Vector3(11,0,-2),new THREE.Vector3(5,0,3)
+  ]);
+  for(let i=0;i<54;i++){const m=new THREE.Mesh(waterGeo,i%9===0?blueBright:blueMat);m.scale.set(1.55,.32,1);m.castShadow=false;domains.blue.add(m);blues.push({m,phase:i/54})}
+  // Yellow begins as a conspicuous ordered ridge/crown: repeated geometry and verticality.
+  for(let i=0;i<15;i++){
+    const a=(i-7)*.52,p=new THREE.Vector2(anchors.yellow.x+a,anchors.yellow.y+Math.sin(i*.8)*.45),h=.65+Math.abs(7-i)*.025;
+    const m=new THREE.Mesh(crystalGeo,i%3?yellowMat:yellowDark);m.scale.set(.72,h*2,.72);m.position.set(p.x,ground(p)+h*.28,p.y);m.rotation.y=i*.47;m.castShadow=true;domains.yellow.add(m);yellows.push({m,p,baseY:m.position.y,i});
+  }
+
+  const started=performance.now();let last=started,nextGreen=started+700,nextYellow=started+900,nextCouple=started+5600,greenGrowth=0,yellowGrowth=0,coupled=false;
+  function growGreen(){
+    const arm=greenGrowth%7,prev=greens.filter(g=>g.arm===arm).at(-1),p=prev.b.clone(),angle=Math.atan2(prev.b.y-prev.a.y,prev.b.x-prev.a.x)+.24*Math.sin(greenGrowth*.77);
+    const q=p.clone().add(new THREE.Vector2(Math.cos(angle),Math.sin(angle)).multiplyScalar(1.25));
+    const stem=new THREE.Mesh(vineGeo,greenMat);placeCylinder(stem,p,q);stem.castShadow=true;domains.green.add(stem);
+    const leaf=new THREE.Mesh(leafGeo,greenTip);leaf.position.set(q.x,ground(q)+.30,q.y);leaf.rotation.z=Math.PI*.5;leaf.rotation.y=-angle;leaf.castShadow=true;domains.green.add(leaf);
+    greens.push({stem,leaf,a:p,b:q,arm,j:6+greenGrowth});terrain.raise(q.x,q.y,{radius:1.0,height:.12});greenGrowth++;
+  }
+  function buildYellow(){
+    const i=yellowGrowth++,ring=1+Math.floor(i/8),a=i*.93,p=new THREE.Vector2(anchors.yellow.x+Math.cos(a)*(4+ring*.45),anchors.yellow.y+Math.sin(a)*(3+ring*.38));
+    const h=.7+(i%5)*.13,m=new THREE.Mesh(crystalGeo,i%3?yellowMat:yellowDark);m.scale.set(.65,h*2.2,.65);m.position.set(p.x,ground(p)+h*.30,p.y);m.rotation.y=a;m.castShadow=true;domains.yellow.add(m);yellows.push({m,p,baseY:m.position.y,i:15+i});terrain.raise(p.x,p.y,{radius:1.35,height:.24});
+  }
+  function update(now){
+    const dt=Math.min(.06,Math.max(0,(now-last)/1000));last=now,t=(now-started)/1000;
+    if(now>=nextGreen&&greenGrowth<30){growGreen();nextGreen=now+260}
+    if(now>=nextYellow&&yellowGrowth<22){buildYellow();nextYellow=now+430}
+    // Blue visibly seeks terrain: its coherent body hugs the live floor while flowing through itself.
+    for(const b of blues){const u=(b.phase+t*.075)%1,q=bluePath.getPoint(u),w=Math.sin(u*Math.PI);q.y=terrain.groundHeight(q.x,q.z)+.13+.05*Math.sin(t*3+b.phase*19);b.m.position.copy(q);b.m.scale.x=1.25+.8*w;b.m.scale.z=.75+.45*w}
+    // Yellow's existing crown slowly organizes upward rather than merely accumulating pieces.
+    for(const y of yellows){y.m.rotation.y+=dt*(.08+(y.i%4)*.015);y.m.position.y=terrain.groundHeight(y.p.x,y.p.y)+.30*y.m.scale.y}
+    if(!coupled&&now>=nextCouple){
+      coupled=true;
+      // First entanglement: Green opens a visible low pass; Blue's destination is rewritten through it,
+      // while Yellow raises a paired bank. All three use the same ordinary terrain state.
+      for(let i=0;i<7;i++){const x=-2+i*1.25,z=-1.5+i*.58;terrain.excavate({x,z},{radius:1.55,depth:.42})}
+      for(let i=0;i<6;i++){const x=5+i*1.15,z=3+i*.48;terrain.raise({x,z},{radius:1.4,height:.38})}
+      bluePath.points.push(new THREE.Vector3(-3,0,-1),new THREE.Vector3(-9,0,3),new THREE.Vector3(-13,0,7));
+      const transfers=ensureBeyondTransfers();transfers.setEnabled(true);
+    }
+    window.vestibuleDirty=true;
+  }
+  fourBrothers={root,domains,update,inspect:()=>({kind:'four-brothers-peace',elapsed:+((performance.now()-started)/1000).toFixed(1),greenGrowth,yellowGrowth,coupled,red:false})};
+  globalThis.FourBrothers=fourBrothers;return fourBrothers;
 }
+function updateFourBrothers(now){if(currentPlace==='beyond')ensureFourBrothers().update(now)}
 
 let beyondArena=null;
 function ensureBeyondArena(){
@@ -5408,6 +5476,7 @@ renderer.setAnimationLoop((now)=>{
   window.__workshopGravityLast=now;
   updateFluidGlobes(now);
   updateBeyondTransfers(now);
+  updateFourBrothers(now);
   updateBeyondArena(now);
   JupurnSystem(now);
   ExchangeSystem(now);

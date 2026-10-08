@@ -1965,6 +1965,50 @@ function ensureBeyondTransfers(){
 }
 function updateBeyondTransfers(now){if(currentPlace==='beyond'&&beyondTransfers?.enabled)beyondTransfers.update(now)}
 
+let beyondPhaseCycle=null;
+function ensureBeyondPhaseCycle(){
+  if(beyondPhaseCycle)return beyondPhaseCycle;
+  const terrain=ensureBeyondTerrain(),root=new THREE.Group();root.name='beyond:bb-phase-cycle';beyondPlace.add(root);
+  const COUNT=1400,geo=new THREE.SphereGeometry(.085,6,4),solidMat=new THREE.MeshStandardMaterial({color:0x4f6654,roughness:.56,metalness:.18}),liquidMat=new THREE.MeshStandardMaterial({color:0x59a9b0,roughness:.18,metalness:.04,transparent:true,opacity:.88}),vaporMat=new THREE.MeshBasicMaterial({color:0xc8ded9,transparent:true,opacity:.32,depthWrite:false});
+  const solid=new THREE.InstancedMesh(geo,solidMat,COUNT),liquid=new THREE.InstancedMesh(geo,liquidMat,COUNT),vapor=new THREE.InstancedMesh(geo,vaporMat,COUNT);
+  solid.name='phase:solid-bbs';liquid.name='phase:melt-bbs';vapor.name='phase:vapor-bbs';for(const m of [solid,liquid,vapor]){m.frustumCulled=false;root.add(m)}
+  const dummy=new THREE.Object3D(),fract=v=>v-Math.floor(v),rnd=n=>fract(Math.sin(n*127.1+beyondWorldSeed*41.7)*43758.5453123),CYCLE=12000;
+  function update(now){
+    const phase=(now%CYCLE)/CYCLE;let ns=0,nl=0,nv=0;
+    // Same finite BB cohort, continuously changing representation. No terrain mutation.
+    for(let i=0;i<COUNT;i++){
+      const a=i*2.3999632297,r=1.2+Math.sqrt(i/COUNT)*7.2,j=(rnd(i*7.3)-.5)*.8;
+      const bx=12+Math.cos(a)*r+j,bz=-8+Math.sin(a)*r+j*.6,ground=terrain.groundHeight(bx,bz);
+      let mesh,slot,x=bx,y=ground+.10,z=bz,scale=.72+rnd(i*11.9)*.5;
+      if(phase<.22){ // solid reservoir warms; outer BBs loosen first
+        const t=phase/.22,loose=THREE.MathUtils.smoothstep(t,Math.max(0,(i/COUNT)-.18),Math.min(1,(i/COUNT)+.22));
+        x+=Math.cos(a)*loose*(.15+1.1*rnd(i*13.1));z+=Math.sin(a)*loose*(.15+1.1*rnd(i*17.7));mesh=solid;slot=ns++;
+      }else if(phase<.46){ // melt: BBs retain identity but spread as a shallow mobile pool
+        const t=(phase-.22)/.24,rr=r*(1+.52*t)+Math.sin(a*3+i*.07)*.28*t;
+        x=12+Math.cos(a)*rr+j;z=-8+Math.sin(a)*rr+j*.6;y=terrain.groundHeight(x,z)+.10;mesh=liquid;slot=nl++;
+      }else if(phase<.70){ // evaporate: particles leave the pool and lose surface constraint
+        const t=(phase-.46)/.24,rr=r*1.48;
+        x=12+Math.cos(a)*rr+j+Math.sin(i*.31+t*5)*t*1.8;z=-8+Math.sin(a)*rr+j*.6+Math.cos(i*.27+t*4)*t*1.8;
+        y=terrain.groundHeight(x,z)+.12+t*(4+10*rnd(i*19.3));mesh=vapor;slot=nv++;scale*=.72;
+      }else if(phase<.88){ // condense: airborne BBs gather into visible droplets
+        const t=(phase-.70)/.18,cloudA=a*.19,cloudR=3.2+4.8*rnd(i*23.1);
+        x=12+Math.cos(cloudA)*cloudR*(1-.55*t);z=-8+Math.sin(cloudA)*cloudR*(1-.55*t);y=8.5+5.5*rnd(i*29.7)-t*2.2;
+        mesh=t<.55?vapor:liquid;slot=t<.55?nv++:nl++;scale*=.82+1.15*t;
+      }else{ // rain: condensed BBs return to the same reservoir footprint
+        const t=(phase-.88)/.12,rr=r*(1.15-.15*t);x=12+Math.cos(a)*rr+j;z=-8+Math.sin(a)*rr+j*.6;
+        const gy=terrain.groundHeight(x,z);y=THREE.MathUtils.lerp(7+6*rnd(i*31.3),gy+.10,t);mesh=liquid;slot=nl++;
+      }
+      dummy.position.set(x,y,z);dummy.scale.setScalar(scale);dummy.updateMatrix();mesh.setMatrixAt(slot,dummy.matrix);
+    }
+    solid.count=ns;liquid.count=nl;vapor.count=nv;for(const m of [solid,liquid,vapor])m.instanceMatrix.needsUpdate=true;
+    window.vestibuleDirty=true;
+  }
+  beyondPhaseCycle={root,update,enabled:true,setEnabled(v){this.enabled=!!v;root.visible=this.enabled;return this.enabled},inspect:()=>({kind:'bb-phase-cycle',count:COUNT,cycleMs:CYCLE,terrainDeformation:false})};
+  return beyondPhaseCycle;
+}
+function updateBeyondPhaseCycle(now){if(currentPlace==='beyond'&&beyondPhaseCycle?.enabled)beyondPhaseCycle.update(now)}
+
+
 function setWorkshopTerrainVisible(visible){
   const terrain=visible?ensureWorkshopTerrain():workshopTerrain;
   if(!terrain)return false;
@@ -2152,7 +2196,7 @@ function presentLocus(name){
   const next=placeDefinitions[name];if(!next)return false;
   for(const [id,{object}] of Object.entries(placeDefinitions))object.visible=id===name;
   floor.visible=name!=='beyond';
-  if(name==='beyond'){ensureBeyondTerrain();if(beyondTransfers)beyondTransfers.setEnabled(false);}
+  if(name==='beyond'){ensureBeyondTerrain();ensureBeyondPhaseCycle().setEnabled(true);if(beyondTransfers)beyondTransfers.setEnabled(false);}
   currentPlace=name;
   if(name==='workshop')installWorkshopSketchSpell();else removeWorkshopSketchSpell();
   if(name==='crucible'){
@@ -5813,7 +5857,7 @@ renderer.setAnimationLoop((now)=>{
   WorkshopGravity.update(Math.min(0.05,Math.max(0,(now-(window.__workshopGravityLast||now))/1000)));
   window.__workshopGravityLast=now;
   updateFluidGlobes(now);
-  updateBeyondTransfers(now);
+  updateBeyondTransfers(now);updateBeyondPhaseCycle(now);
   updateFourBrothers(now);
   updateBeyondArena(now);
   JupurnSystem(now);

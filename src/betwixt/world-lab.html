@@ -1643,13 +1643,13 @@ function createBeyondTerrain(options={}){
   const wallColors=new Float32Array(wallPositions.length),wallIndices=[];
   const wallVertex=(t,l)=>t*(WALL_LEVELS+1)+l;
   function sectionColor(x,z,y,surfaceY){
-    const g=geology(x,z);
-    const originalSurface=sampleWorld(x,z).height;
-    // Deformation translates the local section with its surface; older folded
-    // strata retain their structural phase below the present-day exposure.
-    const structuralCoordinate=deformation(x,z)-(originalSurface-y);
-    const weathering=deformation(x,z)-g.bedrock;
-    const layer=stratumState(structuralCoordinate,weathering).layer;
+    // Bedding is a pre-erosion material coordinate. It is independent of
+    // today's topographic height: excavation reveals existing rock rather
+    // than bending every layer to follow a newly carved valley.
+    const structural=deformation(x,z);
+    const foldDisplacement=structural-.82;
+    const beddingCoordinate=y-foldDisplacement;
+    const layer=stratumState(beddingCoordinate,0).layer;
     const material=new THREE.Color(strata[layer].color);
     const grain=.88+.12*noise(x*.18+y*.09,z*.18-y*.07,887);
     material.multiplyScalar(grain);

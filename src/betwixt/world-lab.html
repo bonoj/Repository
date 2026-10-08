@@ -347,6 +347,7 @@ window.vestibuleWatch=setTimeout(()=>{
 import * as THREE from 'three';
 import { ArcballControls } from 'three/addons/controls/ArcballControls.js';
 import { createQuadrantHistory } from './geological-history-torture.js';
+import { createWater, createLava } from 'https://cdn.jsdelivr.net/gh/bonoj/Repository@5a3efd01/src/fundamentals/liquids/liquids.js';
 
 const scene=new THREE.Scene();
 const WORLD_RADIUS=58;
@@ -3697,6 +3698,41 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     globe.mesh.name='snowglobe:deformable-geological-terrain';
     globe.mesh.castShadow=true;
     root.userData.snowglobe=globe;
+
+    // Finite, prefilled geological liquids. Both use the independent Fundamentals,
+    // in a shared 18-cell-space mapped onto the 104-unit miniature geology.
+    const liquidScale=104/18;
+    const liquidTerrain={
+      groundHeight:(x,z)=>globe.groundHeight(x*liquidScale,z*liquidScale)/liquidScale,
+      groundHeightExact:(x,z)=>globe.groundHeight(x*liquidScale,z*liquidScale)/liquidScale,
+      materialBoundary:(x,z)=>{
+        const r=Math.hypot(x,z),inside=r<49/liquidScale;
+        return {inside,distance:Math.abs(49/liquidScale-r),nx:r?x/r:0,nz:r?z/r:0};
+      }
+    };
+    const liquidOwner=new THREE.Group();liquidOwner.name='snowglobe:liquids';
+    liquidOwner.scale.setScalar(liquidScale);globe.root.add(liquidOwner);
+    const canyonWater=createWater({THREE,owner:liquidOwner,terrain:liquidTerrain});
+    const cauldronLava=createLava({THREE,owner:liquidOwner,terrain:liquidTerrain});
+    // Select two separated local geological lows, rather than invented flat basins.
+    const lowSites=[];
+    for(let z=-35;z<=35;z+=2)for(let x=-35;x<=35;x+=2){
+      if(x*x+z*z>36*36)continue;
+      const h=globe.groundHeight(x,z);
+      lowSites.push({x,z,h});
+    }
+    lowSites.sort((a,b)=>a.h-b.h);
+    const waterSite=lowSites[0];
+    const lavaSite=lowSites.find(p=>Math.hypot(p.x-waterSite.x,p.z-waterSite.z)>23)||lowSites[1];
+    canyonWater.fillRegion({x:waterSite.x/liquidScale,z:waterSite.z/liquidScale,radius:2.6,amount:3.8});
+    cauldronLava.fillRegion({x:lavaSite.x/liquidScale,z:lavaSite.z/liquidScale,radius:1.8,amount:3.2});
+    canyonWater.setEnabled(true);cauldronLava.setEnabled(true);
+    root.userData.snowglobeLiquids={water:canyonWater,lava:cauldronLava,sites:{water:waterSite,lava:lavaSite},scale:liquidScale};
+    globalThis.SnowglobeLiquids={
+      inspect:()=>({sites:{water:waterSite,lava:lavaSite},water:canyonWater.inspect(),lava:cauldronLava.inspect()}),
+      reset:()=>{canyonWater.reset();cauldronLava.reset();canyonWater.fillRegion({x:waterSite.x/liquidScale,z:waterSite.z/liquidScale,radius:2.6,amount:3.8});cauldronLava.fillRegion({x:lavaSite.x/liquidScale,z:lavaSite.z/liquidScale,radius:1.8,amount:3.2})}
+    };
+
     // Catch v0: the verified two-ring/two-rail pipe and five-ring half-cage,
     // assembled in geological local units, then miniaturized together by globe.root.
     // Ring joint centerline spacing .11 comes from Observer's ocular seat.
@@ -6153,6 +6189,8 @@ renderer.setAnimationLoop((now)=>{
   updateWorkshopCrucibleOrb(now);
   updateWorldD20(now);
 
+  const snowglobeLiquids=workshopTabletopBetwixtable.userData.snowglobeLiquids;
+  if(snowglobeLiquids){snowglobeLiquids.water.update(now);snowglobeLiquids.lava.update(now);window.vestibuleDirty=true;}
   updateWorkshop(now);
   if(workshopCrucibleEnabled){
     workshopTerrain?.updateInitialization?.(now);

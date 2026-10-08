@@ -3697,6 +3697,67 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     globe.mesh.name='snowglobe:deformable-geological-terrain';
     globe.mesh.castShadow=true;
     root.userData.snowglobe=globe;
+    // Catch v0: the verified two-ring/two-rail pipe and five-ring half-cage,
+    // assembled in geological local units, then miniaturized together by globe.root.
+    // Ring joint centerline spacing .11 comes from Observer's ocular seat.
+    // The cage stays fixed; its open +Y mouth feeds the pipe's continuous -Y throat.
+    const catchCity=new THREE.Group();catchCity.name='six-cities:catch:v0';
+    const catchSite={x:12.197,z:18.070};
+    catchCity.position.set(catchSite.x,globe.groundHeight(catchSite.x,catchSite.z)+.12,catchSite.z);
+    globe.root.add(catchCity);
+    const catchMetal=brass;
+    const catchRing=(parent,name,r=.66,t=.055)=>{
+      const mesh=new THREE.Mesh(new THREE.TorusGeometry(r,t,10,40),catchMetal);
+      mesh.name=name;mesh.castShadow=true;parent.add(mesh);return mesh;
+    };
+    const catchPipe=new THREE.Group();catchPipe.name='catch:two-ring-two-rail';catchCity.add(catchPipe);
+    const pipeHeight=2.5;
+    for(const y of [0,pipeHeight]){
+      const ring=catchRing(catchPipe,'catch:pipe:ring:'+y,.66,.035);
+      ring.rotation.x=Math.PI/2;ring.position.y=y;
+    }
+    for(const x of [-.66,.66]){
+      const rail=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,pipeHeight,10),catchMetal);
+      rail.name='catch:pipe:rail';rail.position.set(x,pipeHeight/2,0);rail.castShadow=true;catchPipe.add(rail);
+    }
+    const receiver=new THREE.Group();receiver.name='catch:five-ring-half-cage';
+    // Receiver's canonical missing +X dock is rotated to +Y (open sky).
+    receiver.rotation.z=Math.PI/2;
+    receiver.position.y=pipeHeight+.11+2.56;
+    catchCity.add(receiver);
+    const nodeRadius=2.56,ringRadius=.66,tube=.055;
+    const nodes={xp:new THREE.Vector3(nodeRadius,0,0),xn:new THREE.Vector3(-nodeRadius,0,0),
+      yp:new THREE.Vector3(0,nodeRadius,0),yn:new THREE.Vector3(0,-nodeRadius,0),
+      zp:new THREE.Vector3(0,0,nodeRadius),zn:new THREE.Vector3(0,0,-nodeRadius)};
+    const dockNormal=new THREE.Vector3(0,0,1);
+    for(const [id,pos] of Object.entries(nodes)){
+      if(id==='xp')continue;
+      const dock=new THREE.Group();dock.name='catch:receiver:dock:'+id;
+      dock.position.copy(pos);dock.quaternion.setFromUnitVectors(dockNormal,pos.clone().normalize());receiver.add(dock);
+      catchRing(dock,'catch:receiver:ring:'+id,ringRadius,tube);
+    }
+    const snap=(a,b)=>{
+      const p=nodes[a],toward=nodes[b].clone().sub(p).normalize(),normal=p.clone().normalize();
+      return p.clone().addScaledVector(toward.addScaledVector(normal,-toward.dot(normal)).normalize(),ringRadius);
+    };
+    const edges=[['xp','yp'],['yp','xn'],['xn','yn'],['yn','xp'],['yp','zp'],['zp','yn'],['yn','zn'],['zn','yp']];
+    for(const [a,b] of edges){
+      if(a==='xp'||b==='xp')continue;
+      const p=snap(a,b),q=snap(b,a),u=p.clone().normalize(),v=q.clone().normalize();
+      const angle=Math.acos(THREE.MathUtils.clamp(u.dot(v),-1,1)),radius=(p.length()+q.length())/2;
+      const curve=new THREE.Curve();
+      curve.getPoint=(t,target=new THREE.Vector3())=>target.copy(u).multiplyScalar(Math.sin((1-t)*angle)/Math.sin(angle))
+        .addScaledVector(v,Math.sin(t*angle)/Math.sin(angle)).normalize().multiplyScalar(radius);
+      const member=new THREE.Mesh(new THREE.TubeGeometry(curve,20,tube,8,false),catchMetal);
+      member.name='catch:receiver:shell:'+a+':'+b;member.castShadow=true;receiver.add(member);
+    }
+    catchCity.userData.sixCities={kind:'catch-v0',site:catchSite,
+      joinedRingCenterlineSpacing:.11,pipeTop:pipeHeight,cageBottom:pipeHeight+.11,
+      miniatureScale:.025,stationaryReceiver:true};
+    globalThis.SixCitiesCatch={root:catchCity,pipe:catchPipe,receiver,
+      inspect:()=>({...catchCity.userData.sixCities,
+        groundHeight:globe.groundHeight(catchSite.x,catchSite.z),
+        worldScale:globe.root.scale.x})};
     globalThis.SnowglobeTerrain={
       raise:(x,z,radius=7,amount=2)=>globe.deform(x,z,radius,Math.abs(amount)),
       carve:(x,z,radius=7,amount=2)=>globe.deform(x,z,radius,-Math.abs(amount)),

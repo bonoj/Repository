@@ -5971,6 +5971,7 @@ addEventListener('resize',()=>{
   window.vestibuleDirty=true;
 });
 
+let snowglobeFocusTime=0,snowglobeFocusLastReal=null;
 renderer.setAnimationLoop((now)=>{
   updateCollapseBead(now);
   if(worldCollapsed){
@@ -5978,7 +5979,13 @@ renderer.setAnimationLoop((now)=>{
     renderer.render(scene,camera);window.vestibuleDirty=false;return;
   }
   globalThis.boundedWitness?.updateIdle?.(now);
-  globalThis.SnowglobeMeteorWeather?.update(now);
+  // Each focused Betwixtable owns its own simulation clock. Unfocused
+  // snowglobe weather consumes no time or work; resuming never catches up.
+  if(focusedWorkshopObject===workshopTabletopBetwixtable){
+    if(snowglobeFocusLastReal!==null)snowglobeFocusTime+=Math.min(100,Math.max(0,now-snowglobeFocusLastReal));
+    snowglobeFocusLastReal=now;
+    globalThis.SnowglobeMeteorWeather?.update(snowglobeFocusTime);
+  }else snowglobeFocusLastReal=null;
   workshopTabletopBetwixtable.userData.betwixtable.presentation.children.find(o=>o.name==='thoughtform:neptunian-caretaker-carrier')?.userData.animate?.(now);
   jovianBetwixtable.userData.betwixtable.presentation.userData.jovian?.update(now);
   jovianBetwixtable.userData.betwixtable.presentation.userData.jovian?.updateBearings(now);

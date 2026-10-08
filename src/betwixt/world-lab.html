@@ -3759,6 +3759,74 @@ const workshopTabletopBetwixtable=buildBetwixtable({
       reset:()=>{canyonWater.reset();cauldronLava.reset()}
     };
 
+    // Canyon volume: a terrain-intersecting material body, independent of the
+    // shallow-water solver. Its upper surface follows the geological drainage
+    // corridor; its bottom is the sampled terrain, so the water has real depth.
+    // This is a static volume, not a claim of 3D fluid dynamics.
+    const canyonVolume=new THREE.Group();
+    canyonVolume.name='snowglobe:canyon-volumetric-water';
+    globe.root.add(canyonVolume);
+    const canyonMaterial=new THREE.MeshPhysicalMaterial({
+      color:0x338da5,roughness:.19,metalness:0,transparent:true,opacity:.73,
+      depthWrite:false,side:THREE.DoubleSide
+    });
+    function rebuildCanyonVolume(){
+      while(canyonVolume.children.length){
+        const child=canyonVolume.children[0];
+        canyonVolume.remove(child);child.geometry?.dispose();
+      }
+      const step=1.0,lo=-47,hi=47,n=Math.round((hi-lo)/step);
+      const depths=new Float32Array(n*n),bed=new Float32Array(n*n);
+      const ixz=(ix,iz)=>ix+n*iz;
+      let cells=0,volume=0;
+      for(let iz=0;iz<n;iz++)for(let ix=0;ix<n;ix++){
+        const x=lo+(ix+.5)*step,z=lo+(iz+.5)*step;
+        if(Math.hypot(x,z)>46)continue;
+        const d=globe.maps(x,z).drainage.trunk;
+        // The trunk cut is broad; taper the occupied cross-section at its banks.
+        const width=4.1,edge=Math.max(0,1-d/width);
+        if(edge<=0)continue;
+        const depth=1.75*edge*edge;
+        const k=ixz(ix,iz);
+        depths[k]=depth;bed[k]=globe.groundHeight(x,z);
+        volume+=depth*step*step;cells++;
+      }
+      const vertices=[],normals=[];
+      const tri=(a,b,c)=>{vertices.push(...a,...b,...c)};
+      const quad=(a,b,c,d)=>{tri(a,b,c);tri(a,c,d)};
+      for(let iz=0;iz<n;iz++)for(let ix=0;ix<n;ix++){
+        const k=ixz(ix,iz),depth=depths[k];if(depth<=0)continue;
+        const x=lo+ix*step,z=lo+iz*step,y=bed[k],top=y+depth;
+        const a=[x,top,z],b=[x+step,top,z],c=[x+step,top,z+step],d=[x,top,z+step];
+        quad(a,b,c,d);
+        // Close the body at its sampled terrain bed and at exposed banks.
+        quad([x,y,z+step],[x+step,y,z+step],[x+step,y,z],[x,y,z]);
+        const neighbors=[
+          [ix-1,iz,[x,top,z+step],[x,top,z],[x,y,z],[x,y,z+step]],
+          [ix+1,iz,[x+step,top,z],[x+step,top,z+step],[x+step,y,z+step],[x+step,y,z]],
+          [ix,iz-1,[x,top,z],[x+step,top,z],[x+step,y,z],[x,y,z]],
+          [ix,iz+1,[x+step,top,z+step],[x,top,z+step],[x,y,z+step],[x+step,y,z+step]]
+        ];
+        for(const [nx,nz,p,q,u,v] of neighbors){
+          const nk=nx>=0&&nx<n&&nz>=0&&nz<n?ixz(nx,nz):-1;
+          if(nk<0||depths[nk]<=0)quad(p,q,u,v);
+        }
+      }
+      const geometry=new THREE.BufferGeometry();
+      geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+      geometry.computeVertexNormals();
+      const mesh=new THREE.Mesh(geometry,canyonMaterial);
+      mesh.name='canyon:terrain-intersecting-volume';mesh.renderOrder=3;
+      canyonVolume.add(mesh);
+      canyonVolume.userData={kind:'terrain-intersecting-static-volume',cells,volume,step};
+    }
+    rebuildCanyonVolume();
+    globalThis.SnowglobeCanyonWater={
+      inspect:()=>({...canyonVolume.userData}),
+      rebuild:rebuildCanyonVolume,
+      root:canyonVolume
+    };
+
     // Catch v0: the verified two-ring/two-rail pipe and five-ring half-cage,
     // assembled in geological local units, then miniaturized together by globe.root.
     // Ring joint centerline spacing .11 comes from Observer's ocular seat.

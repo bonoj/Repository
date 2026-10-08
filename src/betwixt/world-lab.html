@@ -1636,34 +1636,57 @@ function createBeyondTerrain(options={}){
   }
   const specimenPositions=new Float32Array(surfacePositions);
   const specimenColors=new Float32Array(surfaceColors);
-  const wallPositions=new Float32Array(SECTORS*4*3),wallColors=new Float32Array(wallPositions.length),wallIndices=[];
-  const STRATA_BANDS=12;
-  for(let t=0;t<SECTORS;t++){
-    const a=1+(RINGS-1)*SECTORS+t,b=1+(RINGS-1)*SECTORS+(t+1)%SECTORS,v=t*4;
-    for(const [k,source] of [[0,a],[1,a],[2,b],[3,b]]){
-      const off=(v+k)*3;
-      wallPositions[off]=specimenPositions[source*3];
-      wallPositions[off+2]=specimenPositions[source*3+2];
-      wallPositions[off+1]=k%2?BEDROCK_Y:specimenPositions[source*3+1];
-      const h=wallPositions[off+1],band=Math.floor((h-BEDROCK_Y)/1.8);
-      const tone=k%2?.56:.82;
-      for(let c=0;c<3;c++)wallColors[off+c]=specimenColors[source*3+c]*tone;
+  // Geological section: the same deformed stratigraphic coordinates used by
+  // the surface, sampled at depth. Continuous angular columns share vertices.
+  const WALL_LEVELS=64,WALL_COLUMNS=SECTORS+1;
+  const wallPositions=new Float32Array(WALL_COLUMNS*(WALL_LEVELS+1)*3);
+  const wallColors=new Float32Array(wallPositions.length),wallIndices=[];
+  const wallVertex=(t,l)=>t*(WALL_LEVELS+1)+l;
+  function sectionColor(x,z,y,surfaceY){
+    const g=geology(x,z);
+    const originalSurface=sampleWorld(x,z).height;
+    // Deformation translates the local section with its surface; older folded
+    // strata retain their structural phase below the present-day exposure.
+    const structuralCoordinate=deformation(x,z)-(originalSurface-y);
+    const weathering=deformation(x,z)-g.bedrock;
+    const layer=stratumState(structuralCoordinate,weathering).layer;
+    const material=new THREE.Color(strata[layer].color);
+    const grain=.88+.12*noise(x*.18+y*.09,z*.18-y*.07,887);
+    material.multiplyScalar(grain);
+    return material;
+  }
+  for(let t=0;t<WALL_COLUMNS;t++)for(let l=0;l<=WALL_LEVELS;l++){
+    const angle=(t%SECTORS)*Math.PI*2/SECTORS;
+    const x=Math.cos(angle)*R,z=Math.sin(angle)*R;
+    const rim=1+(RINGS-1)*SECTORS+(t%SECTORS);
+    const top=specimenPositions[rim*3+1],f=l/WALL_LEVELS;
+    const y=BEDROCK_Y+(top-BEDROCK_Y)*f,off=wallVertex(t,l)*3;
+    wallPositions[off]=x;wallPositions[off+1]=y;wallPositions[off+2]=z;
+    const c=sectionColor(x,z,y,top);
+    wallColors[off]=c.r;wallColors[off+1]=c.g;wallColors[off+2]=c.b;
+    if(t<SECTORS&&l<WALL_LEVELS){
+      const a=wallVertex(t,l),b=wallVertex(t+1,l);
+      wallIndices.push(a,a+1,b,b,a+1,b+1);
     }
-    wallIndices.push(v,v+2,v+1,v+1,v+2,v+3);
   }
   const wallGeo=new THREE.BufferGeometry();
   wallGeo.setAttribute('position',new THREE.BufferAttribute(wallPositions,3));
   wallGeo.setAttribute('color',new THREE.BufferAttribute(wallColors,3));
   wallGeo.setIndex(wallIndices);wallGeo.computeVertexNormals();
   const wallMesh=new THREE.Mesh(wallGeo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,side:THREE.DoubleSide}));
-  wallMesh.name='snowglobe:earth-cross-section';wallMesh.receiveShadow=true;root.add(wallMesh);
+  wallMesh.name='snowglobe:geological-strata-section';wallMesh.receiveShadow=true;root.add(wallMesh);
   function refreshEarthWalls(){
-    for(let t=0;t<SECTORS;t++){
-      const a=1+(RINGS-1)*SECTORS+t,b=1+(RINGS-1)*SECTORS+(t+1)%SECTORS,v=t*4;
-      wallPositions[v*3+1]=specimenPositions[a*3+1];
-      wallPositions[(v+2)*3+1]=specimenPositions[b*3+1];
+    for(let t=0;t<WALL_COLUMNS;t++)for(let l=0;l<=WALL_LEVELS;l++){
+      const angle=(t%SECTORS)*Math.PI*2/SECTORS,x=Math.cos(angle)*R,z=Math.sin(angle)*R;
+      const rim=1+(RINGS-1)*SECTORS+(t%SECTORS);
+      const top=specimenPositions[rim*3+1],y=BEDROCK_Y+(top-BEDROCK_Y)*l/WALL_LEVELS,off=wallVertex(t,l)*3;
+      wallPositions[off+1]=y;
+      const c=sectionColor(x,z,y,top);
+      wallColors[off]=c.r;wallColors[off+1]=c.g;wallColors[off+2]=c.b;
     }
-    wallGeo.attributes.position.needsUpdate=true;wallGeo.computeVertexNormals();
+    wallGeo.attributes.position.needsUpdate=true;
+    wallGeo.attributes.color.needsUpdate=true;
+    wallGeo.computeVertexNormals();
   }
   const bedrock=new THREE.Mesh(new THREE.CylinderGeometry(R,R,.55,SECTORS),
     new THREE.MeshStandardMaterial({color:0x555458,roughness:.96,metalness:.03}));

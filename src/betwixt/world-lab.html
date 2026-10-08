@@ -1429,12 +1429,12 @@ function populateBeyondFields(count=900){
   if(beyondPopulation){beyondPopulation.removeFromParent();beyondPopulation.children?.forEach(o=>{o.geometry?.dispose();o.material?.dispose()});beyondPopulation=null}
   // Population Fields P1: the substrate owns only permission. Bamboo owns morphology.
   // A deterministic 2D scalar says whether a population may begin at a surface point;
-  // accepted loci then grow one simple behavior along the local topology normal.
+  // accepted loci then grow one simple behavior in world-up, independent of surface normal.
   const root=new THREE.Group();root.name='population-fields:p1-bamboo-permission';terrain.root.add(root);
   const stemGeo=new THREE.CylinderGeometry(.075,.095,1,6,1,false);
   const stemMat=new THREE.MeshStandardMaterial({color:0x667957,roughness:.86,metalness:.02});
   const stems=new THREE.InstancedMesh(stemGeo,stemMat,count);stems.name='population:bamboo';stems.frustumCulled=false;root.add(stems);
-  const dummy=new THREE.Object3D(),up=new THREE.Vector3(0,1,0),normal=new THREE.Vector3(),q=new THREE.Quaternion();
+  const dummy=new THREE.Object3D();
   const fract=v=>v-Math.floor(v),rnd=n=>fract(Math.sin(n*91.733+beyondWorldSeed*17.17)*43758.5453123);
   const permission=(x,z)=>{
     // One boring flat scalar field: broad localized jurisdiction with a soft/noisy edge.
@@ -1450,10 +1450,9 @@ function populateBeyondFields(count=900){
   while(placed<count&&attempt<count*18){
     const i=attempt++,x=-50+rnd(i*7.13)*100,z=-50+rnd(i*11.71)*100,p=permission(x,z);
     if(p<=.08||rnd(i*17.37)>p*.78)continue;
-    const y=terrain.groundHeight(x,z),height=1.15+rnd(i*23.19)*2.65,radius=.72+rnd(i*29.41)*.72,n=surfaceNormal(x,z).clone();
-    q.setFromUnitVectors(up,n);
-    dummy.position.set(x,y,z).addScaledVector(n,height*.5);
-    dummy.quaternion.copy(q);dummy.scale.set(radius,height,radius);dummy.updateMatrix();stems.setMatrixAt(placed++,dummy.matrix);
+    const y=terrain.groundHeight(x,z),height=1.15+rnd(i*23.19)*2.65,radius=.72+rnd(i*29.41)*.72;
+    dummy.position.set(x,y+height*.5,z);
+    dummy.quaternion.identity();dummy.scale.set(radius,height,radius);dummy.updateMatrix();stems.setMatrixAt(placed++,dummy.matrix);
   }
   stems.count=placed;stems.instanceMatrix.needsUpdate=true;stems.computeBoundingSphere();stems.castShadow=true;stems.receiveShadow=true;
   root.userData.population={kind:'bamboo',permission:'flat-scalar',requested:count,placed,seed:beyondWorldSeed};
@@ -1461,7 +1460,7 @@ function populateBeyondFields(count=900){
   return root.userData.population;
 }
 function toggleBeyondPopulation(){
-  if(beyondPopulation){beyondPopulation.removeFromParent();beyondPopulation.geometry.dispose();beyondPopulation.material.dispose();beyondPopulation=null;window.vestibuleDirty=true;return false}
+  if(beyondPopulation){beyondPopulation.removeFromParent();beyondPopulation.children?.forEach(o=>{o.geometry?.dispose();o.material?.dispose()});beyondPopulation=null;window.vestibuleDirty=true;return false}
   populateBeyondFields();return true;
 }
 

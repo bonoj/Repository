@@ -3757,7 +3757,7 @@ const workshopTabletopBetwixtable=buildBetwixtable({
         if(dist>46){x*=46/dist;z*=46/dist;}
         meteorPending.push({at:now+(i===0?0:80+i*(70+meteorRandom()*220)),x,z,power:meteorPower()});
       }
-      meteorNext=now+1800+meteorRandom()*7200;
+      meteorNext=now+180+meteorRandom()*420;
     }
     root.userData.meteorWeather={update:updateSnowMeteorWeather,inspect:()=>({events:meteorEvents,impacts:meteorImpacts,falling:meteorActive.length,pending:meteorPending.length})};
     globalThis.SnowglobeMeteorWeather=root.userData.meteorWeather;

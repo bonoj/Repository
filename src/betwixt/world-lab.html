@@ -1693,9 +1693,13 @@ function createBeyondTerrain(options={}){
     wallGeo.attributes.color.needsUpdate=true;
     wallGeo.computeVertexNormals();
   }
-  const bedrock=new THREE.Mesh(new THREE.CylinderGeometry(R,R,.55,SECTORS),
+  // Bedrock owns the bottom cap. Inset its cylindrical edge beneath the
+  // geological wall, and keep its top just below the immutable height floor:
+  // no coincident faces, no shader depth bias, no visible perimeter gap.
+  const BEDROCK_CAP_CLEARANCE=.035;
+  const bedrock=new THREE.Mesh(new THREE.CylinderGeometry(R-.08,R-.08,.55,SECTORS),
     new THREE.MeshStandardMaterial({color:0x555458,roughness:.96,metalness:.03}));
-  bedrock.name='snowglobe:bedrock';bedrock.position.y=BEDROCK_Y-.275;root.add(bedrock);
+  bedrock.name='snowglobe:bedrock';bedrock.position.y=BEDROCK_Y-BEDROCK_CAP_CLEARANCE-.275;root.add(bedrock);
   function refreshSpecimen(){
     if(!options.miniature)return;
     for(let k=0;k<specimenPositions.length/3;k++){

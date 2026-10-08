@@ -15,6 +15,8 @@ const factionWar=await readFile("src/betwixt/faction-war.js","utf8");
 const functionalTerrainV0=await readFile("src/betwixt/functional-terrain-v0.js","utf8");
 const geologicalHistoryTorture=await readFile("src/betwixt/geological-history-torture.js","utf8");
 const shallowWater=await readFile("src/cargo/crucible/source/src/runtime/shallow-water-system.js","utf8");
+const fundamentalLiquids=await readFile("src/fundamentals/liquids/liquids.js","utf8");
+const fundamentalLiquidsInline=fundamentalLiquids.replace("export function createLiquid","function createLiquid").replace("export const LIQUID_PRESETS","const LIQUID_PRESETS").replace("export function createWater","function createWater").replace("export function createLava","function createLava");
 const bearingSystem=await readFile("src/cargo/crucible/source/src/runtime/bearing-system.js","utf8");
 const meteorSystem=await readFile("src/cargo/crucible/source/src/runtime/meteor-system.js","utf8");
 const terrainSystem=await readFile("src/fundamentals/terrain/terrain-system.js","utf8");
@@ -60,7 +62,7 @@ for(const token of [
   'function updateLavaPops()',
   'lavaTransport.update(simNow)'
 ])if(!crucibleMain.includes(token))throw new Error(`Crucible lava organism evidence missing: ${token}`);
-const bridge=`<script>${shallowWaterInline}\n${terrainInline}\n${terrainRecipeGeneratorInline}\n${terrainGenesisInline}\n${meteorInline}\n${bearingInline}\n${ecsInline}\n${functionalTerrainV0Inline}\n${geologicalHistoryTortureInline}\n${mirrorInline}\n(function attachMirrorWhenReady(){if(globalThis.vestibuleReady&&globalThis.vestibule?.presences?.length){attachBetwixtMirror();return}addEventListener("vestibule-ready",attachMirrorWhenReady,{once:true})})();<\/script>`;
+const bridge=`<script>${fundamentalLiquidsInline}\n${shallowWaterInline}\n${terrainInline}\n${terrainRecipeGeneratorInline}\n${terrainGenesisInline}\n${meteorInline}\n${bearingInline}\n${ecsInline}\n${functionalTerrainV0Inline}\n${geologicalHistoryTortureInline}\n${mirrorInline}\n(function attachMirrorWhenReady(){if(globalThis.vestibuleReady&&globalThis.vestibule?.presences?.length){attachBetwixtMirror();return}addEventListener("vestibule-ready",attachMirrorWhenReady,{once:true})})();<\/script>`;
 const injection=`<script>globalThis.__REPOSITORY_SHA__=${JSON.stringify(sha)};globalThis.__REPOSITORY_BUILD__=${JSON.stringify(build)};<\/script><script>${shell}<\/script>`;
 const donorExecutable=donor.replace("import { createQuadrantHistory } from './geological-history-torture.js';","");
 const executable=donorExecutable.replace("<body>",`<body data-repository-build="${build}" data-repository-sha="${sha}">${injection}`).replace("</body>",`${bridge}</body>`);

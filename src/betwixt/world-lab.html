@@ -3759,79 +3759,81 @@ const workshopTabletopBetwixtable=buildBetwixtable({
       reset:()=>{canyonWater.reset();cauldronLava.reset()}
     };
 
-    // Flowing canyon river: one connected scalar free surface, not a grid
-    // of independent water columns. A seeded bearing stream travels from
-    // upstream to downstream, bobbing at the sampled water surface.
-    const riverRoot=new THREE.Group();riverRoot.name='snowglobe:flowing-river';globe.root.add(riverRoot);
-    const riverPath=[[-54,-4],[-27,-7],[2,-2],[29,-9],[54,-4]];
-    const riverPoints=[];
-    for(let segment=0;segment<riverPath.length-1;segment++){
-      const a=riverPath[segment],b=riverPath[segment+1],len=Math.hypot(b[0]-a[0],b[1]-a[1]);
-      const steps=Math.ceil(len/.55);
-      for(let j=segment?1:0;j<=steps;j++){
-        const t=j/steps,x=a[0]+(b[0]-a[0])*t,z=a[1]+(b[1]-a[1])*t;
-        if(Math.hypot(x,z)>47)continue;
-        riverPoints.push(new THREE.Vector3(x,globe.groundHeight(x,z)+.65,z));
-      }
+    // Compose the existing liquid solver and bearing dynamics. No authored
+    // water ribbon, fake height field, or scripted bearing trajectory.
+    // The solver owns surface elevation and horizontal flow. Bearings own
+    // gravity, buoyancy, drag, and their individual lifetimes.
+    const riverRoot=new THREE.Group();riverRoot.name='snowglobe:solver-river-bearings';globe.root.add(riverRoot);
+    const riverHead={x:-30,z:-7},riverMouth={x:29,z:-9};
+    const sourceX=riverHead.x/liquidScale,sourceZ=riverHead.z/liquidScale;
+    canyonWater.setSource({x:sourceX,z:sourceZ,rate:5.0});
+    // Prewet the channel through the existing liquid API, so the visible
+    // surface is always the solver's own reconstructed free surface.
+    for(let i=0;i<=16;i++){
+      const t=i/16,x=riverHead.x+(riverMouth.x-riverHead.x)*t;
+      const z=riverHead.z+(riverMouth.z-riverHead.z)*t;
+      canyonWater.fillRegion({x:x/liquidScale,z:z/liquidScale,radius:.35,amount:.32});
     }
-    const riverCurve=new THREE.CatmullRomCurve3(riverPoints,false,'centripetal');
-    const riverSteps=240,riverWidth=2.65,riverVertices=[],riverIndices=[];
-    for(let i=0;i<=riverSteps;i++){
-      const t=i/riverSteps,p=riverCurve.getPoint(t),tangent=riverCurve.getTangent(t);
-      const nx=-tangent.z,nz=tangent.x,norm=Math.hypot(nx,nz)||1;
-      for(const side of [-1,1]){
-        const x=p.x+side*riverWidth*nx/norm,z=p.z+side*riverWidth*nz/norm;
-        const bank=globe.groundHeight(x,z);
-        // A continuous water surface with shoreline taper. The centerline
-        // tracks the geological channel; no independent cell sidewalls.
-        const y=Math.max(bank+.035,p.y-.12);
-        riverVertices.push(x,y,z);
-      }
-      if(i<riverSteps){const k=i*2;riverIndices.push(k,k+2,k+1,k+1,k+2,k+3)}
-    }
-    const riverGeo=new THREE.BufferGeometry();
-    riverGeo.setAttribute('position',new THREE.Float32BufferAttribute(riverVertices,3));
-    riverGeo.setIndex(riverIndices);riverGeo.computeVertexNormals();
-    const riverMesh=new THREE.Mesh(riverGeo,new THREE.MeshBasicMaterial({
-      color:0x278ba6,transparent:true,opacity:.75,depthWrite:false,side:THREE.DoubleSide
-    }));
-    riverMesh.name='river:continuous-free-surface';riverMesh.renderOrder=3;riverRoot.add(riverMesh);
-    const BB_COUNT=600,bbGeo=new THREE.SphereGeometry(.13,6,4);
+    const BB_COUNT=260,bbGeo=new THREE.SphereGeometry(.12,6,5);
     const bbMesh=new THREE.InstancedMesh(bbGeo,new THREE.MeshStandardMaterial({
-      color:0xd8e2d9,roughness:.45,metalness:.12
+      color:0xd8e2d9,roughness:.48,metalness:.12
     }),BB_COUNT);
-    bbMesh.name='river:floating-ball-bearings';bbMesh.frustumCulled=false;riverRoot.add(bbMesh);
-    const bbDummy=new THREE.Object3D(),bbSeeds=new Float32Array(BB_COUNT);
-    const hashBB=n=>{const v=Math.sin(n*127.1+741*31.7)*43758.5453123;return v-Math.floor(v)};
-    for(let i=0;i<BB_COUNT;i++)bbSeeds[i]=hashBB(i+1);
-    let riverStart=performance.now();
+    bbMesh.name='river:physical-floating-bearings';bbMesh.frustumCulled=false;riverRoot.add(bbMesh);
+    const bbDummy=new THREE.Object3D(),bbFlow={depth:0,u:0,v:0};
+    const particles=Array.from({length:BB_COUNT},(_,i)=>({
+      x:riverHead.x,z:riverHead.z,y:0,vx:0,vy:0,vz:0,born:0,active:false,id:i
+    }));
+    let riverLast=performance.now(),riverSpawn=0,riverCursor=0,riverSpawned=0,riverRemoved=0;
+    const spawn=(p,now)=>{
+      const seed=p.id*2.399963+riverSpawned*.754877;
+      p.x=riverHead.x+Math.sin(seed)*.65;p.z=riverHead.z+Math.cos(seed)*.65;
+      p.y=globe.groundHeight(p.x,p.z)+2.4+(p.id%7)*.13;
+      p.vx=0;p.vy=0;p.vz=0;p.born=now;p.active=true;riverSpawned++;
+    };
     const riverFlow={
       update(now){
-        const elapsed=(now-riverStart)*.000042;
-        for(let i=0;i<BB_COUNT;i++){
-          // New bearings enter above the headwater; reaching the far end
-          // despawns them. The next cycle represents a new bearing.
-          const phase=(elapsed+i/BB_COUNT)%1;
-          const t=Math.max(0,Math.min(1,phase*1.12-.12));
-          const p=riverCurve.getPoint(t),tan=riverCurve.getTangent(t);
-          const lane=(bbSeeds[i]-.5)*riverWidth*1.65;
-          p.x+=-tan.z*lane;p.z+=tan.x*lane;
-          const surface=Math.max(globe.groundHeight(p.x,p.z)+.10,p.y-.12);
-          const entering=phase<.107;
-          const drop=entering?(1-phase/.107)*3.5:0;
-          const bob=.095*Math.sin(now*.005+i*2.17)+.035*Math.sin(now*.012+i*.7);
-          bbDummy.position.set(p.x,surface+.18+bob+drop,p.z);
-          bbDummy.scale.setScalar(.75+bbSeeds[i]*.55);
-          bbDummy.updateMatrix();bbMesh.setMatrixAt(i,bbDummy.matrix);
+        const dt=Math.min(.05,Math.max(0,(now-riverLast)/1000));riverLast=now;
+        riverSpawn+=dt*22;
+        while(riverSpawn>=1){riverSpawn--;spawn(particles[riverCursor++%BB_COUNT],now);}
+        let visible=0;
+        for(const p of particles){
+          if(!p.active)continue;
+          const sx=p.x/liquidScale,sz=p.z/liquidScale;
+          const waterY=canyonWater.surfaceY(sx,sz);
+          const wet=Number.isFinite(waterY)&&canyonWater.flowInto(sx,sz,bbFlow);
+          const surface=wet?waterY*liquidScale:NaN;
+          const ground=globe.groundHeight(p.x,p.z);
+          // Buoyancy is a contact force, not a prescribed bobbing animation.
+          // Spring/damping lets individual bearings settle and bob naturally.
+          p.vy-=9.2*dt;
+          if(wet&&surface>ground+.02){
+            const immersion=Math.max(0,Math.min(1,(surface-p.y+.15)/.3));
+            p.vy+=(23*immersion-2.7*p.vy*immersion)*dt;
+            const flowX=bbFlow.u*liquidScale,flowZ=bbFlow.v*liquidScale;
+            p.vx+=(flowX-p.vx)*Math.min(1,dt*3.5*immersion);
+            p.vz+=(flowZ-p.vz)*Math.min(1,dt*3.5*immersion);
+          }
+          p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;
+          if(p.y<ground+.12){
+            p.y=ground+.12;
+            if(p.vy<0)p.vy=-p.vy*.28;
+            p.vx*=Math.max(0,1-dt*2);p.vz*=Math.max(0,1-dt*2);
+          }
+          // Exit or expire; new objects always spawn at the headwater.
+          if(p.x>riverMouth.x||Math.hypot(p.x,p.z)>47||now-p.born>15000){
+            p.active=false;riverRemoved++;continue;
+          }
+          bbDummy.position.set(p.x,p.y,p.z);bbDummy.scale.setScalar(1);
+          bbDummy.updateMatrix();bbMesh.setMatrixAt(visible++,bbDummy.matrix);
         }
-        bbMesh.instanceMatrix.needsUpdate=true;
+        bbMesh.count=visible;bbMesh.instanceMatrix.needsUpdate=true;
         window.vestibuleDirty=true;
       },
-      inspect:()=>({kind:'flowing-canyon-river',bearings:BB_COUNT,riverSteps,riverWidth,source:riverPoints[0].toArray(),sink:riverPoints.at(-1).toArray()}),
-      reset(){riverStart=performance.now()}
+      inspect:()=>({kind:'solver-coupled-floating-bearings',active:particles.filter(p=>p.active).length,
+        spawned:riverSpawned,removed:riverRemoved,water:canyonWater.inspect()}),
+      reset(){for(const p of particles)p.active=false;riverLast=performance.now();riverSpawn=0;}
     };
-    root.userData.snowglobeRiver=riverFlow;
-    globalThis.SnowglobeRiver=riverFlow;
+    root.userData.snowglobeRiver=riverFlow;globalThis.SnowglobeRiver=riverFlow;
 
     // Catch v0: the verified two-ring/two-rail pipe and five-ring half-cage,
     // assembled in geological local units, then miniaturized together by globe.root.

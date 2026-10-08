@@ -1608,55 +1608,78 @@ function createBeyondTerrain(options={}){
   }
   heights.set(filtered);
   for(let i=0;i<N*N;i++)positions[i*3+1]=heights[i];
-  const indices=[];for(let z=0;z<N-1;z++)for(let x=0;x<N-1;x++){const a=x+N*z,b=a+1,d=a+N,e=d+1;if(options.miniature){const cx=(x+.5)/(N-1)*SIZE-HALF,cz=(z+.5)/(N-1)*SIZE-HALF;if(Math.hypot(cx,cz)>49)continue;}if((x+z)&1)indices.push(a,d,b,b,d,e);else indices.push(a,d,e,a,e,b)}
-  // The specimen is earth all the way down to its immutable bedrock plane.
-  // Boundary edges are extracted from the same triangles as the surface, so
-  // their walls follow every deformation without a separate retaining ring.
+  // Miniature surface is sampled from the untouched geological height/color field.
+  // Polar topology gives an exact shared circular rim instead of a grid-cell staircase.
   const BEDROCK_Y=-12;
-  const perimeter=new Map();
-  for(let t=0;t<indices.length;t+=3){
-    const tri=[indices[t],indices[t+1],indices[t+2]];
-    for(let e=0;e<3;e++){
-      const a=tri[e],b=tri[(e+1)%3],key=Math.min(a,b)+':'+Math.max(a,b);
-      if(perimeter.has(key))perimeter.delete(key);else perimeter.set(key,[a,b]);
-    }
+  const R=49,SECTORS=192,RINGS=76;
+  const surfacePositions=[],surfaceColors=[],indices=[];
+  const sample=(array,x,z,component)=>{
+    const fx=clamp((x+HALF)/SIZE*(N-1),0,N-1.00001),fz=clamp((z+HALF)/SIZE*(N-1),0,N-1.00001);
+    const ix=Math.floor(fx),iz=Math.floor(fz),tx=fx-ix,tz=fz-iz,stride=component===null?1:3,c=component||0;
+    const get=(dx,dz)=>array[(ix+dx+N*(iz+dz))*stride+c];
+    return mix(mix(get(0,0),get(1,0),tx),mix(get(0,1),get(1,1),tx),tz);
+  };
+  const vertexAt=(x,z)=>{
+    surfacePositions.push(x,Math.max(BEDROCK_Y,sample(heights,x,z,null)),z);
+    for(let c=0;c<3;c++)surfaceColors.push(sample(colors,x,z,c));
+  };
+  vertexAt(0,0);
+  for(let ring=1;ring<=RINGS;ring++)for(let t=0;t<SECTORS;t++){
+    const angle=t*Math.PI*2/SECTORS,rad=R*ring/RINGS;
+    vertexAt(Math.cos(angle)*rad,Math.sin(angle)*rad);
   }
-  const wallPairs=[...perimeter.values()];
-  const wallPositions=new Float32Array(wallPairs.length*4*3);
-  const wallColors=new Float32Array(wallPositions.length);
-  const wallIndices=[];
-  for(let e=0;e<wallPairs.length;e++){
-    const [a,b]=wallPairs[e],v=e*4;
-    wallIndices.push(v,v+2,v+1,v+1,v+2,v+3);
-    for(let k=0;k<4;k++){
-      const source=k<2?a:b,off=(v+k)*3;
-      wallPositions[off]=positions[source*3];
-      wallPositions[off+2]=positions[source*3+2];
-      wallPositions[off+1]=k%2?BEDROCK_Y:Math.max(BEDROCK_Y,positions[source*3+1]);
-      const depth=k%2?0.52:0.82;
-      for(let c=0;c<3;c++)wallColors[off+c]=colors[source*3+c]*depth;
+  for(let t=0;t<SECTORS;t++)indices.push(0,1+t,1+(t+1)%SECTORS);
+  for(let ring=1;ring<RINGS;ring++)for(let t=0;t<SECTORS;t++){
+    const a=1+(ring-1)*SECTORS+t,b=1+(ring-1)*SECTORS+(t+1)%SECTORS;
+    const c=a+SECTORS,d=b+SECTORS;
+    indices.push(a,c,b,b,c,d);
+  }
+  const specimenPositions=new Float32Array(surfacePositions);
+  const specimenColors=new Float32Array(surfaceColors);
+  const wallPositions=new Float32Array(SECTORS*4*3),wallColors=new Float32Array(wallPositions.length),wallIndices=[];
+  const STRATA_BANDS=12;
+  for(let t=0;t<SECTORS;t++){
+    const a=1+(RINGS-1)*SECTORS+t,b=1+(RINGS-1)*SECTORS+(t+1)%SECTORS,v=t*4;
+    for(const [k,source] of [[0,a],[1,a],[2,b],[3,b]]){
+      const off=(v+k)*3;
+      wallPositions[off]=specimenPositions[source*3];
+      wallPositions[off+2]=specimenPositions[source*3+2];
+      wallPositions[off+1]=k%2?BEDROCK_Y:specimenPositions[source*3+1];
+      const h=wallPositions[off+1],band=Math.floor((h-BEDROCK_Y)/1.8);
+      const tone=k%2?.56:.82;
+      for(let c=0;c<3;c++)wallColors[off+c]=specimenColors[source*3+c]*tone;
     }
+    wallIndices.push(v,v+2,v+1,v+1,v+2,v+3);
   }
   const wallGeo=new THREE.BufferGeometry();
   wallGeo.setAttribute('position',new THREE.BufferAttribute(wallPositions,3));
   wallGeo.setAttribute('color',new THREE.BufferAttribute(wallColors,3));
   wallGeo.setIndex(wallIndices);wallGeo.computeVertexNormals();
   const wallMesh=new THREE.Mesh(wallGeo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,side:THREE.DoubleSide}));
-  wallMesh.name='snowglobe:solid-earth-sides';wallMesh.receiveShadow=true;root.add(wallMesh);
+  wallMesh.name='snowglobe:earth-cross-section';wallMesh.receiveShadow=true;root.add(wallMesh);
   function refreshEarthWalls(){
-    for(let e=0;e<wallPairs.length;e++){
-      const [a,b]=wallPairs[e],v=e*4;
-      wallPositions[(v)*3+1]=Math.max(BEDROCK_Y,positions[a*3+1]);
-      wallPositions[(v+2)*3+1]=Math.max(BEDROCK_Y,positions[b*3+1]);
+    for(let t=0;t<SECTORS;t++){
+      const a=1+(RINGS-1)*SECTORS+t,b=1+(RINGS-1)*SECTORS+(t+1)%SECTORS,v=t*4;
+      wallPositions[v*3+1]=specimenPositions[a*3+1];
+      wallPositions[(v+2)*3+1]=specimenPositions[b*3+1];
     }
     wallGeo.attributes.position.needsUpdate=true;wallGeo.computeVertexNormals();
   }
-  const bedrock=new THREE.Mesh(
-    new THREE.CylinderGeometry(49,49,0.55,128),
-    new THREE.MeshStandardMaterial({color:0x555458,roughness:.96,metalness:.03})
-  );
+  const bedrock=new THREE.Mesh(new THREE.CylinderGeometry(R,R,.55,SECTORS),
+    new THREE.MeshStandardMaterial({color:0x555458,roughness:.96,metalness:.03}));
   bedrock.name='snowglobe:bedrock';bedrock.position.y=BEDROCK_Y-.275;root.add(bedrock);
-  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setAttribute('color',new THREE.BufferAttribute(colors,3));geo.setIndex(indices);geo.computeVertexNormals();
+  function refreshSpecimen(){
+    if(!options.miniature)return;
+    for(let k=0;k<specimenPositions.length/3;k++){
+      const x=specimenPositions[k*3],z=specimenPositions[k*3+2];
+      specimenPositions[k*3+1]=Math.max(BEDROCK_Y,sample(heights,x,z,null));
+    }
+    refreshSpecimen();
+  }
+  const finalPositions=options.miniature?specimenPositions:positions;
+  const finalColors=options.miniature?specimenColors:colors;
+  const finalIndices=options.miniature?indices:(()=>{const ids=[];for(let z=0;z<N-1;z++)for(let x=0;x<N-1;x++){const a=x+N*z,b=a+1,d=a+N,e=d+1;if((x+z)&1)ids.push(a,d,b,b,d,e);else ids.push(a,d,e,a,e,b)}return ids})();
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(finalPositions,3));geo.setAttribute('color',new THREE.BufferAttribute(finalColors,3));geo.setIndex(finalIndices);geo.computeVertexNormals();
   const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.96,metalness:.012,flatShading:true});
   const mesh=new THREE.Mesh(geo,mat);mesh.name='beyond:geological-history-topology';mesh.receiveShadow=true;root.add(mesh);
   function groundHeight(x,z){const fx=clamp((x+HALF)/SIZE*(N-1),0,N-1.001),fz=clamp((z+HALF)/SIZE*(N-1),0,N-1.001),x0=Math.floor(fx),z0=Math.floor(fz),tx=fx-x0,tz=fz-z0,A=heights[x0+N*z0],B=heights[x0+1+N*z0],C=heights[x0+N*(z0+1)],D=heights[x0+1+N*(z0+1)];return THREE.MathUtils.lerp(THREE.MathUtils.lerp(A,B,tx),THREE.MathUtils.lerp(C,D,tx),tz)}
@@ -1675,7 +1698,7 @@ function createBeyondTerrain(options={}){
   function resetMiniature(){
     if(!options.miniature)return inert();
     for(let k=0;k<heights.length;k++){heights[k]=filtered[k];positions[k*3+1]=filtered[k];}
-    geo.attributes.position.needsUpdate=true;geo.computeVertexNormals();refreshEarthWalls();window.vestibuleDirty=true;
+    refreshSpecimen();window.vestibuleDirty=true;
   }
   return{root,mesh,deform,resetMiniature,maps:(x,z)=>{const w=sampleWorld(x,z);return{height:groundHeight(x,z),bedrock:w.bedrock,exposedStratum:w.layer,resistance:w.resistance,mantle:w.mantle,drainage:{trunk:w.drainage.trunk,tributary:w.drainage.tributary},retreat:w.retreat,jurisdictions:w.jurisdictions}},reset:()=>{},seatRect:()=>{},raise:inert,excavate:inert,groundHeight,inspect:()=>({kind:'beyond-geological-history-t9',size:SIZE,resolution:N,seed,mutation:beyondMutation,genome:torture.genome,strata:STRATA,jurisdictions:0,representation:{bandlimit:'separable-121',bedReliefGain:1.25,resistance:'continuous-contact-blend',cliffs:'four-history-genome-sampler'},history:['layered-crust','four-overlapping-jurisdictions','fault-displacement','block-tilt','fold-compression','exposure-erosion','subsidence-deposition','collapse-mass-transport','late-incision']})};
 }
@@ -3638,7 +3661,7 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     // A disposable circular world, compiled from Beyond's full geological history.
     const globe=createBeyondTerrain({parent:root,miniature:true});
     globe.root.scale.setScalar(.025);
-    globe.root.position.y=.49;
+    globe.root.position.y=.33;
     globe.mesh.name='snowglobe:deformable-geological-terrain';
     globe.mesh.castShadow=true;
     root.userData.snowglobe=globe;

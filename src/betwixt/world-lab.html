@@ -6238,7 +6238,7 @@ renderer.setAnimationLoop((now)=>{
   updateWorkshopCrucibleOrb(now);
   updateWorldD20(now);
 
-  const snowglobeLiquids=workshopTabletopBetwixtable.userData.snowglobeLiquids;
+  const snowglobeLiquids=workshopTabletopBetwixtable.userData.betwixtable.presentation.userData.snowglobeLiquids;
   if(snowglobeLiquids){snowglobeLiquids.water.update(now);snowglobeLiquids.lava.update(now);window.vestibuleDirty=true;}
   updateWorkshop(now);
   syncSnowglobeSpells();

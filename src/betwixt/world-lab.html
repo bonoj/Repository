@@ -1609,6 +1609,53 @@ function createBeyondTerrain(options={}){
   heights.set(filtered);
   for(let i=0;i<N*N;i++)positions[i*3+1]=heights[i];
   const indices=[];for(let z=0;z<N-1;z++)for(let x=0;x<N-1;x++){const a=x+N*z,b=a+1,d=a+N,e=d+1;if(options.miniature){const cx=(x+.5)/(N-1)*SIZE-HALF,cz=(z+.5)/(N-1)*SIZE-HALF;if(Math.hypot(cx,cz)>49)continue;}if((x+z)&1)indices.push(a,d,b,b,d,e);else indices.push(a,d,e,a,e,b)}
+  // The specimen is earth all the way down to its immutable bedrock plane.
+  // Boundary edges are extracted from the same triangles as the surface, so
+  // their walls follow every deformation without a separate retaining ring.
+  const BEDROCK_Y=-12;
+  const perimeter=new Map();
+  for(let t=0;t<indices.length;t+=3){
+    const tri=[indices[t],indices[t+1],indices[t+2]];
+    for(let e=0;e<3;e++){
+      const a=tri[e],b=tri[(e+1)%3],key=Math.min(a,b)+':'+Math.max(a,b);
+      if(perimeter.has(key))perimeter.delete(key);else perimeter.set(key,[a,b]);
+    }
+  }
+  const wallPairs=[...perimeter.values()];
+  const wallPositions=new Float32Array(wallPairs.length*4*3);
+  const wallColors=new Float32Array(wallPositions.length);
+  const wallIndices=[];
+  for(let e=0;e<wallPairs.length;e++){
+    const [a,b]=wallPairs[e],v=e*4;
+    wallIndices.push(v,v+2,v+1,v+1,v+2,v+3);
+    for(let k=0;k<4;k++){
+      const source=k<2?a:b,off=(v+k)*3;
+      wallPositions[off]=positions[source*3];
+      wallPositions[off+2]=positions[source*3+2];
+      wallPositions[off+1]=k%2?BEDROCK_Y:Math.max(BEDROCK_Y,positions[source*3+1]);
+      const depth=k%2?0.52:0.82;
+      for(let c=0;c<3;c++)wallColors[off+c]=colors[source*3+c]*depth;
+    }
+  }
+  const wallGeo=new THREE.BufferGeometry();
+  wallGeo.setAttribute('position',new THREE.BufferAttribute(wallPositions,3));
+  wallGeo.setAttribute('color',new THREE.BufferAttribute(wallColors,3));
+  wallGeo.setIndex(wallIndices);wallGeo.computeVertexNormals();
+  const wallMesh=new THREE.Mesh(wallGeo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,side:THREE.DoubleSide}));
+  wallMesh.name='snowglobe:solid-earth-sides';wallMesh.receiveShadow=true;root.add(wallMesh);
+  function refreshEarthWalls(){
+    for(let e=0;e<wallPairs.length;e++){
+      const [a,b]=wallPairs[e],v=e*4;
+      wallPositions[(v)*3+1]=Math.max(BEDROCK_Y,positions[a*3+1]);
+      wallPositions[(v+2)*3+1]=Math.max(BEDROCK_Y,positions[b*3+1]);
+    }
+    wallGeo.attributes.position.needsUpdate=true;wallGeo.computeVertexNormals();
+  }
+  const bedrock=new THREE.Mesh(
+    new THREE.CylinderGeometry(49,49,0.55,128),
+    new THREE.MeshStandardMaterial({color:0x555458,roughness:.96,metalness:.03})
+  );
+  bedrock.name='snowglobe:bedrock';bedrock.position.y=BEDROCK_Y-.275;root.add(bedrock);
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setAttribute('color',new THREE.BufferAttribute(colors,3));geo.setIndex(indices);geo.computeVertexNormals();
   const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.96,metalness:.012,flatShading:true});
   const mesh=new THREE.Mesh(geo,mat);mesh.name='beyond:geological-history-topology';mesh.receiveShadow=true;root.add(mesh);
@@ -1620,15 +1667,15 @@ function createBeyondTerrain(options={}){
       const px=-HALF+SIZE*ix/(N-1),pz=-HALF+SIZE*iz/(N-1),d2=(px-x)**2+(pz-z)**2;
       if(d2>=radius*radius||px*px+pz*pz>49*49)continue;
       const k=ix+N*iz,t=1-d2/(radius*radius);
-      heights[k]+=delta*t*t*(3-2*t);positions[k*3+1]=heights[k];
+      heights[k]=Math.max(BEDROCK_Y,heights[k]+delta*t*t*(3-2*t));positions[k*3+1]=heights[k];
     }
-    geo.attributes.position.needsUpdate=true;geo.computeVertexNormals();
+    geo.attributes.position.needsUpdate=true;geo.computeVertexNormals();refreshEarthWalls();
     window.vestibuleDirty=true;return {x,z,radius,delta};
   }
   function resetMiniature(){
     if(!options.miniature)return inert();
     for(let k=0;k<heights.length;k++){heights[k]=filtered[k];positions[k*3+1]=filtered[k];}
-    geo.attributes.position.needsUpdate=true;geo.computeVertexNormals();window.vestibuleDirty=true;
+    geo.attributes.position.needsUpdate=true;geo.computeVertexNormals();refreshEarthWalls();window.vestibuleDirty=true;
   }
   return{root,mesh,deform,resetMiniature,maps:(x,z)=>{const w=sampleWorld(x,z);return{height:groundHeight(x,z),bedrock:w.bedrock,exposedStratum:w.layer,resistance:w.resistance,mantle:w.mantle,drainage:{trunk:w.drainage.trunk,tributary:w.drainage.tributary},retreat:w.retreat,jurisdictions:w.jurisdictions}},reset:()=>{},seatRect:()=>{},raise:inert,excavate:inert,groundHeight,inspect:()=>({kind:'beyond-geological-history-t9',size:SIZE,resolution:N,seed,mutation:beyondMutation,genome:torture.genome,strata:STRATA,jurisdictions:0,representation:{bandlimit:'separable-121',bedReliefGain:1.25,resistance:'continuous-contact-blend',cliffs:'four-history-genome-sampler'},history:['layered-crust','four-overlapping-jurisdictions','fault-displacement','block-tilt','fold-compression','exposure-erosion','subsidence-deposition','collapse-mass-transport','late-incision']})};
 }
@@ -3591,14 +3638,9 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     // A disposable circular world, compiled from Beyond's full geological history.
     const globe=createBeyondTerrain({parent:root,miniature:true});
     globe.root.scale.setScalar(.025);
-    globe.root.position.y=.22;
+    globe.root.position.y=.49;
     globe.mesh.name='snowglobe:deformable-geological-terrain';
     globe.mesh.castShadow=true;
-    const retainingWall=new THREE.Mesh(
-      new THREE.CylinderGeometry(1.235,1.235,.30,96,1,true),
-      new THREE.MeshStandardMaterial({color:0x876c43,metalness:.78,roughness:.31,side:THREE.DoubleSide})
-    );
-    retainingWall.position.y=.115;retainingWall.castShadow=true;root.add(retainingWall);
     root.userData.snowglobe=globe;
     globalThis.SnowglobeTerrain={
       raise:(x,z,radius=7,amount=2)=>globe.deform(x,z,radius,Math.abs(amount)),

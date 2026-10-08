@@ -1464,12 +1464,12 @@ function toggleBeyondPopulation(){
   populateBeyondFields();return true;
 }
 
-function createBeyondTerrain(){
+function createBeyondTerrain(options={}){
   // Beyond T1: compile a cheap geological history into one authoritative terrain surface.
   // No terrain-type parcels. Continuous strata are deformed, incised, differentially
   // eroded and mantled; dunes are terrain topology whose near-surface material is sand.
-  const root=new THREE.Group();root.name='beyond:world-substance';beyondPlace.add(root);
-  const SIZE=104,HALF=SIZE*.5,N=289,seed=beyondWorldSeed,STRATA=7;
+  const root=new THREE.Group();root.name=options.miniature?'snowglobe:geology':'beyond:world-substance';(options.parent||beyondPlace).add(root);
+  const SIZE=104,HALF=SIZE*.5,N=options.miniature?161:289,seed=beyondWorldSeed,STRATA=7;
   const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),smooth=t=>t*t*(3-2*t),fract=v=>v-Math.floor(v),mix=(a,b,t)=>a+(b-a)*t;
   const hash=(x,z,s=seed)=>fract(Math.sin(x*127.1+z*311.7+s*74.7)*43758.5453123);
   function noise(x,z,s=seed){const ix=Math.floor(x),iz=Math.floor(z),fx=smooth(fract(x)),fz=smooth(fract(z));return mix(mix(hash(ix,iz,s),hash(ix+1,iz,s),fx),mix(hash(ix,iz+1,s),hash(ix+1,iz+1,s),fx),fz)*2-1}
@@ -1608,13 +1608,29 @@ function createBeyondTerrain(){
   }
   heights.set(filtered);
   for(let i=0;i<N*N;i++)positions[i*3+1]=heights[i];
-  const indices=[];for(let z=0;z<N-1;z++)for(let x=0;x<N-1;x++){const a=x+N*z,b=a+1,d=a+N,e=d+1;if((x+z)&1)indices.push(a,d,b,b,d,e);else indices.push(a,d,e,a,e,b)}
+  const indices=[];for(let z=0;z<N-1;z++)for(let x=0;x<N-1;x++){const a=x+N*z,b=a+1,d=a+N,e=d+1;if(options.miniature){const cx=(x+.5)/(N-1)*SIZE-HALF,cz=(z+.5)/(N-1)*SIZE-HALF;if(Math.hypot(cx,cz)>49)continue;}if((x+z)&1)indices.push(a,d,b,b,d,e);else indices.push(a,d,e,a,e,b)}
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(positions,3));geo.setAttribute('color',new THREE.BufferAttribute(colors,3));geo.setIndex(indices);geo.computeVertexNormals();
   const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.96,metalness:.012,flatShading:true});
   const mesh=new THREE.Mesh(geo,mat);mesh.name='beyond:geological-history-topology';mesh.receiveShadow=true;root.add(mesh);
   function groundHeight(x,z){const fx=clamp((x+HALF)/SIZE*(N-1),0,N-1.001),fz=clamp((z+HALF)/SIZE*(N-1),0,N-1.001),x0=Math.floor(fx),z0=Math.floor(fz),tx=fx-x0,tz=fz-z0,A=heights[x0+N*z0],B=heights[x0+1+N*z0],C=heights[x0+N*(z0+1)],D=heights[x0+1+N*(z0+1)];return THREE.MathUtils.lerp(THREE.MathUtils.lerp(A,B,tx),THREE.MathUtils.lerp(C,D,tx),tz)}
   const inert=()=>({locked:true,reason:'beyond-geological-history-t9'});
-  return{root,mesh,maps:(x,z)=>{const w=sampleWorld(x,z);return{height:groundHeight(x,z),bedrock:w.bedrock,exposedStratum:w.layer,resistance:w.resistance,mantle:w.mantle,drainage:{trunk:w.drainage.trunk,tributary:w.drainage.tributary},retreat:w.retreat,jurisdictions:w.jurisdictions}},reset:()=>{},seatRect:()=>{},raise:inert,excavate:inert,groundHeight,inspect:()=>({kind:'beyond-geological-history-t9',size:SIZE,resolution:N,seed,mutation:beyondMutation,genome:torture.genome,strata:STRATA,jurisdictions:0,representation:{bandlimit:'separable-121',bedReliefGain:1.25,resistance:'continuous-contact-blend',cliffs:'four-history-genome-sampler'},history:['layered-crust','four-overlapping-jurisdictions','fault-displacement','block-tilt','fold-compression','exposure-erosion','subsidence-deposition','collapse-mass-transport','late-incision']})};
+  function deform(x,z,radius=7,delta=2){
+    if(!options.miniature)return inert();
+    for(let iz=0;iz<N;iz++)for(let ix=0;ix<N;ix++){
+      const px=-HALF+SIZE*ix/(N-1),pz=-HALF+SIZE*iz/(N-1),d2=(px-x)**2+(pz-z)**2;
+      if(d2>=radius*radius||px*px+pz*pz>49*49)continue;
+      const k=ix+N*iz,t=1-d2/(radius*radius);
+      heights[k]+=delta*t*t*(3-2*t);positions[k*3+1]=heights[k];
+    }
+    geo.attributes.position.needsUpdate=true;geo.computeVertexNormals();
+    window.vestibuleDirty=true;return {x,z,radius,delta};
+  }
+  function resetMiniature(){
+    if(!options.miniature)return inert();
+    for(let k=0;k<heights.length;k++){heights[k]=filtered[k];positions[k*3+1]=filtered[k];}
+    geo.attributes.position.needsUpdate=true;geo.computeVertexNormals();window.vestibuleDirty=true;
+  }
+  return{root,mesh,deform,resetMiniature,maps:(x,z)=>{const w=sampleWorld(x,z);return{height:groundHeight(x,z),bedrock:w.bedrock,exposedStratum:w.layer,resistance:w.resistance,mantle:w.mantle,drainage:{trunk:w.drainage.trunk,tributary:w.drainage.tributary},retreat:w.retreat,jurisdictions:w.jurisdictions}},reset:()=>{},seatRect:()=>{},raise:inert,excavate:inert,groundHeight,inspect:()=>({kind:'beyond-geological-history-t9',size:SIZE,resolution:N,seed,mutation:beyondMutation,genome:torture.genome,strata:STRATA,jurisdictions:0,representation:{bandlimit:'separable-121',bedReliefGain:1.25,resistance:'continuous-contact-blend',cliffs:'four-history-genome-sampler'},history:['layered-crust','four-overlapping-jurisdictions','fault-displacement','block-tilt','fold-compression','exposure-erosion','subsidence-deposition','collapse-mass-transport','late-incision']})};
 }
 function ensureBeyondTerrain(){
   if(!beyondTerrain)beyondTerrain=createBeyondTerrain();
@@ -3571,6 +3587,26 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     glass.position.y=-.015;root.add(glass);
     const edge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.CylinderGeometry(1.31,1.31,.045,48)),glassEdge);
     edge.position.copy(glass.position);root.add(edge);
+
+    // A disposable circular world, compiled from Beyond's full geological history.
+    const globe=createBeyondTerrain({parent:root,miniature:true});
+    globe.root.scale.setScalar(.025);
+    globe.root.position.y=.22;
+    globe.mesh.name='snowglobe:deformable-geological-terrain';
+    globe.mesh.castShadow=true;
+    const retainingWall=new THREE.Mesh(
+      new THREE.CylinderGeometry(1.235,1.235,.30,96,1,true),
+      new THREE.MeshStandardMaterial({color:0x876c43,metalness:.78,roughness:.31,side:THREE.DoubleSide})
+    );
+    retainingWall.position.y=.115;retainingWall.castShadow=true;root.add(retainingWall);
+    root.userData.snowglobe=globe;
+    globalThis.SnowglobeTerrain={
+      raise:(x,z,radius=7,amount=2)=>globe.deform(x,z,radius,Math.abs(amount)),
+      carve:(x,z,radius=7,amount=2)=>globe.deform(x,z,radius,-Math.abs(amount)),
+      reset:()=>globe.resetMiniature(),
+      sample:(x,z)=>globe.maps(x,z),
+      inspect:()=>globe.inspect()
+    };
 
     // Thoughtform: embodied possibility, deliberately not a ticket or interaction target.
     // It hangs in shared view and carries enough semantic residue to recover the idea later.

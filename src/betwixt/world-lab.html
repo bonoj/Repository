@@ -1674,7 +1674,7 @@ function createBeyondTerrain(options={}){
       const x=specimenPositions[k*3],z=specimenPositions[k*3+2];
       specimenPositions[k*3+1]=Math.max(BEDROCK_Y,sample(heights,x,z,null));
     }
-    refreshSpecimen();
+    geo.attributes.position.needsUpdate=true;geo.computeVertexNormals();refreshEarthWalls();
   }
   const finalPositions=options.miniature?specimenPositions:positions;
   const finalColors=options.miniature?specimenColors:colors;
@@ -1692,7 +1692,7 @@ function createBeyondTerrain(options={}){
       const k=ix+N*iz,t=1-d2/(radius*radius);
       heights[k]=Math.max(BEDROCK_Y,heights[k]+delta*t*t*(3-2*t));positions[k*3+1]=heights[k];
     }
-    geo.attributes.position.needsUpdate=true;geo.computeVertexNormals();refreshEarthWalls();
+    refreshSpecimen();
     window.vestibuleDirty=true;return {x,z,radius,delta};
   }
   function resetMiniature(){

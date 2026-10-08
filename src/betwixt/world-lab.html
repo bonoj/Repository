@@ -2234,6 +2234,31 @@ function chooseWorkshopCrucibleTool(tool,button){
   for(const id of ['crucible-meteor','crucible-bearings','crucible-water','crucible-lava','crucible-carve','crucible-raise'])globalThis.RepositoryShell?.button?.(id)?.classList.remove('active');
   button?.classList.add('active');
 }
+// Snowglobe-only temporary tools: select a material, then tap geology to pour.
+let snowglobeTool=null,snowglobeSpellsVisible=false;
+const snowglobeSpellIds=['snowglobe-water','snowglobe-lava','snowglobe-survey'];
+function chooseSnowglobeTool(tool){
+  snowglobeTool=snowglobeTool===tool?null:tool;
+  for(const id of ['snowglobe-water','snowglobe-lava']){
+    const b=globalThis.RepositoryShell?.button?.(id);
+    b?.classList.toggle('active',id==='snowglobe-'+snowglobeTool);
+  }
+}
+function syncSnowglobeSpells(){
+  const shell=globalThis.RepositoryShell;
+  if(!shell)return;
+  const active=focusedWorkshopObject===workshopTabletopBetwixtable&&currentPlace==='workshop';
+  if(active===snowglobeSpellsVisible)return;
+  snowglobeSpellsVisible=active;
+  if(active){
+    shell.registerTool({id:'snowglobe-water',text:'💧',label:'Pour water at tapped snowglobe terrain',onClick:()=>chooseSnowglobeTool('water')});
+    shell.registerTool({id:'snowglobe-lava',text:'🌋',label:'Pour lava at tapped snowglobe terrain',onClick:()=>chooseSnowglobeTool('lava')});
+    shell.registerTool({id:'snowglobe-survey',text:'📋',label:'Download snowglobe geological survey',onClick:()=>globalThis.SnowglobeSurvey?.download()});
+  }else{
+    for(const id of snowglobeSpellIds)shell.removeTool(id);
+    snowglobeTool=null;
+  }
+}
 function installWorkshopCrucibleSpells(){
   const shell=globalThis.RepositoryShell;if(!shell||!workshopCrucibleEnabled||shell.inspect().tools.includes('crucible-terrain-next'))return;
   shell.registerTool({id:'crucible-meteor',text:'☄️',label:'Call meteor magnitude 2 at tapped point',onClick:b=>cycleWorkshopMeteor(b)});
@@ -6069,17 +6094,23 @@ const SelectionSystem={
   },
   tap(x,y){
     if(legacyWorkshop.visible&&fluidGlobeTap(x,y))return;
-    if(focusedWorkshopObject===workshopTabletopBetwixtable){
+    if(focusedWorkshopObject===workshopTabletopBetwixtable&&snowglobeTool){
       const r=canvas.getBoundingClientRect();
       pointerNDC.set(((x-r.left)/r.width)*2-1,-((y-r.top)/r.height)*2+1);
       raycaster.setFromCamera(pointerNDC,camera);
-      const globe=workshopTabletopBetwixtable.userData.betwixtable.presentation.userData.snowglobe;
+      const presentation=workshopTabletopBetwixtable.userData.betwixtable.presentation;
+      const globe=presentation.userData.snowglobe;
       const hit=raycaster.intersectObject(globe.mesh,false)[0];
       if(hit){
         const local=globe.root.worldToLocal(hit.point.clone());
-        globalThis.SnowglobeSurvey.download({x:+local.x.toFixed(4),z:+local.z.toFixed(4),
-          surfaceHeight:+globe.groundHeight(local.x,local.z).toFixed(4),
-          geology:globe.maps(local.x,local.z)});
+        const liquids=presentation.userData.snowglobeLiquids;
+        const liquid=liquids?.[snowglobeTool];
+        if(liquid){
+          const x=local.x/liquids.scale,z=local.z/liquids.scale;
+          liquid.addTimedSource({x,z,rate:1.6,duration:3});
+          liquid.setEnabled(true);
+          window.vestibuleDirty=true;
+        }
         return;
       }
     }
@@ -6192,6 +6223,7 @@ renderer.setAnimationLoop((now)=>{
   const snowglobeLiquids=workshopTabletopBetwixtable.userData.snowglobeLiquids;
   if(snowglobeLiquids){snowglobeLiquids.water.update(now);snowglobeLiquids.lava.update(now);window.vestibuleDirty=true;}
   updateWorkshop(now);
+  syncSnowglobeSpells();
   if(workshopCrucibleEnabled){
     workshopTerrain?.updateInitialization?.(now);
     workshopFactionWar?.update(now);

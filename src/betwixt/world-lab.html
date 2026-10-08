@@ -3701,6 +3701,67 @@ const workshopTabletopBetwixtable=buildBetwixtable({
       inspect:()=>globe.inspect()
     };
 
+    // Crucible meteor/weather semantics adapted to the miniature's existing
+    // deformation authority. Autonomous, seeded, no tap or additional UI.
+    const meteorHeadGeo=new THREE.SphereGeometry(.65,7,5);
+    const meteorHeadMat=new THREE.MeshBasicMaterial({color:0xff8a4c});
+    const meteorWakeGeo=new THREE.SphereGeometry(.32,5,4);
+    const meteorWakeMat=new THREE.MeshBasicMaterial({color:0xff8a4c,transparent:true,opacity:.55,depthWrite:false,blending:THREE.AdditiveBlending});
+    let meteorSeed=0x51a7c1,meteorNext=0,meteorLast=0,meteorEvents=0,meteorImpacts=0;
+    const meteorActive=[],meteorPending=[];
+    const meteorRandom=()=>{meteorSeed^=meteorSeed<<13;meteorSeed^=meteorSeed>>>17;meteorSeed^=meteorSeed<<5;return(meteorSeed>>>0)/4294967296};
+    const meteorPowers=[.18,.28,.42,.62,.85,1.15,1.55];
+    const meteorPower=()=>{const u=meteorRandom(),i=u<.38?Math.floor(meteorRandom()*3):u<.82?2+Math.floor(meteorRandom()*3):4+Math.floor(meteorRandom()*3);return meteorPowers[Math.min(i,6)]};
+    function launchSnowMeteor(x,z,power,now){
+      const h=globe.groundHeight(x,z);
+      const head=new THREE.Mesh(meteorHeadGeo,meteorHeadMat);
+      const wake=new THREE.Mesh(meteorWakeGeo,meteorWakeMat.clone());
+      globe.root.add(head,wake);
+      const start=new THREE.Vector3(x+(meteorRandom()-.5)*12,h+35+meteorRandom()*12,z+(meteorRandom()-.5)*12);
+      const target=new THREE.Vector3(x,h,z);
+      head.position.copy(start);wake.position.copy(start);
+      meteorActive.push({head,wake,start,target,x,z,power,born:now,life:300+meteorRandom()*100});
+    }
+    function updateSnowMeteorWeather(now){
+      if(!meteorLast){meteorLast=now;meteorNext=now+700;}
+      // Avoid a burst of stale scheduled events after a suspended browser tab.
+      if(now-meteorLast>3000){meteorNext=now+700;meteorPending.length=0;}
+      meteorLast=now;
+      for(let i=meteorActive.length-1;i>=0;i--){
+        const m=meteorActive[i],u=Math.min(1,(now-m.born)/m.life),ease=1-(1-u)*(1-u);
+        m.head.position.copy(m.start).lerp(m.target,ease);
+        m.wake.position.copy(m.start).lerp(m.target,Math.max(0,ease-.12));
+        m.wake.scale.setScalar(1+u*2);
+        m.wake.material.opacity=.55*(1-u);
+        if(u>=1){
+          // Crucible's crater event translated to the geological heightfield.
+          // Preserve existing circular bounds and immutable bedrock.
+          globe.deform(m.x,m.z,3.5+m.power*3.8,-(.7+m.power*2.4));
+          globe.root.remove(m.head,m.wake);m.wake.material.dispose();
+          meteorActive.splice(i,1);meteorImpacts++;
+        }
+      }
+      for(let i=meteorPending.length-1;i>=0;i--)if(now>=meteorPending[i].at){
+        const p=meteorPending.splice(i,1)[0];launchSnowMeteor(p.x,p.z,p.power,now);
+      }
+      if(now<meteorNext)return;
+      meteorEvents++;
+      const u=meteorRandom(),count=u<.48?1:u<.86?2+Math.floor(meteorRandom()*4):6+Math.floor(meteorRandom()*7);
+      const spread=count===1?0:count<6?4+meteorRandom()*8:9+meteorRandom()*10;
+      const angle=meteorRandom()*Math.PI*2,r=Math.sqrt(meteorRandom())*31;
+      const cx=Math.cos(angle)*r,cz=Math.sin(angle)*r;
+      for(let i=0;i<count;i++){
+        const a=meteorRandom()*Math.PI*2,rr=Math.sqrt(meteorRandom())*spread;
+        let x=cx+Math.cos(a)*rr,z=cz+Math.sin(a)*rr;
+        const dist=Math.hypot(x,z);
+        if(dist>46){x*=46/dist;z*=46/dist;}
+        meteorPending.push({at:now+(i===0?0:80+i*(70+meteorRandom()*220)),x,z,power:meteorPower()});
+      }
+      meteorNext=now+1800+meteorRandom()*7200;
+    }
+    root.userData.meteorWeather={update:updateSnowMeteorWeather,inspect:()=>({events:meteorEvents,impacts:meteorImpacts,falling:meteorActive.length,pending:meteorPending.length})};
+    globalThis.SnowglobeMeteorWeather=root.userData.meteorWeather;
+
     // Thoughtform: embodied possibility, deliberately not a ticket or interaction target.
     // It hangs in shared view and carries enough semantic residue to recover the idea later.
     const thoughtform=new THREE.Group();thoughtform.name='thoughtform:semantic-snapping-primitives';
@@ -5913,6 +5974,7 @@ renderer.setAnimationLoop((now)=>{
     renderer.render(scene,camera);window.vestibuleDirty=false;return;
   }
   globalThis.boundedWitness?.updateIdle?.(now);
+  globalThis.SnowglobeMeteorWeather?.update(now);
   workshopTabletopBetwixtable.userData.betwixtable.presentation.children.find(o=>o.name==='thoughtform:neptunian-caretaker-carrier')?.userData.animate?.(now);
   jovianBetwixtable.userData.betwixtable.presentation.userData.jovian?.update(now);
   jovianBetwixtable.userData.betwixtable.presentation.userData.jovian?.updateBearings(now);

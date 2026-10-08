@@ -1969,30 +1969,36 @@ let beyondPhaseCycle=null;
 function ensureBeyondPhaseCycle(){
   if(beyondPhaseCycle)return beyondPhaseCycle;
   const terrain=ensureBeyondTerrain(),root=new THREE.Group();root.name='beyond:white-meadow-phase-matter';beyondPlace.add(root);
-  const COUNT=5200,geo=new THREE.SphereGeometry(.075,6,4);
-  const solidMat=new THREE.MeshStandardMaterial({color:0xf0eee7,roughness:.62,metalness:.06}),gasMat=new THREE.MeshBasicMaterial({color:0xe8f1ee,transparent:true,opacity:.18,depthWrite:false});
-  const solidMesh=new THREE.InstancedMesh(geo,solidMat,COUNT),gasMesh=new THREE.InstancedMesh(new THREE.SphereGeometry(.045,5,3),gasMat,COUNT);
+  const COUNT=25000,geo=new THREE.SphereGeometry(.055,5,3);
+  const solidMat=new THREE.MeshStandardMaterial({color:0xf0eee7,roughness:.62,metalness:.04}),gasMat=new THREE.MeshBasicMaterial({color:0xe8f1ee,transparent:true,opacity:.16,depthWrite:false});
+  const solidMesh=new THREE.InstancedMesh(geo,solidMat,COUNT),gasMesh=new THREE.InstancedMesh(new THREE.SphereGeometry(.032,4,3),gasMat,COUNT);
   solidMesh.name='population:white-meadow-bbs';gasMesh.name='phase:gas';for(const m of [solidMesh,gasMesh]){m.frustumCulled=false;root.add(m)}
   const matter=[],dummy=new THREE.Object3D(),fract=v=>v-Math.floor(v),rnd=n=>fract(Math.sin(n*127.1+beyondWorldSeed*41.7)*43758.5453123);
-  let accepted=0,attempt=0;while(accepted<COUNT&&attempt<COUNT*20){const sample=attempt++,x=-48+rnd(sample*7.1)*96,z=-48+rnd(sample*11.3)*96,band=Math.sin(x*.19+1.2*Math.sin(z*.055));if(Math.abs(band)>.68)continue;matter.push({x0:x,z0:z,x,y:terrain.groundHeight(x,z)+.08,z,vx:0,vy:0,vz:0,id:sample});accepted++}
+  let accepted=0,attempt=0;while(accepted<COUNT&&attempt<COUNT*12){const sample=attempt++,x=-50+rnd(sample*7.1)*100,z=-50+rnd(sample*11.3)*100,band=Math.sin(x*.19+1.2*Math.sin(z*.055));if(Math.abs(band)>.82)continue;matter.push({x,z,y:terrain.groundHeight(x,z)+.06,vy:0,state:'can-evaporate',stateAt:0,id:sample});accepted++}
   const phaseRules={
-    evaporate(p,dt,now){const t=now*.001;p.vx+=(Math.sin(p.id*.73+t*.37)*.18)*dt;p.vz+=(Math.cos(p.id*.61-t*.29)*.18)*dt;p.vy+=(1.15-.06*p.vy)*dt;p.vx*=Math.pow(.94,dt);p.vz*=Math.pow(.94,dt);p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt},
-    drift(p,dt,now){const t=now*.001;p.vx+=Math.sin(p.id*.41+t*.31)*.13*dt;p.vz+=Math.cos(p.id*.57-t*.27)*.13*dt;p.x+=p.vx*dt;p.z+=p.vz*dt},
-    condense(p){p.vy=0},
-    gravity(p,dt){p.vy-=7.8*dt;p.y+=p.vy*dt;const gy=terrain.groundHeight(p.x,p.z)+.08;if(p.y<=gy){p.y=gy;p.vy=0}}
+    evaporate(p,now){p.state='rising';p.stateAt=now;p.vy=.42+rnd(p.id*53)*.24},
+    rise(p,dt){p.vy+=(1.05-.055*p.vy)*dt;p.y+=p.vy*dt},
+    dwell(p,dt){p.y+=p.vy*dt;p.vy*=Math.pow(.18,dt)},
+    condense(p,now){p.state='falling';p.stateAt=now;/* one-time transition: gravity owns velocity from here */},
+    gravity(p,dt){p.vy-=7.8*dt;p.y+=p.vy*dt;const gy=terrain.groundHeight(p.x,p.z)+.06;if(p.y<=gy){p.y=gy;p.vy=0;p.state='can-evaporate';p.stateAt=performance.now();}}
   };
-  let t0=performance.now(),last=performance.now();
-  function update(now){const dt=Math.min(.04,Math.max(.001,(now-last)/1000));last=now;const cycle=((now-t0)%15000+15000)%15000,evap=cycle<5000,gasHold=cycle>=5000&&cycle<10000,rain=cycle>=10000;
-    let ns=0,ng=0;
-    for(let i=0;i<matter.length;i++){const p=matter[i],releaseAt=(i/matter.length)*5000;
-      if(evap&&cycle<releaseAt){p.x=p.x0;p.z=p.z0;p.y=terrain.groundHeight(p.x,p.z)+.08;p.vx=p.vy=p.vz=0;dummy.position.set(p.x,p.y,p.z);dummy.scale.setScalar(1);dummy.updateMatrix();solidMesh.setMatrixAt(ns++,dummy.matrix);continue}
-      if(evap||gasHold){phaseRules.evaporate(p,dt,now);phaseRules.drift(p,dt,now);dummy.position.set(p.x,p.y,p.z);dummy.scale.setScalar(.75);dummy.updateMatrix();gasMesh.setMatrixAt(ng++,dummy.matrix);continue}
-      if(rain){phaseRules.condense(p);phaseRules.gravity(p,dt);dummy.position.set(p.x,p.y,p.z);dummy.scale.setScalar(1);dummy.updateMatrix();solidMesh.setMatrixAt(ns++,dummy.matrix)}
+  let last=performance.now(),started=last;
+  for(const p of matter)p.stateAt=started;
+  function update(now){const dt=Math.min(.04,Math.max(.001,(now-last)/1000));last=now;let ns=0,ng=0;
+    for(const p of matter){
+      if(p.state==='can-evaporate'){
+        // Dense meadow drains continuously rather than on a global phase boundary.
+        const age=now-p.stateAt,wait=250+rnd(p.id*17.9+Math.floor(p.stateAt*.001))*4750;if(age>=wait)phaseRules.evaporate(p,now);
+      }
+      if(p.state==='rising'){phaseRules.rise(p,dt);if(now-p.stateAt>=5000){p.state='dwelling';p.stateAt=now}}
+      else if(p.state==='dwelling'){phaseRules.dwell(p,dt);if(now-p.stateAt>=5000)phaseRules.condense(p,now)}
+      else if(p.state==='falling')phaseRules.gravity(p,dt);
+      const gaseous=p.state==='rising'||p.state==='dwelling',mesh=gaseous?gasMesh:solidMesh,slot=gaseous?ng++:ns++;
+      dummy.position.set(p.x,p.y,p.z);dummy.scale.setScalar(gaseous?.72:1);dummy.updateMatrix();mesh.setMatrixAt(slot,dummy.matrix);
     }
-    if(rain&&cycle>14920){for(const p of matter){p.x=p.x0;p.z=p.z0;p.y=terrain.groundHeight(p.x,p.z)+.08;p.vx=p.vy=p.vz=0}}
     solidMesh.count=ns;gasMesh.count=ng;solidMesh.instanceMatrix.needsUpdate=true;gasMesh.instanceMatrix.needsUpdate=true;window.vestibuleDirty=true;
   }
-  beyondPhaseCycle={root,update,phaseRules,matter,enabled:true,setEnabled(v){this.enabled=!!v;root.visible=this.enabled;if(v){t0=performance.now();last=t0}return this.enabled},inspect:()=>({kind:'white-meadow-phase-cycle',count:COUNT,gasPerBB:1,evaporateMs:5000,gasHoldMs:5000,rainMs:5000,terrainDeformation:false,rules:Object.keys(phaseRules)})};
+  beyondPhaseCycle={root,update,phaseRules,matter,enabled:true,setEnabled(v){this.enabled=!!v;root.visible=this.enabled;if(v)last=performance.now();return this.enabled},inspect:()=>({kind:'white-meadow-phase-matter',count:COUNT,gasPerBB:1,drift:false,riseMs:5000,dwellMs:5000,cycle:'can-evaporate -> rising -> dwelling -> falling -> can-evaporate',terrainDeformation:false,rules:Object.keys(phaseRules)})};
   globalThis.BeyondPhaseMatter=beyondPhaseCycle;return beyondPhaseCycle;
 }
 function updateBeyondPhaseCycle(now){if(currentPlace==='beyond'&&beyondPhaseCycle?.enabled)beyondPhaseCycle.update(now)}

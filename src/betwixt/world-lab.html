@@ -1628,11 +1628,11 @@ function createBeyondTerrain(options={}){
     const angle=t*Math.PI*2/SECTORS,rad=R*ring/RINGS;
     vertexAt(Math.cos(angle)*rad,Math.sin(angle)*rad);
   }
-  for(let t=0;t<SECTORS;t++)indices.push(0,1+t,1+(t+1)%SECTORS);
+  for(let t=0;t<SECTORS;t++)indices.push(0,1+(t+1)%SECTORS,1+t);
   for(let ring=1;ring<RINGS;ring++)for(let t=0;t<SECTORS;t++){
     const a=1+(ring-1)*SECTORS+t,b=1+(ring-1)*SECTORS+(t+1)%SECTORS;
     const c=a+SECTORS,d=b+SECTORS;
-    indices.push(a,c,b,b,c,d);
+    indices.push(a,b,c,b,d,c);
   }
   const specimenPositions=new Float32Array(surfacePositions);
   const specimenColors=new Float32Array(surfaceColors);

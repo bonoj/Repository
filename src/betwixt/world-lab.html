@@ -1968,43 +1968,38 @@ function updateBeyondTransfers(now){if(currentPlace==='beyond'&&beyondTransfers?
 let beyondPhaseCycle=null;
 function ensureBeyondPhaseCycle(){
   if(beyondPhaseCycle)return beyondPhaseCycle;
-  const terrain=ensureBeyondTerrain(),root=new THREE.Group();root.name='beyond:bb-phase-cycle';beyondPlace.add(root);
-  const COUNT=1400,geo=new THREE.SphereGeometry(.085,6,4),solidMat=new THREE.MeshStandardMaterial({color:0x4f6654,roughness:.56,metalness:.18}),liquidMat=new THREE.MeshStandardMaterial({color:0x59a9b0,roughness:.18,metalness:.04,transparent:true,opacity:.88}),vaporMat=new THREE.MeshBasicMaterial({color:0xc8ded9,transparent:true,opacity:.32,depthWrite:false});
-  const solid=new THREE.InstancedMesh(geo,solidMat,COUNT),liquid=new THREE.InstancedMesh(geo,liquidMat,COUNT),vapor=new THREE.InstancedMesh(geo,vaporMat,COUNT);
-  solid.name='phase:solid-bbs';liquid.name='phase:melt-bbs';vapor.name='phase:vapor-bbs';for(const m of [solid,liquid,vapor]){m.frustumCulled=false;root.add(m)}
-  const dummy=new THREE.Object3D(),fract=v=>v-Math.floor(v),rnd=n=>fract(Math.sin(n*127.1+beyondWorldSeed*41.7)*43758.5453123),CYCLE=12000;
-  function update(now){
-    const phase=(now%CYCLE)/CYCLE;let ns=0,nl=0,nv=0;
-    // Same finite BB cohort, continuously changing representation. No terrain mutation.
-    for(let i=0;i<COUNT;i++){
-      const a=i*2.3999632297,r=1.2+Math.sqrt(i/COUNT)*7.2,j=(rnd(i*7.3)-.5)*.8;
-      const bx=12+Math.cos(a)*r+j,bz=-8+Math.sin(a)*r+j*.6,ground=terrain.groundHeight(bx,bz);
-      let mesh,slot,x=bx,y=ground+.10,z=bz,scale=.72+rnd(i*11.9)*.5;
-      if(phase<.22){ // solid reservoir warms; outer BBs loosen first
-        const t=phase/.22,loose=THREE.MathUtils.smoothstep(t,Math.max(0,(i/COUNT)-.18),Math.min(1,(i/COUNT)+.22));
-        x+=Math.cos(a)*loose*(.15+1.1*rnd(i*13.1));z+=Math.sin(a)*loose*(.15+1.1*rnd(i*17.7));mesh=solid;slot=ns++;
-      }else if(phase<.46){ // melt: BBs retain identity but spread as a shallow mobile pool
-        const t=(phase-.22)/.24,rr=r*(1+.52*t)+Math.sin(a*3+i*.07)*.28*t;
-        x=12+Math.cos(a)*rr+j;z=-8+Math.sin(a)*rr+j*.6;y=terrain.groundHeight(x,z)+.10;mesh=liquid;slot=nl++;
-      }else if(phase<.70){ // evaporate: particles leave the pool and lose surface constraint
-        const t=(phase-.46)/.24,rr=r*1.48;
-        x=12+Math.cos(a)*rr+j+Math.sin(i*.31+t*5)*t*1.8;z=-8+Math.sin(a)*rr+j*.6+Math.cos(i*.27+t*4)*t*1.8;
-        y=terrain.groundHeight(x,z)+.12+t*(4+10*rnd(i*19.3));mesh=vapor;slot=nv++;scale*=.72;
-      }else if(phase<.88){ // condense: airborne BBs gather into visible droplets
-        const t=(phase-.70)/.18,cloudA=a*.19,cloudR=3.2+4.8*rnd(i*23.1);
-        x=12+Math.cos(cloudA)*cloudR*(1-.55*t);z=-8+Math.sin(cloudA)*cloudR*(1-.55*t);y=8.5+5.5*rnd(i*29.7)-t*2.2;
-        mesh=t<.55?vapor:liquid;slot=t<.55?nv++:nl++;scale*=.82+1.15*t;
-      }else{ // rain: condensed BBs return to the same reservoir footprint
-        const t=(phase-.88)/.12,rr=r*(1.15-.15*t);x=12+Math.cos(a)*rr+j;z=-8+Math.sin(a)*rr+j*.6;
-        const gy=terrain.groundHeight(x,z);y=THREE.MathUtils.lerp(7+6*rnd(i*31.3),gy+.10,t);mesh=liquid;slot=nl++;
-      }
-      dummy.position.set(x,y,z);dummy.scale.setScalar(scale);dummy.updateMatrix();mesh.setMatrixAt(slot,dummy.matrix);
-    }
-    solid.count=ns;liquid.count=nl;vapor.count=nv;for(const m of [solid,liquid,vapor])m.instanceMatrix.needsUpdate=true;
-    window.vestibuleDirty=true;
+  const terrain=ensureBeyondTerrain(),root=new THREE.Group();root.name='beyond:white-meadow-phase-matter';beyondPlace.add(root);
+  const COUNT=1800,GAS_PER_BB=4,MAX_GAS=COUNT*GAS_PER_BB,geo=new THREE.SphereGeometry(.075,6,4);
+  const solidMat=new THREE.MeshStandardMaterial({color:0xf0eee7,roughness:.62,metalness:.06}),gasMat=new THREE.MeshBasicMaterial({color:0xe8f1ee,transparent:true,opacity:.18,depthWrite:false});
+  const solidMesh=new THREE.InstancedMesh(geo,solidMat,COUNT),gasMesh=new THREE.InstancedMesh(new THREE.SphereGeometry(.045,5,3),gasMat,MAX_GAS);
+  solidMesh.name='population:white-meadow-bbs';gasMesh.name='phase:gas';for(const m of [solidMesh,gasMesh]){m.frustumCulled=false;root.add(m)}
+  const solids=[],gas=[],dummy=new THREE.Object3D(),fract=v=>v-Math.floor(v),rnd=n=>fract(Math.sin(n*127.1+beyondWorldSeed*41.7)*43758.5453123);
+  // Meadow is the reservoir: broad white bands projected onto the current substrate.
+  for(let i=0;i<COUNT;i++){const x=-48+rnd(i*7.1)*96,z=-48+rnd(i*11.3)*96,band=Math.sin(x*.19+1.2*Math.sin(z*.055));if(Math.abs(band)>.43){i--;continue}solids.push({x,y:terrain.groundHeight(x,z)+.08,z,vy:0,grounded:true,id:i})}
+  const phaseRules={
+    evaporate(s,dt,now){if(!s.grounded||gas.length>MAX_GAS-GAS_PER_BB)return false;const chance=.032*dt;if(rnd(s.id*13.7+Math.floor(now/260))>chance)return false;for(let k=0;k<GAS_PER_BB;k++)gas.push({x:s.x+(rnd(s.id*31+k)-.5)*.16,y:s.y+.08,z:s.z+(rnd(s.id*43+k)-.5)*.16,vx:0,vy:.35+rnd(s.id*53+k)*.35,vz:0,mass:1/GAS_PER_BB,id:s.id*GAS_PER_BB+k});return true},
+    drift(g,dt,now){const t=now*.001;g.vx+=(Math.sin(g.id*.73+t*.37)*.18)*dt;g.vz+=(Math.cos(g.id*.61-t*.29)*.18)*dt;g.vy+=(.18-.045*g.vy)*dt;g.vx*=Math.pow(.94,dt);g.vz*=Math.pow(.94,dt);g.x+=g.vx*dt;g.y+=g.vy*dt;g.z+=g.vz*dt},
+    condense(){
+      // Local threshold only. Drift is merely one producer of neighborhoods and is not part of this rule.
+      const CELL=1.15,bins=new Map();for(let i=0;i<gas.length;i++){const g=gas[i],key=Math.floor(g.x/CELL)+','+Math.floor(g.y/CELL)+','+Math.floor(g.z/CELL);let b=bins.get(key);if(!b)bins.set(key,b=[]);b.push(i)}
+      const consumed=new Set(),born=[];for(const ids of bins.values())if(ids.length>=GAS_PER_BB){for(let p=0;p+GAS_PER_BB<=ids.length;p+=GAS_PER_BB){const use=ids.slice(p,p+GAS_PER_BB);let x=0,y=0,z=0;for(const j of use){consumed.add(j);x+=gas[j].x;y+=gas[j].y;z+=gas[j].z}born.push({x:x/GAS_PER_BB,y:y/GAS_PER_BB,z:z/GAS_PER_BB,vy:0,grounded:false,id:100000+solids.length+born.length})}}
+      if(consumed.size){const keep=[];for(let i=0;i<gas.length;i++)if(!consumed.has(i))keep.push(gas[i]);gas.length=0;gas.push(...keep);solids.push(...born)}
+    },
+    gravity(s,dt){if(s.grounded)return;const gy=terrain.groundHeight(s.x,s.z)+.08;s.vy-=7.8*dt;s.y+=s.vy*dt;if(s.y<=gy){s.y=gy;s.vy=0;s.grounded=true}}
+  };
+  let last=performance.now(),condenseClock=0;
+  function update(now){const dt=Math.min(.04,Math.max(.001,(now-last)/1000));last=now;
+    // Each operation is independently callable/testable; this loop only composes them.
+    for(let i=solids.length-1;i>=0;i--)if(phaseRules.evaporate(solids[i],dt,now))solids.splice(i,1);
+    for(const g of gas)phaseRules.drift(g,dt,now);
+    condenseClock+=dt;if(condenseClock>=.12){condenseClock=0;phaseRules.condense()}
+    for(const s of solids)phaseRules.gravity(s,dt);
+    let ns=0;for(const p of solids){if(ns>=COUNT)break;dummy.position.set(p.x,p.y,p.z);dummy.scale.setScalar(1);dummy.updateMatrix();solidMesh.setMatrixAt(ns++,dummy.matrix)}
+    let ng=0;for(const p of gas){if(ng>=MAX_GAS)break;dummy.position.set(p.x,p.y,p.z);dummy.scale.setScalar(.75);dummy.updateMatrix();gasMesh.setMatrixAt(ng++,dummy.matrix)}
+    solidMesh.count=ns;gasMesh.count=ng;solidMesh.instanceMatrix.needsUpdate=true;gasMesh.instanceMatrix.needsUpdate=true;window.vestibuleDirty=true;
   }
-  beyondPhaseCycle={root,update,enabled:true,setEnabled(v){this.enabled=!!v;root.visible=this.enabled;return this.enabled},inspect:()=>({kind:'bb-phase-cycle',count:COUNT,cycleMs:CYCLE,terrainDeformation:false})};
-  return beyondPhaseCycle;
+  beyondPhaseCycle={root,update,phaseRules,solids,gas,enabled:true,setEnabled(v){this.enabled=!!v;root.visible=this.enabled;return this.enabled},inspect:()=>({kind:'white-meadow-phase-matter',solid:solids.length,gas:gas.length,gasPerBB:GAS_PER_BB,terrainDeformation:false,rules:Object.keys(phaseRules)})};
+  globalThis.BeyondPhaseMatter=beyondPhaseCycle;return beyondPhaseCycle;
 }
 function updateBeyondPhaseCycle(now){if(currentPlace==='beyond'&&beyondPhaseCycle?.enabled)beyondPhaseCycle.update(now)}
 

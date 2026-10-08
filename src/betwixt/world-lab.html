@@ -1424,44 +1424,41 @@ function ensureWorkshopTerrain(){
   return workshopTerrain;
 }
 let beyondTerrain=null,beyondWorldSeed=741,beyondMutation=0,beyondPopulation=null;
-function populateBeyondFields(count=25000){
+function populateBeyondFields(count=900){
   const terrain=ensureBeyondTerrain();if(!terrain)return null;
-  if(beyondPopulation){beyondPopulation.removeFromParent();beyondPopulation.geometry?.dispose();beyondPopulation.material?.dispose();beyondPopulation=null}
-  // Population Fields P0: direct visualization, not dynamics. Cheap matter is sampled
-  // into several overlapping local organization fields so we can inspect morphology + fps.
-  const geo=new THREE.SphereGeometry(.115,6,4);
-  const mat=new THREE.MeshStandardMaterial({color:0xd8d0b8,roughness:.72,metalness:.08});
-  const mesh=new THREE.InstancedMesh(geo,mat,count);mesh.name='population-fields:p0';mesh.frustumCulled=false;
-  const dummy=new THREE.Object3D(),fract=v=>v-Math.floor(v);
-  const rnd=n=>fract(Math.sin(n*91.733+beyondWorldSeed*17.17)*43758.5453123);
-  const gauss=(n)=>{const u=Math.max(1e-5,rnd(n)),v=rnd(n+17.31);return Math.sqrt(-2*Math.log(u))*Math.cos(Math.PI*2*v)};
-  const branch=[
-    [-34,-22,-27,-12],[-27,-12,-18,-3],[-18,-3,-8,9],[-18,-3,-27,8],[-8,9,2,21],[-8,9,-17,23],[-27,8,-39,18],
-    [9,-28,16,-17],[16,-17,27,-7],[27,-7,39,5],[27,-7,31,11],[16,-17,5,-9]
-  ];
-  const pointOnSeg=(seg,t,off)=>{const [ax,az,bx,bz]=seg,dx=bx-ax,dz=bz-az,l=Math.hypot(dx,dz)||1;return [ax+dx*t-dz/l*off,az+dz*t+dx/l*off]};
-  for(let i=0;i<count;i++){
-    const family=i%4;let x,z;
-    if(family===0){ // noisy clumps
-      const centers=[[-30,28],[-18,34],[-24,18],[36,25],[28,33]],c=centers[Math.floor(rnd(i*7.1)*centers.length)];
-      x=c[0]+gauss(i*13.7)*3.0;z=c[1]+gauss(i*19.3)*2.5;
-    }else if(family===1){ // branching / dendritic
-      const seg=branch[Math.floor(rnd(i*5.3)*branch.length)],p=pointOnSeg(seg,rnd(i*11.9),gauss(i*23.1)*.72);
-      x=p[0];z=p[1];
-    }else if(family===2){ // broken annuli / satellites
-      const cx=28,cz=-27,a=rnd(i*3.7)*Math.PI*2,r=7.2+(rnd(i*29.1)>.76?5.4:0)+gauss(i*31.7)*.55;
-      x=cx+Math.cos(a)*r;z=cz+Math.sin(a)*r*.72;
-    }else{ // sparse noisy sheet with holes
-      x=-2+rnd(i*37.1)*31;z=4+rnd(i*41.3)*25;
-      const hole=Math.hypot(x-5,z-15);if(hole<5.2){const a=Math.atan2(z-15,x-5),r=5.2+rnd(i*43.9)*2.8;x=5+Math.cos(a)*r;z=15+Math.sin(a)*r}
-      x+=gauss(i*47.7)*.35;z+=gauss(i*53.1)*.35;
-    }
-    x=Math.max(-51.5,Math.min(51.5,x));z=Math.max(-51.5,Math.min(51.5,z));
-    const y=terrain.groundHeight(x,z)+.34;
-    dummy.position.set(x,y,z);dummy.scale.setScalar(.72+rnd(i*59.7)*.58);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
+  if(beyondPopulation){beyondPopulation.removeFromParent();beyondPopulation.children?.forEach(o=>{o.geometry?.dispose();o.material?.dispose()});beyondPopulation=null}
+  // Population Fields P1: the substrate owns only permission. Bamboo owns morphology.
+  // A deterministic 2D scalar says whether a population may begin at a surface point;
+  // accepted loci then grow one simple behavior along the local topology normal.
+  const root=new THREE.Group();root.name='population-fields:p1-bamboo-permission';terrain.root.add(root);
+  const stemGeo=new THREE.CylinderGeometry(.075,.095,1,6,1,false);
+  const stemMat=new THREE.MeshStandardMaterial({color:0x667957,roughness:.86,metalness:.02});
+  const stems=new THREE.InstancedMesh(stemGeo,stemMat,count);stems.name='population:bamboo';stems.frustumCulled=false;root.add(stems);
+  const dummy=new THREE.Object3D(),up=new THREE.Vector3(0,1,0),normal=new THREE.Vector3(),q=new THREE.Quaternion();
+  const fract=v=>v-Math.floor(v),rnd=n=>fract(Math.sin(n*91.733+beyondWorldSeed*17.17)*43758.5453123);
+  const permission=(x,z)=>{
+    // One boring flat scalar field: broad localized jurisdiction with a soft/noisy edge.
+    const dx=(x-12)/20,dz=(z+8)/16,r=Math.sqrt(dx*dx+dz*dz);
+    const grain=.16*Math.sin(x*.31+z*.17)+.10*Math.sin(x*.11-z*.37+1.7);
+    return THREE.MathUtils.clamp(1-r+grain,0,1);
+  };
+  const surfaceNormal=(x,z)=>{
+    const e=.28,hL=terrain.groundHeight(x-e,z),hR=terrain.groundHeight(x+e,z),hD=terrain.groundHeight(x,z-e),hU=terrain.groundHeight(x,z+e);
+    return normal.set(hL-hR,2*e,hD-hU).normalize();
+  };
+  let placed=0,attempt=0;
+  while(placed<count&&attempt<count*18){
+    const i=attempt++,x=-50+rnd(i*7.13)*100,z=-50+rnd(i*11.71)*100,p=permission(x,z);
+    if(p<=.08||rnd(i*17.37)>p*.78)continue;
+    const y=terrain.groundHeight(x,z),height=1.15+rnd(i*23.19)*2.65,radius=.72+rnd(i*29.41)*.72,n=surfaceNormal(x,z).clone();
+    q.setFromUnitVectors(up,n);
+    dummy.position.set(x,y,z).addScaledVector(n,height*.5);
+    dummy.quaternion.copy(q);dummy.scale.set(radius,height,radius);dummy.updateMatrix();stems.setMatrixAt(placed++,dummy.matrix);
   }
-  mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();mesh.castShadow=true;mesh.receiveShadow=true;terrain.root.add(mesh);beyondPopulation=mesh;window.vestibuleDirty=true;
-  return{count,fields:4};
+  stems.count=placed;stems.instanceMatrix.needsUpdate=true;stems.computeBoundingSphere();stems.castShadow=true;stems.receiveShadow=true;
+  root.userData.population={kind:'bamboo',permission:'flat-scalar',requested:count,placed,seed:beyondWorldSeed};
+  beyondPopulation=root;window.vestibuleDirty=true;
+  return root.userData.population;
 }
 function toggleBeyondPopulation(){
   if(beyondPopulation){beyondPopulation.removeFromParent();beyondPopulation.geometry.dispose();beyondPopulation.material.dispose();beyondPopulation=null;window.vestibuleDirty=true;return false}

@@ -1969,36 +1969,30 @@ let beyondPhaseCycle=null;
 function ensureBeyondPhaseCycle(){
   if(beyondPhaseCycle)return beyondPhaseCycle;
   const terrain=ensureBeyondTerrain(),root=new THREE.Group();root.name='beyond:white-meadow-phase-matter';beyondPlace.add(root);
-  const COUNT=5200,GAS_PER_BB=4,MAX_GAS=COUNT*GAS_PER_BB,geo=new THREE.SphereGeometry(.075,6,4);
+  const COUNT=5200,geo=new THREE.SphereGeometry(.075,6,4);
   const solidMat=new THREE.MeshStandardMaterial({color:0xf0eee7,roughness:.62,metalness:.06}),gasMat=new THREE.MeshBasicMaterial({color:0xe8f1ee,transparent:true,opacity:.18,depthWrite:false});
-  const solidMesh=new THREE.InstancedMesh(geo,solidMat,COUNT),gasMesh=new THREE.InstancedMesh(new THREE.SphereGeometry(.045,5,3),gasMat,MAX_GAS);
+  const solidMesh=new THREE.InstancedMesh(geo,solidMat,COUNT),gasMesh=new THREE.InstancedMesh(new THREE.SphereGeometry(.045,5,3),gasMat,COUNT);
   solidMesh.name='population:white-meadow-bbs';gasMesh.name='phase:gas';for(const m of [solidMesh,gasMesh]){m.frustumCulled=false;root.add(m)}
-  const solids=[],gas=[],dummy=new THREE.Object3D(),fract=v=>v-Math.floor(v),rnd=n=>fract(Math.sin(n*127.1+beyondWorldSeed*41.7)*43758.5453123);
-  // Meadow is the reservoir: broad white bands projected onto the current substrate.
-  let accepted=0,attempt=0;while(accepted<COUNT&&attempt<COUNT*20){const sample=attempt++,x=-48+rnd(sample*7.1)*96,z=-48+rnd(sample*11.3)*96,band=Math.sin(x*.19+1.2*Math.sin(z*.055));if(Math.abs(band)>.68)continue;solids.push({x,y:terrain.groundHeight(x,z)+.08,z,vy:0,grounded:true,id:sample});accepted++}
+  const matter=[],dummy=new THREE.Object3D(),fract=v=>v-Math.floor(v),rnd=n=>fract(Math.sin(n*127.1+beyondWorldSeed*41.7)*43758.5453123);
+  let accepted=0,attempt=0;while(accepted<COUNT&&attempt<COUNT*20){const sample=attempt++,x=-48+rnd(sample*7.1)*96,z=-48+rnd(sample*11.3)*96,band=Math.sin(x*.19+1.2*Math.sin(z*.055));if(Math.abs(band)>.68)continue;matter.push({x0:x,z0:z,x,y:terrain.groundHeight(x,z)+.08,z,vx:0,vy:0,vz:0,id:sample});accepted++}
   const phaseRules={
-    evaporate(s,dt,now){if(!s.grounded||gas.length>MAX_GAS-GAS_PER_BB)return false;const chance=.22*dt;if(rnd(s.id*13.7+Math.floor(now/90))>chance)return false;for(let k=0;k<GAS_PER_BB;k++)gas.push({x:s.x+(rnd(s.id*31+k)-.5)*.16,y:s.y+.08,z:s.z+(rnd(s.id*43+k)-.5)*.16,vx:0,vy:.35+rnd(s.id*53+k)*.35,vz:0,mass:1/GAS_PER_BB,id:s.id*GAS_PER_BB+k});return true},
-    drift(g,dt,now){const t=now*.001;g.vx+=(Math.sin(g.id*.73+t*.37)*.18)*dt;g.vz+=(Math.cos(g.id*.61-t*.29)*.18)*dt;g.vy+=(.18-.045*g.vy)*dt;g.vx*=Math.pow(.94,dt);g.vz*=Math.pow(.94,dt);g.x+=g.vx*dt;g.y+=g.vy*dt;g.z+=g.vz*dt},
-    condense(){
-      // Local threshold only. Drift is merely one producer of neighborhoods and is not part of this rule.
-      const CELL=1.15,bins=new Map();for(let i=0;i<gas.length;i++){const g=gas[i],key=Math.floor(g.x/CELL)+','+Math.floor(g.y/CELL)+','+Math.floor(g.z/CELL);let b=bins.get(key);if(!b)bins.set(key,b=[]);b.push(i)}
-      const consumed=new Set(),born=[];for(const ids of bins.values())if(ids.length>=GAS_PER_BB){for(let p=0;p+GAS_PER_BB<=ids.length;p+=GAS_PER_BB){const use=ids.slice(p,p+GAS_PER_BB);let x=0,y=0,z=0;for(const j of use){consumed.add(j);x+=gas[j].x;y+=gas[j].y;z+=gas[j].z}born.push({x:x/GAS_PER_BB,y:y/GAS_PER_BB,z:z/GAS_PER_BB,vy:0,grounded:false,id:100000+solids.length+born.length})}}
-      if(consumed.size){const keep=[];for(let i=0;i<gas.length;i++)if(!consumed.has(i))keep.push(gas[i]);gas.length=0;gas.push(...keep);solids.push(...born)}
-    },
-    gravity(s,dt){if(s.grounded)return;const gy=terrain.groundHeight(s.x,s.z)+.08;s.vy-=7.8*dt;s.y+=s.vy*dt;if(s.y<=gy){s.y=gy;s.vy=0;s.grounded=true}}
+    evaporate(p,dt,now){const t=now*.001;p.vx+=(Math.sin(p.id*.73+t*.37)*.18)*dt;p.vz+=(Math.cos(p.id*.61-t*.29)*.18)*dt;p.vy+=(1.15-.06*p.vy)*dt;p.vx*=Math.pow(.94,dt);p.vz*=Math.pow(.94,dt);p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt},
+    drift(p,dt,now){const t=now*.001;p.vx+=Math.sin(p.id*.41+t*.31)*.13*dt;p.vz+=Math.cos(p.id*.57-t*.27)*.13*dt;p.x+=p.vx*dt;p.z+=p.vz*dt},
+    condense(p){p.vy=0},
+    gravity(p,dt){p.vy-=7.8*dt;p.y+=p.vy*dt;const gy=terrain.groundHeight(p.x,p.z)+.08;if(p.y<=gy){p.y=gy;p.vy=0}}
   };
-  let last=performance.now(),condenseClock=0;
-  function update(now){const dt=Math.min(.04,Math.max(.001,(now-last)/1000));last=now;
-    // Each operation is independently callable/testable; this loop only composes them.
-    for(let i=solids.length-1;i>=0;i--)if(phaseRules.evaporate(solids[i],dt,now))solids.splice(i,1);
-    for(const g of gas)phaseRules.drift(g,dt,now);
-    condenseClock+=dt;if(condenseClock>=.12){condenseClock=0;phaseRules.condense()}
-    for(const s of solids)phaseRules.gravity(s,dt);
-    let ns=0;for(const p of solids){if(ns>=COUNT)break;dummy.position.set(p.x,p.y,p.z);dummy.scale.setScalar(1);dummy.updateMatrix();solidMesh.setMatrixAt(ns++,dummy.matrix)}
-    let ng=0;for(const p of gas){if(ng>=MAX_GAS)break;dummy.position.set(p.x,p.y,p.z);dummy.scale.setScalar(.75);dummy.updateMatrix();gasMesh.setMatrixAt(ng++,dummy.matrix)}
+  let t0=performance.now(),last=performance.now();
+  function update(now){const dt=Math.min(.04,Math.max(.001,(now-last)/1000));last=now;const cycle=((now-t0)%15000+15000)%15000,evap=cycle<5000,gasHold=cycle>=5000&&cycle<10000,rain=cycle>=10000;
+    let ns=0,ng=0;
+    for(let i=0;i<matter.length;i++){const p=matter[i],releaseAt=(i/matter.length)*5000;
+      if(evap&&cycle<releaseAt){p.x=p.x0;p.z=p.z0;p.y=terrain.groundHeight(p.x,p.z)+.08;p.vx=p.vy=p.vz=0;dummy.position.set(p.x,p.y,p.z);dummy.scale.setScalar(1);dummy.updateMatrix();solidMesh.setMatrixAt(ns++,dummy.matrix);continue}
+      if(evap||gasHold){phaseRules.evaporate(p,dt,now);phaseRules.drift(p,dt,now);dummy.position.set(p.x,p.y,p.z);dummy.scale.setScalar(.75);dummy.updateMatrix();gasMesh.setMatrixAt(ng++,dummy.matrix);continue}
+      if(rain){phaseRules.condense(p);phaseRules.gravity(p,dt);dummy.position.set(p.x,p.y,p.z);dummy.scale.setScalar(1);dummy.updateMatrix();solidMesh.setMatrixAt(ns++,dummy.matrix)}
+    }
+    if(rain&&cycle>14920){for(const p of matter){p.x=p.x0;p.z=p.z0;p.y=terrain.groundHeight(p.x,p.z)+.08;p.vx=p.vy=p.vz=0}}
     solidMesh.count=ns;gasMesh.count=ng;solidMesh.instanceMatrix.needsUpdate=true;gasMesh.instanceMatrix.needsUpdate=true;window.vestibuleDirty=true;
   }
-  beyondPhaseCycle={root,update,phaseRules,solids,gas,enabled:true,setEnabled(v){this.enabled=!!v;root.visible=this.enabled;return this.enabled},inspect:()=>({kind:'white-meadow-phase-matter',solid:solids.length,gas:gas.length,gasPerBB:GAS_PER_BB,terrainDeformation:false,rules:Object.keys(phaseRules)})};
+  beyondPhaseCycle={root,update,phaseRules,matter,enabled:true,setEnabled(v){this.enabled=!!v;root.visible=this.enabled;if(v){t0=performance.now();last=t0}return this.enabled},inspect:()=>({kind:'white-meadow-phase-cycle',count:COUNT,gasPerBB:1,evaporateMs:5000,gasHoldMs:5000,rainMs:5000,terrainDeformation:false,rules:Object.keys(phaseRules)})};
   globalThis.BeyondPhaseMatter=beyondPhaseCycle;return beyondPhaseCycle;
 }
 function updateBeyondPhaseCycle(now){if(currentPlace==='beyond'&&beyondPhaseCycle?.enabled)beyondPhaseCycle.update(now)}

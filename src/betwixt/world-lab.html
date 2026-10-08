@@ -1969,7 +1969,7 @@ let beyondPhaseCycle=null;
 function ensureBeyondPhaseCycle(){
   if(beyondPhaseCycle)return beyondPhaseCycle;
   const terrain=ensureBeyondTerrain(),root=new THREE.Group();root.name='beyond:white-meadow-phase-matter';beyondPlace.add(root);
-  const COUNT=500000,geo=new THREE.SphereGeometry(.055,5,3);
+  const COUNT=25000,geo=new THREE.SphereGeometry(.055,5,3);
   const solidMat=new THREE.MeshStandardMaterial({color:0xf0eee7,roughness:.62,metalness:.04}),gasMat=new THREE.MeshBasicMaterial({color:0xe8f1ee,transparent:true,opacity:.16,depthWrite:false});
   const solidMesh=new THREE.InstancedMesh(geo,solidMat,COUNT),gasMesh=new THREE.InstancedMesh(new THREE.SphereGeometry(.032,4,3),gasMat,COUNT);
   solidMesh.name='population:white-meadow-bbs';gasMesh.name='phase:gas';for(const m of [solidMesh,gasMesh]){m.frustumCulled=false;root.add(m)}

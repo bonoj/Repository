@@ -3759,73 +3759,79 @@ const workshopTabletopBetwixtable=buildBetwixtable({
       reset:()=>{canyonWater.reset();cauldronLava.reset()}
     };
 
-    // Canyon volume: a terrain-intersecting material body, independent of the
-    // shallow-water solver. Its upper surface follows the geological drainage
-    // corridor; its bottom is the sampled terrain, so the water has real depth.
-    // This is a static volume, not a claim of 3D fluid dynamics.
-    const canyonVolume=new THREE.Group();
-    canyonVolume.name='snowglobe:canyon-volumetric-water';
-    globe.root.add(canyonVolume);
-    const canyonMaterial=new THREE.MeshPhysicalMaterial({
-      color:0x338da5,roughness:.19,metalness:0,transparent:true,opacity:.73,
-      depthWrite:false,side:THREE.DoubleSide
-    });
-    function rebuildCanyonVolume(){
-      while(canyonVolume.children.length){
-        const child=canyonVolume.children[0];
-        canyonVolume.remove(child);child.geometry?.dispose();
+    // Flowing canyon river: one connected scalar free surface, not a grid
+    // of independent water columns. A seeded bearing stream travels from
+    // upstream to downstream, bobbing at the sampled water surface.
+    const riverRoot=new THREE.Group();riverRoot.name='snowglobe:flowing-river';globe.root.add(riverRoot);
+    const riverPath=[[-54,-4],[-27,-7],[2,-2],[29,-9],[54,-4]];
+    const riverPoints=[];
+    for(let segment=0;segment<riverPath.length-1;segment++){
+      const a=riverPath[segment],b=riverPath[segment+1],len=Math.hypot(b[0]-a[0],b[1]-a[1]);
+      const steps=Math.ceil(len/.55);
+      for(let j=segment?1:0;j<=steps;j++){
+        const t=j/steps,x=a[0]+(b[0]-a[0])*t,z=a[1]+(b[1]-a[1])*t;
+        if(Math.hypot(x,z)>47)continue;
+        riverPoints.push(new THREE.Vector3(x,globe.groundHeight(x,z)+.65,z));
       }
-      const step=1.0,lo=-47,hi=47,n=Math.round((hi-lo)/step);
-      const depths=new Float32Array(n*n),bed=new Float32Array(n*n);
-      const ixz=(ix,iz)=>ix+n*iz;
-      let cells=0,volume=0;
-      for(let iz=0;iz<n;iz++)for(let ix=0;ix<n;ix++){
-        const x=lo+(ix+.5)*step,z=lo+(iz+.5)*step;
-        if(Math.hypot(x,z)>46)continue;
-        const d=globe.maps(x,z).drainage.trunk;
-        // The trunk cut is broad; taper the occupied cross-section at its banks.
-        const width=4.1,edge=Math.max(0,1-d/width);
-        if(edge<=0)continue;
-        const depth=1.75*edge*edge;
-        const k=ixz(ix,iz);
-        depths[k]=depth;bed[k]=globe.groundHeight(x,z);
-        volume+=depth*step*step;cells++;
-      }
-      const vertices=[],normals=[];
-      const tri=(a,b,c)=>{vertices.push(...a,...b,...c)};
-      const quad=(a,b,c,d)=>{tri(a,b,c);tri(a,c,d)};
-      for(let iz=0;iz<n;iz++)for(let ix=0;ix<n;ix++){
-        const k=ixz(ix,iz),depth=depths[k];if(depth<=0)continue;
-        const x=lo+ix*step,z=lo+iz*step,y=bed[k],top=y+depth;
-        const a=[x,top,z],b=[x+step,top,z],c=[x+step,top,z+step],d=[x,top,z+step];
-        quad(a,b,c,d);
-        // Close the body at its sampled terrain bed and at exposed banks.
-        quad([x,y,z+step],[x+step,y,z+step],[x+step,y,z],[x,y,z]);
-        const neighbors=[
-          [ix-1,iz,[x,top,z+step],[x,top,z],[x,y,z],[x,y,z+step]],
-          [ix+1,iz,[x+step,top,z],[x+step,top,z+step],[x+step,y,z+step],[x+step,y,z]],
-          [ix,iz-1,[x,top,z],[x+step,top,z],[x+step,y,z],[x,y,z]],
-          [ix,iz+1,[x+step,top,z+step],[x,top,z+step],[x,y,z+step],[x+step,y,z+step]]
-        ];
-        for(const [nx,nz,p,q,u,v] of neighbors){
-          const nk=nx>=0&&nx<n&&nz>=0&&nz<n?ixz(nx,nz):-1;
-          if(nk<0||depths[nk]<=0)quad(p,q,u,v);
-        }
-      }
-      const geometry=new THREE.BufferGeometry();
-      geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
-      geometry.computeVertexNormals();
-      const mesh=new THREE.Mesh(geometry,canyonMaterial);
-      mesh.name='canyon:terrain-intersecting-volume';mesh.renderOrder=3;
-      canyonVolume.add(mesh);
-      canyonVolume.userData={kind:'terrain-intersecting-static-volume',cells,volume,step};
     }
-    rebuildCanyonVolume();
-    globalThis.SnowglobeCanyonWater={
-      inspect:()=>({...canyonVolume.userData}),
-      rebuild:rebuildCanyonVolume,
-      root:canyonVolume
+    const riverCurve=new THREE.CatmullRomCurve3(riverPoints,false,'centripetal');
+    const riverSteps=240,riverWidth=2.65,riverVertices=[],riverIndices=[];
+    for(let i=0;i<=riverSteps;i++){
+      const t=i/riverSteps,p=riverCurve.getPoint(t),tangent=riverCurve.getTangent(t);
+      const nx=-tangent.z,nz=tangent.x,norm=Math.hypot(nx,nz)||1;
+      for(const side of [-1,1]){
+        const x=p.x+side*riverWidth*nx/norm,z=p.z+side*riverWidth*nz/norm;
+        const bank=globe.groundHeight(x,z);
+        // A continuous water surface with shoreline taper. The centerline
+        // tracks the geological channel; no independent cell sidewalls.
+        const y=Math.max(bank+.035,p.y-.12);
+        riverVertices.push(x,y,z);
+      }
+      if(i<riverSteps){const k=i*2;riverIndices.push(k,k+2,k+1,k+1,k+2,k+3)}
+    }
+    const riverGeo=new THREE.BufferGeometry();
+    riverGeo.setAttribute('position',new THREE.Float32BufferAttribute(riverVertices,3));
+    riverGeo.setIndex(riverIndices);riverGeo.computeVertexNormals();
+    const riverMesh=new THREE.Mesh(riverGeo,new THREE.MeshBasicMaterial({
+      color:0x278ba6,transparent:true,opacity:.75,depthWrite:false,side:THREE.DoubleSide
+    }));
+    riverMesh.name='river:continuous-free-surface';riverMesh.renderOrder=3;riverRoot.add(riverMesh);
+    const BB_COUNT=600,bbGeo=new THREE.SphereGeometry(.13,6,4);
+    const bbMesh=new THREE.InstancedMesh(bbGeo,new THREE.MeshStandardMaterial({
+      color:0xd8e2d9,roughness:.45,metalness:.12
+    }),BB_COUNT);
+    bbMesh.name='river:floating-ball-bearings';bbMesh.frustumCulled=false;riverRoot.add(bbMesh);
+    const bbDummy=new THREE.Object3D(),bbSeeds=new Float32Array(BB_COUNT);
+    const hashBB=n=>{const v=Math.sin(n*127.1+741*31.7)*43758.5453123;return v-Math.floor(v)};
+    for(let i=0;i<BB_COUNT;i++)bbSeeds[i]=hashBB(i+1);
+    let riverStart=performance.now();
+    const riverFlow={
+      update(now){
+        const elapsed=(now-riverStart)*.000042;
+        for(let i=0;i<BB_COUNT;i++){
+          // New bearings enter above the headwater; reaching the far end
+          // despawns them. The next cycle represents a new bearing.
+          const phase=(elapsed+i/BB_COUNT)%1;
+          const t=Math.max(0,Math.min(1,phase*1.12-.12));
+          const p=riverCurve.getPoint(t),tan=riverCurve.getTangent(t);
+          const lane=(bbSeeds[i]-.5)*riverWidth*1.65;
+          p.x+=-tan.z*lane;p.z+=tan.x*lane;
+          const surface=Math.max(globe.groundHeight(p.x,p.z)+.10,p.y-.12);
+          const entering=phase<.107;
+          const drop=entering?(1-phase/.107)*3.5:0;
+          const bob=.095*Math.sin(now*.005+i*2.17)+.035*Math.sin(now*.012+i*.7);
+          bbDummy.position.set(p.x,surface+.18+bob+drop,p.z);
+          bbDummy.scale.setScalar(.75+bbSeeds[i]*.55);
+          bbDummy.updateMatrix();bbMesh.setMatrixAt(i,bbDummy.matrix);
+        }
+        bbMesh.instanceMatrix.needsUpdate=true;
+        window.vestibuleDirty=true;
+      },
+      inspect:()=>({kind:'flowing-canyon-river',bearings:BB_COUNT,riverSteps,riverWidth,source:riverPoints[0].toArray(),sink:riverPoints.at(-1).toArray()}),
+      reset(){riverStart=performance.now()}
     };
+    root.userData.snowglobeRiver=riverFlow;
+    globalThis.SnowglobeRiver=riverFlow;
 
     // Catch v0: the verified two-ring/two-rail pipe and five-ring half-cage,
     // assembled in geological local units, then miniaturized together by globe.root.
@@ -6307,6 +6313,7 @@ renderer.setAnimationLoop((now)=>{
 
   const snowglobeLiquids=workshopTabletopBetwixtable.userData.betwixtable.presentation.userData.snowglobeLiquids;
   if(snowglobeLiquids){snowglobeLiquids.water.update(now);snowglobeLiquids.lava.update(now);window.vestibuleDirty=true;}
+  workshopTabletopBetwixtable.userData.betwixtable.presentation.userData.snowglobeRiver?.update(now);
   updateWorkshop(now);
   syncSnowglobeSpells();
   if(workshopCrucibleEnabled){

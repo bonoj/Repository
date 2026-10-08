@@ -3764,7 +3764,69 @@ const workshopTabletopBetwixtable=buildBetwixtable({
       meteorNext=now+180+meteorRandom()*420;
     }
     root.userData.meteorWeather={update:updateSnowMeteorWeather,inspect:()=>({events:meteorEvents,impacts:meteorImpacts,falling:meteorActive.length,pending:meteorPending.length})};
+    // Meteor experiment suspended for city surveying. Clear any in-flight bodies.
+    for(const m of meteorActive){globe.root.remove(m.head,m.wake);m.wake.material.dispose();}
+    meteorActive.length=0;meteorPending.length=0;
+    root.userData.meteorWeather.update=()=>{};
+    root.userData.meteorWeather.enabled=false;
     globalThis.SnowglobeMeteorWeather=root.userData.meteorWeather;
+
+    // Portable, deterministic terrain survey: the complete authoritative height grid,
+    // geology/material samples, candidate city sites, and construction contracts.
+    const surveySnowglobe=(tap=null)=>{
+      const meta=globe.inspect(),resolution=meta.resolution,size=meta.size,half=size/2;
+      const step=size/(resolution-1),radius=49;
+      const elevations=[],geology=[],sites=[];
+      let min=Infinity,max=-Infinity;
+      for(let iz=0;iz<resolution;iz++){
+        const row=[];
+        for(let ix=0;ix<resolution;ix++){
+          const x=-half+ix*step,z=-half+iz*step,h=globe.groundHeight(x,z);
+          row.push(+h.toFixed(5));min=Math.min(min,h);max=Math.max(max,h);
+        }
+        elevations.push(row);
+      }
+      // Regular geology grid preserves substrate semantics without repeating 26k objects.
+      for(let iz=0;iz<=32;iz++)for(let ix=0;ix<=32;ix++){
+        const x=-48+ix*3,z=-48+iz*3;
+        if(Math.hypot(x,z)>radius)continue;
+        const w=globe.maps(x,z);
+        geology.push({x,z,height:+w.height.toFixed(4),bedrock:+w.bedrock.toFixed(4),
+          layer:w.exposedStratum,resistance:+w.resistance.toFixed(4),
+          mantle:w.mantle,drainage:w.drainage,retreat:w.retreat,jurisdictions:w.jurisdictions});
+      }
+      // Six preliminary low-slope candidates, not yet committed city placements.
+      for(let i=0;i<6;i++){
+        const angle=i*Math.PI/3;let best=null;
+        for(let r=12;r<=36;r+=3)for(let da=-.27;da<=.27;da+=.135){
+          const x=Math.cos(angle+da)*r,z=Math.sin(angle+da)*r,h=globe.groundHeight(x,z);
+          const slope=Math.max(...[[3,0],[-3,0],[0,3],[0,-3]].map(([dx,dz])=>Math.abs(globe.groundHeight(x+dx,z+dz)-h)/3));
+          const score=slope+.008*Math.abs(r-25);
+          if(!best||score<best.score)best={x:+x.toFixed(3),z:+z.toFixed(3),height:+h.toFixed(4),slope:+slope.toFixed(4),score};
+        }
+        sites.push({sector:i,...best});
+      }
+      return {schema:'six-cities-snowglobe-survey-v1',coordinateFrame:{
+        x:'east',y:'up',z:'north',units:'terrain-local',center:[0,0,0],radius,
+        meshToTabletop:{scale:.025,translationY:.33},grid:{resolution,size,origin:[-half,-half],step},
+        bedrockY:-12},meta,meteorWeather:'disabled',heightRange:{min,max},
+        elevations,geology,candidateSites:sites,
+        infrastructure:{water:{implemented:false,proposed:'terrain-aligned shallow-water field'},
+          lava:{implemented:false,proposed:'separate heat-bearing liquid/material field'},
+          population:{implemented:false,proposed:'tagged density volumes on terrain'},
+          matterStreams:{implemented:false,proposed:'conserved source-to-sink transport with city-owned controllers'}},
+        tap};
+    };
+    const downloadSnowglobeSurvey=(tap)=>{
+      const payload=surveySnowglobe(tap);
+      const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+      const url=URL.createObjectURL(blob),a=document.createElement('a');
+      a.href=url;a.download='six-cities-snowglobe-survey.json';document.body.append(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),2000);
+      return payload;
+    };
+    root.userData.snowglobeSurvey={inspect:surveySnowglobe,download:downloadSnowglobeSurvey};
+    globalThis.SnowglobeSurvey=root.userData.snowglobeSurvey;
 
     // Thoughtform: embodied possibility, deliberately not a ticket or interaction target.
     // It hangs in shared view and carries enough semantic residue to recover the idea later.
@@ -5910,6 +5972,20 @@ const SelectionSystem={
   },
   tap(x,y){
     if(legacyWorkshop.visible&&fluidGlobeTap(x,y))return;
+    if(focusedWorkshopObject===workshopTabletopBetwixtable){
+      const r=canvas.getBoundingClientRect();
+      pointerNDC.set(((x-r.left)/r.width)*2-1,-((y-r.top)/r.height)*2+1);
+      raycaster.setFromCamera(pointerNDC,camera);
+      const globe=workshopTabletopBetwixtable.userData.snowglobe;
+      const hit=raycaster.intersectObject(globe.mesh,false)[0];
+      if(hit){
+        const local=globe.root.worldToLocal(hit.point.clone());
+        globalThis.SnowglobeSurvey.download({x:+local.x.toFixed(4),z:+local.z.toFixed(4),
+          surfaceHeight:+globe.groundHeight(local.x,local.z).toFixed(4),
+          geology:globe.maps(local.x,local.z)});
+        return;
+      }
+    }
     if(workshopTap(x,y))return;
     const hit=this.pick(x,y);
     if(selectedEntity){

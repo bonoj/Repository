@@ -1975,7 +1975,7 @@ function ensureBeyondPhaseCycle(){
   solidMesh.name='population:white-meadow-bbs';gasMesh.name='phase:gas';for(const m of [solidMesh,gasMesh]){m.frustumCulled=false;root.add(m)}
   const solids=[],gas=[],dummy=new THREE.Object3D(),fract=v=>v-Math.floor(v),rnd=n=>fract(Math.sin(n*127.1+beyondWorldSeed*41.7)*43758.5453123);
   // Meadow is the reservoir: broad white bands projected onto the current substrate.
-  for(let i=0;i<COUNT;i++){const x=-48+rnd(i*7.1)*96,z=-48+rnd(i*11.3)*96,band=Math.sin(x*.19+1.2*Math.sin(z*.055));if(Math.abs(band)>.43){i--;continue}solids.push({x,y:terrain.groundHeight(x,z)+.08,z,vy:0,grounded:true,id:i})}
+  let accepted=0,attempt=0;while(accepted<COUNT&&attempt<COUNT*20){const sample=attempt++,x=-48+rnd(sample*7.1)*96,z=-48+rnd(sample*11.3)*96,band=Math.sin(x*.19+1.2*Math.sin(z*.055));if(Math.abs(band)>.43)continue;solids.push({x,y:terrain.groundHeight(x,z)+.08,z,vy:0,grounded:true,id:sample});accepted++}
   const phaseRules={
     evaporate(s,dt,now){if(!s.grounded||gas.length>MAX_GAS-GAS_PER_BB)return false;const chance=.032*dt;if(rnd(s.id*13.7+Math.floor(now/260))>chance)return false;for(let k=0;k<GAS_PER_BB;k++)gas.push({x:s.x+(rnd(s.id*31+k)-.5)*.16,y:s.y+.08,z:s.z+(rnd(s.id*43+k)-.5)*.16,vx:0,vy:.35+rnd(s.id*53+k)*.35,vz:0,mass:1/GAS_PER_BB,id:s.id*GAS_PER_BB+k});return true},
     drift(g,dt,now){const t=now*.001;g.vx+=(Math.sin(g.id*.73+t*.37)*.18)*dt;g.vz+=(Math.cos(g.id*.61-t*.29)*.18)*dt;g.vy+=(.18-.045*g.vy)*dt;g.vx*=Math.pow(.94,dt);g.vz*=Math.pow(.94,dt);g.x+=g.vx*dt;g.y+=g.vy*dt;g.z+=g.vz*dt},

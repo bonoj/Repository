@@ -3702,6 +3702,224 @@ const geometryRegressionHealthy=geometryRegressionReport.every(r=>r.matchedExpec
 console.info('CHEMLAB geometry regression',geometryRegressionHealthy,geometryRegressionReport);
 if(!geometryRegressionHealthy)throw new Error('CHEMLAB geometry regression expectation mismatch');
 
+const workshopTabletopBetwixtable=buildBetwixtable({
+  name:'brass-glass-tabletop',
+  parent:legacyWorkshop,
+  // Deliberately airborne: a clean third spatial specimen with generous clearance
+  // above the floor-bound Crucible and Chem discovery objects.
+  at:new THREE.Vector3(0,GROUND_Y+4.6,0),
+  padding:.28,
+  build(root){
+    // Workshop materials first: existing brass and accepted translucent glass.
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(1.42,.105,10,48),brass);
+    rim.rotation.x=Math.PI/2;rim.castShadow=true;root.add(rim);
+    const glass=new THREE.Mesh(new THREE.CylinderGeometry(1.31,1.31,.045,48),glassFace);
+    glass.position.y=-.015;root.add(glass);
+    const edge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.CylinderGeometry(1.31,1.31,.045,48)),glassEdge);
+    edge.position.copy(glass.position);root.add(edge);
+
+    const workshopSnowglobe=createSnowglobe({parent:root});
+    root.userData.snowglobeRuntime=workshopSnowglobe;
+    // Preserve Workshop's presentation-facing compatibility handles.
+    for(const key of ['snowglobe','snowglobeLiquids','snowglobeRiver','canyonInitial','snowglobeSurvey','meteorWeather','updateCatchSwarm'])root.userData[key]=workshopSnowglobe.root.userData[key];
+    Object.assign(globalThis,workshopSnowglobe.api);
+    // Thoughtform: embodied possibility, deliberately not a ticket or interaction target.
+    // It hangs in shared view and carries enough semantic residue to recover the idea later.
+    const thoughtform=new THREE.Group();thoughtform.name='thoughtform:semantic-snapping-primitives';
+    thoughtform.position.set(1.38,-.52,0);root.add(thoughtform);
+    thoughtform.userData.thoughtform=Object.freeze({
+      kind:'thoughtform',
+      plan:'Semantic snapping-point LEGO primitives for model-forward prototyping: reason cheaply in 2D/node relationships, compose simple semantic parts through named snapping points, project/integrate into 3D, and use A-Z possibility fields to explore many forms before reality collapses onto one.',
+      interaction:'none'
+    });
+
+    // Short brass hanger; the cage begins visibly below the cylinder rather than intersecting it.
+    const stem=new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,.38,10),brass);
+    stem.position.y=.28;stem.castShadow=true;thoughtform.add(stem);
+
+    // Three-axis brass gimbal cage around an accepted Workshop-glass UV sphere.
+    // The cage is one child so it can turn slowly as a single quiet physical presence.
+    const cage=new THREE.Group();cage.name='thoughtform:gimbal-cage';cage.position.y=-.20;thoughtform.add(cage);thoughtform.userData.gimbalCage=cage;
+    thoughtform.userData.gimbalCage=cage;
+    const sphere=new THREE.Mesh(new THREE.SphereGeometry(.25,20,14),glassFace);
+    cage.add(sphere);
+    const sphereEdge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(.25,12,8)),glassEdge);
+    cage.add(sphereEdge);
+    for(const rotation of [[Math.PI/2,0,0],[0,Math.PI/2,0],[0,0,0]]){
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(.32,.025,8,28),brass);
+      ring.rotation.set(...rotation);ring.castShadow=true;cage.add(ring);
+    }
+    // Tiny dealer's-choice torchship retained as physical residue of the A-Z fleet pressure test.
+    // It is memory, not a new authority or modeling primitive.
+    const azTorch=new THREE.Group();azTorch.name='thoughtform:az-torchship';azTorch.scale.setScalar(.34);azTorch.position.set(0,-.015,0);cage.add(azTorch);
+    const azHull=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.30,8),brassDark);azTorch.add(azHull);
+    const azDrive=new THREE.Mesh(new THREE.CylinderGeometry(.095,.045,.10,10),warm);azDrive.position.y=-.20;azTorch.add(azDrive);
+    const azGlass=new THREE.Mesh(new THREE.SphereGeometry(.065,10,7),glassFace);azGlass.position.y=.20;azTorch.add(azGlass);
+    for(let i=0;i<6;i++){
+      const a=i*Math.PI/3,rail=new THREE.Mesh(new THREE.BoxGeometry(.018,.16,.018),brass);
+      rail.position.set(Math.cos(a)*.085,0,Math.sin(a)*.085);rail.rotation.y=a;azTorch.add(rail);
+    }
+
+    // Second Thoughtform: a cold-boot capsule for the earned Chemlab crossing.
+    // It is deliberately downstream residue: enough to resume instantly, never authority over code/science.
+    const chemThoughtform=new THREE.Group();chemThoughtform.name='thoughtform:chemlab-cold-boot';
+    chemThoughtform.position.set(-1.38,-.52,0);root.add(chemThoughtform);
+    chemThoughtform.userData.thoughtform=Object.freeze({
+      kind:'thoughtform',
+      title:'Chemlab cold boot',
+      accepted:Object.freeze(['CH4','H2O','CO2','C2H6','C2H4','C2H2','NH3']),
+      process:'science fixture -> project -> executable geometry regression -> browser/CI agreement -> Home pin -> Interstice runtime gate -> human inspection -> accept',
+      restart:'Resume after accepted ammonia. Preserve accepted corpus and regression gate. Add new geometry/invariants only when a specimen earns them. Current renderer may lag semantic bond order; graph and numerical geometry remain authoritative over decoration.',
+      debts:Object.freeze(['bond order is not yet rendered literally','tree-directed projector does not yet solve rings/cycles','semantic ports are metadata rather than a general compatibility solver','flash replacement does not yet dispose all GPU resources']),
+      interaction:'none'
+    });
+    const chemStem=new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,.38,10),brass);
+    chemStem.position.y=.28;chemStem.castShadow=true;chemThoughtform.add(chemStem);
+    const chemCage=new THREE.Group();chemCage.name='thoughtform:chemlab-gimbal-cage';chemCage.position.y=-.20;chemThoughtform.add(chemCage);chemThoughtform.userData.gimbalCage=chemCage;
+    chemThoughtform.userData.gimbalCage=chemCage;
+    const chemSphere=new THREE.Mesh(new THREE.SphereGeometry(.27,20,14),glassFace);chemCage.add(chemSphere);
+    chemCage.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(.27,12,8)),glassEdge));
+    for(const rotation of [[Math.PI/2,0,0],[0,Math.PI/2,0],[0,0,0]]){
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(.34,.025,8,28),brass);
+      ring.rotation.set(...rotation);ring.castShadow=true;chemCage.add(ring);
+    }
+    const atomMats={
+      carbon:new THREE.MeshStandardMaterial({color:0x303437,roughness:.42}),
+      oxygen:new THREE.MeshStandardMaterial({color:0xc83d32,roughness:.42}),
+      nitrogen:new THREE.MeshStandardMaterial({color:0x3659b8,roughness:.42}),
+      hydrogen:new THREE.MeshStandardMaterial({color:0xf1eee6,roughness:.52})
+    };
+    const miniSpecs=[
+      {k:'water',atoms:[['oxygen',0,0,0],['hydrogen',-.075,.07,0],['hydrogen',.075,.07,0]],r:.028},
+      {k:'methane',atoms:[['carbon',0,0,0],['hydrogen',0,.09,0],['hydrogen',.075,-.045,0],['hydrogen',-.04,-.045,.065],['hydrogen',-.04,-.045,-.065]],r:.025},
+      {k:'ammonia',atoms:[['nitrogen',0,0,0],['hydrogen',.07,-.055,0],['hydrogen',-.035,-.055,.061],['hydrogen',-.035,-.055,-.061]],r:.026}
+    ];
+    miniSpecs.forEach((spec,i)=>{
+      const molecule=new THREE.Group();molecule.name='thoughtform:mini:'+spec.k;
+      molecule.userData.phase=i*Math.PI*2/miniSpecs.length;chemCage.add(molecule);
+      for(const [kind,x,y,z] of spec.atoms){
+        const atom=new THREE.Mesh(new THREE.SphereGeometry(spec.r*(kind==='hydrogen'?.72:1),8,6),atomMats[kind]);
+        atom.position.set(x,y,z);molecule.add(atom);
+      }
+    });
+
+    // Third Thoughtform: Neptunian caretaker-carrier proposition. The miniature is
+    // deliberately active: a tiny carrier holds a three-drone deterministic patrol.
+    const nepThoughtform=new THREE.Group();nepThoughtform.name='thoughtform:neptunian-caretaker-carrier';
+    nepThoughtform.position.set(0,-.52,1.38);root.add(nepThoughtform);
+    nepThoughtform.userData.thoughtform=Object.freeze({
+      kind:'thoughtform',title:'Neptunian caretaker carrier',
+      plan:'A central laboratory caretaker carrier owns a deterministic drone swarm. Experiments expose only the interfaces they earn. The carrier dispatches small agents to deliver stimuli, run protocols, observe outcomes, record evidence, and return. Their ordinary activity continuously exercises the laboratory as a living regression suite while repeated deterministic workloads make long-term FPS drift observable.',
+      firstConsumer:'Jovian gravity: dispatch deterministic bearing packets, retain trajectories/evidence, vary one approach condition at a time, and report before the next trial.',
+      emergence:'Do not prebuild one agent per experiment. Jupiter earns the first protocol; a second real consumer earns shared carrier/dispatch semantics.',interaction:'none'
+    });
+    const nepStem=new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,.38,10),brass);nepStem.position.y=.28;nepThoughtform.add(nepStem);
+    const nepCage=new THREE.Group();nepCage.name='thoughtform:neptunian-gimbal-cage';nepCage.position.y=-.20;nepThoughtform.add(nepCage);nepThoughtform.userData.gimbalCage=nepCage;
+    nepCage.add(new THREE.Mesh(new THREE.SphereGeometry(.27,20,14),glassFace));
+    nepCage.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(.27,12,8)),glassEdge));
+    for(const rotation of [[Math.PI/2,0,0],[0,Math.PI/2,0],[0,0,0]]){const ring=new THREE.Mesh(new THREE.TorusGeometry(.34,.025,8,28),brass);ring.rotation.set(...rotation);nepCage.add(ring);}
+    const carrier=new THREE.Group();carrier.name='thoughtform:caretaker-carrier-mini';nepCage.add(carrier);
+    const carrierBody=new THREE.Mesh(new THREE.CylinderGeometry(.075,.105,.18,8),brassDark);carrierBody.rotation.z=Math.PI/2;carrier.add(carrierBody);
+    const carrierCore=new THREE.Mesh(new THREE.SphereGeometry(.055,10,7),warm);carrier.add(carrierCore);
+    for(let i=0;i<3;i++){const drone=new THREE.Mesh(new THREE.OctahedronGeometry(.025,0),steel);drone.name='thoughtform:caretaker-drone:'+i;drone.userData.phase=i*Math.PI*2/3;carrier.add(drone);}
+    nepThoughtform.userData.animate=(t)=>{carrier.rotation.y=t*.00022;for(let i=0;i<3;i++){const d=carrier.children[i+2],a=t*.0011+d.userData.phase;d.position.set(Math.cos(a)*.16,Math.sin(a*1.7)*.045,Math.sin(a)*.16);}}
+
+    // Fourth Thoughtform: deterministic self-authoring graph traversal.
+    // The white point is stable authority; apparent surrounding chaos is entirely seeded motion.
+    const graphMindThoughtform=new THREE.Group();graphMindThoughtform.name='thoughtform:deterministic-self-authoring-graph';
+    graphMindThoughtform.position.set(0,-.52,-1.38);root.add(graphMindThoughtform);
+    graphMindThoughtform.userData.thoughtform=Object.freeze({
+      kind:'thoughtform',title:'Deterministic self-authoring graph',
+      plan:'Build a tiny model-like authoring engine inside the runtime: deterministic graph traversal over a rich playground vocabulary, with a socketable external agent able to steer, inspect, or extend the traversal. It is not intended to imitate a true LLM; it is a proving ground for self-authored executable consequence, inspectable state, replay, and model/runtime collaboration.',
+      invariant:'Same graph, seed, state, and inputs produce the same traversal and authored result. Apparent complexity must remain replayable.',
+      emergence:'Start with the smallest traversal that can author a meaningful next graph state. Add memory, choice vocabulary, scoring, mutation, and agent sockets only when executable pressure earns them.',
+      interaction:'none'
+    });
+    const mindStem=new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,.38,10),brass);mindStem.position.y=.28;graphMindThoughtform.add(mindStem);
+    const mindCage=new THREE.Group();mindCage.name='thoughtform:graph-mind-gimbal-cage';mindCage.position.y=-.20;graphMindThoughtform.add(mindCage);graphMindThoughtform.userData.gimbalCage=mindCage;
+    mindCage.add(new THREE.Mesh(new THREE.SphereGeometry(.27,20,14),glassFace));
+    mindCage.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(.27,12,8)),glassEdge));
+    for(const rotation of [[Math.PI/2,0,0],[0,Math.PI/2,0],[0,0,0]]){const ring=new THREE.Mesh(new THREE.TorusGeometry(.34,.025,8,28),brass);ring.rotation.set(...rotation);mindCage.add(ring);}
+    const mindCore=new THREE.Mesh(new THREE.SphereGeometry(.025,10,8),new THREE.MeshBasicMaterial({color:0xffffff}));mindCore.name='thoughtform:graph-mind-star';mindCage.add(mindCore);
+    const shadowMat=new THREE.MeshBasicMaterial({color:0x070809,transparent:true,opacity:.86,depthWrite:false});
+    const shadows=new THREE.Group();shadows.name='thoughtform:graph-mind-shadow';mindCage.add(shadows);
+    let mindSeed=0x51f15e;
+    const mindRand=()=>{mindSeed=(Math.imul(mindSeed,1664525)+1013904223)>>>0;return mindSeed/4294967296};
+    for(let i=0;i<19;i++){
+      const shard=new THREE.Mesh(new THREE.TetrahedronGeometry(.018+mindRand()*.035,0),shadowMat);
+      shard.userData.orbit=Object.freeze({r:.055+mindRand()*.17,phase:mindRand()*Math.PI*2,speed:.00055+mindRand()*.00135,tilt:(mindRand()-.5)*2.4,wobble:.4+mindRand()*1.9,spin:.001+mindRand()*.003});
+      shadows.add(shard);
+    }
+    graphMindThoughtform.userData.animate=(t)=>{
+      for(const shard of shadows.children){
+        const q=shard.userData.orbit,a=q.phase+t*q.speed;
+        shard.position.set(Math.cos(a)*q.r,Math.sin(a*q.wobble)*q.r*.48,Math.sin(a)*q.r);
+        shard.position.applyAxisAngle(new THREE.Vector3(1,0,0),q.tilt);
+        shard.rotation.set(a*q.wobble,a*1.37+t*q.spin,a*.73);
+      }
+    };
+
+    // Fifth Thoughtform: Rendezvous. Two wandering eyes discover a shared path,
+    // exchange one pulse, then separate: seek -> meet -> exchange -> separate.
+    const rendezvousThoughtform=new THREE.Group();rendezvousThoughtform.name='thoughtform:rendezvous';
+    rendezvousThoughtform.position.set(.98,-.52,.98);root.add(rendezvousThoughtform);
+    rendezvousThoughtform.userData.thoughtform=Object.freeze({
+      kind:'thoughtform',title:'Rendezvous',
+      question:'Can two independently instantiated things discover a sufficiently cheap shared surface to exchange consequence?',
+      toy:'Two eyes wander independently. When they establish a common path, a filament appears and one pulse crosses it; then the path breaks and wandering resumes.',
+      invariant:'Transport is the experiment. Do not assume inference, durable storage, or a named networking architecture before the crossing earns it.',
+      interaction:'none'
+    });
+    const rendezvousStem=new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,.38,10),brass);rendezvousStem.position.y=.28;rendezvousThoughtform.add(rendezvousStem);
+    const rendezvousCage=new THREE.Group();rendezvousCage.name='thoughtform:rendezvous-gimbal-cage';rendezvousCage.position.y=-.20;rendezvousThoughtform.add(rendezvousCage);rendezvousThoughtform.userData.gimbalCage=rendezvousCage;
+    rendezvousCage.add(new THREE.Mesh(new THREE.SphereGeometry(.27,20,14),glassFace));
+    rendezvousCage.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(.27,12,8)),glassEdge));
+    for(const rotation of [[Math.PI/2,0,0],[0,Math.PI/2,0],[0,0,0]]){const ring=new THREE.Mesh(new THREE.TorusGeometry(.34,.025,8,28),brass);ring.rotation.set(...rotation);rendezvousCage.add(ring);}
+    const eyeMat=new THREE.MeshStandardMaterial({color:0xf4f1e8,roughness:.38}),pupilMat=new THREE.MeshBasicMaterial({color:0x08090a});
+    function rendezvousEye(name,seed){
+      const eye=new THREE.Group();eye.name=name;rendezvousCage.add(eye);eye.add(new THREE.Mesh(new THREE.SphereGeometry(.055,12,8),eyeMat));
+      const pupil=new THREE.Mesh(new THREE.SphereGeometry(.019,10,7),pupilMat);pupil.name=name+':pupil';eye.add(pupil);
+      eye.userData.pupil=pupil;eye.userData.seed=seed;return eye;
+    }
+    const rendezvousA=rendezvousEye('thoughtform:rendezvous-eye-a',.37),rendezvousB=rendezvousEye('thoughtform:rendezvous-eye-b',2.41);
+    const filamentGeometry=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);
+    const filament=new THREE.Line(filamentGeometry,new THREE.LineBasicMaterial({color:0xffd7a0,transparent:true,opacity:.72,depthWrite:false}));filament.name='thoughtform:rendezvous-filament';filament.visible=false;rendezvousCage.add(filament);
+    const rendezvousPulse=new THREE.Mesh(new THREE.SphereGeometry(.018,10,7),warm);rendezvousPulse.name='thoughtform:rendezvous-pulse';rendezvousPulse.visible=false;rendezvousCage.add(rendezvousPulse);
+    const rendezvousLook=(eye,direction)=>{const d=direction.clone();if(d.lengthSq()>1e-8)d.normalize();eye.userData.pupil.position.copy(d.multiplyScalar(.047));};
+    const rendezvousWander=(eye,t,phase)=>{
+      // Bounded 3-D Lissajous wander. The eye center stays well inside the glass
+      // shell and the paired phases keep the two bodies from clipping one another.
+      const a=t*.00113+phase,b=t*.00167+phase*1.91,c=t*.00083+phase*.73;
+      eye.position.set(Math.sin(a)*.145,Math.sin(b)*.105,Math.sin(c)*.145);
+      const jitter=new THREE.Vector3(Math.sin(t*.0107+phase),Math.sin(t*.0131+phase*2.3),Math.sin(t*.0091+phase*.4));
+      rendezvousLook(eye,jitter);
+    };
+    rendezvousThoughtform.userData.animate=(t)=>{
+      // Four seconds of independent search, then two seconds of mutual notice,
+      // intent gaze and packet exchange. Smoothstep prevents teleporting at phase edges.
+      const cycle=(t%6000)/6000,meeting=cycle>=2/3;
+      rendezvousWander(rendezvousA,t,rendezvousA.userData.seed);rendezvousWander(rendezvousB,t,rendezvousB.userData.seed);
+      const delta=rendezvousB.position.clone().sub(rendezvousA.position),distance=delta.length(),minDistance=.125;
+      if(distance<minDistance&&distance>1e-6){const push=delta.normalize().multiplyScalar((minDistance-distance)*.5);rendezvousA.position.addScaledVector(push,-1);rendezvousB.position.add(push);}
+      if(meeting){
+        const u=(cycle-2/3)/(1/3),attention=Math.min(1,u/.12),release=Math.min(1,(1-u)/.12),intent=Math.min(attention,release);
+        const midpoint=rendezvousA.position.clone().add(rendezvousB.position).multiplyScalar(.5);
+        const axis=rendezvousB.position.clone().sub(rendezvousA.position);if(axis.lengthSq()<1e-8)axis.set(1,0,0);axis.normalize();
+        const meetA=midpoint.clone().addScaledVector(axis,-.105),meetB=midpoint.clone().addScaledVector(axis,.105);
+        const ease=intent*intent*(3-2*intent);rendezvousA.position.lerp(meetA,ease);rendezvousB.position.lerp(meetB,ease);
+        rendezvousLook(rendezvousA,rendezvousB.position.clone().sub(rendezvousA.position));rendezvousLook(rendezvousB,rendezvousA.position.clone().sub(rendezvousB.position));
+        filament.visible=intent>.55;rendezvousPulse.visible=filament.visible;
+        if(filament.visible){
+          filamentGeometry.setFromPoints([rendezvousA.position,rendezvousB.position]);
+          const packet=Math.max(0,Math.min(1,(u-.22)/.56));rendezvousPulse.position.lerpVectors(rendezvousA.position,rendezvousB.position,packet);
+        }
+      }else{filament.visible=false;rendezvousPulse.visible=false;}
+      window.vestibuleDirty=true;
+    };
+  }
+});
+
+
 // Snowglobe world authority: no Betwixtable, focus or Workshop ownership.
 function createSnowglobe({parent,scale=.025,seed=741}={}){
   if(!parent)throw new Error('Snowglobe requires a scene parent');
@@ -4150,224 +4368,6 @@ function createSnowglobe({parent,scale=.025,seed=741}={}){
   function dispose(){if(disposed)return;disposed=true;parent.remove(root);}
   return {root,api,update,reset,dispose,inspect:()=>({time,terrain:api.SnowglobeTerrain.inspect(),liquids:api.SnowglobeLiquids.inspect(),river:api.SnowglobeRiver.inspect()})};
 }
-
-const workshopTabletopBetwixtable=buildBetwixtable({
-  name:'brass-glass-tabletop',
-  parent:legacyWorkshop,
-  // Deliberately airborne: a clean third spatial specimen with generous clearance
-  // above the floor-bound Crucible and Chem discovery objects.
-  at:new THREE.Vector3(0,GROUND_Y+4.6,0),
-  padding:.28,
-  build(root){
-    // Workshop materials first: existing brass and accepted translucent glass.
-    const rim=new THREE.Mesh(new THREE.TorusGeometry(1.42,.105,10,48),brass);
-    rim.rotation.x=Math.PI/2;rim.castShadow=true;root.add(rim);
-    const glass=new THREE.Mesh(new THREE.CylinderGeometry(1.31,1.31,.045,48),glassFace);
-    glass.position.y=-.015;root.add(glass);
-    const edge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.CylinderGeometry(1.31,1.31,.045,48)),glassEdge);
-    edge.position.copy(glass.position);root.add(edge);
-
-    const workshopSnowglobe=createSnowglobe({parent:root});
-    root.userData.snowglobeRuntime=workshopSnowglobe;
-    // Preserve Workshop's presentation-facing compatibility handles.
-    for(const key of ['snowglobe','snowglobeLiquids','snowglobeRiver','canyonInitial','snowglobeSurvey','meteorWeather','updateCatchSwarm'])root.userData[key]=workshopSnowglobe.root.userData[key];
-    Object.assign(globalThis,workshopSnowglobe.api);
-    // Thoughtform: embodied possibility, deliberately not a ticket or interaction target.
-    // It hangs in shared view and carries enough semantic residue to recover the idea later.
-    const thoughtform=new THREE.Group();thoughtform.name='thoughtform:semantic-snapping-primitives';
-    thoughtform.position.set(1.38,-.52,0);root.add(thoughtform);
-    thoughtform.userData.thoughtform=Object.freeze({
-      kind:'thoughtform',
-      plan:'Semantic snapping-point LEGO primitives for model-forward prototyping: reason cheaply in 2D/node relationships, compose simple semantic parts through named snapping points, project/integrate into 3D, and use A-Z possibility fields to explore many forms before reality collapses onto one.',
-      interaction:'none'
-    });
-
-    // Short brass hanger; the cage begins visibly below the cylinder rather than intersecting it.
-    const stem=new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,.38,10),brass);
-    stem.position.y=.28;stem.castShadow=true;thoughtform.add(stem);
-
-    // Three-axis brass gimbal cage around an accepted Workshop-glass UV sphere.
-    // The cage is one child so it can turn slowly as a single quiet physical presence.
-    const cage=new THREE.Group();cage.name='thoughtform:gimbal-cage';cage.position.y=-.20;thoughtform.add(cage);thoughtform.userData.gimbalCage=cage;
-    thoughtform.userData.gimbalCage=cage;
-    const sphere=new THREE.Mesh(new THREE.SphereGeometry(.25,20,14),glassFace);
-    cage.add(sphere);
-    const sphereEdge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(.25,12,8)),glassEdge);
-    cage.add(sphereEdge);
-    for(const rotation of [[Math.PI/2,0,0],[0,Math.PI/2,0],[0,0,0]]){
-      const ring=new THREE.Mesh(new THREE.TorusGeometry(.32,.025,8,28),brass);
-      ring.rotation.set(...rotation);ring.castShadow=true;cage.add(ring);
-    }
-    // Tiny dealer's-choice torchship retained as physical residue of the A-Z fleet pressure test.
-    // It is memory, not a new authority or modeling primitive.
-    const azTorch=new THREE.Group();azTorch.name='thoughtform:az-torchship';azTorch.scale.setScalar(.34);azTorch.position.set(0,-.015,0);cage.add(azTorch);
-    const azHull=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.30,8),brassDark);azTorch.add(azHull);
-    const azDrive=new THREE.Mesh(new THREE.CylinderGeometry(.095,.045,.10,10),warm);azDrive.position.y=-.20;azTorch.add(azDrive);
-    const azGlass=new THREE.Mesh(new THREE.SphereGeometry(.065,10,7),glassFace);azGlass.position.y=.20;azTorch.add(azGlass);
-    for(let i=0;i<6;i++){
-      const a=i*Math.PI/3,rail=new THREE.Mesh(new THREE.BoxGeometry(.018,.16,.018),brass);
-      rail.position.set(Math.cos(a)*.085,0,Math.sin(a)*.085);rail.rotation.y=a;azTorch.add(rail);
-    }
-
-    // Second Thoughtform: a cold-boot capsule for the earned Chemlab crossing.
-    // It is deliberately downstream residue: enough to resume instantly, never authority over code/science.
-    const chemThoughtform=new THREE.Group();chemThoughtform.name='thoughtform:chemlab-cold-boot';
-    chemThoughtform.position.set(-1.38,-.52,0);root.add(chemThoughtform);
-    chemThoughtform.userData.thoughtform=Object.freeze({
-      kind:'thoughtform',
-      title:'Chemlab cold boot',
-      accepted:Object.freeze(['CH4','H2O','CO2','C2H6','C2H4','C2H2','NH3']),
-      process:'science fixture -> project -> executable geometry regression -> browser/CI agreement -> Home pin -> Interstice runtime gate -> human inspection -> accept',
-      restart:'Resume after accepted ammonia. Preserve accepted corpus and regression gate. Add new geometry/invariants only when a specimen earns them. Current renderer may lag semantic bond order; graph and numerical geometry remain authoritative over decoration.',
-      debts:Object.freeze(['bond order is not yet rendered literally','tree-directed projector does not yet solve rings/cycles','semantic ports are metadata rather than a general compatibility solver','flash replacement does not yet dispose all GPU resources']),
-      interaction:'none'
-    });
-    const chemStem=new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,.38,10),brass);
-    chemStem.position.y=.28;chemStem.castShadow=true;chemThoughtform.add(chemStem);
-    const chemCage=new THREE.Group();chemCage.name='thoughtform:chemlab-gimbal-cage';chemCage.position.y=-.20;chemThoughtform.add(chemCage);chemThoughtform.userData.gimbalCage=chemCage;
-    chemThoughtform.userData.gimbalCage=chemCage;
-    const chemSphere=new THREE.Mesh(new THREE.SphereGeometry(.27,20,14),glassFace);chemCage.add(chemSphere);
-    chemCage.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(.27,12,8)),glassEdge));
-    for(const rotation of [[Math.PI/2,0,0],[0,Math.PI/2,0],[0,0,0]]){
-      const ring=new THREE.Mesh(new THREE.TorusGeometry(.34,.025,8,28),brass);
-      ring.rotation.set(...rotation);ring.castShadow=true;chemCage.add(ring);
-    }
-    const atomMats={
-      carbon:new THREE.MeshStandardMaterial({color:0x303437,roughness:.42}),
-      oxygen:new THREE.MeshStandardMaterial({color:0xc83d32,roughness:.42}),
-      nitrogen:new THREE.MeshStandardMaterial({color:0x3659b8,roughness:.42}),
-      hydrogen:new THREE.MeshStandardMaterial({color:0xf1eee6,roughness:.52})
-    };
-    const miniSpecs=[
-      {k:'water',atoms:[['oxygen',0,0,0],['hydrogen',-.075,.07,0],['hydrogen',.075,.07,0]],r:.028},
-      {k:'methane',atoms:[['carbon',0,0,0],['hydrogen',0,.09,0],['hydrogen',.075,-.045,0],['hydrogen',-.04,-.045,.065],['hydrogen',-.04,-.045,-.065]],r:.025},
-      {k:'ammonia',atoms:[['nitrogen',0,0,0],['hydrogen',.07,-.055,0],['hydrogen',-.035,-.055,.061],['hydrogen',-.035,-.055,-.061]],r:.026}
-    ];
-    miniSpecs.forEach((spec,i)=>{
-      const molecule=new THREE.Group();molecule.name='thoughtform:mini:'+spec.k;
-      molecule.userData.phase=i*Math.PI*2/miniSpecs.length;chemCage.add(molecule);
-      for(const [kind,x,y,z] of spec.atoms){
-        const atom=new THREE.Mesh(new THREE.SphereGeometry(spec.r*(kind==='hydrogen'?.72:1),8,6),atomMats[kind]);
-        atom.position.set(x,y,z);molecule.add(atom);
-      }
-    });
-
-    // Third Thoughtform: Neptunian caretaker-carrier proposition. The miniature is
-    // deliberately active: a tiny carrier holds a three-drone deterministic patrol.
-    const nepThoughtform=new THREE.Group();nepThoughtform.name='thoughtform:neptunian-caretaker-carrier';
-    nepThoughtform.position.set(0,-.52,1.38);root.add(nepThoughtform);
-    nepThoughtform.userData.thoughtform=Object.freeze({
-      kind:'thoughtform',title:'Neptunian caretaker carrier',
-      plan:'A central laboratory caretaker carrier owns a deterministic drone swarm. Experiments expose only the interfaces they earn. The carrier dispatches small agents to deliver stimuli, run protocols, observe outcomes, record evidence, and return. Their ordinary activity continuously exercises the laboratory as a living regression suite while repeated deterministic workloads make long-term FPS drift observable.',
-      firstConsumer:'Jovian gravity: dispatch deterministic bearing packets, retain trajectories/evidence, vary one approach condition at a time, and report before the next trial.',
-      emergence:'Do not prebuild one agent per experiment. Jupiter earns the first protocol; a second real consumer earns shared carrier/dispatch semantics.',interaction:'none'
-    });
-    const nepStem=new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,.38,10),brass);nepStem.position.y=.28;nepThoughtform.add(nepStem);
-    const nepCage=new THREE.Group();nepCage.name='thoughtform:neptunian-gimbal-cage';nepCage.position.y=-.20;nepThoughtform.add(nepCage);nepThoughtform.userData.gimbalCage=nepCage;
-    nepCage.add(new THREE.Mesh(new THREE.SphereGeometry(.27,20,14),glassFace));
-    nepCage.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(.27,12,8)),glassEdge));
-    for(const rotation of [[Math.PI/2,0,0],[0,Math.PI/2,0],[0,0,0]]){const ring=new THREE.Mesh(new THREE.TorusGeometry(.34,.025,8,28),brass);ring.rotation.set(...rotation);nepCage.add(ring);}
-    const carrier=new THREE.Group();carrier.name='thoughtform:caretaker-carrier-mini';nepCage.add(carrier);
-    const carrierBody=new THREE.Mesh(new THREE.CylinderGeometry(.075,.105,.18,8),brassDark);carrierBody.rotation.z=Math.PI/2;carrier.add(carrierBody);
-    const carrierCore=new THREE.Mesh(new THREE.SphereGeometry(.055,10,7),warm);carrier.add(carrierCore);
-    for(let i=0;i<3;i++){const drone=new THREE.Mesh(new THREE.OctahedronGeometry(.025,0),steel);drone.name='thoughtform:caretaker-drone:'+i;drone.userData.phase=i*Math.PI*2/3;carrier.add(drone);}
-    nepThoughtform.userData.animate=(t)=>{carrier.rotation.y=t*.00022;for(let i=0;i<3;i++){const d=carrier.children[i+2],a=t*.0011+d.userData.phase;d.position.set(Math.cos(a)*.16,Math.sin(a*1.7)*.045,Math.sin(a)*.16);}}
-
-    // Fourth Thoughtform: deterministic self-authoring graph traversal.
-    // The white point is stable authority; apparent surrounding chaos is entirely seeded motion.
-    const graphMindThoughtform=new THREE.Group();graphMindThoughtform.name='thoughtform:deterministic-self-authoring-graph';
-    graphMindThoughtform.position.set(0,-.52,-1.38);root.add(graphMindThoughtform);
-    graphMindThoughtform.userData.thoughtform=Object.freeze({
-      kind:'thoughtform',title:'Deterministic self-authoring graph',
-      plan:'Build a tiny model-like authoring engine inside the runtime: deterministic graph traversal over a rich playground vocabulary, with a socketable external agent able to steer, inspect, or extend the traversal. It is not intended to imitate a true LLM; it is a proving ground for self-authored executable consequence, inspectable state, replay, and model/runtime collaboration.',
-      invariant:'Same graph, seed, state, and inputs produce the same traversal and authored result. Apparent complexity must remain replayable.',
-      emergence:'Start with the smallest traversal that can author a meaningful next graph state. Add memory, choice vocabulary, scoring, mutation, and agent sockets only when executable pressure earns them.',
-      interaction:'none'
-    });
-    const mindStem=new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,.38,10),brass);mindStem.position.y=.28;graphMindThoughtform.add(mindStem);
-    const mindCage=new THREE.Group();mindCage.name='thoughtform:graph-mind-gimbal-cage';mindCage.position.y=-.20;graphMindThoughtform.add(mindCage);graphMindThoughtform.userData.gimbalCage=mindCage;
-    mindCage.add(new THREE.Mesh(new THREE.SphereGeometry(.27,20,14),glassFace));
-    mindCage.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(.27,12,8)),glassEdge));
-    for(const rotation of [[Math.PI/2,0,0],[0,Math.PI/2,0],[0,0,0]]){const ring=new THREE.Mesh(new THREE.TorusGeometry(.34,.025,8,28),brass);ring.rotation.set(...rotation);mindCage.add(ring);}
-    const mindCore=new THREE.Mesh(new THREE.SphereGeometry(.025,10,8),new THREE.MeshBasicMaterial({color:0xffffff}));mindCore.name='thoughtform:graph-mind-star';mindCage.add(mindCore);
-    const shadowMat=new THREE.MeshBasicMaterial({color:0x070809,transparent:true,opacity:.86,depthWrite:false});
-    const shadows=new THREE.Group();shadows.name='thoughtform:graph-mind-shadow';mindCage.add(shadows);
-    let mindSeed=0x51f15e;
-    const mindRand=()=>{mindSeed=(Math.imul(mindSeed,1664525)+1013904223)>>>0;return mindSeed/4294967296};
-    for(let i=0;i<19;i++){
-      const shard=new THREE.Mesh(new THREE.TetrahedronGeometry(.018+mindRand()*.035,0),shadowMat);
-      shard.userData.orbit=Object.freeze({r:.055+mindRand()*.17,phase:mindRand()*Math.PI*2,speed:.00055+mindRand()*.00135,tilt:(mindRand()-.5)*2.4,wobble:.4+mindRand()*1.9,spin:.001+mindRand()*.003});
-      shadows.add(shard);
-    }
-    graphMindThoughtform.userData.animate=(t)=>{
-      for(const shard of shadows.children){
-        const q=shard.userData.orbit,a=q.phase+t*q.speed;
-        shard.position.set(Math.cos(a)*q.r,Math.sin(a*q.wobble)*q.r*.48,Math.sin(a)*q.r);
-        shard.position.applyAxisAngle(new THREE.Vector3(1,0,0),q.tilt);
-        shard.rotation.set(a*q.wobble,a*1.37+t*q.spin,a*.73);
-      }
-    };
-
-    // Fifth Thoughtform: Rendezvous. Two wandering eyes discover a shared path,
-    // exchange one pulse, then separate: seek -> meet -> exchange -> separate.
-    const rendezvousThoughtform=new THREE.Group();rendezvousThoughtform.name='thoughtform:rendezvous';
-    rendezvousThoughtform.position.set(.98,-.52,.98);root.add(rendezvousThoughtform);
-    rendezvousThoughtform.userData.thoughtform=Object.freeze({
-      kind:'thoughtform',title:'Rendezvous',
-      question:'Can two independently instantiated things discover a sufficiently cheap shared surface to exchange consequence?',
-      toy:'Two eyes wander independently. When they establish a common path, a filament appears and one pulse crosses it; then the path breaks and wandering resumes.',
-      invariant:'Transport is the experiment. Do not assume inference, durable storage, or a named networking architecture before the crossing earns it.',
-      interaction:'none'
-    });
-    const rendezvousStem=new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,.38,10),brass);rendezvousStem.position.y=.28;rendezvousThoughtform.add(rendezvousStem);
-    const rendezvousCage=new THREE.Group();rendezvousCage.name='thoughtform:rendezvous-gimbal-cage';rendezvousCage.position.y=-.20;rendezvousThoughtform.add(rendezvousCage);rendezvousThoughtform.userData.gimbalCage=rendezvousCage;
-    rendezvousCage.add(new THREE.Mesh(new THREE.SphereGeometry(.27,20,14),glassFace));
-    rendezvousCage.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.SphereGeometry(.27,12,8)),glassEdge));
-    for(const rotation of [[Math.PI/2,0,0],[0,Math.PI/2,0],[0,0,0]]){const ring=new THREE.Mesh(new THREE.TorusGeometry(.34,.025,8,28),brass);ring.rotation.set(...rotation);rendezvousCage.add(ring);}
-    const eyeMat=new THREE.MeshStandardMaterial({color:0xf4f1e8,roughness:.38}),pupilMat=new THREE.MeshBasicMaterial({color:0x08090a});
-    function rendezvousEye(name,seed){
-      const eye=new THREE.Group();eye.name=name;rendezvousCage.add(eye);eye.add(new THREE.Mesh(new THREE.SphereGeometry(.055,12,8),eyeMat));
-      const pupil=new THREE.Mesh(new THREE.SphereGeometry(.019,10,7),pupilMat);pupil.name=name+':pupil';eye.add(pupil);
-      eye.userData.pupil=pupil;eye.userData.seed=seed;return eye;
-    }
-    const rendezvousA=rendezvousEye('thoughtform:rendezvous-eye-a',.37),rendezvousB=rendezvousEye('thoughtform:rendezvous-eye-b',2.41);
-    const filamentGeometry=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);
-    const filament=new THREE.Line(filamentGeometry,new THREE.LineBasicMaterial({color:0xffd7a0,transparent:true,opacity:.72,depthWrite:false}));filament.name='thoughtform:rendezvous-filament';filament.visible=false;rendezvousCage.add(filament);
-    const rendezvousPulse=new THREE.Mesh(new THREE.SphereGeometry(.018,10,7),warm);rendezvousPulse.name='thoughtform:rendezvous-pulse';rendezvousPulse.visible=false;rendezvousCage.add(rendezvousPulse);
-    const rendezvousLook=(eye,direction)=>{const d=direction.clone();if(d.lengthSq()>1e-8)d.normalize();eye.userData.pupil.position.copy(d.multiplyScalar(.047));};
-    const rendezvousWander=(eye,t,phase)=>{
-      // Bounded 3-D Lissajous wander. The eye center stays well inside the glass
-      // shell and the paired phases keep the two bodies from clipping one another.
-      const a=t*.00113+phase,b=t*.00167+phase*1.91,c=t*.00083+phase*.73;
-      eye.position.set(Math.sin(a)*.145,Math.sin(b)*.105,Math.sin(c)*.145);
-      const jitter=new THREE.Vector3(Math.sin(t*.0107+phase),Math.sin(t*.0131+phase*2.3),Math.sin(t*.0091+phase*.4));
-      rendezvousLook(eye,jitter);
-    };
-    rendezvousThoughtform.userData.animate=(t)=>{
-      // Four seconds of independent search, then two seconds of mutual notice,
-      // intent gaze and packet exchange. Smoothstep prevents teleporting at phase edges.
-      const cycle=(t%6000)/6000,meeting=cycle>=2/3;
-      rendezvousWander(rendezvousA,t,rendezvousA.userData.seed);rendezvousWander(rendezvousB,t,rendezvousB.userData.seed);
-      const delta=rendezvousB.position.clone().sub(rendezvousA.position),distance=delta.length(),minDistance=.125;
-      if(distance<minDistance&&distance>1e-6){const push=delta.normalize().multiplyScalar((minDistance-distance)*.5);rendezvousA.position.addScaledVector(push,-1);rendezvousB.position.add(push);}
-      if(meeting){
-        const u=(cycle-2/3)/(1/3),attention=Math.min(1,u/.12),release=Math.min(1,(1-u)/.12),intent=Math.min(attention,release);
-        const midpoint=rendezvousA.position.clone().add(rendezvousB.position).multiplyScalar(.5);
-        const axis=rendezvousB.position.clone().sub(rendezvousA.position);if(axis.lengthSq()<1e-8)axis.set(1,0,0);axis.normalize();
-        const meetA=midpoint.clone().addScaledVector(axis,-.105),meetB=midpoint.clone().addScaledVector(axis,.105);
-        const ease=intent*intent*(3-2*intent);rendezvousA.position.lerp(meetA,ease);rendezvousB.position.lerp(meetB,ease);
-        rendezvousLook(rendezvousA,rendezvousB.position.clone().sub(rendezvousA.position));rendezvousLook(rendezvousB,rendezvousA.position.clone().sub(rendezvousB.position));
-        filament.visible=intent>.55;rendezvousPulse.visible=filament.visible;
-        if(filament.visible){
-          filamentGeometry.setFromPoints([rendezvousA.position,rendezvousB.position]);
-          const packet=Math.max(0,Math.min(1,(u-.22)/.56));rendezvousPulse.position.lerpVectors(rendezvousA.position,rendezvousB.position,packet);
-        }
-      }else{filament.visible=false;rendezvousPulse.visible=false;}
-      window.vestibuleDirty=true;
-    };
-  }
-});
-
 
 // The presentation is optional; the Snowglobe world does not know its host.
 const betwixtSnowglobeHost=buildBetwixtable({name:'snowglobe',parent:betwixtPlace,padding:.28,build(root){

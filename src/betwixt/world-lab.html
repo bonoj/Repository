@@ -4169,6 +4169,8 @@ const workshopTabletopBetwixtable=buildBetwixtable({
 
     const workshopSnowglobe=createSnowglobe({parent:root});
     root.userData.snowglobeRuntime=workshopSnowglobe;
+    // Preserve Workshop's presentation-facing compatibility handles.
+    for(const key of ['snowglobe','snowglobeLiquids','snowglobeRiver','canyonInitial','snowglobeSurvey','meteorWeather','updateCatchSwarm'])root.userData[key]=workshopSnowglobe.root.userData[key];
     Object.assign(globalThis,workshopSnowglobe.api);
     // Thoughtform: embodied possibility, deliberately not a ticket or interaction target.
     // It hangs in shared view and carries enough semantic residue to recover the idea later.

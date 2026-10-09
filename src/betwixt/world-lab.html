@@ -6474,7 +6474,8 @@ renderer.setAnimationLoop((now)=>{
   const workshopSnowglobeRuntime=workshopTabletopBetwixtable.userData.betwixtable.presentation.userData.snowglobeRuntime;
   if(legacyWorkshop.visible)workshopSnowglobeRuntime?.update(now);
   else workshopSnowglobeRuntime?.suspend();
-  betwixtSnowglobe.update(now);
+  if(betwixtPlace.visible)betwixtSnowglobe.update(now);
+  else betwixtSnowglobe.suspend();
   updateWorkshopCrucibleOrb(now);
   updateWorldD20(now);
 

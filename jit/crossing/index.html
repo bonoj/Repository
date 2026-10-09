@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Crossing 01 — GitHub Ingest</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#eee;background:#121719}body{max-width:560px;margin:0 auto;padding:28px 18px;line-height:1.5}h1{font-size:1.65rem;margin-bottom:0}p,small{color:#aebdc1}label{display:block;margin:20px 0 7px}input,textarea,button{font:inherit;box-sizing:border-box;width:100%;border-radius:9px;padding:13px;border:1px solid #526267;background:#202b2e;color:#fff}textarea{min-height:120px;resize:vertical}button{margin-top:14px;background:#d5a55e;color:#181818;font-weight:700;border:0;cursor:pointer}button:disabled{opacity:.5}a{color:#e8bc79}pre{white-space:pre-wrap;overflow-wrap:anywhere;padding:14px;background:#202b2e;border-radius:9px;min-height:65px} .muted{font-size:.9rem} .status{font-weight:700}
+</style>
+</head>
+<body>
+<h1>Crossing 01</h1><p>Static page → authenticated GitHub write → public Observer report.</p>
+<p class="muted">Experimental transport test, not GitHub OAuth. The token is held only in this page's memory, never saved in localStorage, cookies, or the repository. Use a short-lived fine-grained personal access token restricted to <a href="https://github.com/bonoj/Ingest">bonoj/Ingest</a> with Contents: Read and write. Do not use on a device you don't trust.</p>
+<label for="token">GitHub token (runtime only)</label>
+<input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
+<label for="observation">Observer report</label>
+<textarea id="observation">Crossing test: the observer saw a marble.</textarea>
+<button id="send">Send report</button>
+<p id="state" class="status" aria-live="polite">Disconnected</p>
+<pre id="output">No report submitted.</pre>
+<p class="muted">Reports are public. Do not submit secrets, personal data, or private world knowledge. Each attempt creates a unique JSON file; failed attempts do not retry automatically.</p>
+<script>
+'use strict';
+const owner='bonoj',repo='Ingest';
+const token=document.getElementById('token');
+const send=document.getElementById('send');
+const state=document.getElementById('state');
+const output=document.getElementById('output');
+const observation=document.getElementById('observation');
+function status(s){state.textContent=s}
+function toBase64(text){const bytes=new TextEncoder().encode(text);let binary='';for(const b of bytes)binary+=String.fromCharCode(b);return btoa(binary)}
+send.addEventListener('click',async()=>{
+ const credential=token.value.trim();
+ if(!credential){status('Disconnected — token required');return}
+ const note=observation.value.trim();
+ if(!note){status('No observation to send');return}
+ send.disabled=true;status('Sending…');output.textContent='Waiting for GitHub response.';
+ const id=crypto.randomUUID();
+ const report={id,observed_at:new Date().toISOString(),source:'crossing-01',build_sha:'jit',scene:'crossing',observations:{note}};
+ const path='reports/'+id+'.json';
+ const endpoint='https://api.github.com/repos/'+owner+'/'+repo+'/contents/'+path;
+ try{
+  const res=await fetch(endpoint,{method:'PUT',headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+credential,'X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'},body:JSON.stringify({message:'Ingest Observer report '+id,content:toBase64(JSON.stringify(report,null,2))})});
+  if(!res.ok){const body=await res.text();throw new Error('GitHub write HTTP '+res.status+': '+body.slice(0,350))}
+  status('Delivered — verifying public read…');
+  const raw='https://raw.githubusercontent.com/'+owner+'/'+repo+'/main/'+path;
+  // Raw GitHub CDN can lag; use authenticated Contents API for immediate read-after-write verification.
+  const check=await fetch(endpoint,{headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+credential,'X-GitHub-Api-Version':'2022-11-28'}});
+  if(!check.ok)throw new Error('Write succeeded; verification HTTP '+check.status);
+  const found=await check.json();
+  const decoded=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(found.content.replace(/\s/g,'')),c=>c.charCodeAt(0))));
+  if(decoded.id!==id)throw new Error('Write succeeded; report ID mismatch');
+  status('Delivered and verified');
+  output.textContent='Report ID: '+id+'\nVerified GitHub API read.\nPublic URL: '+raw;
+  token.value=''; // discard credential after successful use
+ }catch(err){status('Not verified');output.textContent=String(err.message||err)+'\n\nIf a commit succeeded, inspect Ingest before retrying.'}
+ finally{send.disabled=false}
+});
+</script>
+</body></html>

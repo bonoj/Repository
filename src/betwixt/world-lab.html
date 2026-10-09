@@ -2986,21 +2986,6 @@ function updatePropulsionModules(now){
   if(propulsionModules.length)window.vestibuleDirty=true;
 }
 
-// Four independent propulsion modules on Catch's lateral receiver docks.
-// The open sky mouth and pipe throat remain unobstructed.
-if(globalThis.SixCitiesCatch?.receiver){
-  const engines=[];
-  for(const [i,id] of ['yp','yn','zp','zn'].entries()){
-    const dock=globalThis.SixCitiesCatch.receiver.getObjectByName('catch:receiver:dock:'+id);
-    if(!dock)throw new Error('Catch propulsion dock missing: '+id);
-    const engine=makePropulsionModule({name:'catch:propulsion:'+id,parent:dock});
-    engine.phase=i*Math.PI/2+.17;
-    engine.tilt=i*2.399963229728653+.31;
-    engines.push(engine);
-  }
-  globalThis.SixCitiesCatch.propulsion=engines;
-}
-
 // CARDINAL CAGE GRAMMAR — same rings, topology determines cartridge vs receiver.
 function buildCardinalCage({parent,name='cardinal-cage',nodeRadius=1.72,ringRadius=.66,tube=.055,omitNode=null}={}){
   const shell=new THREE.Group();shell.name=name;parent.add(shell);
@@ -3909,6 +3894,22 @@ const workshopTabletopBetwixtable=buildBetwixtable({
       inspect:()=>({...catchCity.userData.sixCities,
         groundHeight:globe.groundHeight(catchSite.x,catchSite.z),
         worldScale:globe.root.scale.x})};
+    // Four independent propulsion modules on Catch's lateral receiver docks.
+    // The open sky mouth and pipe throat remain unobstructed.
+    if(globalThis.SixCitiesCatch?.receiver){
+      const engines=[];
+      for(const [i,id] of ['yp','yn','zp','zn'].entries()){
+        const dock=globalThis.SixCitiesCatch.receiver.getObjectByName('catch:receiver:dock:'+id);
+        if(!dock)throw new Error('Catch propulsion dock missing: '+id);
+        const engine=makePropulsionModule({name:'catch:propulsion:'+id,parent:dock});
+        engine.phase=i*Math.PI/2+.17;
+        engine.tilt=i*2.399963229728653+.31;
+        engines.push(engine);
+      }
+      globalThis.SixCitiesCatch.propulsion=engines;
+    }
+
+
     globalThis.SnowglobeTerrain={
       raise:(x,z,radius=7,amount=2)=>globe.deform(x,z,radius,Math.abs(amount)),
       carve:(x,z,radius=7,amount=2)=>globe.deform(x,z,radius,-Math.abs(amount)),

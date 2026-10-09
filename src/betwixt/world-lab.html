@@ -3931,11 +3931,34 @@ const workshopTabletopBetwixtable=buildBetwixtable({
         target:pick(null,true),speed:2.0+rand()*1.4});
     }
     let swarmLast=0;
+    const focus=new THREE.Vector3(),curiosity={phase:'idle'};
     const updateCatchSwarm=(now)=>{
       const dt=Math.min(.05,Math.max(0,(now-swarmLast)/1000));swarmLast=now;
+      const cycle=now%44000,phase=cycle<17000?'idle':cycle<34000?'investigate':'dismiss';
+      if(phase!==curiosity.phase){
+        curiosity.phase=phase;
+        for(let i=1;i<swarm.length;i++){
+          const a=swarm[i];
+          if(phase==='investigate'){a.mode='investigate';a.until=Infinity;}
+          else if(phase==='dismiss'){a.mode='return';a.target=pick(a,true);a.until=Infinity;a.speed=7;}
+          else {a.mode='hover';a.until=now+2000+rand()*4000;a.speed=2.5;}
+        }
+      }
+      let n=0;focus.set(0,0,0);
+      for(const p of particles)if(p.active){focus.x+=p.x;focus.y+=p.y;focus.z+=p.z;n++;}
+      if(n)focus.multiplyScalar(1/n);
+      else focus.set(riverHead.x,globe.groundHeight(riverHead.x,riverHead.z)+3,riverHead.z);
+      focus.y=safeY(focus.x,focus.z,focus.y+3);
+      for(let i=1;i<swarm.length;i++)if(phase==='investigate'){
+        const a=swarm[i],angle=(i-1)*Math.PI*2/11+now*.00023,r=2.4+(i%3)*.6;
+        const x=focus.x+Math.cos(angle)*r,z=focus.z+Math.sin(angle)*r;
+        a.target.set(x,safeY(x,z,focus.y+(i%4)*.65),z);a.speed=12;
+      }
+      swarm[0].mode='sentinel';swarm[0].until=Infinity;
+      swarm[0].target.set(catchSite.x,home.y+3,catchSite.z);
       for(let i=0;i<swarm.length;i++){
         const a=swarm[i];
-        if(now>=a.until){
+        if(now>=a.until&&i!==0&&a.mode!=='investigate'){
           if(a.mode==='hover'){a.mode='wander';a.target=pick(a);a.until=now+6000+rand()*9000;}
           else if(a.mode==='wander'){a.mode='return';a.target=pick(a,true);a.until=Infinity;}
           else {a.mode='hover';a.until=now+4000+rand()*5000;}
@@ -3950,8 +3973,13 @@ const workshopTabletopBetwixtable=buildBetwixtable({
           a.node.position.y+=Math.sin(now*.0011+a.phase)*dt*.12;
         }
         a.node.position.y=safeY(a.node.position.x,a.node.position.z,a.node.position.y);
-        a.eye.rotation.y=.32*Math.sin(now*.00043+a.phase);
-        a.eye.rotation.x=.17*Math.sin(now*.00031+a.phase*1.7);
+        if(a.mode==='investigate'||a.mode==='sentinel'){
+          const direction=focus.clone().sub(a.node.position).normalize();
+          a.eye.quaternion.slerp(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),direction),a.mode==='sentinel'?.07:.18);
+        }else{
+          a.eye.rotation.y=.32*Math.sin(now*.00043+a.phase);
+          a.eye.rotation.x=.17*Math.sin(now*.00031+a.phase*1.7);
+        }
         a.seat.quaternion.copy(a.eye.quaternion);
       }
       // Nonpenetration is enforced after movement, not merely suggested by a steering force.

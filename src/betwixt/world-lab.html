@@ -3910,6 +3910,67 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     }
 
 
+    // Twelve independent observer eyes: hover, wander, return. Local geological units.
+    const swarm=[];
+    const swarmRoot=new THREE.Group();swarmRoot.name='catch:observer-swarm';globe.root.add(swarmRoot);
+    let swarmSeed=741;const rand=()=>{swarmSeed=(Math.imul(swarmSeed,1664525)+1013904223)>>>0;return swarmSeed/4294967296};
+    const home=new THREE.Vector3(catchSite.x,catchCity.position.y+7.6,catchSite.z);
+    const safeY=(x,z,y)=>Math.max(y,globe.groundHeight(x,z)+1.25);
+    const pick=(a,homeward=false)=>{
+      const angle=rand()*Math.PI*2,radius=homeward?2+rand()*4:5+rand()*13;
+      const x=catchSite.x+Math.cos(angle)*radius,z=catchSite.z+Math.sin(angle)*radius;
+      return new THREE.Vector3(x,safeY(x,z,homeward?home.y+rand()*3:globe.groundHeight(x,z)+3+rand()*8),z);
+    };
+    for(let i=0;i<12;i++){
+      const node=new THREE.Group();node.name='catch:observer:'+i;swarmRoot.add(node);
+      buildObserverPresentation(node);
+      const angle=i*Math.PI*2/12,rad=3.2+(i%3)*1.2;
+      node.position.set(catchSite.x+Math.cos(angle)*rad,home.y+(i%4)*1.25,catchSite.z+Math.sin(angle)*rad);
+      const eye=node.userData.observerEye,seat=node.userData.observerOcularSeat;
+      swarm.push({node,eye,seat,phase:rand()*6.283,mode:'hover',until:1500+rand()*7000,
+        target:pick(null,true),speed:2.0+rand()*1.4});
+    }
+    let swarmLast=0;
+    const updateCatchSwarm=(now)=>{
+      const dt=Math.min(.05,Math.max(0,(now-swarmLast)/1000));swarmLast=now;
+      for(let i=0;i<swarm.length;i++){
+        const a=swarm[i];
+        if(now>=a.until){
+          if(a.mode==='hover'){a.mode='wander';a.target=pick(a);a.until=now+6000+rand()*9000;}
+          else if(a.mode==='wander'){a.mode='return';a.target=pick(a,true);a.until=Infinity;}
+          else {a.mode='hover';a.until=now+4000+rand()*5000;}
+        }
+        if(a.mode!=='hover'){
+          const delta=a.target.clone().sub(a.node.position),distance=delta.length();
+          if(a.mode==='return'&&distance<.35){a.mode='hover';a.until=now+4000+rand()*5000;}
+          else if(distance>.001){
+            const step=Math.min(distance,a.speed*dt);a.node.position.addScaledVector(delta,step/distance);
+          }
+        }else{
+          a.node.position.y+=Math.sin(now*.0011+a.phase)*dt*.12;
+        }
+        a.node.position.y=safeY(a.node.position.x,a.node.position.z,a.node.position.y);
+        a.eye.rotation.y=.32*Math.sin(now*.00043+a.phase);
+        a.eye.rotation.x=.17*Math.sin(now*.00031+a.phase*1.7);
+        a.seat.quaternion.copy(a.eye.quaternion);
+      }
+      // Nonpenetration is enforced after movement, not merely suggested by a steering force.
+      // Observer glass radius .50; 1.12 center spacing provides clearance.
+      for(let pass=0;pass<3;pass++)for(let i=0;i<swarm.length;i++)for(let j=i+1;j<swarm.length;j++){
+        const a=swarm[i].node.position,b=swarm[j].node.position;
+        const dx=b.x-a.x,dy=b.y-a.y,dz=b.z-a.z,d2=dx*dx+dy*dy+dz*dz;
+        if(d2>=1.12*1.12)continue;
+        const d=Math.sqrt(d2),nx=d>.00001?dx/d:Math.cos(i+j),ny=d>.00001?dy/d:.5,nz=d>.00001?dz/d:Math.sin(i+j);
+        const push=(1.12-d)*.5+.0001;
+        a.x-=nx*push;a.y-=ny*push;a.z-=nz*push;
+        b.x+=nx*push;b.y+=ny*push;b.z+=nz*push;
+        a.y=safeY(a.x,a.z,a.y);b.y=safeY(b.x,b.z,b.y);
+      }
+      window.vestibuleDirty=true;
+    };
+    root.userData.updateCatchSwarm=updateCatchSwarm;
+    globalThis.SixCitiesCatch.swarm={agents:swarm,update:updateCatchSwarm};
+
     globalThis.SnowglobeTerrain={
       raise:(x,z,radius=7,amount=2)=>globe.deform(x,z,radius,Math.abs(amount)),
       carve:(x,z,radius=7,amount=2)=>globe.deform(x,z,radius,-Math.abs(amount)),
@@ -6343,6 +6404,7 @@ renderer.setAnimationLoop((now)=>{
     window.vestibuleDirty=true;
   }
   updateObserverEye(now);updateObserverVesselOrbiter(now);updatePropulsionModules(now);
+  workshopTabletopBetwixtable.userData.betwixtable.presentation.userData.updateCatchSwarm?.(now);
   updateWorkshopCrucibleOrb(now);
   updateWorldD20(now);
 

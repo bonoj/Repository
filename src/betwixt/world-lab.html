@@ -3718,7 +3718,7 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     const edge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.CylinderGeometry(1.31,1.31,.045,48)),glassEdge);
     edge.position.copy(glass.position);root.add(edge);
 
-    const workshopSnowglobe=createSnowglobe({parent:root});
+    const workshopSnowglobe=createSnowglobe({parent:root,eyeBehavior:'experimental'});
     root.userData.snowglobeRuntime=workshopSnowglobe;
     // Preserve Workshop's presentation-facing compatibility handles.
     for(const key of ['snowglobe','snowglobeLiquids','snowglobeRiver','canyonInitial','snowglobeSurvey','meteorWeather','updateCatchSwarm'])root.userData[key]=workshopSnowglobe.root.userData[key];
@@ -3921,7 +3921,7 @@ const workshopTabletopBetwixtable=buildBetwixtable({
 
 
 // Snowglobe world authority: no Betwixtable, focus or Workshop ownership.
-function createSnowglobe({parent,scale=.025,seed=741}={}){
+function createSnowglobe({parent,scale=.025,seed=741,eyeBehavior='baseline'}={}){
   if(!parent)throw new Error('Snowglobe requires a scene parent');
   const root=new THREE.Group();root.name='snowglobe:world';parent.add(root);
   const api={},engines=[];
@@ -4138,8 +4138,15 @@ function createSnowglobe({parent,scale=.025,seed=741}={}){
         target:pick(null,true),speed:2.0+rand()*1.4});
     }
     let swarmLast=0;
+    const experimentalEyes=eyeBehavior==='experimental';
+    const forwardAxis=new THREE.Vector3(0,0,1),aimQuaternion=new THREE.Quaternion();
+    const eyeReport={policy:eyeBehavior,updates:0,observing:0,traveling:0,meanAlignment:1,meanTargetDistance:0};
+    if(experimentalEyes)for(let i=0;i<swarm.length;i++){
+      const a=swarm[i];a.velocity=new THREE.Vector3();a.attentionUntil=0;a.observationOffset=1.7+rand()*2.2;a.bobPhase=rand()*Math.PI*2;a.interest=i%5;
+    }
+    const inspectEyes=()=>({...eyeReport,agents:swarm.map((a,i)=>({id:i,mode:a.mode,position:a.node.position.toArray().map(v=>+v.toFixed(2)),target:a.target.toArray().map(v=>+v.toFixed(2)),speed:+(a.velocity?.length()||0).toFixed(2),interest:a.interest??null}))});
     const focus=new THREE.Vector3(),curiosity={phase:'idle'};
-    const updateCatchSwarm=(now)=>{
+    const updateBaselineEyes=(now)=>{
       const dt=Math.min(.05,Math.max(0,(now-swarmLast)/1000));swarmLast=now;
       const cycle=now%44000,phase=cycle<17000?'idle':cycle<34000?'investigate':'dismiss';
       if(phase!==curiosity.phase){
@@ -4203,8 +4210,75 @@ function createSnowglobe({parent,scale=.025,seed=741}={}){
       }
       window.vestibuleDirty=true;
     };
+    // Workshop-only policy. Shared geometry, bearings and collision authority remain unchanged.
+    // Baseline Betwixt keeps the original update function byte-for-byte.
+    const updateExperimentalEyes=(now)=>{
+      const dt=Math.min(.05,Math.max(0,(now-swarmLast)/1000));swarmLast=now;
+      if(dt<=0)return;
+      const active=particles.filter(p=>p.active);
+      let observing=0,traveling=0,alignment=0,distanceSum=0;
+      for(let i=0;i<swarm.length;i++){
+        const a=swarm[i],position=a.node.position;
+        if(now>=a.attentionUntil){
+          a.interest=active.length?Math.floor(rand()*Math.min(active.length,80)):-1;
+          a.attentionUntil=now+2400+rand()*5000;
+          a.mode=a.interest<0?'wander':'observe';
+          if(a.mode==='wander')a.target.copy(pick(a));
+        }
+        if(a.mode==='observe'&&active.length){
+          const p=active[a.interest%active.length];
+          if(p){
+            a.target.set(p.x,p.y,p.z);
+            a.target.y=safeY(a.target.x,a.target.z,a.target.y);
+          }
+        }
+        // Attention is distinct from locomotion: inspect from above and slightly aside.
+        const destination=a.target.clone();
+        if(a.mode==='observe'){
+          destination.x+=Math.cos(a.phase)*a.observationOffset;
+          destination.z+=Math.sin(a.phase)*a.observationOffset;
+          destination.y+=2.2+.4*Math.sin(now*.0015+a.bobPhase);
+        }
+        destination.y=safeY(destination.x,destination.z,destination.y);
+        const delta=destination.sub(position),distance=delta.length();
+        const desired=distance>.001?delta.clone().multiplyScalar(Math.min(4.5,distance*1.5)/distance):new THREE.Vector3();
+        // Ring's established +Z forward is the flight axis. Turn before translating.
+        const travel=desired.length()>.22;
+        const look=travel?desired.clone().normalize():a.target.clone().sub(position).normalize();
+        if(look.lengthSq()>.001){
+          aimQuaternion.setFromUnitVectors(forwardAxis,look);
+          a.eye.quaternion.slerp(aimQuaternion,Math.min(1,dt*(travel?5:3)));
+          a.seat.quaternion.copy(a.eye.quaternion);
+        }
+        const facing=forwardAxis.clone().applyQuaternion(a.eye.quaternion);
+        const aligned=travel?Math.max(0,facing.dot(desired.clone().normalize())):1;
+        const allowed=travel?Math.pow(aligned,4):1;
+        desired.multiplyScalar(allowed);
+        a.velocity.lerp(desired,Math.min(1,dt*3.5));
+        if(distance<.35)a.velocity.multiplyScalar(Math.max(0,1-dt*5));
+        position.addScaledVector(a.velocity,dt);
+        position.y=safeY(position.x,position.z,position.y);
+        if(a.mode==='observe'&&distance<2.8)observing++;
+        if(a.velocity.length()>.5)traveling++;
+        alignment+=aligned;distanceSum+=distance;
+      }
+      // Preserve the existing hard nonpenetration guarantee.
+      for(let pass=0;pass<3;pass++)for(let i=0;i<swarm.length;i++)for(let j=i+1;j<swarm.length;j++){
+        const a=swarm[i].node.position,b=swarm[j].node.position;
+        const dx=b.x-a.x,dy=b.y-a.y,dz=b.z-a.z,d2=dx*dx+dy*dy+dz*dz;
+        if(d2>=1.12*1.12)continue;
+        const d=Math.sqrt(d2),nx=d>.00001?dx/d:Math.cos(i+j),ny=d>.00001?dy/d:.5,nz=d>.00001?dz/d:Math.sin(i+j);
+        const push=(1.12-d)*.5+.0001;
+        a.x-=nx*push;a.y-=ny*push;a.z-=nz*push;
+        b.x+=nx*push;b.y+=ny*push;b.z+=nz*push;
+        a.y=safeY(a.x,a.z,a.y);b.y=safeY(b.x,b.z,b.y);
+      }
+      Object.assign(eyeReport,{updates:eyeReport.updates+1,observing,traveling,meanAlignment:+(alignment/swarm.length).toFixed(3),meanTargetDistance:+(distanceSum/swarm.length).toFixed(2)});
+      window.vestibuleDirty=true;
+    };
+    const updateCatchSwarm=experimentalEyes?updateExperimentalEyes:updateBaselineEyes;
     root.userData.updateCatchSwarm=updateCatchSwarm;
-    api.SixCitiesCatch.swarm={agents:swarm,update:updateCatchSwarm};
+    api.SixCitiesCatch.swarm={agents:swarm,update:updateCatchSwarm,inspect:inspectEyes};
 
     api.SnowglobeTerrain={
       raise:(x,z,radius=7,amount=2)=>globe.deform(x,z,radius,Math.abs(amount)),

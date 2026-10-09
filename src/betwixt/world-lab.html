@@ -2961,7 +2961,7 @@ relateSpatial({subject:'observer-eye',kind:'above',reference:'crucible-twixt',ga
 
 // PROPULSION MODULE — the observer seat reused as a freely swivelling thrust locus.
 const propulsionModules=[];
-function makePropulsionModule({name='propulsion-module',parent=betwixtPlace,at=new THREE.Vector3()}={}){
+function makePropulsionModule({name='propulsion-module',parent=betwixtPlace,at=new THREE.Vector3(),registry=propulsionModules}={}){
   const node=new THREE.Group();node.name=name;node.position.copy(at);parent.add(node);
   const gimbal=new THREE.Group();gimbal.name=name+':gimbal';node.add(gimbal);
   const ringRadius=.535,ringTube=.035;
@@ -2974,7 +2974,7 @@ function makePropulsionModule({name='propulsion-module',parent=betwixtPlace,at=n
     cube.position.set(Math.cos(a)*.34,Math.sin(a)*.34,0);cube.rotation.set(a*.31,a*.47,a);cube.castShadow=true;rotor.add(cube);
   }
   const module={node,gimbal,rotor,phase:Math.random()*Math.PI*2,tilt:Math.random()*Math.PI*2};
-  propulsionModules.push(module);return module;
+  registry.push(module);return module;
 }
 function updatePropulsionModules(now){
   for(const m of propulsionModules){
@@ -3702,25 +3702,14 @@ const geometryRegressionHealthy=geometryRegressionReport.every(r=>r.matchedExpec
 console.info('CHEMLAB geometry regression',geometryRegressionHealthy,geometryRegressionReport);
 if(!geometryRegressionHealthy)throw new Error('CHEMLAB geometry regression expectation mismatch');
 
-const workshopTabletopBetwixtable=buildBetwixtable({
-  name:'brass-glass-tabletop',
-  parent:legacyWorkshop,
-  // Deliberately airborne: a clean third spatial specimen with generous clearance
-  // above the floor-bound Crucible and Chem discovery objects.
-  at:new THREE.Vector3(0,GROUND_Y+4.6,0),
-  padding:.28,
-  build(root){
-    // Workshop materials first: existing brass and accepted translucent glass.
-    const rim=new THREE.Mesh(new THREE.TorusGeometry(1.42,.105,10,48),brass);
-    rim.rotation.x=Math.PI/2;rim.castShadow=true;root.add(rim);
-    const glass=new THREE.Mesh(new THREE.CylinderGeometry(1.31,1.31,.045,48),glassFace);
-    glass.position.y=-.015;root.add(glass);
-    const edge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.CylinderGeometry(1.31,1.31,.045,48)),glassEdge);
-    edge.position.copy(glass.position);root.add(edge);
-
+// Snowglobe world authority: no Betwixtable, focus or Workshop ownership.
+function createSnowglobe({parent,scale=.025,seed=741}={}){
+  if(!parent)throw new Error('Snowglobe requires a scene parent');
+  const root=new THREE.Group();root.name='snowglobe:world';parent.add(root);
+  const api={},engines=[];
     // A disposable circular world, compiled from Beyond's full geological history.
     const globe=createBeyondTerrain({parent:root,miniature:true});
-    globe.root.scale.setScalar(.025);
+    globe.root.scale.setScalar(scale);
     globe.root.position.y=.33;
     globe.mesh.name='snowglobe:deformable-geological-terrain';
     globe.mesh.castShadow=true;
@@ -3754,7 +3743,7 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     // Begin dry. Water and lava are added only through the snowglobe spells.
     canyonWater.setEnabled(true);cauldronLava.setEnabled(true);
     root.userData.snowglobeLiquids={water:canyonWater,lava:cauldronLava,sites:{water:waterSite,lava:lavaSite},scale:liquidScale};
-    globalThis.SnowglobeLiquids={
+    api.SnowglobeLiquids={
       inspect:()=>({sites:{water:waterSite,lava:lavaSite},water:canyonWater.inspect(),lava:cauldronLava.inspect()}),
       reset:()=>{canyonWater.reset();cauldronLava.reset()}
     };
@@ -3831,7 +3820,7 @@ const workshopTabletopBetwixtable=buildBetwixtable({
         spawned:riverSpawned,removed:riverRemoved,water:canyonWater.inspect()}),
       reset(){for(const p of particles)p.active=false;riverLast=performance.now();riverSpawn=0;}
     };
-    root.userData.snowglobeRiver=riverFlow;globalThis.SnowglobeRiver=riverFlow;
+    root.userData.snowglobeRiver=riverFlow;api.SnowglobeRiver=riverFlow;
 
     // Catch v0: the verified two-ring/two-rail pipe and five-ring half-cage,
     // assembled in geological local units, then miniaturized together by globe.root.
@@ -3890,30 +3879,30 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     catchCity.userData.sixCities={kind:'catch-v0',site:catchSite,
       joinedRingCenterlineSpacing:.11,pipeTop:pipeHeight,cageBottom:pipeHeight+.11,
       miniatureScale:.025,stationaryReceiver:true};
-    globalThis.SixCitiesCatch={root:catchCity,pipe:catchPipe,receiver,
+    api.SixCitiesCatch={root:catchCity,pipe:catchPipe,receiver,
       inspect:()=>({...catchCity.userData.sixCities,
         groundHeight:globe.groundHeight(catchSite.x,catchSite.z),
         worldScale:globe.root.scale.x})};
     // Four independent propulsion modules on Catch's lateral receiver docks.
     // The open sky mouth and pipe throat remain unobstructed.
-    if(globalThis.SixCitiesCatch?.receiver){
+    if(api.SixCitiesCatch?.receiver){
       const engines=[];
       for(const [i,id] of ['yp','yn','zp','zn'].entries()){
-        const dock=globalThis.SixCitiesCatch.receiver.getObjectByName('catch:receiver:dock:'+id);
+        const dock=api.SixCitiesCatch.receiver.getObjectByName('catch:receiver:dock:'+id);
         if(!dock)throw new Error('Catch propulsion dock missing: '+id);
-        const engine=makePropulsionModule({name:'catch:propulsion:'+id,parent:dock});
+        const engine=makePropulsionModule({name:'catch:propulsion:'+id,parent:dock,registry:engines});
         engine.phase=i*Math.PI/2+.17;
         engine.tilt=i*2.399963229728653+.31;
         engines.push(engine);
       }
-      globalThis.SixCitiesCatch.propulsion=engines;
+      api.SixCitiesCatch.propulsion=engines;
     }
 
 
     // Twelve independent observer eyes: hover, wander, return. Local geological units.
     const swarm=[];
     const swarmRoot=new THREE.Group();swarmRoot.name='catch:observer-swarm';globe.root.add(swarmRoot);
-    let swarmSeed=741;const rand=()=>{swarmSeed=(Math.imul(swarmSeed,1664525)+1013904223)>>>0;return swarmSeed/4294967296};
+    let swarmSeed=seed;const rand=()=>{swarmSeed=(Math.imul(swarmSeed,1664525)+1013904223)>>>0;return swarmSeed/4294967296};
     const home=new THREE.Vector3(catchSite.x,catchCity.position.y+7.6,catchSite.z);
     const safeY=(x,z,y)=>Math.max(y,globe.groundHeight(x,z)+1.25);
     const pick=(a,homeward=false)=>{
@@ -3997,9 +3986,9 @@ const workshopTabletopBetwixtable=buildBetwixtable({
       window.vestibuleDirty=true;
     };
     root.userData.updateCatchSwarm=updateCatchSwarm;
-    globalThis.SixCitiesCatch.swarm={agents:swarm,update:updateCatchSwarm};
+    api.SixCitiesCatch.swarm={agents:swarm,update:updateCatchSwarm};
 
-    globalThis.SnowglobeTerrain={
+    api.SnowglobeTerrain={
       raise:(x,z,radius=7,amount=2)=>globe.deform(x,z,radius,Math.abs(amount)),
       carve:(x,z,radius=7,amount=2)=>globe.deform(x,z,radius,-Math.abs(amount)),
       reset:()=>globe.resetMiniature(),
@@ -4071,7 +4060,7 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     meteorActive.length=0;meteorPending.length=0;
     root.userData.meteorWeather.update=()=>{};
     root.userData.meteorWeather.enabled=false;
-    globalThis.SnowglobeMeteorWeather=root.userData.meteorWeather;
+    api.SnowglobeMeteorWeather=root.userData.meteorWeather;
 
     // Portable, deterministic terrain survey: the complete authoritative height grid,
     // geology/material samples, candidate city sites, and construction contracts.
@@ -4140,7 +4129,7 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     };
     const downloadSnowglobeSurvey=(tap)=>{
       const payload=surveySnowglobe(tap);
-      payload.materialTapDiagnostics={selectedSpell:snowglobeTool,attempts:snowglobeTapHistory.map(e=>({...e})),currentLiquids:globalThis.SnowglobeLiquids?.inspect?.()};
+      payload.materialTapDiagnostics={selectedSpell:snowglobeTool,attempts:snowglobeTapHistory.map(e=>({...e})),currentLiquids:api.SnowglobeLiquids?.inspect?.()};
       const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
       const url=URL.createObjectURL(blob),a=document.createElement('a');
       a.href=url;a.download='six-cities-snowglobe-survey.json';document.body.append(a);a.click();a.remove();
@@ -4148,8 +4137,39 @@ const workshopTabletopBetwixtable=buildBetwixtable({
       return payload;
     };
     root.userData.snowglobeSurvey={inspect:surveySnowglobe,download:downloadSnowglobeSurvey};
-    globalThis.SnowglobeSurvey=root.userData.snowglobeSurvey;
+    api.SnowglobeSurvey=root.userData.snowglobeSurvey;
 
+
+  let last=null,time=0,disposed=false;
+  function update(now){if(disposed)return;time+=last===null?0:Math.min(100,Math.max(0,now-last));last=now;
+    root.userData.snowglobeLiquids.water.update(time);root.userData.snowglobeLiquids.lava.update(time);
+    root.userData.snowglobeRiver.update(time);root.userData.updateCatchSwarm(time);root.userData.meteorWeather.update(time);
+    for(const m of engines){m.gimbal.rotation.set(.34*Math.sin(time*.00043+m.tilt),.72*Math.sin(time*.00031+m.phase),.18*Math.sin(time*.00053+m.phase),'YXZ');m.rotor.rotation.z=time*.010+m.phase;}
+  }
+  function reset(){api.SnowglobeTerrain.reset();api.SnowglobeLiquids.reset();api.SnowglobeRiver.reset();time=0;last=null;}
+  function dispose(){if(disposed)return;disposed=true;parent.remove(root);}
+  return {root,api,update,reset,dispose,inspect:()=>({time,terrain:api.SnowglobeTerrain.inspect(),liquids:api.SnowglobeLiquids.inspect(),river:api.SnowglobeRiver.inspect()})};
+}
+
+const workshopTabletopBetwixtable=buildBetwixtable({
+  name:'brass-glass-tabletop',
+  parent:legacyWorkshop,
+  // Deliberately airborne: a clean third spatial specimen with generous clearance
+  // above the floor-bound Crucible and Chem discovery objects.
+  at:new THREE.Vector3(0,GROUND_Y+4.6,0),
+  padding:.28,
+  build(root){
+    // Workshop materials first: existing brass and accepted translucent glass.
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(1.42,.105,10,48),brass);
+    rim.rotation.x=Math.PI/2;rim.castShadow=true;root.add(rim);
+    const glass=new THREE.Mesh(new THREE.CylinderGeometry(1.31,1.31,.045,48),glassFace);
+    glass.position.y=-.015;root.add(glass);
+    const edge=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.CylinderGeometry(1.31,1.31,.045,48)),glassEdge);
+    edge.position.copy(glass.position);root.add(edge);
+
+    const workshopSnowglobe=createSnowglobe({parent:root});
+    root.userData.snowglobeRuntime=workshopSnowglobe;
+    Object.assign(globalThis,workshopSnowglobe.api);
     // Thoughtform: embodied possibility, deliberately not a ticket or interaction target.
     // It hangs in shared view and carries enough semantic residue to recover the idea later.
     const thoughtform=new THREE.Group();thoughtform.name='thoughtform:semantic-snapping-primitives';
@@ -4346,6 +4366,16 @@ const workshopTabletopBetwixtable=buildBetwixtable({
   }
 });
 
+
+// The presentation is optional; the Snowglobe world does not know its host.
+const betwixtSnowglobeHost=buildBetwixtable({name:'snowglobe',parent:betwixtPlace,padding:.28,build(root){
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(1.42,.105,10,48),brass);rim.rotation.x=Math.PI/2;root.add(rim);
+  const glass=new THREE.Mesh(new THREE.CylinderGeometry(1.31,1.31,.045,48),glassFace);root.add(glass);
+}});
+const betwixtSnowglobe=createSnowglobe({parent:betwixtSnowglobeHost.userData.betwixtable.presentation});
+betwixtSnowglobeHost.userData.betwixtable.fit();
+registerRelationalNode('snowglobe-eye',{object:betwixtSnowglobeHost,bounds:()=>betwixtSnowglobeHost.userData.betwixtable.bounds()});
+relateSpatial({subject:'snowglobe-eye',kind:'above',reference:'observer-eye',gap:2.0});
 
 /* FAILURE TO LAUNCH — preserved collaboration specimen.
 
@@ -6403,7 +6433,7 @@ renderer.setAnimationLoop((now)=>{
   if(focusedWorkshopObject===workshopTabletopBetwixtable){
     if(snowglobeFocusLastReal!==null)snowglobeFocusTime+=Math.min(100,Math.max(0,now-snowglobeFocusLastReal));
     snowglobeFocusLastReal=now;
-    globalThis.SnowglobeMeteorWeather?.update(snowglobeFocusTime);
+    // Focus does not control Snowglobe simulation.
   }else snowglobeFocusLastReal=null;
   workshopTabletopBetwixtable.userData.betwixtable.presentation.children.find(o=>o.name==='thoughtform:neptunian-caretaker-carrier')?.userData.animate?.(now);
   jovianBetwixtable.userData.betwixtable.presentation.userData.jovian?.update(now);
@@ -6432,13 +6462,13 @@ renderer.setAnimationLoop((now)=>{
     window.vestibuleDirty=true;
   }
   updateObserverEye(now);updateObserverVesselOrbiter(now);updatePropulsionModules(now);
-  workshopTabletopBetwixtable.userData.betwixtable.presentation.userData.updateCatchSwarm?.(now);
+  workshopTabletopBetwixtable.userData.betwixtable.presentation.userData.snowglobeRuntime?.update(now);
+  betwixtSnowglobe.update(now);
   updateWorkshopCrucibleOrb(now);
   updateWorldD20(now);
 
   const snowglobeLiquids=workshopTabletopBetwixtable.userData.betwixtable.presentation.userData.snowglobeLiquids;
-  if(snowglobeLiquids){snowglobeLiquids.water.update(now);snowglobeLiquids.lava.update(now);window.vestibuleDirty=true;}
-  workshopTabletopBetwixtable.userData.betwixtable.presentation.userData.snowglobeRiver?.update(now);
+  // Liquids and bearings are advanced by each Snowglobe instance.
   updateWorkshop(now);
   syncSnowglobeSpells();
   if(workshopCrucibleEnabled){

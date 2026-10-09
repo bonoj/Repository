@@ -3765,15 +3765,12 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     // gravity, buoyancy, drag, and their individual lifetimes.
     const riverRoot=new THREE.Group();riverRoot.name='snowglobe:solver-river-bearings';globe.root.add(riverRoot);
     const riverHead={x:-30,z:-7},riverMouth={x:29,z:-9};
-    const sourceX=riverHead.x/liquidScale,sourceZ=riverHead.z/liquidScale;
-    canyonWater.setSource({x:sourceX,z:sourceZ,rate:5.0});
-    // Prewet the channel through the existing liquid API, so the visible
-    // surface is always the solver's own reconstructed free surface.
-    for(let i=0;i<=16;i++){
-      const t=i/16,x=riverHead.x+(riverMouth.x-riverHead.x)*t;
-      const z=riverHead.z+(riverMouth.z-riverHead.z)*t;
-      canyonWater.fillRegion({x:x/liquidScale,z:z/liquidScale,radius:.35,amount:.32});
-    }
+    // Finite canyon at rest: construct the full hydrostatic state immediately.
+    // Elevation is specified in geological world coordinates, then converted
+    // to the Fundamental liquid's local solver coordinates.
+    const canyonSurfaceY=waterSite.h+6;
+    const canyonInitial=canyonWater.initializeToLevel(canyonSurfaceY/liquidScale);
+    root.userData.canyonInitial={worldY:canyonSurfaceY,...canyonInitial};
     const BB_COUNT=260,bbGeo=new THREE.SphereGeometry(.12,6,5);
     const bbMesh=new THREE.InstancedMesh(bbGeo,new THREE.MeshStandardMaterial({
       color:0xd8e2d9,roughness:.48,metalness:.12
@@ -3787,7 +3784,8 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     const spawn=(p,now)=>{
       const seed=p.id*2.399963+riverSpawned*.754877;
       p.x=riverHead.x+Math.sin(seed)*.65;p.z=riverHead.z+Math.cos(seed)*.65;
-      p.y=globe.groundHeight(p.x,p.z)+2.4+(p.id%7)*.13;
+      const initialSurface=canyonWater.surfaceY(p.x/liquidScale,p.z/liquidScale);
+      p.y=Number.isFinite(initialSurface)?initialSurface*liquidScale+.2:globe.groundHeight(p.x,p.z)+.2;
       p.vx=0;p.vy=0;p.vz=0;p.born=now;p.active=true;riverSpawned++;
     };
     const riverFlow={

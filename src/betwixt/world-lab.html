@@ -3987,7 +3987,7 @@ function createSnowglobe({parent,scale=.025,seed=741}={}){
     const particles=Array.from({length:BB_COUNT},(_,i)=>({
       x:riverHead.x,z:riverHead.z,y:0,vx:0,vy:0,vz:0,born:0,active:false,id:i
     }));
-    let riverLast=performance.now(),riverSpawn=0,riverCursor=0,riverSpawned=0,riverRemoved=0;
+    let riverLast=null,riverSpawn=0,riverCursor=0,riverSpawned=0,riverRemoved=0;
     const spawn=(p,now)=>{
       const seed=p.id*2.399963+riverSpawned*.754877;
       p.x=riverHead.x+Math.sin(seed)*.65;p.z=riverHead.z+Math.cos(seed)*.65;
@@ -3997,7 +3997,7 @@ function createSnowglobe({parent,scale=.025,seed=741}={}){
     };
     const riverFlow={
       update(now){
-        const dt=Math.min(.05,Math.max(0,(now-riverLast)/1000));riverLast=now;
+        const dt=riverLast===null?0:Math.min(.05,Math.max(0,(now-riverLast)/1000));riverLast=now;
         riverSpawn+=dt*22;
         while(riverSpawn>=1){riverSpawn--;spawn(particles[riverCursor++%BB_COUNT],now);}
         let visible=0;
@@ -4036,7 +4036,7 @@ function createSnowglobe({parent,scale=.025,seed=741}={}){
       },
       inspect:()=>({kind:'solver-coupled-floating-bearings',active:particles.filter(p=>p.active).length,
         spawned:riverSpawned,removed:riverRemoved,water:canyonWater.inspect()}),
-      reset(){for(const p of particles)p.active=false;riverLast=performance.now();riverSpawn=0;}
+      reset(){for(const p of particles)p.active=false;riverLast=null;riverSpawn=0;}
     };
     root.userData.snowglobeRiver=riverFlow;api.SnowglobeRiver=riverFlow;
 
@@ -4358,15 +4358,22 @@ function createSnowglobe({parent,scale=.025,seed=741}={}){
     api.SnowglobeSurvey=root.userData.snowglobeSurvey;
 
 
-  let last=null,time=0,disposed=false;
-  function update(now){if(disposed)return;time+=last===null?0:Math.min(100,Math.max(0,now-last));last=now;
+  let last=null,time=0,disposed=false,accumulator=0;
+  // Simulation clocks are local. Inactive instances do not catch up.
+  function suspend(){last=null;accumulator=0;}
+  function update(now){if(disposed)return;
+    if(last===null){last=now;return;}
+    accumulator+=Math.min(100,Math.max(0,now-last));last=now;
+    // Keep simulation at a bounded 30 Hz, independent of display refresh.
+    if(accumulator<1000/30)return;
+    const step=Math.min(100,accumulator);accumulator=0;time+=step;
     root.userData.snowglobeLiquids.water.update(time);root.userData.snowglobeLiquids.lava.update(time);
     root.userData.snowglobeRiver.update(time);root.userData.updateCatchSwarm(time);root.userData.meteorWeather.update(time);
     for(const m of engines){m.gimbal.rotation.set(.34*Math.sin(time*.00043+m.tilt),.72*Math.sin(time*.00031+m.phase),.18*Math.sin(time*.00053+m.phase),'YXZ');m.rotor.rotation.z=time*.010+m.phase;}
   }
-  function reset(){api.SnowglobeTerrain.reset();api.SnowglobeLiquids.reset();api.SnowglobeRiver.reset();time=0;last=null;}
+  function reset(){api.SnowglobeTerrain.reset();api.SnowglobeLiquids.reset();api.SnowglobeRiver.reset();time=0;suspend();}
   function dispose(){if(disposed)return;disposed=true;parent.remove(root);}
-  return {root,api,update,reset,dispose,inspect:()=>({time,terrain:api.SnowglobeTerrain.inspect(),liquids:api.SnowglobeLiquids.inspect(),river:api.SnowglobeRiver.inspect()})};
+  return {root,api,update,suspend,reset,dispose,inspect:()=>({time,terrain:api.SnowglobeTerrain.inspect(),liquids:api.SnowglobeLiquids.inspect(),river:api.SnowglobeRiver.inspect()})};
 }
 
 // The presentation is optional; the Snowglobe world does not know its host.
@@ -6464,7 +6471,9 @@ renderer.setAnimationLoop((now)=>{
     window.vestibuleDirty=true;
   }
   updateObserverEye(now);updateObserverVesselOrbiter(now);updatePropulsionModules(now);
-  workshopTabletopBetwixtable.userData.betwixtable.presentation.userData.snowglobeRuntime?.update(now);
+  const workshopSnowglobeRuntime=workshopTabletopBetwixtable.userData.betwixtable.presentation.userData.snowglobeRuntime;
+  if(legacyWorkshop.visible)workshopSnowglobeRuntime?.update(now);
+  else workshopSnowglobeRuntime?.suspend();
   betwixtSnowglobe.update(now);
   updateWorkshopCrucibleOrb(now);
   updateWorldD20(now);

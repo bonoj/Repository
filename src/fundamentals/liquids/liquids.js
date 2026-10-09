@@ -239,6 +239,23 @@ export function createLiquid({THREE,owner,terrain,kind="water",look=null,initial
   function addTimedSource({x=0,z=0,rate=.9,duration=3}={}){const source={x,z,rate:Math.max(0,rate),remaining:Math.max(0,duration)};sources.push(source);return{...source}}
   function inject(q=1,x=0,z=0){return addWater(q,x,z)}
   function fillRegion({x=0,z=0,radius=1,amount=1}={}){const cells=[];for(let iz=0;iz<N;iz++)for(let ix=0;ix<N;ix++)if(Math.hypot(wx(ix)-x,wz(iz)-z)<=radius&&valid(idx(ix,iz)))cells.push(idx(ix,iz));if(!cells.length)return 0;const dh=amount/(cells.length*DX*DX);for(const k of cells)h[k]+=dh;totalInjected+=amount;return amount}
+  // Construct a finite lake-at-rest state from a world-space solver elevation.
+  // No ongoing source: every supported cell starts with its hydrostatic depth.
+  function initializeToLevel(y){
+    if(!Number.isFinite(y))throw new Error("Liquid initial level must be finite");
+    sources=[];
+    sampleBed();
+    let volume=0,wetCells=0;
+    for(let k=0;k<K;k++){
+      const depth=valid(k)?Math.max(0,y-bed[k]):0;
+      h[k]=depth>DRY?depth:0;
+      hu[k]=0;hv[k]=0;
+      if(h[k]>0){volume+=h[k]*DX*DX;wetCells++}
+    }
+    totalInjected=volume;totalEscaped=0;totalDryLoss=0;steps=0;acc=0;lastNow=null;
+    refresh();
+    return{level:y,volume,wetCells};
+  }
   function cycleViscosity(){viscosityLevel=viscosityLevel>=26?1:viscosityLevel+1;return{level:viscosityLevel,drag:.22*Math.pow(2,(viscosityLevel-1)/3)}}
   function cycleDisplayDensity(){displayDensity=displayDensity>=25?1:displayDensity+1;refresh();return inspect().display}
   function setDisplayDensity(v){displayDensity=THREE.MathUtils.clamp(v|0,1,25);refresh();return inspect().display}
@@ -286,7 +303,7 @@ export function createLiquid({THREE,owner,terrain,kind="water",look=null,initial
   }
   function inspect(){let volume=0,wet=0,maxDepth=0,maxSpeed=0;for(let k=0;k<K;k++)if(h[k]>DRY){wet++;volume+=h[k]*DX*DX;maxDepth=Math.max(maxDepth,h[k]);maxSpeed=Math.max(maxSpeed,Math.hypot(hu[k],hv[k])/h[k])}return{kind:`fundamental-${kind}`,independent:true,enabled,grid:[N,N],cellSize:DX,sources:sources.map(s=>({...s})),display:{density:displayDensity,level:displayDensity,max:25},viscosity:{level:viscosityLevel,max:26,drag:.22*Math.pow(2,(viscosityLevel-1)/3)},water:{injected:totalInjected,volume,maxDepth,maxSpeed,escaped:totalEscaped,dryLoss:totalDryLoss,accounted:volume+totalEscaped+totalDryLoss,balanceError:totalInjected-(volume+totalEscaped+totalDryLoss)},wetCells:wet,steps,probe:probeFrame,presentation:{...presentationProbe}}}
   cacheBoundary();sampleBed();refresh();
-  return{update,setEnabled,reset,inject,fillRegion,setSource,setSources,addTimedSource,cycleDisplayDensity,setDisplayDensity,cycleWaterLook,cycleViscosity,waterLook:()=>applyWaterLook(),surfaceY,flowInto,sampleState,sampleStateInto,surfaceHeight,forEachWetCell,captureDiagnostic,inspect,object:surface,sideObject:waterSide};
+  return{update,setEnabled,reset,inject,fillRegion,initializeToLevel,setSource,setSources,addTimedSource,cycleDisplayDensity,setDisplayDensity,cycleWaterLook,cycleViscosity,waterLook:()=>applyWaterLook(),surfaceY,flowInto,sampleState,sampleStateInto,surfaceHeight,forEachWetCell,captureDiagnostic,inspect,object:surface,sideObject:waterSide};
 }
 
 

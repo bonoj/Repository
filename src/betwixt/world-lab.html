@@ -4003,13 +4003,32 @@ const workshopTabletopBetwixtable=buildBetwixtable({
         }
         sites.push({sector:i,...best});
       }
-      return {schema:'six-cities-snowglobe-survey-v1',coordinateFrame:{
+      // Read-only hydrology sampled in the same terrain-local frame as geology.
+      const hydrology={frame:'terrain-local',sampleSpacing:3,water:{samples:[],wetCells:0,depthMin:null,depthMax:0,depthMean:null,flowSpeedMax:0,volumeProxy:0},lava:{samples:[],wetCells:0,depthMin:null,depthMax:0,depthMean:null,flowSpeedMax:0,volumeProxy:0}};
+      for(const [kind,solver] of [['water',canyonWater],['lava',cauldronLava]]){
+        const out=hydrology[kind],flow={depth:0,u:0,v:0};let depthSum=0;
+        for(let iz=0;iz<=32;iz++)for(let ix=0;ix<=32;ix++){
+          const x=-48+ix*3,z=-48+iz*3;if(Math.hypot(x,z)>radius)continue;
+          const ground=globe.groundHeight(x,z),surfaceLocal=solver.surfaceY(x/liquidScale,z/liquidScale);
+          const wet=Number.isFinite(surfaceLocal)&&solver.flowInto(x/liquidScale,z/liquidScale,flow);
+          const surface=wet?surfaceLocal*liquidScale:null;
+          const depth=wet?Math.max(0,surface-ground):0;
+          const speed=wet?Math.hypot(flow.u,flow.v)*liquidScale:0;
+          out.samples.push({x,z,ground:+ground.toFixed(4),surface:surface===null?null:+surface.toFixed(4),depth:+depth.toFixed(4),flow:wet?[+(flow.u*liquidScale).toFixed(4),+(flow.v*liquidScale).toFixed(4)]:[0,0]});
+          if(depth>0){out.wetCells++;depthSum+=depth;out.depthMin=out.depthMin===null?depth:Math.min(out.depthMin,depth);out.depthMax=Math.max(out.depthMax,depth);out.flowSpeedMax=Math.max(out.flowSpeedMax,speed);}
+        }
+        out.sampleCount=out.samples.length;out.wetFraction=out.sampleCount?out.wetCells/out.sampleCount:0;
+        out.depthMean=out.wetCells?depthSum/out.wetCells:null;
+        out.volumeProxy=depthSum*9; // sampled area approximation, not solver-authoritative mass
+        out.solver=solver.inspect();
+      }
+      return {schema:'six-cities-snowglobe-survey-v2',coordinateFrame:{
         x:'east',y:'up',z:'north',units:'terrain-local',center:[0,0,0],radius,
         meshToTabletop:{scale:.025,translationY:.33},grid:{resolution,size,origin:[-half,-half],step},
         bedrockY:-12},meta,meteorWeather:'disabled',heightRange:{min,max},
-        elevations,geology,candidateSites:sites,
-        infrastructure:{water:{implemented:false,proposed:'terrain-aligned shallow-water field'},
-          lava:{implemented:false,proposed:'separate heat-bearing liquid/material field'},
+        elevations,geology,candidateSites:sites,hydrology,
+        infrastructure:{water:{implemented:true,authority:'Fundamentals liquid solver'},
+          lava:{implemented:true,authority:'Fundamentals liquid solver'},
           population:{implemented:false,proposed:'tagged density volumes on terrain'},
           matterStreams:{implemented:false,proposed:'conserved source-to-sink transport with city-owned controllers'}},
         tap};

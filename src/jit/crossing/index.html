@@ -120,9 +120,8 @@ async function run(){
  await stage('small_poll',async()=>{const a=await poll('small_poll');const found=a.find(x=>x.message===msg);if(!found)throw Error('Published message not found in cached poll');return {events:a.length,matched_id:found.id};});
  const large=await stage('large_publish',async()=>{
   // Synthetic, deterministic-looking JSON: approximately 1 MiB; no sensitive world state.
-  const entries=[];let index=0;
-  while(JSON.stringify({crossing:'02',id,entries}).length<1024*1024){entries.push({n:index++,position:[index%97,(index*7)%113,(index*13)%127],tag:'survey-'+(index%17),observation:'terrain/water/particles'});}
-  const data=enc.encode(JSON.stringify({crossing:'02',id,entries}));
+  const payload='terrain/water/particles|'.repeat(48000);
+  const data=enc.encode(JSON.stringify({crossing:'02',id,payload}));
   const sha=await digest(data);const filename='crossing-02-'+id+'.json';
   const r=await request('large_publish','https://ntfy.sh/'+name,{method:'PUT',headers:{'Filename':filename,'Title':'Crossing 02 binary '+id.slice(0,8),'Content-Type':'application/octet-stream'},body:new Blob([data],{type:'application/octet-stream'})});
   const body=await r.text();if(!r.ok)throw Error('HTTP '+r.status+': '+body.slice(0,400));

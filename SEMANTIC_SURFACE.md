@@ -97,6 +97,18 @@ The current specimen has established a narrow executable fact: categorical featu
 This remains Workshop evidence. It has not yet earned promotion into Fundamentals.
 
 
+## Snowglobe ownership and experimental eyes (current executable)
+
+Two independent Snowglobe runtimes are instantiated from `createSnowglobe` in `src/betwixt/world-lab.html`: the Workshop tabletop specimen and the Betwixt resident Snowglobe above the Observer Eye. Each owns its own Beyond-derived deformable terrain, water/lava solver instances, river bearings, Catch receiver, twelve observer eyes, and simulation clock. This is instance isolation, not two copies of the factory. The Betwixt presentation uses a Betwixtable and relational placement; the simulation does not depend on that host.
+
+Each runtime advances at a bounded ~30 Hz only while its containing place is visible. The Workshop runtime is suspended when `legacyWorkshop.visible` is false; the Betwixt runtime is suspended when `betwixtPlace.visible` is false. Suspension clears accumulated time rather than catching up hidden wall-clock time. This is distinct from focus: merely focusing another object does not stop the visible Snowglobe.
+
+The Workshop instance explicitly requests `eyeBehavior:'experimental'`; Betwixt uses the default `baseline`. The baseline preserves the existing shared-phase wander/investigate/dismiss eye choreography. The experimental policy separately selects bearing interests, steers using the eye/ring's existing local +Z forward axis, applies hover offsets, and retains hard pairwise nonpenetration. Both policies share eye anatomy, world ownership, and river input. This is a local choice, **not** an earned general behavior-plugin framework.
+
+The experimental policy exposes `SixCitiesCatch.swarm.inspect()`: per-eye modes, positions, targets, speeds, interests, plus aggregate observing/traveling counts, mean forward alignment, and mean target distance. **The downloadable `SnowglobeSurvey` currently does not include that eye report.** It exports terrain/geology, candidate sites, sampled hydrology, infrastructure claims, and liquid-tap diagnostics. Do not treat an exported terrain survey as behavioral evidence; wire the existing eye report into the survey when that observation seam is next exercised.
+
+The latest experimental eye behavior is *implemented but not accepted*. john reported unsatisfactory/strange behavior without a diagnostic trace. In particular, forward alignment gates desired steering but does not rigidly constrain retained velocity; this is a hypothesis to test, not a proven explanation. Do not promote the experimental policy into Betwixt until runtime observation supports it.
+
 ## Betwixtable spatial boundary
 
 Repeated Workshop pressure has earned one small spatial contract.

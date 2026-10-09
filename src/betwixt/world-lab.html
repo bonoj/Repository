@@ -3768,7 +3768,7 @@ const workshopTabletopBetwixtable=buildBetwixtable({
     // Finite canyon at rest: construct the full hydrostatic state immediately.
     // Elevation is specified in geological world coordinates, then converted
     // to the Fundamental liquid's local solver coordinates.
-    const canyonSurfaceY=waterSite.h+6;
+    const canyonSurfaceY=waterSite.h+15;
     const canyonInitial=canyonWater.initializeToLevel(canyonSurfaceY/liquidScale);
     root.userData.canyonInitial={worldY:canyonSurfaceY,...canyonInitial};
     const BB_COUNT=260,bbGeo=new THREE.SphereGeometry(.12,6,5);

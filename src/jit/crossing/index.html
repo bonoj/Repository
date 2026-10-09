@@ -10,12 +10,17 @@
 </head>
 <body>
 <h1>Crossing 01</h1><p>Static page → authenticated GitHub write → public Observer report.</p>
-<p class="muted">Experimental transport test, not GitHub OAuth. The token is held only in this page's memory, never saved in localStorage, cookies, or the repository. Use a short-lived fine-grained personal access token restricted to <a href="https://github.com/bonoj/Ingest">bonoj/Ingest</a> with Contents: Read and write. Do not use on a device you don't trust.</p>
-<label for="token">GitHub token (runtime only)</label>
-<input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
+<p class="muted">Sign in as bonoj using an Ingest-scoped GitHub token as your password. Save it with your phone password manager. Crossing does not store the credential itself; it stays in page memory until you close or reload the page.</p>
+<form id="login" autocomplete="on">
+<label for="username">GitHub username</label>
+<input id="username" name="username" autocomplete="username" value="bonoj" autocapitalize="none" spellcheck="false">
+<label for="token">Password (Ingest token)</label>
+<input id="token" name="password" type="password" autocomplete="current-password" required placeholder="GitHub token">
+<button id="connect" type="submit">Sign in</button>
+</form>
 <label for="observation">Observer report</label>
 <textarea id="observation">Crossing test: the observer saw a marble.</textarea>
-<button id="send">Send report</button>
+<button id="send" disabled>Send report</button>
 <p id="state" class="status" aria-live="polite">Disconnected</p>
 <pre id="output">No report submitted.</pre>
 <p class="muted">Reports are public. Do not submit secrets, personal data, or private world knowledge. Each attempt creates a unique JSON file; failed attempts do not retry automatically.</p>
@@ -23,15 +28,32 @@
 'use strict';
 const owner='bonoj',repo='Ingest';
 const token=document.getElementById('token');
+const username=document.getElementById('username');
+const connect=document.getElementById('connect');
+let credential='';
 const send=document.getElementById('send');
 const state=document.getElementById('state');
 const output=document.getElementById('output');
 const observation=document.getElementById('observation');
 function status(s){state.textContent=s}
+document.getElementById('login').addEventListener('submit',async e=>{
+ e.preventDefault();
+ if(username.value.trim()!=='bonoj'){status('Only bonoj is authorized');return}
+ const candidate=token.value.trim();
+ if(!candidate){status('Password required');return}
+ connect.disabled=true;status('Checking GitHub identity…');
+ try{
+  const response=await fetch('https://api.github.com/user',{headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+candidate,'X-GitHub-Api-Version':'2022-11-28'}});
+  if(!response.ok)throw new Error('Authentication failed: HTTP '+response.status);
+  const user=await response.json();
+  if(user.login!=='bonoj')throw new Error('Only bonoj is authorized');
+  credential=candidate;token.value='';send.disabled=false;status('Signed in as bonoj');output.textContent='Ready to send reports.';
+ }catch(err){credential='';send.disabled=true;status('Not signed in');output.textContent=String(err.message||err)}
+ finally{connect.disabled=false}
+});
 function toBase64(text){const bytes=new TextEncoder().encode(text);let binary='';for(const b of bytes)binary+=String.fromCharCode(b);return btoa(binary)}
 send.addEventListener('click',async()=>{
- const credential=token.value.trim();
- if(!credential){status('Disconnected — token required');return}
+ if(!credential){status('Sign in first');return}
  const note=observation.value.trim();
  if(!note){status('No observation to send');return}
  send.disabled=true;status('Sending…');output.textContent='Waiting for GitHub response.';
@@ -52,7 +74,7 @@ send.addEventListener('click',async()=>{
   if(decoded.id!==id)throw new Error('Write succeeded; report ID mismatch');
   status('Delivered and verified');
   output.textContent='Report ID: '+id+'\nVerified GitHub API read.\nPublic URL: '+raw;
-  token.value=''; // discard credential after successful use
+  // Retain credential in memory for subsequent sends; never persist it.
  }catch(err){status('Not verified');output.textContent=String(err.message||err)+'\n\nIf a commit succeeded, inspect Ingest before retrying.'}
  finally{send.disabled=false}
 });

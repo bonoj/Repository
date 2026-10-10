@@ -61,12 +61,7 @@ function updateGravity(t){
  gravityPosition.set(Math.sin(phase)*gravityOrbitalRadius,-Math.cos(phase)*gravityOrbitalRadius,0);
  gravityOrb.position.copy(gravityPosition);brassLight.position.copy(gravityPosition);
  gravityDown.copy(gravityPosition).normalize();
- // Collector's normal and clipping plane track the current gravitational down direction.
- const up=gravityDown.clone().negate();
- clipPlane.normal.copy(gravityDown);
- waterSurface.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),up);
- waterSurface.position.copy(gravityDown).multiplyScalar(-waterY);
- clipPlane.constant=waterY;
+ // Water has its own momentum; do not rotate the collector with gravity.
 }
 const rand=()=>Math.random()*2-1;
 function spawnOne(boost=1){
@@ -103,27 +98,62 @@ const waterSurface=put(world,rippleGeo,surfaceMat);
 waterSurface.rotation.x=-Math.PI/2;
 let windImpulse=0,windAffected=0,windSurgeStart=-100,windSpeed=3.1;
 function windGust(){const elapsed=simTime-windSurgeStart;return elapsed>=0&&elapsed<5?Math.sin(Math.PI*elapsed/5)**2:0}
+// Conservative damped surface-height dynamics on a fixed horizontal disk.
+// Point gravity is sampled at each vertex; acceleration changes before water responds.
+const waveH=new Float32Array(rippleBase.length/3),waveV=new Float32Array(waveH.length);
+const waveNext=new Float32Array(waveH.length),waveVelocityNext=new Float32Array(waveH.length);
+const waveAdj=Array.from({length:waveH.length},()=>new Set());
+for(let k=0;k<indices.length;k+=3){const a=indices[k],b=indices[k+1],c=indices[k+2];waveAdj[a].add(b);waveAdj[a].add(c);waveAdj[b].add(a);waveAdj[b].add(c);waveAdj[c].add(a);waveAdj[c].add(b)}
+let wavePeak=0,waveEnergy=0;
+function stepWater(dt){
+ const radius=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));
+ const gust=windGust(),speed=3.1+13*gust;
+ const n=waveH.length;let mean=0,count=0;
+ for(let i=0;i<n;i++){
+  const x=rippleBase[3*i]*radius,z=rippleBase[3*i+1]*radius;
+  const r=Math.hypot(rippleBase[3*i],rippleBase[3*i+1]);
+  if(r>.999){waveNext[i]=0;waveVelocityNext[i]=0;continue}
+  const dx=gravityPosition.x-x,dy=gravityPosition.y-waterY,dz=gravityPosition.z-z;
+  const d2=dx*dx+dy*dy+dz*dz+gravitySoftening*gravitySoftening;
+  const accel=GRAVITY*gravityOrbitalRadius*gravityOrbitalRadius/(d2*Math.sqrt(d2));
+  const gx=dx*accel;
+  let avg=0;for(const j of waveAdj[i])avg+=waveH[j]-waveH[i];
+  avg/=Math.max(1,waveAdj[i].size);
+  // Local forcing: stronger on the side nearer the pendular point source.
+  const forcing=gx*.045*x/Math.max(radius,1)+speed*.007*x/Math.max(radius,1);
+  const v=(waveV[i]+dt*(avg*22+forcing-waveH[i]*.55))*Math.exp(-.42*dt);
+  waveVelocityNext[i]=v;waveNext[i]=waveH[i]+v*dt;
+  mean+=waveNext[i];count++;
+ }
+ mean/=Math.max(1,count);
+ wavePeak=0;waveEnergy=0;
+ for(let i=0;i<n;i++){
+  if(Math.hypot(rippleBase[i*3],rippleBase[i*3+1])>.999){waveH[i]=0;waveV[i]=0;continue}
+  waveH[i]=Math.max(-1.8,Math.min(1.8,waveNext[i]-mean));
+  waveV[i]=waveVelocityNext[i];wavePeak=Math.max(wavePeak,Math.abs(waveH[i]));waveEnergy+=waveV[i]*waveV[i];
+ }
+}
 function updateWindVisual(){
  const radius=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));
- const gust=windGust();
  const a=ripplePositions.array;
- for(let i=0;i<a.length;i+=3){
-  const x=rippleBase[i],z=rippleBase[i+1],r=Math.hypot(x,z);
-  const downstream=Math.max(0,(x+.2)/1.2);
-  // Zero wave displacement at the contact ring; no detached jagged perimeter.
-  const envelope=Math.pow(Math.max(0,1-r*r),1.5);
-  const wave=((.08+.24*downstream)*Math.sin(x*radius*1.6-z*radius*.45-simTime*3.2)
-   +(.025+.13*downstream)*Math.sin(x*radius*2.8+z*radius*1.4-simTime*4.5));
-  a[i]=x;a[i+1]=z;a[i+2]=envelope*wave*(1+gust*2.5)/Math.max(radius,.01);
- }
+ for(let i=0;i<a.length;i+=3){a[i]=rippleBase[i];a[i+1]=rippleBase[i+1];a[i+2]=waveH[i/3]/Math.max(radius,.01)}
  ripplePositions.needsUpdate=true;rippleGeo.computeVertexNormals();
+}
+function localWaterHeight(x,z){
+ const radius=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));
+ const nx=x/Math.max(radius,.01),nz=-z/Math.max(radius,.01);
+ const r=Math.hypot(nx,nz);if(r>=1)return waterY;
+ const ring=Math.max(1,Math.min(RADIAL,Math.round(r*RADIAL)));
+ let a=Math.atan2(nz,nx);if(a<0)a+=2*Math.PI;
+ const segment=Math.round(a*SEGMENTS/(2*Math.PI))%SEGMENTS;
+ return waterY+waveH[1+(ring-1)*SEGMENTS+segment];
 }
 const clipPlane=new T.Plane(new T.Vector3(0,-1,0),-INNER_R);basinMat.clippingPlanes=[clipPlane];renderer.localClippingEnabled=true;
 let waterY=-INNER_R,waterVolume=0;
 settledCount=INITIAL_WATER_UNITS;
 function capacityAt(y){const d=Math.max(0,Math.min(2*INNER_R,y+INNER_R));return Math.PI*d*d*(INNER_R-d/3)}
 function waterlineForVolume(v){let lo=-INNER_R,hi=INNER_R;for(let k=0;k<30;k++){const m=(lo+hi)*.5;if(capacityAt(m)<v)lo=m;else hi=m}return (lo+hi)*.5}
-function updateCollector(){waterVolume=settledCount*MATERIAL_UNIT;waterY=settledCount?waterlineForVolume(waterVolume):-INNER_R;clipPlane.constant=waterY;const r=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));waterSurface.position.copy(gravityDown).multiplyScalar(-waterY);waterSurface.scale.set(r,r,1);waterSurface.visible=settledCount>0;basin.visible=settledCount>0}
+function updateCollector(){waterVolume=settledCount*MATERIAL_UNIT;waterY=settledCount?waterlineForVolume(waterVolume):-INNER_R;clipPlane.constant=waterY;const r=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));waterSurface.position.set(0,waterY,0);waterSurface.scale.set(r,r,1);waterSurface.visible=settledCount>0;basin.visible=settledCount>0}
 let splashImpacts=0,splashEjected=0,splashReturned=0;
 function splash(p,impactSpeed){
  // Incoming unit merges first. Ejected units are debited from the collector.
@@ -133,9 +163,8 @@ function splash(p,impactSpeed){
  const available=Math.min(settledCount-1,MAX_ACTIVE-particles.length+1);
  const n=Math.min(available,4,Math.floor(energy*.17));
  if(n>0){
-  const upx=-gravityDown.x,upy=-gravityDown.y,upz=-gravityDown.z;
-  const depth=p.x*gravityDown.x+p.y*gravityDown.y+p.z*gravityDown.z;
-  const cx=p.x-gravityDown.x*(depth+waterY),cy=p.y-gravityDown.y*(depth+waterY),cz=p.z-gravityDown.z*(depth+waterY);
+  const upx=0,upy=1,upz=0;
+  const cx=p.x,cy=localWaterHeight(p.x,p.z),cz=p.z;
   for(let j=0;j<n;j++){
    const a=Math.random()*Math.PI*2;
    let tx=Math.cos(a),ty=0,tz=Math.sin(a);
@@ -153,14 +182,14 @@ function splash(p,impactSpeed){
 function settle(p){settledCount++;if(p.splash)splashReturned++;updateCollector()}
 updateCollector();
 function simulate(dt){
- const t=Math.min(dt,.022);simSteps++;simTime+=t;
+ const t=Math.min(dt,.022);simSteps++;simTime+=t;stepWater(t);
  if(dripEnabled){emitCarry+=emitRate*t;const n=Math.min(160,Math.floor(emitCarry));let spawned=0;for(;spawned<n;spawned++)if(!spawnOne())break;emitCarry-=spawned;}
  const limit=INNER_R-BEAD_R;
  // Seed the first liquid on contact with the vessel, then merge at the waterline.
  for(let i=particles.length-1;i>=0;i--){
   const p=particles[i];p.life+=t;const dx=gravityPosition.x-p.x,dy=gravityPosition.y-p.y,dz=gravityPosition.z-p.z;const d2=dx*dx+dy*dy+dz*dz+gravitySoftening*gravitySoftening;const accel=GRAVITY*gravityOrbitalRadius*gravityOrbitalRadius/(d2*Math.sqrt(d2));p.vx+=dx*accel*t;p.vy+=dy*accel*t;p.vz+=dz*accel*t;
   // Thick horizontal airflow band; lateral drag stays subordinate to gravity.
-  const height=-(p.x*gravityDown.x+p.y*gravityDown.y+p.z*gravityDown.z)-waterY;
+  const height=p.y-localWaterHeight(p.x,p.z);
   const band=Math.exp(-Math.pow((height-1.1)/2.3,2));
   const air=2.1*band*t;
   windSpeed=3.1+13*windGust();
@@ -177,8 +206,8 @@ function simulate(dt){
    p.vx*=.79;p.vz*=.79;collisionCount++;
    if(settledCount===0){settle(p);particles[i]=particles[particles.length-1];particles.pop();continue;}
   }
-  const depth=p.x*gravityDown.x+p.y*gravityDown.y+p.z*gravityDown.z;const downward=p.vx*gravityDown.x+p.vy*gravityDown.y+p.vz*gravityDown.z;
-  if(settledCount>0 && depth>=-waterY-BEAD_R && downward>0){
+  const depth=p.y;const downward=-p.vy;
+  if(settledCount>0 && depth<=localWaterHeight(p.x,p.z)+BEAD_R && downward>0){
    if(p.splash)settle(p);else splash(p,downward);particles[i]=particles[particles.length-1];particles.pop();
   }
  }
@@ -189,7 +218,7 @@ function renderBeads(){
 
  const fraction=Math.cbrt(sourceUnits/30000);source.scale.setScalar(fraction);sourceCore.scale.setScalar(fraction);
 }
-const BUILD='waterworld-pendulum-v15';
+const BUILD='waterworld-inertial-surface-v16';
 const buildLabel=document.querySelector('#build');
 buildLabel.textContent=BUILD;
 const hud=document.querySelector('#hud');
@@ -200,7 +229,7 @@ plopButton.onclick=()=>burst(120,2.8);
 const surgeButton=document.createElement('button');surgeButton.textContent='↝ SURGE';hud.append(surgeButton);
 surgeButton.onclick=()=>{windSurgeStart=simTime};
 const resetButton=document.createElement('button');resetButton.textContent='↺ RESET';hud.append(resetButton);
-resetButton.onclick=()=>{particles.length=0;settledCount=INITIAL_WATER_UNITS;updateCollector();windSurgeStart=-100;windSpeed=3.1;sourceUnits=30000;emitted=0;escaped=0;collisionCount=0;simTime=0;simSteps=0;emitCarry=0;peakActive=0;splashImpacts=0;splashEjected=0;splashReturned=0;windImpulse=0;windAffected=0;};
+resetButton.onclick=()=>{particles.length=0;settledCount=INITIAL_WATER_UNITS;updateCollector();windSurgeStart=-100;windSpeed=3.1;sourceUnits=30000;emitted=0;escaped=0;collisionCount=0;simTime=0;simSteps=0;emitCarry=0;peakActive=0;splashImpacts=0;splashEjected=0;splashReturned=0;windImpulse=0;windAffected=0;waveH.fill(0);waveV.fill(0);wavePeak=0;waveEnergy=0;};
 const status=document.querySelector('#status');status.textContent='PENDULAR GRAVITY · LOW WIND · SOURCE → COLLECTION';
 const envelope=new T.Mesh(new T.SphereGeometry(BAUBLE_R,72,48),new T.MeshPhysicalMaterial({color:0xa0dce2,metalness:0,roughness:.08,transparent:true,opacity:.055,depthWrite:false,side:T.FrontSide}));world.add(envelope);
 const innerGlass=new T.Mesh(new T.SphereGeometry(INNER_R,72,48),new T.MeshPhysicalMaterial({color:0x9dcdd7,metalness:0,roughness:.09,transparent:true,opacity:.035,depthWrite:false,side:T.BackSide}));world.add(innerGlass);
@@ -216,7 +245,7 @@ function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.
 const probeButton=document.querySelector('#probe'),probePanel=document.querySelector('#probePanel'),probeText=document.querySelector('#probeText');
 let probeReport='',probeLast=0,probeFrames=0,probeFrameMs=0;
 const round=(n,d=2)=>Number.isFinite(n)?+n.toFixed(d):null;
-function fluidDiagnostics(){return {model:'discrete 3D ballistic beads',sourceUnits,emitted,active:particles.length,settled:settledCount,unrepresented:escaped,accounted:sourceUnits+particles.length+settledCount+escaped,initialUnits:30000+INITIAL_WATER_UNITS,initialWaterUnits:INITIAL_WATER_UNITS,initialFillFraction:.2,gravity:{type:'pendular point source',position:gravityPosition.toArray().map(round),orbitalRadius:gravityOrbitalRadius,periodSeconds:gravityPeriod,swingAmplitudeRadians:gravitySwingAmplitude,stationary:false,strengthAtCenter:GRAVITY},wind:{direction:[1,0,0],bandCenterAboveSurface:1.1,bandThickness:2.3,baselineSpeed:3.1,currentSpeed:round(windSpeed),gustStrength:round(windGust()),affectedSteps:windAffected,impulse:round(windImpulse)},collisions:collisionCount,splashImpacts,splashEjected,splashReturned,peakActive,steps:simSteps,seconds:round(simTime),beadRadius:BEAD_R,activeCap:MAX_ACTIVE,collectorVolume:round(waterVolume,4),waterline:round(waterY,4),collectorModel:'gravity-aligned equilibrium; spherical geometry adapter'}}
+function fluidDiagnostics(){return {model:'discrete 3D ballistic beads',sourceUnits,emitted,active:particles.length,settled:settledCount,unrepresented:escaped,accounted:sourceUnits+particles.length+settledCount+escaped,initialUnits:30000+INITIAL_WATER_UNITS,initialWaterUnits:INITIAL_WATER_UNITS,initialFillFraction:.2,gravity:{type:'pendular point source',position:gravityPosition.toArray().map(round),orbitalRadius:gravityOrbitalRadius,periodSeconds:gravityPeriod,swingAmplitudeRadians:gravitySwingAmplitude,stationary:false,strengthAtCenter:GRAVITY},wind:{direction:[1,0,0],bandCenterAboveSurface:1.1,bandThickness:2.3,baselineSpeed:3.1,currentSpeed:round(windSpeed),gustStrength:round(windGust()),affectedSteps:windAffected,impulse:round(windImpulse)},collisions:collisionCount,splashImpacts,splashEjected,splashReturned,peakActive,steps:simSteps,seconds:round(simTime),beadRadius:BEAD_R,activeCap:MAX_ACTIVE,collectorVolume:round(waterVolume,4),waterline:round(waterY,4),collectorModel:'conservative damped 2D inertial heightfield; point-gravity forcing',wavePeak:round(wavePeak),waveEnergy:round(waveEnergy)}}
 function inspectWorld(){
  camera.updateMatrixWorld();world.updateMatrixWorld(true);
  const center=new T.Vector3(0,0,0).project(camera);

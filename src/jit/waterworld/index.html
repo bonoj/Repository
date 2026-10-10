@@ -54,12 +54,12 @@ let impactImpulse=0,dripEnabled=true;
 // Moving point-mass gravity source outside the vessel.
 const gravityOrbitalRadius=15.1,gravityPeriod=90,gravitySoftening=3;
 const gravityPosition=new T.Vector3(),gravityDown=new T.Vector3(0,-1,0);
-const brass=put(world,new T.SphereGeometry(.48,24,16),new T.MeshStandardMaterial({color:0xb68a43,metalness:.88,roughness:.23}));
+const gravityOrb=put(world,new T.SphereGeometry(.48,24,16),new T.MeshStandardMaterial({color:0xb68a43,metalness:.88,roughness:.23}));
 const brassLight=new T.PointLight(0xffc578,3,7);world.add(brassLight);
 function updateGravity(t){
  const phase=t*2*Math.PI/gravityPeriod;
  gravityPosition.set(Math.sin(phase)*gravityOrbitalRadius,-Math.cos(phase)*gravityOrbitalRadius,Math.sin(phase*.5)*1.6);
- brass.position.copy(gravityPosition);brassLight.position.copy(gravityPosition);
+ gravityOrb.position.copy(gravityPosition);brassLight.position.copy(gravityPosition);
  gravityDown.copy(gravityPosition).normalize();
  // Collector's normal and clipping plane track the current gravitational down direction.
  const up=gravityDown.clone().negate();

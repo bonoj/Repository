@@ -37,19 +37,19 @@ function beam(a,b,r,m,p=world){const v=new T.Vector3(...a),w=new T.Vector3(...b)
 
 // Source → discrete transport → accumulated material. No pressure solver or wall mesh.
 const BAUBLE_R=10.25,INNER_R=BAUBLE_R-.18;
-const SOURCE_R=3.05,BEAD_R=.055,MAX_ACTIVE=2600,MAX_SETTLED=9000,GRAVITY=13.5;
+const SOURCE_R=3.05,BEAD_R=.055,MAX_ACTIVE=2600,GRAVITY=13.5;
 const sourceMat=new T.MeshPhysicalMaterial({color:0x57c9df,metalness:0,roughness:.08,transparent:true,opacity:.49,depthWrite:false,clearcoat:1,clearcoatRoughness:.05,side:T.FrontSide});
 const source=put(world,new T.SphereGeometry(SOURCE_R,48,32),sourceMat);
 const sourceCore=put(world,new T.SphereGeometry(SOURCE_R*.97,40,28),new T.MeshPhysicalMaterial({color:0x167da8,roughness:.15,transparent:true,opacity:.17,depthWrite:false}));
 const beadMat=new T.MeshPhysicalMaterial({color:0x6acde8,metalness:.04,roughness:.12,transparent:true,opacity:.88,depthWrite:false});
 const beadGeo=new T.IcosahedronGeometry(BEAD_R,1);
 const activeMesh=new T.InstancedMesh(beadGeo,beadMat,MAX_ACTIVE);
-const settledMesh=new T.InstancedMesh(beadGeo,beadMat,MAX_SETTLED);
-activeMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);settledMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
-activeMesh.frustumCulled=false;settledMesh.frustumCulled=false;
-world.add(activeMesh,settledMesh);
-const dummy=new T.Object3D(),particles=[],settled=[];
-let emitted=0,escaped=0,collisionCount=0,sourceUnits=30000,emitRate=65,emitCarry=0,simSteps=0,simTime=0,peakActive=0;
+
+activeMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
+activeMesh.frustumCulled=false;
+world.add(activeMesh);
+const dummy=new T.Object3D(),particles=[];
+let emitted=0,escaped=0,settledCount=0,collisionCount=0,sourceUnits=30000,emitRate=65,emitCarry=0,simSteps=0,simTime=0,peakActive=0;
 let impactImpulse=0,dripEnabled=true;
 const rand=()=>Math.random()*2-1;
 function spawnOne(boost=1){
@@ -61,16 +61,18 @@ function spawnOne(boost=1){
  sourceUnits--;emitted++;peakActive=Math.max(peakActive,particles.length);return true;
 }
 function burst(n,boost=1){for(let i=0;i<n;i++)if(!spawnOne(boost))break}
-function settle(p){
- if(settled.length>=MAX_SETTLED){escaped++;return}
- // Close-packed visual deposit in the lower spherical cap; no O(n²) contact solver.
- const k=settled.length,perLayer=240,layer=Math.floor(k/perLayer);
- const y=-INNER_R+BEAD_R+layer*BEAD_R*1.75;
- const allowable=Math.sqrt(Math.max(0,(INNER_R-BEAD_R)**2-y*y));
- const ringIndex=k%perLayer,phi=ringIndex*2.399963229728653;
- const rho=Math.sqrt((ringIndex+.5)/perLayer)*Math.min(allowable,2.8+layer*.06);
- settled.push([rho*Math.cos(phi),y,rho*Math.sin(phi)]);
-}
+const MATERIAL_UNIT=4*Math.PI*SOURCE_R**3/(3*30000);
+const basinMat=new T.MeshPhysicalMaterial({color:0x238db2,roughness:.12,transparent:true,opacity:.38,depthWrite:false,side:T.DoubleSide});
+const surfaceMat=new T.MeshPhysicalMaterial({color:0x79d7e5,roughness:.09,transparent:true,opacity:.58,depthWrite:false,side:T.DoubleSide});
+const basin=put(world,new T.SphereGeometry(INNER_R-.015,48,32),basinMat);
+const waterSurface=put(world,new T.CircleGeometry(1,64),surfaceMat);waterSurface.rotation.x=-Math.PI/2;
+const clipPlane=new T.Plane(new T.Vector3(0,1,0),INNER_R);basinMat.clippingPlanes=[clipPlane];renderer.localClippingEnabled=true;
+let waterY=-INNER_R,waterVolume=0;
+function capacityAt(y){const d=Math.max(0,Math.min(2*INNER_R,y+INNER_R));return Math.PI*d*d*(INNER_R-d/3)}
+function waterlineForVolume(v){let lo=-INNER_R,hi=INNER_R;for(let k=0;k<30;k++){const m=(lo+hi)*.5;if(capacityAt(m)<v)lo=m;else hi=m}return (lo+hi)*.5}
+function updateCollector(){waterVolume=settledCount*MATERIAL_UNIT;waterY=settledCount?waterlineForVolume(waterVolume):-INNER_R;clipPlane.constant=-waterY;const r=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));waterSurface.position.y=waterY;waterSurface.scale.set(r,r,1);waterSurface.visible=settledCount>0;basin.visible=settledCount>0}
+function settle(p){settledCount++;updateCollector()}
+updateCollector();
 function simulate(dt){
  const t=Math.min(dt,.022);simSteps++;simTime+=t;
  if(dripEnabled){emitCarry+=emitRate*t;const n=Math.min(160,Math.floor(emitCarry));emitCarry-=n;burst(n)}

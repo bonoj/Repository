@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07101a"><title>Waterworld · Gravity Ocean</title><style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:82px;right:10px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:118px 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px}#buildRow{display:flex;justify-content:center;align-items:center;gap:5px;margin-top:3px;color:#a6b7b9;font:11px ui-monospace,monospace;letter-spacing:.12em;pointer-events:auto}#fresh{display:inline-grid;place-items:center;width:40px;height:40px;min-height:40px;padding:0;border:0;background:transparent;color:#c4b291;font:23px system-ui;line-height:1;cursor:pointer} </style></head><body><div id="stage"></div><button id="probe" type="button">◉ INSPECT</button><div id="probePanel"><div id="probeActions"><button id="copyProbe">COPY REPORT</button><button id="closeProbe">CLOSE</button></div><div id="probeText"></div></div><div id="title"><h1>WATERWORLD</h1><div id="tag">GRAVITY OCEAN · FIRST LIGHT</div><div id="buildRow"><span id="build">v4 · 97024e25</span><button id="fresh" type="button" title="Fetch latest build" aria-label="Fetch latest build">↻</button></div></div><div id="hud"><div id="status">ORBIT: ONE FINGER · PINCH: ZOOM · WATER TESTS ITSELF</div></div><div id="error"></div><script>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:82px;right:10px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:118px 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px}#buildRow{display:flex;justify-content:center;align-items:center;gap:5px;margin-top:3px;color:#a6b7b9;font:11px ui-monospace,monospace;letter-spacing:.12em;pointer-events:auto}#fresh{display:inline-grid;place-items:center;width:40px;height:40px;min-height:40px;padding:0;border:0;background:transparent;color:#c4b291;font:23px system-ui;line-height:1;cursor:pointer} </style></head><body><div id="stage"></div><button id="probe" type="button">◉ INSPECT</button><div id="probePanel"><div id="probeActions"><button id="copyProbe">COPY REPORT</button><button id="closeProbe">CLOSE</button></div><div id="probeText"></div></div><div id="title"><h1>WATERWORLD</h1><div id="tag">SOURCE · TRANSPORT · COLLECTION</div><div id="buildRow"><span id="build">v5 · BEADS</span><button id="fresh" type="button" title="Fetch latest build" aria-label="Fetch latest build">↻</button></div></div><div id="hud"><div id="status">ORBIT: ONE FINGER · PINCH: ZOOM · WATER TESTS ITSELF</div></div><div id="error"></div><script>
 (function(){
  const el=document.getElementById('error');
  function fatal(error){
@@ -35,106 +35,81 @@ function ring(p,r,t,m,x,y,z){const o=put(p,new T.TorusGeometry(r,t,7,48),m,x,y,z
 function beam(a,b,r,m,p=world){const v=new T.Vector3(...a),w=new T.Vector3(...b),d=w.clone().sub(v),o=put(p,new T.CylinderGeometry(r,r,d.length(),7),m,...v.clone().add(w).multiplyScalar(.5).toArray());o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),d.normalize());return o}
 
 
-// Dynamic height-field ocean: conservative finite-volume fluxes and inertial waves.
-// External gravity acts in world -Y. Camera orbit never changes that field.
-const waterFill=.34, waterRadius=10.07, N=52, cell=2*waterRadius/N;
-const capVolume=h=>Math.PI*h*h*(waterRadius-h/3);
-const targetVolume=waterFill*4*Math.PI*waterRadius**3/3;
-let low=0,high=2*waterRadius;
-for(let k=0;k<48;k++){const m=(low+high)/2;if(capVolume(m)<targetVolume)low=m;else high=m}
-const surfaceY=-waterRadius+(low+high)/2;
-const count=N*N, floor=new Float32Array(count), area=new Float32Array(count);
-const h=new Float32Array(count), vx=new Float32Array(count), vz=new Float32Array(count);
-const dh=new Float32Array(count), ax=new Float32Array(count), az=new Float32Array(count);
-const valid=new Uint8Array(count), g=16, damping=.997;
-const index=(i,j)=>j*N+i, X=i=>(i+.5)*cell-waterRadius, Z=j=>(j+.5)*cell-waterRadius;
-let wetArea=0,initialMass=0;
-for(let j=0;j<N;j++)for(let i=0;i<N;i++){
- const id=index(i,j),x=X(i),z=Z(j),r2=x*x+z*z;
- if(r2>=waterRadius*waterRadius*.985)continue;
- valid[id]=1;floor[id]=-Math.sqrt(waterRadius*waterRadius-r2);
- h[id]=Math.max(0,surfaceY-floor[id]);area[id]=cell*cell;initialMass+=h[id]*area[id];wetArea+=area[id];
+// Source → discrete transport → accumulated material. No pressure solver or wall mesh.
+const BAUBLE_R=10.25,INNER_R=BAUBLE_R-.18;
+const SOURCE_R=3.05,BEAD_R=.055,MAX_ACTIVE=2600,MAX_SETTLED=9000,GRAVITY=13.5;
+const sourceMat=new T.MeshPhysicalMaterial({color:0x57c9df,metalness:0,roughness:.08,transparent:true,opacity:.49,depthWrite:false,clearcoat:1,clearcoatRoughness:.05,side:T.FrontSide});
+const source=put(world,new T.SphereGeometry(SOURCE_R,48,32),sourceMat);
+const sourceCore=put(world,new T.SphereGeometry(SOURCE_R*.97,40,28),new T.MeshPhysicalMaterial({color:0x167da8,roughness:.15,transparent:true,opacity:.17,depthWrite:false}));
+const beadMat=new T.MeshPhysicalMaterial({color:0x6acde8,metalness:.04,roughness:.12,transparent:true,opacity:.88,depthWrite:false});
+const beadGeo=new T.IcosahedronGeometry(BEAD_R,1);
+const activeMesh=new T.InstancedMesh(beadGeo,beadMat,MAX_ACTIVE);
+const settledMesh=new T.InstancedMesh(beadGeo,beadMat,MAX_SETTLED);
+activeMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);settledMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
+activeMesh.frustumCulled=false;settledMesh.frustumCulled=false;
+world.add(activeMesh,settledMesh);
+const dummy=new T.Object3D(),particles=[],settled=[];
+let emitted=0,escaped=0,collisionCount=0,sourceUnits=30000,emitRate=65,emitCarry=0,simSteps=0,simTime=0,peakActive=0;
+let impactImpulse=0,dripEnabled=true;
+const rand=()=>Math.random()*2-1;
+function spawnOne(boost=1){
+ if(sourceUnits<=0||particles.length>=MAX_ACTIVE)return false;
+ const theta=Math.random()*Math.PI*2,u=rand(),r=Math.sqrt(1-u*u);
+ const nx=r*Math.cos(theta),ny=u,nz=r*Math.sin(theta);
+ const radius=SOURCE_R+BEAD_R*.8;
+ particles.push({x:nx*radius,y:ny*radius,z:nz*radius,vx:nx*(.8+Math.random()*.9)*boost,vy:ny*(.8+Math.random()*.9)*boost,vz:nz*(.8+Math.random()*.9)*boost,life:0});
+ sourceUnits--;emitted++;peakActive=Math.max(peakActive,particles.length);return true;
 }
-const oceanMat=new T.MeshPhysicalMaterial({color:0x1596b9,roughness:.2,metalness:0,transparent:true,opacity:.38,side:T.DoubleSide,depthWrite:false});
-// One indexed vertex per grid corner: adjacent triangles share exact positions.
-const oceanGeo=new T.BufferGeometry(),side=N+1;
-const verts=new Float32Array(side*side*3),indices=[];
-const vertex=(i,j)=>j*side+i;
-for(let j=0;j<=N;j++)for(let i=0;i<=N;i++){const k=vertex(i,j);verts[k*3]=i*cell-waterRadius;verts[k*3+2]=j*cell-waterRadius}
-for(let j=0;j<N;j++)for(let i=0;i<N;i++){const k=index(i,j);if(!valid[k])continue;const a=vertex(i,j),b=vertex(i+1,j),c=vertex(i+1,j+1),d=vertex(i,j+1);indices.push(a,d,b,b,d,c)}
-oceanGeo.setAttribute('position',new T.BufferAttribute(verts,3).setUsage(T.DynamicDrawUsage));oceanGeo.setIndex(indices);
-const ocean=put(world,oceanGeo,oceanMat);
-const skirtGeo=new T.BufferGeometry(); // Retired: independent curtains caused the jagged wall.
-let surfaceSlopeMax=0,wallClamps=0;
-let impulseCount=0,simSteps=0,simTime=0;
-function splash(x,z,strength=2.8){
- impulseCount++;
- for(let j=0;j<N;j++)for(let i=0;i<N;i++){const id=index(i,j);if(!valid[id])continue;
- const d2=(X(i)-x)**2+(Z(j)-z)**2;
- const w=Math.exp(-d2/3.5);
- h[id]=Math.max(0,h[id]+strength*w*.10);
- vx[id]+=(X(i)-x)*w*strength*.24;vz[id]+=(Z(j)-z)*w*strength*.24;
- }
- normalizeMass();
-}
-function normalizeMass(){
- let mass=0;for(let k=0;k<count;k++)mass+=h[k]*area[k];
- const diff=(initialMass-mass)/wetArea;
- for(let k=0;k<count;k++)if(valid[k])h[k]=Math.max(0,h[k]+diff);
+function burst(n,boost=1){for(let i=0;i<n;i++)if(!spawnOne(boost))break}
+function settle(p){
+ if(settled.length>=MAX_SETTLED){escaped++;return}
+ // Close-packed visual deposit in the lower spherical cap; no O(n²) contact solver.
+ const k=settled.length,perLayer=240,layer=Math.floor(k/perLayer);
+ const y=-INNER_R+BEAD_R+layer*BEAD_R*1.75;
+ const allowable=Math.sqrt(Math.max(0,(INNER_R-BEAD_R)**2-y*y));
+ const ringIndex=k%perLayer,phi=ringIndex*2.399963229728653;
+ const rho=Math.sqrt((ringIndex+.5)/perLayer)*Math.min(allowable,2.8+layer*.06);
+ settled.push([rho*Math.cos(phi),y,rho*Math.sin(phi)]);
 }
 function simulate(dt){
- // Momentum from pressure-surface slope, then conservative face fluxes.
- const t=Math.min(dt,.016);
- for(let k=0;k<count;k++){dh[k]=0;ax[k]=0;az[k]=0}
- for(let j=1;j<N-1;j++)for(let i=1;i<N-1;i++){const k=index(i,j);if(!valid[k])continue;
- const l=index(i-1,j),r=index(i+1,j),d=index(i,j-1),u=index(i,j+1);
- const yl=valid[l]?floor[l]+h[l]:floor[k]+h[k],yr=valid[r]?floor[r]+h[r]:floor[k]+h[k];
- const yd=valid[d]?floor[d]+h[d]:floor[k]+h[k],yu=valid[u]?floor[u]+h[u]:floor[k]+h[k];
- ax[k]=-g*(yr-yl)/(2*cell);az[k]=-g*(yu-yd)/(2*cell);
- }
- for(let k=0;k<count;k++)if(valid[k]){vx[k]=(vx[k]+ax[k]*t)*damping;vz[k]=(vz[k]+az[k]*t)*damping}
- for(let j=0;j<N;j++)for(let i=0;i<N;i++){const k=index(i,j);if(!valid[k])continue;
- if(i+1<N){const r=index(i+1,j);if(valid[r]){const v=(vx[k]+vx[r])*.5,src=v>0?k:r;
- const q=Math.sign(v)*Math.min(Math.abs(v)*Math.max(0,h[src])*t/cell,Math.max(0,h[src])*.24);
- dh[k]-=q;dh[r]+=q;}else vx[k]=Math.min(0,vx[k]);}
- if(j+1<N){const u=index(i,j+1);if(valid[u]){const v=(vz[k]+vz[u])*.5,src=v>0?k:u;
- const q=Math.sign(v)*Math.min(Math.abs(v)*Math.max(0,h[src])*t/cell,Math.max(0,h[src])*.24);
- dh[k]-=q;dh[u]+=q;}else vz[k]=Math.min(0,vz[k]);}
- }
- for(let k=0;k<count;k++)if(valid[k])h[k]=Math.max(0,h[k]+dh[k]);
- if((++simSteps%24)===0)normalizeMass();
- simTime+=t;
-}
-function updateOcean(){
- const p=oceanGeo.attributes.position;surfaceSlopeMax=0;wallClamps=0;
- for(let j=0;j<=N;j++)for(let i=0;i<=N;i++){
-  let sum=0,n=0;
-  for(let dj=-1;dj<=0;dj++)for(let di=-1;di<=0;di++){
-   const ii=i+di,jj=j+dj;
-   if(ii>=0&&ii<N&&jj>=0&&jj<N&&valid[index(ii,jj)]){
-    const k=index(ii,jj);sum+=floor[k]+h[k];n++;
-   }
+ const t=Math.min(dt,.022);simSteps++;simTime+=t;
+ if(dripEnabled){emitCarry+=emitRate*t;const n=Math.min(160,Math.floor(emitCarry));emitCarry-=n;burst(n)}
+ const limit=INNER_R-BEAD_R;
+ for(let i=particles.length-1;i>=0;i--){
+  const p=particles[i];p.life+=t;p.vy-=GRAVITY*t;
+  p.x+=p.vx*t;p.y+=p.vy*t;p.z+=p.vz*t;
+  const r2=p.x*p.x+p.y*p.y+p.z*p.z;
+  if(r2>limit*limit){
+   const r=Math.sqrt(r2),nx=p.x/r,ny=p.y/r,nz=p.z/r;
+   p.x=nx*limit;p.y=ny*limit;p.z=nz*limit;
+   const vn=p.vx*nx+p.vy*ny+p.vz*nz;
+   if(vn>0){p.vx-=1.24*vn*nx;p.vy-=1.24*vn*ny;p.vz-=1.24*vn*nz}
+   p.vx*=.79;p.vz*=.79;collisionCount++;
   }
-  const x=i*cell-waterRadius,z=j*cell-waterRadius,r2=x*x+z*z;
-  const wall=Math.sqrt(Math.max(0,waterRadius*waterRadius-r2));
-  const raw=n?sum/n:-wall;
-  const y=Math.max(-wall,Math.min(raw,wall-.025));
-  if(n&&Math.abs(y-raw)>.001)wallClamps++;
-  p.setY(vertex(i,j),y);
+  if(p.y< -INNER_R+.22 && (Math.hypot(p.vx,p.vy,p.vz)<2.5||p.life>7)){
+   settle(p);particles[i]=particles[particles.length-1];particles.pop();
+  }else if(p.life>16){
+   settle(p);particles[i]=particles[particles.length-1];particles.pop();
+  }
  }
- for(let j=1;j<N;j++)for(let i=1;i<N;i++){
-  const k=vertex(i,j),dx=Math.abs(p.getY(k+1)-p.getY(k-1))/(2*cell),dz=Math.abs(p.getY(k+side)-p.getY(k-side))/(2*cell);
-  surfaceSlopeMax=Math.max(surfaceSlopeMax,dx,dz);
- }
- p.needsUpdate=true;oceanGeo.computeVertexNormals();
 }
-updateOcean();
-const splashButton=document.createElement('button');splashButton.textContent='💧 PLOP';document.querySelector('#hud').append(splashButton);
-splashButton.onclick=()=>splash((Math.random()-.5)*5,(Math.random()-.5)*5,4);
-const surgeButton=document.createElement('button');surgeButton.textContent='↝ SURGE';document.querySelector('#hud').append(surgeButton);
-surgeButton.onclick=()=>{for(let k=0;k<count;k++)if(valid[k])vx[k]+=3.2;splash(0,0,1.4)};
-
-const BAUBLE_R=10.25,INNER_R=BAUBLE_R-.18;
+function renderBeads(){
+ for(let i=0;i<particles.length;i++){const p=particles[i];dummy.position.set(p.x,p.y,p.z);dummy.updateMatrix();activeMesh.setMatrixAt(i,dummy.matrix)}
+ activeMesh.count=particles.length;activeMesh.instanceMatrix.needsUpdate=true;
+ for(let i=0;i<settled.length;i++){const p=settled[i];dummy.position.set(p[0],p[1],p[2]);dummy.updateMatrix();settledMesh.setMatrixAt(i,dummy.matrix)}
+ settledMesh.count=settled.length;settledMesh.instanceMatrix.needsUpdate=true;
+ const fraction=Math.max(.3,Math.cbrt(sourceUnits/30000));source.scale.setScalar(fraction);sourceCore.scale.setScalar(fraction);
+}
+const hud=document.querySelector('#hud');
+const dripButton=document.createElement('button');dripButton.textContent='💧 DRIP ON';hud.append(dripButton);
+dripButton.onclick=()=>{dripEnabled=!dripEnabled;dripButton.textContent=dripEnabled?'💧 DRIP ON':'💧 DRIP OFF'};
+const plopButton=document.createElement('button');plopButton.textContent='◉ PLOP';hud.append(plopButton);
+plopButton.onclick=()=>burst(120,2.8);
+const surgeButton=document.createElement('button');surgeButton.textContent='↝ SURGE';hud.append(surgeButton);
+surgeButton.onclick=()=>{burst(360,3.5);for(const p of particles){p.vx+=2.4;p.vz+=1.1}};
+const resetButton=document.createElement('button');resetButton.textContent='↺ RESET';hud.append(resetButton);
+resetButton.onclick=()=>{particles.length=0;settled.length=0;sourceUnits=30000;emitted=0;escaped=0;collisionCount=0;simTime=0;simSteps=0;emitCarry=0;peakActive=0;};
+const status=document.querySelector('#status');status.textContent='ORBIT · PINCH ZOOM · SOURCE → BEADS → COLLECTION';
 const envelope=new T.Mesh(new T.SphereGeometry(BAUBLE_R,72,48),new T.MeshPhysicalMaterial({color:0xa0dce2,metalness:0,roughness:.08,transparent:true,opacity:.055,depthWrite:false,side:T.FrontSide}));world.add(envelope);
 const innerGlass=new T.Mesh(new T.SphereGeometry(INNER_R,72,48),new T.MeshPhysicalMaterial({color:0x9dcdd7,metalness:0,roughness:.09,transparent:true,opacity:.035,depthWrite:false,side:T.BackSide}));world.add(innerGlass);
 const equator=put(world,new T.TorusGeometry(BAUBLE_R,.095,10,120),brass);equator.rotation.x=Math.PI/2;
@@ -149,11 +124,11 @@ function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.
 const probeButton=document.querySelector('#probe'),probePanel=document.querySelector('#probePanel'),probeText=document.querySelector('#probeText');
 let probeReport='',probeLast=0,probeFrames=0,probeFrameMs=0;
 const round=(n,d=2)=>Number.isFinite(n)?+n.toFixed(d):null;
-function fluidDiagnostics(){let mass=0,minH=Infinity,maxH=-Infinity,minY=Infinity,maxY=-Infinity,sumSpeed=0,maxSpeed=0,kinetic=0,wet=0,negative=0,nearWall=0;for(let k=0;k<count;k++)if(valid[k]){const depth=h[k],speed=Math.hypot(vx[k],vz[k]);mass+=depth*area[k];minH=Math.min(minH,depth);maxH=Math.max(maxH,depth);minY=Math.min(minY,floor[k]+depth);maxY=Math.max(maxY,floor[k]+depth);sumSpeed+=speed;maxSpeed=Math.max(maxSpeed,speed);kinetic+=.5*depth*area[k]*speed*speed;if(depth>.025)wet++;if(depth<0)negative++;if(Math.hypot(X(k%N),Z(Math.floor(k/N)))>waterRadius*.85)nearWall++}return{grid:N,cellSize:round(cell,4),validCells:valid.reduce((a,b)=>a+b,0),wetCells:wet,nearWallCells:nearWall,initialMass:round(initialMass,5),currentMass:round(mass,5),massError:round(mass-initialMass,6),massErrorPercent:round(100*(mass-initialMass)/initialMass,5),minDepth:round(minH,4),maxDepth:round(maxH,4),minSurfaceY:round(minY,4),maxSurfaceY:round(maxY,4),meanSpeed:round(sumSpeed/Math.max(1,valid.reduce((a,b)=>a+b,0)),4),maxSpeed:round(maxSpeed,4),kineticEnergyProxy:round(kinetic,3),negativeDepthCells:negative,simulationSeconds:round(simTime,3),simulationSteps:simSteps,impulses:impulseCount,vesselJostles,renderOpacity:oceanMat.opacity,renderDepthWrite:oceanMat.depthWrite,wallMode:'shared-vertex mesh; no skirt; spherical vertex clamp',surfaceSlopeMax:round(surfaceSlopeMax,4),wallClampedVertices:wallClamps,limitations:['2.5D shallow-water model; no overturned waves','automatic impulse; shell translation not simulated','perimeter still grid approximated']}}
+function fluidDiagnostics(){return {model:'discrete 3D ballistic beads',sourceUnits,emitted,active:particles.length,settled:settled.length,unrepresented:escaped,accounted:sourceUnits+particles.length+settled.length+escaped,initialUnits:30000,gravity:[0,-GRAVITY,0],collisions:collisionCount,peakActive,steps:simSteps,seconds:round(simTime),beadRadius:BEAD_R,activeCap:MAX_ACTIVE,settledCap:MAX_SETTLED}}
 function inspectWorld(){
  camera.updateMatrixWorld();world.updateMatrixWorld(true);
  const center=new T.Vector3(0,0,0).project(camera);
- const report={build:'waterworld-continuous-surface-v4',time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:1,contentsInstantiated:true,water:{fillFraction:waterFill,surfaceY:round(surfaceY),volume:round(targetVolume),gravity:[0,-1,0],phase:'liquid',model:'conservative 2D finite-volume shallow water',steps:simSteps,impulses:impulseCount,jostles:vesselJostles,diagnostics:fluidDiagnostics()}},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:round(probeFrames?1000/(probeFrameMs/probeFrames):0)},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:[]};
+ const report={build:'waterworld-bead-transport-v5',time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:1,contentsInstantiated:true,water:{phase:'liquid',model:'source sphere / ballistic transport / deposited beads',diagnostics:fluidDiagnostics()}},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:round(probeFrames?1000/(probeFrameMs/probeFrames):0)},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:[]};
  probeReport=JSON.stringify(report,null,2);probeText.textContent=probeReport;return report;
 }
 probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};
@@ -175,7 +150,7 @@ document.querySelector('#copyProbe').addEventListener('click',()=>recordInteract
 document.querySelector('#closeProbe').addEventListener('click',()=>recordInteraction('inspect-close'));
 
 
-let last=performance.now(),accumulator=0,lastAutoCycle=-1;function frame(now){requestAnimationFrame(frame);accumulator+=Math.min(.05,(now-last)/1000);let steps=0;while(accumulator>=.008&&steps++<7){simulate(.008);accumulator-=.008}const cycle=Math.floor(simTime/14);if(cycle!==lastAutoCycle){lastAutoCycle=cycle;if(cycle>0){for(let k=0;k<count;k++)if(valid[k])vx[k]+=1.25;impulseCount++}}updateOcean();probeFrames++;probeFrameMs+=Math.max(0,now-last);last=now;if(now-probeLast>2500){probeLast=now;if(probePanel.classList.contains('open'))inspectWorld();probeFrames=0;probeFrameMs=0}
+let last=performance.now(),accumulator=0;function frame(now){requestAnimationFrame(frame);accumulator+=Math.min(.05,(now-last)/1000);let steps=0;while(accumulator>=.008&&steps++<7){simulate(.008);accumulator-=.008}renderBeads();probeFrames++;probeFrameMs+=Math.max(0,now-last);last=now;if(now-probeLast>2500){probeLast=now;if(probePanel.classList.contains('open'))inspectWorld();probeFrames=0;probeFrameMs=0}
 camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);renderer.render(scene,camera)}
 requestAnimationFrame(frame);
 }catch(e){window.BaubleFatal(e);console.error(e)}

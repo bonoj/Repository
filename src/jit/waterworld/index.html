@@ -86,6 +86,9 @@ const waterSurface=put(world,new T.CircleGeometry(1,96),surfaceMat);waterSurface
 const windDisc=put(world,new T.CircleGeometry(1,96),new T.MeshBasicMaterial({color:0x8cdae4,transparent:true,opacity:.06,depthWrite:false,side:T.DoubleSide}));
 windDisc.rotation.x=-Math.PI/2;
 const rippleGeo=new T.PlaneGeometry(2,2,36,36);
+const kept=[];const ids=rippleGeo.index.array,xy=rippleGeo.attributes.position.array;
+for(let k=0;k<ids.length;k+=3){let ok=true;for(let j=0;j<3;j++){const q=ids[k+j]*3;if(xy[q]*xy[q]+xy[q+1]*xy[q+1]>1)ok=false;}if(ok)kept.push(ids[k],ids[k+1],ids[k+2]);}
+rippleGeo.setIndex(kept);
 const rippleSurface=put(world,rippleGeo,new T.MeshPhysicalMaterial({color:0x6ad8ed,roughness:.13,transparent:true,opacity:.43,depthWrite:false,side:T.DoubleSide}));
 rippleSurface.rotation.x=-Math.PI/2;
 const ripplePositions=rippleGeo.attributes.position,rippleBase=Float32Array.from(ripplePositions.array);

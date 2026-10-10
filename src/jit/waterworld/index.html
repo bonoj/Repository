@@ -66,11 +66,11 @@ const basinMat=new T.MeshPhysicalMaterial({color:0x238db2,roughness:.12,transpar
 const surfaceMat=new T.MeshPhysicalMaterial({color:0x79d7e5,roughness:.09,transparent:true,opacity:.58,depthWrite:false,side:T.DoubleSide});
 const basin=put(world,new T.SphereGeometry(INNER_R-.015,48,32),basinMat);
 const waterSurface=put(world,new T.CircleGeometry(1,64),surfaceMat);waterSurface.rotation.x=-Math.PI/2;
-const clipPlane=new T.Plane(new T.Vector3(0,1,0),INNER_R);basinMat.clippingPlanes=[clipPlane];renderer.localClippingEnabled=true;
+const clipPlane=new T.Plane(new T.Vector3(0,-1,0),-INNER_R);basinMat.clippingPlanes=[clipPlane];renderer.localClippingEnabled=true;
 let waterY=-INNER_R,waterVolume=0;
 function capacityAt(y){const d=Math.max(0,Math.min(2*INNER_R,y+INNER_R));return Math.PI*d*d*(INNER_R-d/3)}
 function waterlineForVolume(v){let lo=-INNER_R,hi=INNER_R;for(let k=0;k<30;k++){const m=(lo+hi)*.5;if(capacityAt(m)<v)lo=m;else hi=m}return (lo+hi)*.5}
-function updateCollector(){waterVolume=settledCount*MATERIAL_UNIT;waterY=settledCount?waterlineForVolume(waterVolume):-INNER_R;clipPlane.constant=-waterY;const r=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));waterSurface.position.y=waterY;waterSurface.scale.set(r,r,1);waterSurface.visible=settledCount>0;basin.visible=settledCount>0}
+function updateCollector(){waterVolume=settledCount*MATERIAL_UNIT;waterY=settledCount?waterlineForVolume(waterVolume):-INNER_R;clipPlane.constant=waterY;const r=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));waterSurface.position.y=waterY;waterSurface.scale.set(r,r,1);waterSurface.visible=settledCount>0;basin.visible=settledCount>0}
 function settle(p){settledCount++;updateCollector()}
 updateCollector();
 function simulate(dt){

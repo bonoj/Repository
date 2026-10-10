@@ -52,12 +52,12 @@ const dummy=new T.Object3D(),particles=[];
 let emitted=0,escaped=0,settledCount=0,collisionCount=0,sourceUnits=30000,emitRate=65,emitCarry=0,simSteps=0,simTime=0,peakActive=0;
 let impactImpulse=0,dripEnabled=true;
 // Moving point-mass gravity source outside the vessel.
-const gravityOrbitalRadius=12.2,gravityPeriod=45,gravitySoftening=3;
+const gravityOrbitalRadius=12.2,gravityPeriod=18,gravitySwingAmplitude=.36,gravitySoftening=3;
 const gravityPosition=new T.Vector3(),gravityDown=new T.Vector3(0,-1,0);
 const gravityOrb=put(world,new T.SphereGeometry(.48,24,16),new T.MeshStandardMaterial({color:0xb68a43,metalness:.88,roughness:.23}));
 const brassLight=new T.PointLight(0xffc578,3,7);world.add(brassLight);
 function updateGravity(t){
- const phase=0; // Stationary gravity source, as requested.
+ const phase=gravitySwingAmplitude*Math.sin(2*Math.PI*t/gravityPeriod); // Pendulum, no full orbit.
  gravityPosition.set(Math.sin(phase)*gravityOrbitalRadius,-Math.cos(phase)*gravityOrbitalRadius,0);
  gravityOrb.position.copy(gravityPosition);brassLight.position.copy(gravityPosition);
  gravityDown.copy(gravityPosition).normalize();
@@ -160,7 +160,7 @@ function simulate(dt){
  for(let i=particles.length-1;i>=0;i--){
   const p=particles[i];p.life+=t;const dx=gravityPosition.x-p.x,dy=gravityPosition.y-p.y,dz=gravityPosition.z-p.z;const d2=dx*dx+dy*dy+dz*dz+gravitySoftening*gravitySoftening;const accel=GRAVITY*gravityOrbitalRadius*gravityOrbitalRadius/(d2*Math.sqrt(d2));p.vx+=dx*accel*t;p.vy+=dy*accel*t;p.vz+=dz*accel*t;
   // Thick horizontal airflow band; lateral drag stays subordinate to gravity.
-  const height=p.y-waterY;
+  const height=-(p.x*gravityDown.x+p.y*gravityDown.y+p.z*gravityDown.z)-waterY;
   const band=Math.exp(-Math.pow((height-1.1)/2.3,2));
   const air=2.1*band*t;
   windSpeed=3.1+13*windGust();
@@ -189,7 +189,7 @@ function renderBeads(){
 
  const fraction=Math.cbrt(sourceUnits/30000);source.scale.setScalar(fraction);sourceCore.scale.setScalar(fraction);
 }
-const BUILD='waterworld-circular-shore-v14';
+const BUILD='waterworld-pendulum-v15';
 const buildLabel=document.querySelector('#build');
 buildLabel.textContent=BUILD;
 const hud=document.querySelector('#hud');
@@ -201,7 +201,7 @@ const surgeButton=document.createElement('button');surgeButton.textContent='↝ 
 surgeButton.onclick=()=>{windSurgeStart=simTime};
 const resetButton=document.createElement('button');resetButton.textContent='↺ RESET';hud.append(resetButton);
 resetButton.onclick=()=>{particles.length=0;settledCount=INITIAL_WATER_UNITS;updateCollector();windSurgeStart=-100;windSpeed=3.1;sourceUnits=30000;emitted=0;escaped=0;collisionCount=0;simTime=0;simSteps=0;emitCarry=0;peakActive=0;splashImpacts=0;splashEjected=0;splashReturned=0;windImpulse=0;windAffected=0;};
-const status=document.querySelector('#status');status.textContent='STATIONARY GRAVITY · LOW WIND DISC · SOURCE → COLLECTION';
+const status=document.querySelector('#status');status.textContent='PENDULAR GRAVITY · LOW WIND · SOURCE → COLLECTION';
 const envelope=new T.Mesh(new T.SphereGeometry(BAUBLE_R,72,48),new T.MeshPhysicalMaterial({color:0xa0dce2,metalness:0,roughness:.08,transparent:true,opacity:.055,depthWrite:false,side:T.FrontSide}));world.add(envelope);
 const innerGlass=new T.Mesh(new T.SphereGeometry(INNER_R,72,48),new T.MeshPhysicalMaterial({color:0x9dcdd7,metalness:0,roughness:.09,transparent:true,opacity:.035,depthWrite:false,side:T.BackSide}));world.add(innerGlass);
 const equator=put(world,new T.TorusGeometry(BAUBLE_R,.095,10,120),brass);equator.rotation.x=Math.PI/2;
@@ -216,7 +216,7 @@ function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.
 const probeButton=document.querySelector('#probe'),probePanel=document.querySelector('#probePanel'),probeText=document.querySelector('#probeText');
 let probeReport='',probeLast=0,probeFrames=0,probeFrameMs=0;
 const round=(n,d=2)=>Number.isFinite(n)?+n.toFixed(d):null;
-function fluidDiagnostics(){return {model:'discrete 3D ballistic beads',sourceUnits,emitted,active:particles.length,settled:settledCount,unrepresented:escaped,accounted:sourceUnits+particles.length+settledCount+escaped,initialUnits:30000+INITIAL_WATER_UNITS,initialWaterUnits:INITIAL_WATER_UNITS,initialFillFraction:.2,gravity:{type:'stationary point source',position:gravityPosition.toArray().map(round),orbitalRadius:gravityOrbitalRadius,periodSeconds:null,stationary:true,strengthAtCenter:GRAVITY},wind:{direction:[1,0,0],bandCenterAboveSurface:1.1,bandThickness:2.3,baselineSpeed:3.1,currentSpeed:round(windSpeed),gustStrength:round(windGust()),affectedSteps:windAffected,impulse:round(windImpulse)},collisions:collisionCount,splashImpacts,splashEjected,splashReturned,peakActive,steps:simSteps,seconds:round(simTime),beadRadius:BEAD_R,activeCap:MAX_ACTIVE,collectorVolume:round(waterVolume,4),waterline:round(waterY,4),collectorModel:'gravity-aligned equilibrium; spherical geometry adapter'}}
+function fluidDiagnostics(){return {model:'discrete 3D ballistic beads',sourceUnits,emitted,active:particles.length,settled:settledCount,unrepresented:escaped,accounted:sourceUnits+particles.length+settledCount+escaped,initialUnits:30000+INITIAL_WATER_UNITS,initialWaterUnits:INITIAL_WATER_UNITS,initialFillFraction:.2,gravity:{type:'pendular point source',position:gravityPosition.toArray().map(round),orbitalRadius:gravityOrbitalRadius,periodSeconds:gravityPeriod,swingAmplitudeRadians:gravitySwingAmplitude,stationary:false,strengthAtCenter:GRAVITY},wind:{direction:[1,0,0],bandCenterAboveSurface:1.1,bandThickness:2.3,baselineSpeed:3.1,currentSpeed:round(windSpeed),gustStrength:round(windGust()),affectedSteps:windAffected,impulse:round(windImpulse)},collisions:collisionCount,splashImpacts,splashEjected,splashReturned,peakActive,steps:simSteps,seconds:round(simTime),beadRadius:BEAD_R,activeCap:MAX_ACTIVE,collectorVolume:round(waterVolume,4),waterline:round(waterY,4),collectorModel:'gravity-aligned equilibrium; spherical geometry adapter'}}
 function inspectWorld(){
  camera.updateMatrixWorld();world.updateMatrixWorld(true);
  const center=new T.Vector3(0,0,0).project(camera);

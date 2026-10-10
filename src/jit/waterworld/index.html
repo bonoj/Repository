@@ -124,6 +124,17 @@ function sampleHeight(x,z){
  const iz=Math.max(0,Math.min(GRID-1,Math.floor((z+INNER_R)/DX)));
  const i=iz*GRID+ix;return wet[i]?bed[i]+depthField[i]:-INNER_R;
 }
+let thumpCount=0,thumpImpulse=0;
+function thump(){
+ thumpCount++;
+ for(let z=0;z<GRID;z++)for(let x=0;x<GRID;x++){
+ const i=z*GRID+x;if(!wet[i]||depthField[i]<.08)continue;
+ const px=(x+.5)*DX-INNER_R,pz=(z+.5)*DX-INNER_R,r=Math.hypot(px,pz);
+ const impulse=18*Math.exp(-r*r/58);
+ velX[i]+=impulse*px/Math.max(r,.3);velZ[i]+=impulse*pz/Math.max(r,.3);
+ thumpImpulse+=impulse*depthField[i]*CELL;
+ }
+}
 function stepWater(dt){
  if(!transportReady)return;
  // Explicit conservative donor-cell flux, capped by donor inventory.
@@ -142,8 +153,8 @@ function stepWater(dt){
   const drag=Math.exp(-.32*dt);
   nextVX[i]=(velX[i]+dt*(-g*(R-L)/(2*DX)+rx*factor+speed*.055))*drag;
   nextVZ[i]=(velZ[i]+dt*(-g*(U-D)/(2*DX)+rz*factor))*drag;
-  nextVX[i]=Math.max(-5,Math.min(5,nextVX[i]));
-  nextVZ[i]=Math.max(-5,Math.min(5,nextVZ[i]));
+  nextVX[i]=Math.max(-24,Math.min(24,nextVX[i]));
+  nextVZ[i]=Math.max(-24,Math.min(24,nextVZ[i]));
  }
  nextDepth.set(depthField);
  // Pairwise edge flux: transfer equal and opposite volumes; dry cells may flood.
@@ -250,7 +261,7 @@ function renderBeads(){
 
  const fraction=Math.cbrt(sourceUnits/30000);source.scale.setScalar(fraction);sourceCore.scale.setScalar(fraction);
 }
-const BUILD='waterworld-transport-v17';
+const BUILD='waterworld-thump-v18';
 const buildLabel=document.querySelector('#build');
 buildLabel.textContent=BUILD;
 const hud=document.querySelector('#hud');
@@ -258,10 +269,10 @@ const dripButton=document.createElement('button');dripButton.textContent='💧 D
 dripButton.onclick=()=>{dripEnabled=!dripEnabled;dripButton.textContent=dripEnabled?'💧 DRIP ON':'💧 DRIP OFF'};
 const plopButton=document.createElement('button');plopButton.textContent='◉ PLOP';hud.append(plopButton);
 plopButton.onclick=()=>burst(120,2.8);
-const surgeButton=document.createElement('button');surgeButton.textContent='↝ SURGE';hud.append(surgeButton);
-surgeButton.onclick=()=>{windSurgeStart=simTime};
+const surgeButton=document.createElement('button');surgeButton.textContent='◉ THUMP';hud.append(surgeButton);
+surgeButton.onclick=()=>{thump()};
 const resetButton=document.createElement('button');resetButton.textContent='↺ RESET';hud.append(resetButton);
-resetButton.onclick=()=>{particles.length=0;settledCount=INITIAL_WATER_UNITS;updateCollector();windSurgeStart=-100;windSpeed=3.1;sourceUnits=30000;emitted=0;escaped=0;collisionCount=0;simTime=0;simSteps=0;emitCarry=0;peakActive=0;splashImpacts=0;splashEjected=0;splashReturned=0;windImpulse=0;windAffected=0;transportReady=false;initializeTransport();wavePeak=0;waveEnergy=0;};
+resetButton.onclick=()=>{particles.length=0;settledCount=INITIAL_WATER_UNITS;updateCollector();windSurgeStart=-100;windSpeed=3.1;sourceUnits=30000;emitted=0;escaped=0;collisionCount=0;simTime=0;simSteps=0;emitCarry=0;peakActive=0;splashImpacts=0;splashEjected=0;splashReturned=0;windImpulse=0;windAffected=0;transportReady=false;initializeTransport();thumpCount=0;thumpImpulse=0;wavePeak=0;waveEnergy=0;};
 const status=document.querySelector('#status');status.textContent='PENDULAR GRAVITY · LOW WIND · SOURCE → COLLECTION';
 const envelope=new T.Mesh(new T.SphereGeometry(BAUBLE_R,72,48),new T.MeshPhysicalMaterial({color:0xa0dce2,metalness:0,roughness:.08,transparent:true,opacity:.055,depthWrite:false,side:T.FrontSide}));world.add(envelope);
 const innerGlass=new T.Mesh(new T.SphereGeometry(INNER_R,72,48),new T.MeshPhysicalMaterial({color:0x9dcdd7,metalness:0,roughness:.09,transparent:true,opacity:.035,depthWrite:false,side:T.BackSide}));world.add(innerGlass);
@@ -277,7 +288,7 @@ function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.
 const probeButton=document.querySelector('#probe'),probePanel=document.querySelector('#probePanel'),probeText=document.querySelector('#probeText');
 let probeReport='',probeLast=0,probeFrames=0,probeFrameMs=0;
 const round=(n,d=2)=>Number.isFinite(n)?+n.toFixed(d):null;
-function fluidDiagnostics(){return {model:'discrete 3D ballistic beads',sourceUnits,emitted,active:particles.length,settled:settledCount,unrepresented:escaped,accounted:sourceUnits+particles.length+settledCount+escaped,initialUnits:30000+INITIAL_WATER_UNITS,initialWaterUnits:INITIAL_WATER_UNITS,initialFillFraction:.2,gravity:{type:'pendular point source',position:gravityPosition.toArray().map(round),orbitalRadius:gravityOrbitalRadius,periodSeconds:gravityPeriod,swingAmplitudeRadians:gravitySwingAmplitude,stationary:false,strengthAtCenter:GRAVITY},wind:{direction:[1,0,0],bandCenterAboveSurface:1.1,bandThickness:2.3,baselineSpeed:3.1,currentSpeed:round(windSpeed),gustStrength:round(windGust()),affectedSteps:windAffected,impulse:round(windImpulse)},collisions:collisionCount,splashImpacts,splashEjected,splashReturned,peakActive,steps:simSteps,seconds:round(simTime),beadRadius:BEAD_R,activeCap:MAX_ACTIVE,collectorVolume:round(waterVolume,4),waterline:round(waterY,4),collectorModel:'64x64 conservative finite-volume transport with point gravity and wind',wavePeak:round(wavePeak),waveEnergy:round(waveEnergy),transportVolume:round(transportVolume,4),wetCells}}
+function fluidDiagnostics(){return {model:'discrete 3D ballistic beads',sourceUnits,emitted,active:particles.length,settled:settledCount,unrepresented:escaped,accounted:sourceUnits+particles.length+settledCount+escaped,initialUnits:30000+INITIAL_WATER_UNITS,initialWaterUnits:INITIAL_WATER_UNITS,initialFillFraction:.2,gravity:{type:'pendular point source',position:gravityPosition.toArray().map(round),orbitalRadius:gravityOrbitalRadius,periodSeconds:gravityPeriod,swingAmplitudeRadians:gravitySwingAmplitude,stationary:false,strengthAtCenter:GRAVITY},wind:{direction:[1,0,0],bandCenterAboveSurface:1.1,bandThickness:2.3,baselineSpeed:3.1,currentSpeed:round(windSpeed),gustStrength:round(windGust()),affectedSteps:windAffected,impulse:round(windImpulse)},collisions:collisionCount,splashImpacts,splashEjected,splashReturned,peakActive,steps:simSteps,seconds:round(simTime),beadRadius:BEAD_R,activeCap:MAX_ACTIVE,collectorVolume:round(waterVolume,4),waterline:round(waterY,4),collectorModel:'64x64 conservative finite-volume transport with point gravity and wind',wavePeak:round(wavePeak),waveEnergy:round(waveEnergy),transportVolume:round(transportVolume,4),wetCells,thumpCount,thumpImpulse:round(thumpImpulse)}}
 function inspectWorld(){
  camera.updateMatrixWorld();world.updateMatrixWorld(true);
  const center=new T.Vector3(0,0,0).project(camera);

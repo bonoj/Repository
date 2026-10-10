@@ -57,7 +57,7 @@ const gravityPosition=new T.Vector3(),gravityDown=new T.Vector3(0,-1,0);
 const gravityOrb=put(world,new T.SphereGeometry(.48,24,16),new T.MeshStandardMaterial({color:0xb68a43,metalness:.88,roughness:.23}));
 const brassLight=new T.PointLight(0xffc578,3,7);world.add(brassLight);
 function updateGravity(t){
- const phase=t*2*Math.PI/gravityPeriod;
+ const phase=0; // Stationary gravity source, as requested.
  gravityPosition.set(Math.sin(phase)*gravityOrbitalRadius,-Math.cos(phase)*gravityOrbitalRadius,0);
  gravityOrb.position.copy(gravityPosition);brassLight.position.copy(gravityPosition);
  gravityDown.copy(gravityPosition).normalize();
@@ -92,9 +92,10 @@ let splashImpacts=0,splashEjected=0,splashReturned=0;
 function splash(p,impactSpeed){
  // Incoming unit merges first. Ejected units are debited from the collector.
  settledCount++;
- // Only primary droplets can excite a splash; ejecta return without cascading.\n const energy=p.splash?0:Math.max(0,impactSpeed-4);
+ // Only primary droplets can excite a splash; ejecta return without cascading.
+ const energy=p.splash?0:Math.max(0,impactSpeed-4);
  const available=Math.min(settledCount-1,MAX_ACTIVE-particles.length+1);
- const n=Math.min(available,6,Math.floor(energy*.23));
+ const n=Math.min(available,4,Math.floor(energy*.17));
  if(n>0){
   const upx=-gravityDown.x,upy=-gravityDown.y,upz=-gravityDown.z;
   const depth=p.x*gravityDown.x+p.y*gravityDown.y+p.z*gravityDown.z;
@@ -105,7 +106,7 @@ function splash(p,impactSpeed){
    const dot=tx*upx+ty*upy+tz*upz;
    tx-=dot*upx;ty-=dot*upy;tz-=dot*upz;
    const norm=Math.hypot(tx,ty,tz)||1;tx/=norm;ty/=norm;tz/=norm;
-   const kick=Math.min(9,2.2+energy*.34)*(0.7+Math.random()*.5);
+   const kick=Math.min(5,1.4+energy*.16)*(0.7+Math.random()*.5);
    particles.push({x:cx+upx*.12+tx*.07,y:cy+upy*.12+ty*.07,z:cz+upz*.12+tz*.07,
     vx:upx*kick+tx*kick*.42,vy:upy*kick+ty*kick*.42,vz:upz*kick+tz*kick*.42,life:0,splash:true});
   }
@@ -117,8 +118,9 @@ function settle(p){settledCount++;if(p.splash)splashReturned++;updateCollector()
 updateCollector();
 function simulate(dt){
  const t=Math.min(dt,.022);simSteps++;simTime+=t;
- if(dripEnabled){emitCarry+=emitRate*t;const n=Math.min(160,Math.floor(emitCarry));emitCarry-=n;burst(n)}
+ if(dripEnabled){emitCarry+=emitRate*t;const n=Math.min(160,Math.floor(emitCarry));let spawned=0;for(;spawned<n;spawned++)if(!spawnOne())break;emitCarry-=spawned;}
  const limit=INNER_R-BEAD_R;
+ // Seed the first liquid on contact with the vessel, then merge at the waterline.
  for(let i=particles.length-1;i>=0;i--){
   const p=particles[i];p.life+=t;const dx=gravityPosition.x-p.x,dy=gravityPosition.y-p.y,dz=gravityPosition.z-p.z;const d2=dx*dx+dy*dy+dz*dz+gravitySoftening*gravitySoftening;const accel=GRAVITY*gravityOrbitalRadius*gravityOrbitalRadius/(d2*Math.sqrt(d2));p.vx+=dx*accel*t;p.vy+=dy*accel*t;p.vz+=dz*accel*t;
   p.x+=p.vx*t;p.y+=p.vy*t;p.z+=p.vz*t;
@@ -129,9 +131,10 @@ function simulate(dt){
    const vn=p.vx*nx+p.vy*ny+p.vz*nz;
    if(vn>0){p.vx-=1.24*vn*nx;p.vy-=1.24*vn*ny;p.vz-=1.24*vn*nz}
    p.vx*=.79;p.vz*=.79;collisionCount++;
+   if(settledCount===0){settle(p);particles[i]=particles[particles.length-1];particles.pop();continue;}
   }
   const depth=p.x*gravityDown.x+p.y*gravityDown.y+p.z*gravityDown.z;const downward=p.vx*gravityDown.x+p.vy*gravityDown.y+p.vz*gravityDown.z;
-  if(depth>=-waterY-BEAD_R && downward>0 && (settledCount>0||depth>INNER_R-.22)){
+  if(settledCount>0 && depth>=-waterY-BEAD_R && downward>0){
    if(p.splash)settle(p);else splash(p,downward);particles[i]=particles[particles.length-1];particles.pop();
   }
  }
@@ -166,11 +169,11 @@ function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.
 const probeButton=document.querySelector('#probe'),probePanel=document.querySelector('#probePanel'),probeText=document.querySelector('#probeText');
 let probeReport='',probeLast=0,probeFrames=0,probeFrameMs=0;
 const round=(n,d=2)=>Number.isFinite(n)?+n.toFixed(d):null;
-function fluidDiagnostics(){return {model:'discrete 3D ballistic beads',sourceUnits,emitted,active:particles.length,settled:settledCount,unrepresented:escaped,accounted:sourceUnits+particles.length+settledCount+escaped,initialUnits:30000,gravity:{type:'orbiting point source',position:gravityPosition.toArray().map(round),orbitalRadius:gravityOrbitalRadius,periodSeconds:gravityPeriod,strengthAtCenter:GRAVITY},collisions:collisionCount,splashImpacts,splashEjected,splashReturned,peakActive,steps:simSteps,seconds:round(simTime),beadRadius:BEAD_R,activeCap:MAX_ACTIVE,collectorVolume:round(waterVolume,4),waterline:round(waterY,4),collectorModel:'gravity-aligned equilibrium; spherical geometry adapter'}}
+function fluidDiagnostics(){return {model:'discrete 3D ballistic beads',sourceUnits,emitted,active:particles.length,settled:settledCount,unrepresented:escaped,accounted:sourceUnits+particles.length+settledCount+escaped,initialUnits:30000,gravity:{type:'orbiting point source',position:gravityPosition.toArray().map(round),orbitalRadius:gravityOrbitalRadius,periodSeconds:null,stationary:true,strengthAtCenter:GRAVITY},collisions:collisionCount,splashImpacts,splashEjected,splashReturned,peakActive,steps:simSteps,seconds:round(simTime),beadRadius:BEAD_R,activeCap:MAX_ACTIVE,collectorVolume:round(waterVolume,4),waterline:round(waterY,4),collectorModel:'gravity-aligned equilibrium; spherical geometry adapter'}}
 function inspectWorld(){
  camera.updateMatrixWorld();world.updateMatrixWorld(true);
  const center=new T.Vector3(0,0,0).project(camera);
- const report={build:'waterworld-splash-orbit-v9',time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:1,contentsInstantiated:true,water:{phase:'liquid',model:'shrinking source / point gravity / merged volume',diagnostics:fluidDiagnostics()}},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:round(probeFrames?1000/(probeFrameMs/probeFrames):0)},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:[]};
+ const report={build:'waterworld-static-gravity-v10',time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:1,contentsInstantiated:true,water:{phase:'liquid',model:'shrinking source / point gravity / merged volume',diagnostics:fluidDiagnostics()}},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:round(probeFrames?1000/(probeFrameMs/probeFrames):0)},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:[]};
  probeReport=JSON.stringify(report,null,2);probeText.textContent=probeReport;return report;
 }
 probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};

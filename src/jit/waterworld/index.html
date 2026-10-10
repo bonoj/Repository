@@ -96,8 +96,8 @@ let windImpulse=0,windAffected=0;
 function updateWindVisual(){
  const radius=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));
  windDisc.visible=rippleSurface.visible=settledCount>0;
- windDisc.position.set(0,-waterY+.09,0);windDisc.scale.set(radius,radius,1);
- rippleSurface.position.set(0,-waterY+.03,0);rippleSurface.scale.set(radius,radius,1);
+ windDisc.position.set(0,waterY+.09,0);windDisc.scale.set(radius,radius,1);
+ rippleSurface.position.set(0,waterY+.03,0);rippleSurface.scale.set(radius,radius,1);
  const a=ripplePositions.array;
  for(let i=0;i<a.length;i+=3){
   const x=rippleBase[i],z=rippleBase[i+1],r2=x*x+z*z;
@@ -148,7 +148,7 @@ function simulate(dt){
  for(let i=particles.length-1;i>=0;i--){
   const p=particles[i];p.life+=t;const dx=gravityPosition.x-p.x,dy=gravityPosition.y-p.y,dz=gravityPosition.z-p.z;const d2=dx*dx+dy*dy+dz*dz+gravitySoftening*gravitySoftening;const accel=GRAVITY*gravityOrbitalRadius*gravityOrbitalRadius/(d2*Math.sqrt(d2));p.vx+=dx*accel*t;p.vy+=dy*accel*t;p.vz+=dz*accel*t;
   // Thick horizontal airflow band; lateral drag stays subordinate to gravity.
-  const height=p.y+waterY;
+  const height=p.y-waterY;
   const band=Math.exp(-Math.pow((height-1.1)/2.3,2));
   const air=2.1*band*t;
   const push=(3.1-p.vx)*air;
@@ -176,7 +176,7 @@ function renderBeads(){
 
  const fraction=Math.cbrt(sourceUnits/30000);source.scale.setScalar(fraction);sourceCore.scale.setScalar(fraction);
 }
-const BUILD='waterworld-wind-disc-v11';
+const BUILD='waterworld-wind-disc-v12';
 const buildLabel=document.querySelector('#build');
 buildLabel.textContent=BUILD;
 const hud=document.querySelector('#hud');

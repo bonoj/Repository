@@ -82,7 +82,28 @@ const MATERIAL_UNIT=4*Math.PI*SOURCE_R**3/(3*30000);
 const basinMat=new T.MeshPhysicalMaterial({color:0x238db2,roughness:.12,transparent:true,opacity:.38,depthWrite:false,side:T.DoubleSide});
 const surfaceMat=new T.MeshPhysicalMaterial({color:0x79d7e5,roughness:.09,transparent:true,opacity:.58,depthWrite:false,side:T.DoubleSide});
 const basin=put(world,new T.SphereGeometry(INNER_R-.015,48,32),basinMat);
-const waterSurface=put(world,new T.CircleGeometry(1,64),surfaceMat);waterSurface.rotation.x=-Math.PI/2;
+const waterSurface=put(world,new T.CircleGeometry(1,96),surfaceMat);waterSurface.rotation.x=-Math.PI/2;
+const windDisc=put(world,new T.CircleGeometry(1,96),new T.MeshBasicMaterial({color:0x8cdae4,transparent:true,opacity:.06,depthWrite:false,side:T.DoubleSide}));
+windDisc.rotation.x=-Math.PI/2;
+const rippleGeo=new T.PlaneGeometry(2,2,36,36);
+const rippleSurface=put(world,rippleGeo,new T.MeshPhysicalMaterial({color:0x6ad8ed,roughness:.13,transparent:true,opacity:.43,depthWrite:false,side:T.DoubleSide}));
+rippleSurface.rotation.x=-Math.PI/2;
+const ripplePositions=rippleGeo.attributes.position,rippleBase=Float32Array.from(ripplePositions.array);
+let windImpulse=0,windAffected=0;
+function updateWindVisual(){
+ const radius=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));
+ windDisc.visible=rippleSurface.visible=settledCount>0;
+ windDisc.position.set(0,-waterY+.09,0);windDisc.scale.set(radius,radius,1);
+ rippleSurface.position.set(0,-waterY+.03,0);rippleSurface.scale.set(radius,radius,1);
+ const a=ripplePositions.array;
+ for(let i=0;i<a.length;i+=3){
+  const x=rippleBase[i],z=rippleBase[i+1],r2=x*x+z*z;
+  a[i]=x;a[i+1]=z;
+  const downstream=Math.max(0,(x+.2)/1.2);
+  a[i+2]=r2<=1?((.08+.24*downstream)*Math.sin(x*radius*1.6-z*radius*.45-simTime*3.2)+(.025+.13*downstream)*Math.sin(x*radius*2.8+z*radius*1.4-simTime*4.5))/Math.max(radius,.01):-.5;
+ }
+ ripplePositions.needsUpdate=true;rippleGeo.computeVertexNormals();
+}
 const clipPlane=new T.Plane(new T.Vector3(0,-1,0),-INNER_R);basinMat.clippingPlanes=[clipPlane];renderer.localClippingEnabled=true;
 let waterY=-INNER_R,waterVolume=0;
 function capacityAt(y){const d=Math.max(0,Math.min(2*INNER_R,y+INNER_R));return Math.PI*d*d*(INNER_R-d/3)}
@@ -123,6 +144,13 @@ function simulate(dt){
  // Seed the first liquid on contact with the vessel, then merge at the waterline.
  for(let i=particles.length-1;i>=0;i--){
   const p=particles[i];p.life+=t;const dx=gravityPosition.x-p.x,dy=gravityPosition.y-p.y,dz=gravityPosition.z-p.z;const d2=dx*dx+dy*dy+dz*dz+gravitySoftening*gravitySoftening;const accel=GRAVITY*gravityOrbitalRadius*gravityOrbitalRadius/(d2*Math.sqrt(d2));p.vx+=dx*accel*t;p.vy+=dy*accel*t;p.vz+=dz*accel*t;
+  // Thick horizontal airflow band; lateral drag stays subordinate to gravity.
+  const height=p.y+waterY;
+  const band=Math.exp(-Math.pow((height-1.1)/2.3,2));
+  const air=2.1*band*t;
+  const push=(3.1-p.vx)*air;
+  p.vx+=push;p.vz+=(-p.vz)*air*.38;
+  windImpulse+=Math.abs(push);if(band>.15)windAffected++;
   p.x+=p.vx*t;p.y+=p.vy*t;p.z+=p.vz*t;
   const r2=p.x*p.x+p.y*p.y+p.z*p.z;
   if(r2>limit*limit){
@@ -145,7 +173,7 @@ function renderBeads(){
 
  const fraction=Math.cbrt(sourceUnits/30000);source.scale.setScalar(fraction);sourceCore.scale.setScalar(fraction);
 }
-const BUILD='waterworld-static-gravity-v10';
+const BUILD='waterworld-wind-disc-v11';
 const buildLabel=document.querySelector('#build');
 buildLabel.textContent=BUILD;
 const hud=document.querySelector('#hud');
@@ -156,8 +184,8 @@ plopButton.onclick=()=>burst(120,2.8);
 const surgeButton=document.createElement('button');surgeButton.textContent='↝ SURGE';hud.append(surgeButton);
 surgeButton.onclick=()=>{burst(360,3.5);for(const p of particles){p.vx+=2.4;p.vz+=1.1}};
 const resetButton=document.createElement('button');resetButton.textContent='↺ RESET';hud.append(resetButton);
-resetButton.onclick=()=>{particles.length=0;settledCount=0;updateCollector();sourceUnits=30000;emitted=0;escaped=0;collisionCount=0;simTime=0;simSteps=0;emitCarry=0;peakActive=0;splashImpacts=0;splashEjected=0;splashReturned=0;};
-const status=document.querySelector('#status');status.textContent='ORBIT · PINCH ZOOM · SOURCE → BEADS → COLLECTION';
+resetButton.onclick=()=>{particles.length=0;settledCount=0;updateCollector();sourceUnits=30000;emitted=0;escaped=0;collisionCount=0;simTime=0;simSteps=0;emitCarry=0;peakActive=0;splashImpacts=0;splashEjected=0;splashReturned=0;windImpulse=0;windAffected=0;};
+const status=document.querySelector('#status');status.textContent='STATIONARY GRAVITY · LOW WIND DISC · SOURCE → COLLECTION';
 const envelope=new T.Mesh(new T.SphereGeometry(BAUBLE_R,72,48),new T.MeshPhysicalMaterial({color:0xa0dce2,metalness:0,roughness:.08,transparent:true,opacity:.055,depthWrite:false,side:T.FrontSide}));world.add(envelope);
 const innerGlass=new T.Mesh(new T.SphereGeometry(INNER_R,72,48),new T.MeshPhysicalMaterial({color:0x9dcdd7,metalness:0,roughness:.09,transparent:true,opacity:.035,depthWrite:false,side:T.BackSide}));world.add(innerGlass);
 const equator=put(world,new T.TorusGeometry(BAUBLE_R,.095,10,120),brass);equator.rotation.x=Math.PI/2;
@@ -172,7 +200,7 @@ function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.
 const probeButton=document.querySelector('#probe'),probePanel=document.querySelector('#probePanel'),probeText=document.querySelector('#probeText');
 let probeReport='',probeLast=0,probeFrames=0,probeFrameMs=0;
 const round=(n,d=2)=>Number.isFinite(n)?+n.toFixed(d):null;
-function fluidDiagnostics(){return {model:'discrete 3D ballistic beads',sourceUnits,emitted,active:particles.length,settled:settledCount,unrepresented:escaped,accounted:sourceUnits+particles.length+settledCount+escaped,initialUnits:30000,gravity:{type:'orbiting point source',position:gravityPosition.toArray().map(round),orbitalRadius:gravityOrbitalRadius,periodSeconds:null,stationary:true,strengthAtCenter:GRAVITY},collisions:collisionCount,splashImpacts,splashEjected,splashReturned,peakActive,steps:simSteps,seconds:round(simTime),beadRadius:BEAD_R,activeCap:MAX_ACTIVE,collectorVolume:round(waterVolume,4),waterline:round(waterY,4),collectorModel:'gravity-aligned equilibrium; spherical geometry adapter'}}
+function fluidDiagnostics(){return {model:'discrete 3D ballistic beads',sourceUnits,emitted,active:particles.length,settled:settledCount,unrepresented:escaped,accounted:sourceUnits+particles.length+settledCount+escaped,initialUnits:30000,gravity:{type:'stationary point source',position:gravityPosition.toArray().map(round),orbitalRadius:gravityOrbitalRadius,periodSeconds:null,stationary:true,strengthAtCenter:GRAVITY},wind:{direction:[1,0,0],bandCenterAboveSurface:1.1,bandThickness:2.3,targetSpeed:3.1,affectedSteps:windAffected,impulse:round(windImpulse)},collisions:collisionCount,splashImpacts,splashEjected,splashReturned,peakActive,steps:simSteps,seconds:round(simTime),beadRadius:BEAD_R,activeCap:MAX_ACTIVE,collectorVolume:round(waterVolume,4),waterline:round(waterY,4),collectorModel:'gravity-aligned equilibrium; spherical geometry adapter'}}
 function inspectWorld(){
  camera.updateMatrixWorld();world.updateMatrixWorld(true);
  const center=new T.Vector3(0,0,0).project(camera);
@@ -199,7 +227,7 @@ document.querySelector('#closeProbe').addEventListener('click',()=>recordInterac
 
 
 let last=performance.now(),accumulator=0;const orbitStart=performance.now();
-function frame(now){requestAnimationFrame(frame);updateGravity((now-orbitStart)/1000);accumulator+=Math.min(.05,(now-last)/1000);let steps=0;while(accumulator>=.008&&steps++<7){simulate(.008);accumulator-=.008}renderBeads();probeFrames++;probeFrameMs+=Math.max(0,now-last);last=now;if(now-probeLast>2500){probeLast=now;if(probePanel.classList.contains('open'))inspectWorld();probeFrames=0;probeFrameMs=0}
+function frame(now){requestAnimationFrame(frame);updateGravity((now-orbitStart)/1000);accumulator+=Math.min(.05,(now-last)/1000);let steps=0;while(accumulator>=.008&&steps++<7){simulate(.008);accumulator-=.008}renderBeads();updateWindVisual();probeFrames++;probeFrameMs+=Math.max(0,now-last);last=now;if(now-probeLast>2500){probeLast=now;if(probePanel.classList.contains('open'))inspectWorld();probeFrames=0;probeFrameMs=0}
 camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);renderer.render(scene,camera)}
 requestAnimationFrame(frame);
 }catch(e){window.BaubleFatal(e);console.error(e)}

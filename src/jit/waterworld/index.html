@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07101a"><title>Waterworld · Gravity Ocean</title><style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:82px;right:10px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:118px 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px}#buildRow{display:flex;justify-content:center;align-items:center;gap:5px;margin-top:3px;color:#a6b7b9;font:11px ui-monospace,monospace;letter-spacing:.12em;pointer-events:auto}#fresh{display:inline-grid;place-items:center;width:40px;height:40px;min-height:40px;padding:0;border:0;background:transparent;color:#c4b291;font:23px system-ui;line-height:1;cursor:pointer} </style></head><body><div id="stage"></div><button id="probe" type="button">◉ INSPECT</button><div id="probePanel"><div id="probeActions"><button id="copyProbe">COPY REPORT</button><button id="closeProbe">CLOSE</button></div><div id="probeText"></div></div><div id="title"><h1>WATERWORLD</h1><div id="tag">SOURCE · TRANSPORT · COLLECTION</div><div id="buildRow"><span id="build"></span><button id="fresh" type="button" title="Fetch latest build" aria-label="Fetch latest build">↻</button></div></div><div id="hud"><div id="status">ORBIT: ONE FINGER · PINCH: ZOOM · WATER TESTS ITSELF</div></div><div id="error"></div><script>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:82px;right:10px;top:120px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:175px 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px}#buildRow{display:flex;justify-content:center;align-items:center;gap:5px;margin:3px auto 0;max-width:calc(100vw - 150px);color:#a6b7b9;font:11px ui-monospace,monospace;letter-spacing:.12em;pointer-events:auto}#build{font-size:10px;letter-spacing:0;overflow-wrap:anywhere;text-align:center}#fresh{display:inline-grid;place-items:center;width:40px;height:40px;min-height:40px;padding:0;border:0;background:transparent;color:#c4b291;font:23px system-ui;line-height:1;cursor:pointer} </style></head><body><div id="stage"></div><button id="probe" type="button">◉ INSPECT</button><div id="probePanel"><div id="probeActions"><button id="copyProbe">COPY REPORT</button><button id="closeProbe">CLOSE</button></div><div id="probeText"></div></div><div id="title"><h1>WATERWORLD</h1><div id="tag">SOURCE · TRANSPORT · COLLECTION</div><div id="buildRow"><span id="build"></span><button id="fresh" type="button" title="Fetch latest build" aria-label="Fetch latest build">↻</button></div></div><div id="hud"><div id="status">ORBIT: ONE FINGER · PINCH: ZOOM · WATER TESTS ITSELF</div></div><div id="error"></div><script>
 (function(){
  const el=document.getElementById('error');
  function fatal(error){
@@ -83,31 +83,38 @@ const INITIAL_WATER_UNITS=Math.round((.2*4*Math.PI*INNER_R**3/3)/MATERIAL_UNIT);
 const basinMat=new T.MeshPhysicalMaterial({color:0x238db2,roughness:.12,transparent:true,opacity:.38,depthWrite:false,side:T.DoubleSide});
 const surfaceMat=new T.MeshPhysicalMaterial({color:0x79d7e5,roughness:.09,transparent:true,opacity:.58,depthWrite:false,side:T.DoubleSide});
 const basin=put(world,new T.SphereGeometry(INNER_R-.015,48,32),basinMat);
-const waterSurface=put(world,new T.CircleGeometry(1,96),surfaceMat);waterSurface.rotation.x=-Math.PI/2;
-const windDisc=put(world,new T.CircleGeometry(1,96),new T.MeshBasicMaterial({color:0x8cdae4,transparent:true,opacity:.06,depthWrite:false,side:T.DoubleSide}));
-windDisc.rotation.x=-Math.PI/2;
-const rippleGeo=new T.PlaneGeometry(2,2,36,36);
-const kept=[];const ids=rippleGeo.index.array,xy=rippleGeo.attributes.position.array;
-for(let k=0;k<ids.length;k+=3){let ok=true;for(let j=0;j<3;j++){const q=ids[k+j]*3;if(xy[q]*xy[q]+xy[q+1]*xy[q+1]>1)ok=false;}if(ok)kept.push(ids[k],ids[k+1],ids[k+2]);}
-rippleGeo.setIndex(kept);
-const rippleSurface=put(world,rippleGeo,new T.MeshPhysicalMaterial({color:0x6ad8ed,roughness:.13,transparent:true,opacity:.43,depthWrite:false,side:T.DoubleSide}));
-rippleSurface.rotation.x=-Math.PI/2;
+// Single circular surface: concentric rings share a clean, fixed shoreline.
+const RADIAL=24,SEGMENTS=96;
+const vertices=[0,0,0],indices=[];
+for(let ring=1;ring<=RADIAL;ring++){
+ const r=ring/RADIAL;
+ for(let j=0;j<SEGMENTS;j++){const a=2*Math.PI*j/SEGMENTS;vertices.push(r*Math.cos(a),r*Math.sin(a),0)}
+}
+for(let j=0;j<SEGMENTS;j++)indices.push(0,1+j,1+(j+1)%SEGMENTS);
+for(let ring=1;ring<RADIAL;ring++)for(let j=0;j<SEGMENTS;j++){
+ const a=1+(ring-1)*SEGMENTS+j,b=1+(ring-1)*SEGMENTS+(j+1)%SEGMENTS;
+ const c=a+SEGMENTS,d=b+SEGMENTS;indices.push(a,c,b,b,c,d);
+}
+const rippleGeo=new T.BufferGeometry();
+rippleGeo.setAttribute('position',new T.Float32BufferAttribute(vertices,3));
+rippleGeo.setIndex(indices);rippleGeo.computeVertexNormals();
 const ripplePositions=rippleGeo.attributes.position,rippleBase=Float32Array.from(ripplePositions.array);
+const waterSurface=put(world,rippleGeo,surfaceMat);
+waterSurface.rotation.x=-Math.PI/2;
 let windImpulse=0,windAffected=0,windSurgeStart=-100,windSpeed=3.1;
 function windGust(){const elapsed=simTime-windSurgeStart;return elapsed>=0&&elapsed<5?Math.sin(Math.PI*elapsed/5)**2:0}
 function updateWindVisual(){
  const radius=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));
  const gust=windGust();
- windDisc.material.opacity=.06+gust*.16;
- windDisc.visible=rippleSurface.visible=settledCount>0;
- windDisc.position.set(0,waterY+.09,0);windDisc.scale.set(radius,radius,1);
- rippleSurface.position.set(0,waterY+.03,0);rippleSurface.scale.set(radius,radius,1);
  const a=ripplePositions.array;
  for(let i=0;i<a.length;i+=3){
-  const x=rippleBase[i],z=rippleBase[i+1],r2=x*x+z*z;
-  a[i]=x;a[i+1]=z;
+  const x=rippleBase[i],z=rippleBase[i+1],r=Math.hypot(x,z);
   const downstream=Math.max(0,(x+.2)/1.2);
-  a[i+2]=r2<=1?((.08+.24*downstream)*(1+gust*2.5)*Math.sin(x*radius*1.6-z*radius*.45-simTime*3.2)+(.025+.13*downstream)*(1+gust*2.5)*Math.sin(x*radius*2.8+z*radius*1.4-simTime*4.5))/Math.max(radius,.01):-.5;
+  // Zero wave displacement at the contact ring; no detached jagged perimeter.
+  const envelope=Math.pow(Math.max(0,1-r*r),1.5);
+  const wave=((.08+.24*downstream)*Math.sin(x*radius*1.6-z*radius*.45-simTime*3.2)
+   +(.025+.13*downstream)*Math.sin(x*radius*2.8+z*radius*1.4-simTime*4.5));
+  a[i]=x;a[i+1]=z;a[i+2]=envelope*wave*(1+gust*2.5)/Math.max(radius,.01);
  }
  ripplePositions.needsUpdate=true;rippleGeo.computeVertexNormals();
 }
@@ -182,7 +189,7 @@ function renderBeads(){
 
  const fraction=Math.cbrt(sourceUnits/30000);source.scale.setScalar(fraction);sourceCore.scale.setScalar(fraction);
 }
-const BUILD='waterworld-initial-ocean-gust-v13';
+const BUILD='waterworld-circular-shore-v14';
 const buildLabel=document.querySelector('#build');
 buildLabel.textContent=BUILD;
 const hud=document.querySelector('#hud');

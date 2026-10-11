@@ -2,7 +2,7 @@
 // Standalone ES module. No Hermeticon or rendering dependencies.
 // Source lineage: src/jit/waterworld/index.html (Waterworld V25).
 export class ComposableWater {
- constructor({heightAt, bounds, resolution=64, gravity=13.5, drag=.32, maxSpeed=24, beadRadius=.055, beadCapacity=2600, onExit=()=>{}}){
+ constructor({heightAt, bounds, resolution=64, gravity=13.5, drag=.32, maxSpeed=24, beadRadius=.055, beadCapacity=2600, beadVolume=.004, adhesionTime=.12, onExit=()=>{}}){
   if(typeof heightAt!=='function')throw Error('heightAt(x,z) required');
   const {minX,maxX,minZ,maxZ}=bounds;
   if(!(maxX>minX&&maxZ>minZ))throw Error('Invalid bounds');
@@ -11,7 +11,7 @@ export class ComposableWater {
   this.bed=new Float32Array(this.n);this.wet=new Uint8Array(this.n);
   this.depth=new Float32Array(this.n);this.vx=new Float32Array(this.n);this.vz=new Float32Array(this.n);
   this.nextDepth=new Float32Array(this.n);this.nextVX=new Float32Array(this.n);this.nextVZ=new Float32Array(this.n);
-  this.beads=[];this.emitted=0;this.exited=0;this.deposited=0;this.initialVolume=0;
+  this.beads=[];this.lips=new Map();this.emitted=0;this.exited=0;this.deposited=0;this.removed=0;this.initialVolume=0;this.lipReleased=0;
   this.refreshTerrain();
  }
  index(x,z){const i=Math.floor((x-this.bounds.minX)/this.dx),j=Math.floor((z-this.bounds.minZ)/this.dz);return i<0||i>=this.resolution||j<0||j>=this.resolution?-1:j*this.resolution+i}
@@ -51,9 +51,10 @@ export class ComposableWater {
    }
   }
   for(let i=0;i<this.n;i++){D[i]=Math.max(0,ND[i]);VX[i]=NX[i];VZ[i]=NZ[i]}
+  this.stepEdges(dt);
  }
  addWater(x,z,volume){const i=this.index(x,z);if(i<0||!this.wet[i])return false;this.depth[i]+=volume/this.area;this.deposited+=volume;return true}
- removeWater(x,z,volume){const i=this.index(x,z);if(i<0||!this.wet[i])return 0;const v=Math.min(volume,this.depth[i]*this.area);this.depth[i]-=v/this.area;return v}
+ removeWater(x,z,volume){const i=this.index(x,z);if(i<0||!this.wet[i])return 0;const v=Math.min(volume,this.depth[i]*this.area);this.depth[i]-=v/this.area;this.removed+=v;return v}
  thump(x,z,strength=18,radius=7.6){
   const n=this.resolution,{minX,minZ}=this.bounds;
   for(let j=0;j<n;j++)for(let k=0;k<n;k++){
@@ -63,8 +64,46 @@ export class ComposableWater {
    this.vx[i]+=impulse*dx/Math.max(r,.3);this.vz[i]+=impulse*dz/Math.max(r,.3);
   }
  }
+ // Unsupported neighbors and outer boundaries share one conserved edge reservoir.
+ // Lip volume is held briefly before becoming ballistic BBs. No mass is created by rendering.
+ stepEdges(dt){
+  const n=this.resolution,D=this.depth,W=this.wet;
+  for(let z=0;z<n;z++)for(let x=0;x<n;x++){
+   const i=z*n+x;if(!W[i]||D[i]<=0)continue;
+   for(const [ox,oz,velocity,spacing] of [[1,0,this.vx[i],this.dx],[-1,0,-this.vx[i],this.dx],[0,1,this.vz[i],this.dz],[0,-1,-this.vz[i],this.dz]]){
+    const xx=x+ox,zz=z+oz;
+    if(xx>=0&&xx<n&&zz>=0&&zz<n&&W[zz*n+xx])continue;
+    if(velocity<=0)continue;
+    const available=D[i]*this.area;
+    const transfer=Math.min(available*.24,velocity*dt*D[i]*this.area/spacing);
+    if(transfer<=0)continue;
+    D[i]-=transfer/this.area;
+    const key=i+':'+ox+':'+oz;
+    let lip=this.lips.get(key);
+    if(!lip){
+     lip={volume:0,age:0,x:this.bounds.minX+(x+.5+ox*.5)*this.dx,
+      z:this.bounds.minZ+(z+.5+oz*.5)*this.dz,y:this.bed[i],vx:ox*velocity,vz:oz*velocity};
+     this.lips.set(key,lip);
+    }
+    lip.volume+=transfer;lip.vx=ox*velocity;lip.vz=oz*velocity;
+   }
+  }
+  for(const [key,lip] of this.lips){
+   lip.age+=dt;
+   if(lip.age<this.adhesionTime)continue;
+   while(lip.volume>=this.beadVolume&&this.beads.length<this.beadCapacity){
+    // Start just beyond the lip, slightly below the supported bed.
+    this.beads.push({x:lip.x+Math.sign(lip.vx)*this.beadRadius*2,
+     y:lip.y-this.beadRadius,z:lip.z+Math.sign(lip.vz)*this.beadRadius*2,
+     vx:lip.vx,vy:0,vz:lip.vz,volume:this.beadVolume});
+    lip.volume-=this.beadVolume;this.lipReleased+=this.beadVolume;
+   }
+   if(lip.volume<1e-10){this.lips.delete(key)}
+  }
+ }
  // Waterworld V25 airborne BB transport: real x/y/z, velocity, gravity, surface deposition.
  emitBead({x,y,z,vx=0,vy=0,vz=0,volume=1}){
+  if(!Number.isFinite(volume)||volume<=0||![x,y,z,vx,vy,vz].every(Number.isFinite))return false;
   if(this.beads.length>=this.beadCapacity)return false;
   this.beads.push({x,y,z,vx,vy,vz,volume});this.emitted+=volume;return true;
  }
@@ -73,6 +112,7 @@ export class ComposableWater {
    const p=this.beads[k];p.vy-=this.gravity*dt;
    p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;
    const h=this.surfaceAt(p.x,p.z);
+   // Crossing a supported surface deposits; unsupported space remains ballistic.
    if(h!==null&&p.vy<0&&p.y<=h+this.beadRadius){
     this.addWater(p.x,p.z,p.volume);this.beads.splice(k,1);continue;
    }
@@ -84,8 +124,9 @@ export class ComposableWater {
  step(dt){this.stepWater(dt);this.stepBeads(dt)}
  diagnostics(){
   const airborne=this.beads.reduce((v,p)=>v+p.volume,0),liquid=this.volume();
-  return {liquid,airborne,emitted:this.emitted,deposited:this.deposited,exited:this.exited,
-   residual:this.initialVolume+this.emitted-liquid-airborne-this.exited};
+  const lip=[...this.lips.values()].reduce((v,p)=>v+p.volume,0);
+  return {liquid,airborne,lip,emitted:this.emitted,deposited:this.deposited,removed:this.removed,exited:this.exited,lipReleased:this.lipReleased,
+   residual:this.initialVolume+this.emitted-liquid-airborne-lip-this.exited-this.removed};
  }
  // Read-only bilinear surface for renderer. No simulation mutation.
  renderedHeight(x,z){

@@ -1,39 +1,68 @@
 # Hermeticon Wanderer — semantic surface
-Updated 2026-10-11. Status: v6 verified by user screenshots and runtime report; world/aperture separation not yet implemented.
+Updated: 2026-10-11 · Canon: V21 continuous traversal + Above / Within / Below
 
-## Purpose and architecture
-Hermeticon Wanderer is an executable, perturbable, persistent world observed through a canonical glass-and-brass bauble. **The bauble is an observation aperture, not a world boundary.** A larger square terrain field exists in world coordinates outside the sphere. Wanderer eventually moves the viewing aperture over that world. World state, geology, time and material persist outside the view.
+## Identity
+A beautiful, perturbable, composable executable world, not merely a terrain clipping demo. **The glass bauble is a viewing aperture, never the geological world's physical boundary.** A persistent deterministic square geological field exists beyond the visible sphere. The Wanderer moves the aperture through it. The geology is not attenuated, squeezed or remeshed to fit glass. Atmospheric visibility may fade at the aperture edge.
 
-Ownership:
-- **World:** authoritative signed matter field, absolute coordinates, deformation, physics, history, storage chunks.
-- **Aperture:** visibility of the world within the sphere, not removal or creation of matter.
-- **Vessel:** glass, brass, lighting, camera, orbit/pinch, UI, telemetry, containment of displayed geometry.
-- **Wanderer:** observation transform; moving it never translates or regenerates the world.
+**New canon — three physically connected regions of ONE world:**
+- **Above:** mountains, surface, weather, rivers, incoming material, settlements, holes.
+- **Within:** traversable caverns, shafts, bridges, walls, ceiling, machines embedded in geology.
+- **Below:** the slab underside, suspended collection/sorting machinery, reservoirs, receiving pools, fabrication and potentially stranger hosted experiences.
+- A hole is an entrance, a gravity conduit and a potential industrial resource, not a defect. Material falling through from Above can be caught, vacuumed, sorted, recirculated and fabricated Below. Keep the chain physically legible.
+- The first studio-facing demonstration might be a beautiful machine with light interaction: follow material from surface through a hole to the working underside, change one property, watch the causal response. Show, don't tell. Protect private collaboration methods.
 
-Square chunks are computation/storage boundaries, not geological boundaries. Keep world y=0 as the fixed equatorial datum. Never normalize heights per chunk. A mountain, stream or tunnel can cross a chunk seam and leave the aperture without terminating.
-
-## Location and evidence
+## Locations and procedure
 Source: `bonoj/Repository/src/jit/hermeticon-wanderer/index.html`
 Public mirror: `bonoj/bonoj.github.io/master:jit/hermeticon-wanderer/index.html`
 URL: https://bonoj.github.io/jit/hermeticon-wanderer/
-Canonical empty scaffold: `bonoj/bonoj.github.io/master:jit/bauble/index.html`
-Procedure: `bonoj/Repository/src/jit/README.md` and `bonoj/Gate/README.md`.
-Current build: `hermeticon-wanderer-canonical-v6`.
+Canonical empty scaffold: `bonoj/bonoj.github.io/master:jit/bauble/index.html` (do not modify).
+Publication authority: `bonoj/Gate/README.md` + `bonoj/Repository/src/jit/README.md`.
 
-User screenshots show satisfying low-poly raised/lowered terrain, through-holes, underside, cyan interior lighting, glass, brass ring, working orbit and zoom. User is very happy with the terrain geometry. Known visual issues: artificially circular jagged disk boundary; torn-looking facets in some holes; crowded HUD/build/INSPECT; stale EMPTY VESSEL label.
+## Implemented and evidenced — V21
+- Build: `hermeticon-wanderer-continuous-traversal-v21`.
+- Deterministic world-coordinate 3D signed matter field: seed 741, 85×21×85 (151,725) samples, square half-extent 25.2, 42 initial geological operations (14 through-holes and 28 raises/lowers). Geology has upper and lower surfaces.
+- One resident mesh, generated at initialization. 125,184 triangles / 375,552 vertices, ~307 ms initial generation. `terrainBuildCount=1` after traversal. **No terrain remeshing on ordinary Wanderer movement.**
+- GPU sphere clip radius 9.72, with blue radial edge fog (~7.1–9.7). GPU witness x/z: visible at 9.71, discarded at 9.73; real scene witness 346 occupied pixels all inside projected sphere. Shader compiled with both hooks. No runtime warnings in supplied report.
+- Wanderer moved to approximately (−4.176, 6.218) without changing the resident mesh. The terrain view transform and shader aperture uniform move relative to world-coordinate geology.
+- Glass and brass bauble, orbit/pinch camera, four temporary on-screen direction buttons, INSPECT/COPY REPORT, fixed 8 ms simulation, performance and invariants.
+- Runtime reported ~87.6 FPS after ~46 seconds, screenshots ~59.7–109.9 FPS depending on view. Promising but NOT a worst-case 60 FPS guarantee. Zero reported invariant or containment violations. User screenshots confirmed compelling views from above, near surface, sideways across slab, and from below; user described result as 'absolutely gorgeous.'
+- The large number of mesh vertices outside the aperture is **expected** in the resident-world architecture, not a breach. The CPU geometry exists beyond the GPU viewing window.
+- Inspection debt: labels such as `cutTriangles`, `scoop`, `vertex-initialized-fragment-sphere-scoop`, and `extractionMargin` reflect prior architecture and need semantic cleanup. Pixel witnesses do not prove aesthetic quality, smoothness, physical containment or correct occlusion.
+- **Not yet implemented here:** an embodied visible Wanderer, vertical traversal, material bead transport, collection, sorting, fabrication, or connected cave experiences. Related transport experiments elsewhere are potential reusable evidence, not already integrated.
 
-User runtime report (2026-10-11): 43×21×43 signed samples (38,829); 7,963 solid; 30,866 void; 29,128 mesh triangles / 87,384 vertices, double-sided. Four vertical through-holes and seven top/bottom raise/lower operations per deterministic seed. Seed 743 cycle 7; rebuild 68.1 ms (recorded cycles ~59–72 ms). Render 12 calls, 48,952 triangles, 14 geometries; ~58.99 FPS in report, ~71–88 on screenshots. 25 containment checks with zero reported violations; 25 generic invariant checks with zero failures; no warnings. Fixed 8ms step: 6,253 steps, 50.024 simulated seconds, 8.419 dropped seconds. Interaction trace of 132 events demonstrates orbit, pinch, inspect, copy. These checks do NOT prove mesh watertightness, tunnel connectivity, conservation or continuous simulation time.
+## Architectural principles
+1. One persistent world, multiple viewing locations. No ordinary-traversal regeneration; no chunking or streaming yet. Keep world y=0 as fixed datum.
+2. Separate authoritative matter and transport from rendering. Preserve geology, tunnels, and holes through aperture movement.
+3. Radial atmospheric fog conceals the viewing horizon. It must not rewrite geology; avoid a hard circular terrain edge.
+4. Occlusion within caves is a distinct problem: preserve real ceilings and walls; explore selective near-foreground visibility when necessary, rather than deleting physical terrain.
+5. Phone-first, simple legible interactions, deterministic tests, minimal architecture, no long-press, no tiny controls.
+6. Preserve the V21 baseline and inspection witnesses while exploring; don't confuse a visual success with a conservation proof.
 
-## Current implementation versus contract
-V6 samples a square volume but physically truncates the signed material with a circular `R - hypot(x,z)` constraint and a spherical `9.91 - hypot(x,y,z)` constraint. The disk wall is generated terrain, **not an optical aperture**. It also autonomously cycles seeds, regenerating local geology. That is a successful volumetric geometry torture test, not a persistent world.
+## Immediate exploration — in order
+### A. Little Wanderer and clear screen
+- Remove the four permanent navigation arrow buttons from the main screen.
+- Introduce a small, clearly legible Wanderer entity located within the geology. It should become the focus of movement and future vertical exploration.
+- Prototype direct, touch-friendly navigation (e.g. tap-to-move with a visible target/path) that coexists with camera orbit/pinch. Avoid automatically imposing ubiquitous virtual thumbsticks; test touch ambiguity and ergonomics.
+- Initially navigate surface; later move through actual holes into caverns and below. Format coordinates compactly, move diagnostics into INSPECT, retain build/FPS and refresh.
+- Success: user can wander smoothly without button clutter; `terrainBuildCount=1`, stable geology, near 60 FPS under realistic camera views.
 
-The canonical bauble, fixed-step simulation, containment and inspection are present. The active v6 does NOT yet contain integrated water, bead transport, gathering, fabrication, chunk streaming or a moving Wanderer. Earlier experiments exist as `waterworld-v2.html`, `geological-history-torture.js`, `genesis-preserved-v1.html`; they are evidence and reusable parts, not currently running v6 systems. Waterworld handoff: `src/jit/waterworld/WATERWORLD.md`.
+### B. Layer-aware visibility and descent
+- Prove a single actual passage from Above to Within/Below, not a scene teleport disguised as continuity.
+- Compare views from surface, cavern, underside. Explore fading only obstructive foreground rock while retaining authoritative roof/walls.
+- Keep radial fog for the distant aperture edge; it cannot solve every local occlusion.
 
-## Next experiments and acceptance
-1. Replace radial/spherical material constraints with a larger world-coordinate square terrain field. Preserve signed-field extraction, holes, deformations and canonical bauble.
-2. Make visibility clipping an explicit rendering/aperture operation; terrain continues outside. No artificial circular wall or taper. Keep the containment verifier meaningful for rendered geometry; do not disable it to accommodate unbounded authoritative world state.
-3. Prove continuity by translating the aperture across fixed deterministic world terrain; the same tunnel should be recoverable as the view moves.
-4. Retain build/FPS/INSPECT/COPY REPORT, camera controls, fixed-step accounting, meaningful invariants and errors. Repair HUD status/overlap without replacing the UI.
-5. Then compose geology, excavation, water, beads, gravity, material gathering and fabrication. Candidate water design: separate shallow-water domains connected by discrete gravity-driven material transport through holes. This is a hypothesis, not an implemented capability.
+### C. Material transport — smallest causal loop
+- One surface source → one existing hole → gravity-driven fall → one underside catcher or pool.
+- Make matter and direction readable. Instrument counts: emitted, in-flight, collected, lost, conservation residual, throughput, FPS.
+- Consult existing Crucible/Six Cities bead-stream and water transport implementations before reuse; don't assume they are present in Hermeticon.
+- Then test vacuum intake, separation by material property, pipes, reservoirs, recirculation and fabrication. Start small and visually convincing, scale later.
 
-Avoid a premature general 3D fluid solver, new bauble scaffold, bespoke delivery pipeline, or claims of runtime correctness based solely on passing generic checks. Build phone-first; preserve deterministic evidence; reuse solved systems. 🐉
+## Horizons (not commitments)
+- Terraria-like descent through geological layers into a deeper, stranger world.
+- Machines and civilizations suspended from the underside of mountains.
+- Surface weather and material cycles feeding subterranean industry.
+- Modular transport, chemistry, sorting and fabrication as composable experiential systems.
+- A compelling executable outreach bauble for studios: a tiny coherent world whose inhabitants and machinery demonstrate creative systems thinking through interaction.
+
+## Handoff
+The immediate next build should be a **small Wanderer + uncluttered navigation hypothesis test**, not a sprawling game or new chunk architecture. After validating movement, test **one real material path through a hole to a receiving machine below**. Preserve V21 as the continuous-terrain baseline. 🐉

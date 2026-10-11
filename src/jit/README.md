@@ -8,6 +8,21 @@ For a **new JIT bauble**, start here, then read [`bonoj/Gate/README.md`](https:/
 
 For **existing Waterworld**, distinguish the [current working specification](WATERWORLD.md) (ambitious future 3D-water goals, not an implementation authorization) from the [v25 executable handoff](waterworld/WATERWORLD.md) (what the present 2.5D hybrid actually does). The [Ledger technical account](https://github.com/bonoj/Ledger/blob/main/notes/2026-10-10-waterworld-conserved-liquid.md) is historical evidence, not deployment authority.
 
+## Mandatory inherited bauble machinery
+
+The deployed `jit/bauble/index.html` is executable infrastructure, not a visual suggestion. Copy the **current** canonical file each time; do not copy an old experiment or freeze a template version in this README. During experiment work, preserve and verify:
+
+- **Vessel and framing:** spherical inner/outer radii, glass and intentional exterior hardware, scene graph, camera orbit/pinch/wheel input, responsive full-bauble initial framing with breathing room. Scene-down gravity is an experiment decision, never an implicit radial-gravity assumption.
+- **Single-source build identity:** one `BUILD` constant feeds the visible build name/number **outside INSPECT** and the inspection report. Advance the identifier for each published change. Preserve the adjacent ↻ fresh-fetch control. Never let HUD and report disagree.
+- **Inspection and failure reporting:** INSPECT / COPY REPORT, bounded privacy-minimal interaction trace, runtime/viewport/camera/render/performance evidence, and visible fatal-error reporting. Keep the report truthful about which systems exist.
+- **Containment:** preserve the mesh-vertex / instanced-mesh verifier, its visible red alarm, console diagnostic, and INSPECT evidence. Interior geometry must remain inside `INNER_R`. Intentional exterior designs require explicit `userData.allowOutsideBauble=true`; never casually exempt experimental contents. This verifier detects breaches; it does **not** enforce physics, catch unrendered particles, or guarantee no escape between checks. Add simulation-side containment and invariants for each material system.
+- **Fixed-step clock:** retain the 8 ms simulation step, bounded catch-up, accumulated/dropped-time accounting, and empty `simulate(dt)` extension point. Simulation must not depend on variable render fps.
+- **Generic invariants:** retain `BaubleRegisterInvariant`, periodic verification, shared warning alarm, and inspection diagnostics. Register experiment-specific conservation, boundary, invalid-state, and similar checks rather than silently swallowing failures.
+- **Simulation/render separation:** treat authoritative physical state and rendered surfaces as distinct where appropriate. When contact or seating depends on a rendered surface, verify their agreement; do not blindly use a visual approximation as physics.
+- **No imported domain assumptions:** the template remains empty. Waterworld's liquid solver, buoyancy, wind, orbiting gravity, and bead accounting are examples of domain systems, **not** default bauble behavior.
+
+Before slinging a new bauble, check that the build label and report match; framing shows the complete sphere on the target viewport; INSPECT and error copy work; registered invariants are present; containment is not accidentally disabled; and the committed/published source bytes agree. Distinguish source verification from actual browser/runtime verification. Never claim that a verifier guarantees physical confinement when it only detects breaches.
+
 ## Canonical publication route
 
 1. Fetch the canonical empty bauble from `bonoj/bonoj.github.io` `master:jit/bauble/index.html` and use its full contents as the new site's initial scaffold. Do not replace it with a new scene. Read Gate before writing.

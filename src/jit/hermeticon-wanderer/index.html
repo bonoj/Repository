@@ -1,5 +1,5 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07101a"><title>Hermeticon · Wanderer</title><style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:82px;right:10px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:118px 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px} #fpsRow{margin:-2px auto 0;text-align:center;color:#b9d4cc;font:11px ui-monospace,monospace;letter-spacing:.06em;pointer-events:none}#buildRow{display:flex;align-items:center;justify-content:center;gap:6px;margin:5px auto 0;pointer-events:auto;color:#a6b7b9;font:10px ui-monospace,monospace}#fresh{width:40px;height:40px;padding:0;min-height:40px;border:0;background:transparent;color:#c4b291;font-size:23px;cursor:pointer}#containmentAlarm{display:none;position:fixed;z-index:35;left:10px;right:10px;top:calc(65px + env(safe-area-inset-top));background:#531b19ee;color:#ffe9d7;border:2px solid #ff6955;border-radius:9px;padding:12px;font:700 12px/1.4 ui-monospace,monospace;white-space:pre-wrap;pointer-events:none}#containmentAlarm.on{display:block}#fieldControls{position:fixed;z-index:22;left:10px;right:10px;bottom:calc(105px + env(safe-area-inset-bottom));display:flex;gap:8px}#fieldControls button{flex:1;padding:11px 5px;font-size:11px;background:#102b38ee}#fieldControls .active{border-color:#b5e7d5;background:#31535b}</style></head><body><div id="stage"></div><div id="containmentAlarm" role="alert"></div><button id="probe" type="button">◉ INSPECT</button><div id="probePanel"><div id="probeActions"><button id="copyProbe">COPY REPORT</button><button id="closeProbe">CLOSE</button></div><div id="probeText"></div></div><div id="title"><h1>HERMETICON</h1><div id="tag">EMPTY WORLD · WANDERER</div><div id="buildRow"><span id="build"></span><button id="fresh" type="button" aria-label="Fetch latest build" title="Fetch latest build">↻</button></div><div id="fpsRow">FPS · —</div></div><div id="fieldControls"><button id="impulse" type="button">✦ IMPULSE</button><button id="spawnPhage" type="button">🦠 PHAGE</button><button id="gravityMode">◎ GRAVITY · STRONG</button></div><div id="hud"><div id="status">EMPTY VESSEL · ORBIT / PINCH TO EXPLORE</div></div><div id="error"></div><script>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07101a"><title>Hermeticon · Wanderer — Water</title><style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:82px;right:10px;top:120px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:175px 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px}#buildRow{display:flex;justify-content:center;align-items:center;gap:5px;margin:3px auto 0;max-width:calc(100vw - 150px);color:#a6b7b9;font:11px ui-monospace,monospace;letter-spacing:.12em;pointer-events:auto}#build{font-size:10px;letter-spacing:0;overflow-wrap:anywhere;text-align:center}#fresh{display:inline-grid;place-items:center;width:40px;height:40px;min-height:40px;padding:0;border:0;background:transparent;color:#c4b291;font:23px system-ui;line-height:1;cursor:pointer} </style></head><body><div id="stage"></div><button id="probe" type="button">◉ INSPECT</button><div id="probePanel"><div id="probeActions"><button id="copyProbe">COPY REPORT</button><button id="closeProbe">CLOSE</button></div><div id="probeText"></div></div><div id="title"><h1>HERMETICON</h1><div id="tag">WANDERER · WATERWORLD MATERIAL</div><div id="buildRow"><span id="build"></span><button id="fresh" type="button" title="Fetch latest build" aria-label="Fetch latest build">↻</button></div></div><div id="hud"><div id="status">ORBIT: ONE FINGER · PINCH: ZOOM · WATER TESTS ITSELF</div></div><div id="error"></div><script>
 (function(){
  const el=document.getElementById('error');
  function fatal(error){
@@ -18,13 +18,10 @@
 })();
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
-// One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-v1';
-document.querySelector('#build').textContent=BUILD;
-document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
 
 try {
+document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 const scene=new T.Scene();scene.background=new T.Color(0x06101b);scene.fog=new T.FogExp2(0x071827,.012);
 const world=new T.Group();scene.add(world);
 const renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.38;document.querySelector('#stage').append(renderer.domElement);
@@ -37,195 +34,349 @@ function cyl(p,r1,r2,h,m,x,y,z,n=12){return put(p,new T.CylinderGeometry(r1,r2,h
 function ring(p,r,t,m,x,y,z){const o=put(p,new T.TorusGeometry(r,t,7,48),m,x,y,z);o.rotation.x=Math.PI/2;return o}
 function beam(a,b,r,m,p=world){const v=new T.Vector3(...a),w=new T.Vector3(...b),d=w.clone().sub(v),o=put(p,new T.CylinderGeometry(r,r,d.length(),7),m,...v.clone().add(w).multiplyScalar(.5).toArray());o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),d.normalize());return o}
 
+
+// Source → discrete transport → accumulated material. No pressure solver or wall mesh.
 const BAUBLE_R=10.25,INNER_R=BAUBLE_R-.18;
+const SOURCE_R=3.05,BEAD_R=.055,MAX_ACTIVE=2600,GRAVITY=13.5;
+const sourceMat=new T.MeshPhysicalMaterial({color:0x57c9df,metalness:0,roughness:.08,transparent:true,opacity:.49,depthWrite:false,clearcoat:1,clearcoatRoughness:.05,side:T.FrontSide});
+const source=put(world,new T.SphereGeometry(SOURCE_R,48,32),sourceMat);
+const sourceCore=put(world,new T.SphereGeometry(SOURCE_R*.97,40,28),new T.MeshPhysicalMaterial({color:0x167da8,roughness:.15,transparent:true,opacity:.17,depthWrite:false}));
+const beadMat=new T.MeshPhysicalMaterial({color:0x6acde8,metalness:.04,roughness:.12,transparent:true,opacity:.88,depthWrite:false});
+const beadGeo=new T.IcosahedronGeometry(BEAD_R,1);
+const activeMesh=new T.InstancedMesh(beadGeo,beadMat,MAX_ACTIVE);
+
+activeMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
+activeMesh.frustumCulled=false;
+world.add(activeMesh);
+const dummy=new T.Object3D(),particles=[];
+let emitted=0,escaped=0,settledCount=0,collisionCount=0,sourceUnits=30000,emitRate=65,emitCarry=0,simSteps=0,simTime=0,peakActive=0;
+let impactImpulse=0,dripEnabled=true;
+// Moving point-mass gravity source outside the vessel.
+const gravityOrbitalRadius=12.2,gravityPeriod=18,gravitySwingAmplitude=.36,gravitySoftening=3;
+const gravityPosition=new T.Vector3(),gravityDown=new T.Vector3(0,-1,0);
+const gravityOrb=put(world,new T.SphereGeometry(.48,24,16),new T.MeshStandardMaterial({color:0xb68a43,metalness:.88,roughness:.23}));
+const brassLight=new T.PointLight(0xffc578,3,7);world.add(brassLight);
+function updateGravity(t){
+ const phase=gravitySwingAmplitude*Math.sin(2*Math.PI*t/gravityPeriod); // Pendulum, no full orbit.
+ gravityPosition.set(Math.sin(phase)*gravityOrbitalRadius,-Math.cos(phase)*gravityOrbitalRadius,0);
+ gravityOrb.position.copy(gravityPosition);brassLight.position.copy(gravityPosition);
+ gravityDown.copy(gravityPosition).normalize();
+ // Water has its own momentum; do not rotate the collector with gravity.
+}
+const rand=()=>Math.random()*2-1;
+function spawnOne(boost=1){
+ if(sourceUnits<=0||particles.length>=MAX_ACTIVE)return false;
+ const theta=Math.random()*Math.PI*2,u=rand(),r=Math.sqrt(1-u*u);
+ const nx=r*Math.cos(theta),ny=u,nz=r*Math.sin(theta);
+ const radius=SOURCE_R+BEAD_R*.8;
+ particles.push({x:nx*radius,y:ny*radius,z:nz*radius,vx:nx*(.8+Math.random()*.9)*boost,vy:ny*(.8+Math.random()*.9)*boost,vz:nz*(.8+Math.random()*.9)*boost,life:0});
+ sourceUnits--;emitted++;peakActive=Math.max(peakActive,particles.length);return true;
+}
+function burst(n,boost=1){for(let i=0;i<n;i++)if(!spawnOne(boost))break}
+const MATERIAL_UNIT=4*Math.PI*SOURCE_R**3/(3*30000);
+const INITIAL_WATER_UNITS=Math.round((.2*4*Math.PI*INNER_R**3/3)/MATERIAL_UNIT);
+const basinMat=new T.MeshPhysicalMaterial({color:0x238db2,roughness:.12,transparent:true,opacity:.38,depthWrite:false,side:T.DoubleSide});
+const surfaceMat=new T.MeshPhysicalMaterial({color:0x79d7e5,roughness:.09,transparent:true,opacity:.58,depthWrite:false,side:T.DoubleSide});
+const basin=put(world,new T.SphereGeometry(INNER_R-.015,48,32),basinMat);
+// Circular rendered water body; transport grid remains authoritative for dynamics.
+const RADIAL=24,SEGMENTS=96;
+const vertices=[0,0,0],indices=[];
+for(let ring=1;ring<=RADIAL;ring++){
+ const r=ring/RADIAL;
+ for(let j=0;j<SEGMENTS;j++){const a=2*Math.PI*j/SEGMENTS;vertices.push(r*Math.cos(a),r*Math.sin(a),0)}
+}
+for(let j=0;j<SEGMENTS;j++)indices.push(0,1+j,1+(j+1)%SEGMENTS);
+for(let ring=1;ring<RADIAL;ring++)for(let j=0;j<SEGMENTS;j++){
+ const a=1+(ring-1)*SEGMENTS+j,b=1+(ring-1)*SEGMENTS+(j+1)%SEGMENTS;
+ const c=a+SEGMENTS,d=b+SEGMENTS;indices.push(a,c,b,b,c,d);
+}
+const rippleGeo=new T.BufferGeometry();
+rippleGeo.setAttribute('position',new T.Float32BufferAttribute(vertices,3));
+rippleGeo.setIndex(indices);rippleGeo.computeVertexNormals();
+const ripplePositions=rippleGeo.attributes.position,rippleBase=Float32Array.from(ripplePositions.array);
+const waterSurface=put(world,rippleGeo,surfaceMat);
+waterSurface.rotation.x=-Math.PI/2;
+let windImpulse=0,windAffected=0,windSurgeStart=-100,windSpeed=3.1;
+function windGust(){const elapsed=simTime-windSurgeStart;return elapsed>=0&&elapsed<5?Math.sin(Math.PI*elapsed/5)**2:0}
+// Conservative damped surface-height dynamics on a fixed horizontal disk.
+// Point gravity is sampled at each vertex; acceleration changes before water responds.
+// 64x64 finite-volume shallow-water transport; cell water volumes and momenta.
+const GRID=64,NC=GRID*GRID,DX=2*INNER_R/GRID,CELL=DX*DX;
+const depthField=new Float32Array(NC),velX=new Float32Array(NC),velZ=new Float32Array(NC);
+const nextDepth=new Float32Array(NC),nextVX=new Float32Array(NC),nextVZ=new Float32Array(NC);
+const bed=new Float32Array(NC),wet=new Uint8Array(NC);
+let transportReady=false,wavePeak=0,waveEnergy=0,transportVolume=0,wetCells=0,shorelineMotion=0;
+for(let z=0;z<GRID;z++)for(let x=0;x<GRID;x++){
+ const i=z*GRID+x,px=(x+.5)*DX-INNER_R,pz=(z+.5)*DX-INNER_R;
+ const r2=px*px+pz*pz;
+ if(r2<INNER_R*INNER_R){wet[i]=1;bed[i]=-Math.sqrt(INNER_R*INNER_R-r2)}
+}
+function initializeTransport(){
+ let lo=-INNER_R,hi=INNER_R;
+ for(let k=0;k<35;k++){const m=(lo+hi)/2;let vol=0;for(let i=0;i<NC;i++)if(wet[i])vol+=Math.max(0,m-bed[i])*CELL;if(vol<waterVolume)lo=m;else hi=m}
+ const level=(lo+hi)/2;
+ for(let i=0;i<NC;i++){depthField[i]=wet[i]?Math.max(0,level-bed[i]):0;velX[i]=velZ[i]=0}
+ transportReady=true;
+}
+function fieldVolume(){let v=0;for(let i=0;i<NC;i++)v+=depthField[i]*CELL;return v}
+function sampleHeight(x,z){
+ const ix=Math.max(0,Math.min(GRID-1,Math.floor((x+INNER_R)/DX)));
+ const iz=Math.max(0,Math.min(GRID-1,Math.floor((z+INNER_R)/DX)));
+ const i=iz*GRID+ix;return wet[i]?bed[i]+depthField[i]:-INNER_R;
+}
+let thumpCount=0,thumpImpulse=0;
+function thump(){
+ thumpCount++;
+ for(let z=0;z<GRID;z++)for(let x=0;x<GRID;x++){
+ const i=z*GRID+x;if(!wet[i]||depthField[i]<.08)continue;
+ const px=(x+.5)*DX-INNER_R,pz=(z+.5)*DX-INNER_R,r=Math.hypot(px,pz);
+ const impulse=18*Math.exp(-r*r/58);
+ velX[i]+=impulse*px/Math.max(r,.3);velZ[i]+=impulse*pz/Math.max(r,.3);
+ thumpImpulse+=impulse*depthField[i]*CELL;
+ }
+}
+function stepWater(dt){
+ if(!transportReady)return;
+ // Explicit conservative donor-cell flux, capped by donor inventory.
+ // Surface pressure gradients and spatially sampled pendular gravity accelerate currents.
+ const speed=3.1+13*windGust(),g=GRAVITY;
+ for(let z=0;z<GRID;z++)for(let x=0;x<GRID;x++){
+  const i=z*GRID+x;if(!wet[i]||depthField[i]<.001){nextVX[i]=nextVZ[i]=0;continue}
+  const px=(x+.5)*DX-INNER_R,pz=(z+.5)*DX-INNER_R,h=bed[i]+depthField[i];
+  const L=x>0&&wet[i-1]?bed[i-1]+depthField[i-1]:h;
+  const R=x<GRID-1&&wet[i+1]?bed[i+1]+depthField[i+1]:h;
+  const D=z>0&&wet[i-GRID]?bed[i-GRID]+depthField[i-GRID]:h;
+  const U=z<GRID-1&&wet[i+GRID]?bed[i+GRID]+depthField[i+GRID]:h;
+  const rx=gravityPosition.x-px,ry=gravityPosition.y-h,rz=gravityPosition.z-pz;
+  const d2=rx*rx+ry*ry+rz*rz+gravitySoftening*gravitySoftening;
+  const factor=g*gravityOrbitalRadius*gravityOrbitalRadius/(d2*Math.sqrt(d2));
+  const drag=Math.exp(-.32*dt);
+  nextVX[i]=(velX[i]+dt*(-g*(R-L)/(2*DX)+rx*factor+speed*.055))*drag;
+  nextVZ[i]=(velZ[i]+dt*(-g*(U-D)/(2*DX)+rz*factor))*drag;
+  nextVX[i]=Math.max(-24,Math.min(24,nextVX[i]));
+  nextVZ[i]=Math.max(-24,Math.min(24,nextVZ[i]));
+ }
+ nextDepth.set(depthField);
+ // Pairwise edge flux: transfer equal and opposite volumes; dry cells may flood.
+ for(let z=0;z<GRID;z++)for(let x=0;x<GRID;x++){
+  const i=z*GRID+x;if(!wet[i])continue;
+  for(let axis=0;axis<2;axis++){
+   const j=axis===0?i+1:i+GRID;
+   if(axis===0&&x===GRID-1||axis===1&&z===GRID-1||!wet[j])continue;
+   const vi=axis===0?nextVX[i]:nextVZ[i],vj=axis===0?nextVX[j]:nextVZ[j];
+   const velocity=(vi+vj)*.5;
+   const donor=velocity>=0?i:j,receiver=velocity>=0?j:i;
+   const wanted=Math.abs(velocity)*dt*depthField[donor]/DX;
+   const transfer=Math.min(wanted,Math.max(0,nextDepth[donor])*.48);
+   nextDepth[donor]-=transfer;nextDepth[receiver]+=transfer;
+  }
+ }
+ let current=0,active=0;
+ for(let i=0;i<NC;i++){depthField[i]=Math.max(0,nextDepth[i]);velX[i]=nextVX[i];velZ[i]=nextVZ[i];current+=depthField[i]*CELL;if(depthField[i]>.03)active++}
+ // Droplet additions/removals change target volume; normalize depths without creating mass.
+ const scale=current>0?waterVolume/current:1;
+ for(let i=0;i<NC;i++)depthField[i]*=scale;
+ transportVolume=waterVolume;wetCells=active;
+ wavePeak=0;waveEnergy=0;
+ for(let i=0;i<NC;i++)if(depthField[i]>.02){wavePeak=Math.max(wavePeak,Math.abs(bed[i]+depthField[i]-waterY));waveEnergy+=depthField[i]*(velX[i]*velX[i]+velZ[i]*velZ[i])*CELL}
+}
+// Render-only bilinear sampling; never modifies the conservative transport field.
+function renderedHeight(x,z){
+ const gx=(x+INNER_R)/DX-.5,gz=(z+INNER_R)/DX-.5;
+ const ix=Math.floor(gx),iz=Math.floor(gz),tx=gx-ix,tz=gz-iz;
+ let sum=0,weight=0;
+ for(let dz=0;dz<2;dz++)for(let dx=0;dx<2;dx++){
+  const cx=ix+dx,cz=iz+dz;
+  if(cx<0||cx>=GRID||cz<0||cz>=GRID)continue;
+  const i=cz*GRID+cx;
+  if(!wet[i])continue;
+  const w=(dx?tx:1-tx)*(dz?tz:1-tz);
+  sum+=w*(bed[i]+depthField[i]);weight+=w;
+ }
+ return weight>1e-6?sum/weight:waterY;
+}
+function updateWindVisual(){
+ const a=ripplePositions.array;
+ const radius=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));
+ for(let i=0;i<a.length;i+=3){
+  const x=rippleBase[i]*radius,z=-rippleBase[i+1]*radius;
+  a[i]=rippleBase[i];a[i+1]=rippleBase[i+1];
+  a[i+2]=(renderedHeight(x,z)-waterY)/Math.max(radius,.01);
+ }
+ ripplePositions.needsUpdate=true;rippleGeo.computeVertexNormals();
+}
+function waterAt(x,z){
+ const ix=Math.floor((x+INNER_R)/DX),iz=Math.floor((z+INNER_R)/DX);
+ return ix>=0&&ix<GRID&&iz>=0&&iz<GRID&&wet[iz*GRID+ix]&&depthField[iz*GRID+ix]>.035;
+}
+function sampleWetSurface(x,z){return waterAt(x,z)?sampleHeight(x,z):waterY}
+function localWaterHeight(x,z){return waterAt(x,z)?sampleHeight(x,z):-INNER_R}
+const clipPlane=new T.Plane(new T.Vector3(0,-1,0),-INNER_R);basinMat.clippingPlanes=[clipPlane];renderer.localClippingEnabled=true;
+let waterY=-INNER_R,waterVolume=0;
+settledCount=INITIAL_WATER_UNITS;
+function capacityAt(y){const d=Math.max(0,Math.min(2*INNER_R,y+INNER_R));return Math.PI*d*d*(INNER_R-d/3)}
+function waterlineForVolume(v){let lo=-INNER_R,hi=INNER_R;for(let k=0;k<30;k++){const m=(lo+hi)*.5;if(capacityAt(m)<v)lo=m;else hi=m}return (lo+hi)*.5}
+function updateCollector(){waterVolume=settledCount*MATERIAL_UNIT;waterY=settledCount?waterlineForVolume(waterVolume):-INNER_R;clipPlane.constant=waterY;const r=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));waterSurface.position.set(0,waterY,0);waterSurface.scale.set(r,r,1);waterSurface.visible=settledCount>0;basin.visible=settledCount>0;if(!transportReady)initializeTransport()}
+let splashImpacts=0,splashEjected=0,splashReturned=0;
+function splash(p,impactSpeed){
+ // Incoming unit merges first. Ejected units are debited from the collector.
+ settledCount++;
+ // Only primary droplets can excite a splash; ejecta return without cascading.
+ const energy=p.splash?0:Math.max(0,impactSpeed-4);
+ const available=Math.min(settledCount-1,MAX_ACTIVE-particles.length+1);
+ const n=Math.min(available,4,Math.floor(energy*.17));
+ if(n>0){
+  const upx=0,upy=1,upz=0;
+  const cx=p.x,cy=localWaterHeight(p.x,p.z),cz=p.z;
+  for(let j=0;j<n;j++){
+   const a=Math.random()*Math.PI*2;
+   let tx=Math.cos(a),ty=0,tz=Math.sin(a);
+   const dot=tx*upx+ty*upy+tz*upz;
+   tx-=dot*upx;ty-=dot*upy;tz-=dot*upz;
+   const norm=Math.hypot(tx,ty,tz)||1;tx/=norm;ty/=norm;tz/=norm;
+   const kick=Math.min(5,1.4+energy*.16)*(0.7+Math.random()*.5);
+   particles.push({x:cx+upx*.12+tx*.07,y:cy+upy*.12+ty*.07,z:cz+upz*.12+tz*.07,
+    vx:upx*kick+tx*kick*.42,vy:upy*kick+ty*kick*.42,vz:upz*kick+tz*kick*.42,life:0,splash:true});
+  }
+  settledCount-=n;splashEjected+=n;splashImpacts++;
+ }
+ updateCollector();
+}
+function settle(p){settledCount++;if(p.splash)splashReturned++;updateCollector()}
+updateCollector();
+// Autonomous brass skiff: depth-averaged currents, buoyancy and predictive edge avoidance.
+const skiff=new T.Group();world.add(skiff);
+const hull=put(skiff,new T.SphereGeometry(1,16,10),brass,0,-.12,0);hull.scale.set(.53,.23,1.08);
+const rim=put(skiff,new T.TorusGeometry(.53,.055,7,24),bright,0,.02,0);rim.rotation.x=Math.PI/2;rim.scale.set(1,2.0,1);
+const deck=put(skiff,new T.BoxGeometry(.67,.08,.95),brass,0,.035,0);
+const mast=cyl(skiff,.035,.045,.82,bright,0,.46,-.10);
+const sail=put(skiff,new T.ConeGeometry(.35,.76,3),bright,0,.52,-.12);sail.rotation.z=.13;
+const cargo=put(skiff,new T.CylinderGeometry(.27,.27,.075,16),surfaceMat,0,.11,.27);cargo.visible=false;
+const boatState={x:1.3,z:1.2,vx:0,vz:0,heading:.7,y:-4.3,vy:0,roll:0,pitch:0,cargoUnits:0,caught:0,turns:0};
+function boatCurrent(x,z){
+ const ix=Math.max(0,Math.min(GRID-1,Math.floor((x+INNER_R)/DX))),iz=Math.max(0,Math.min(GRID-1,Math.floor((z+INNER_R)/DX))),i=iz*GRID+ix;
+ return {vx:velX[i],vz:velZ[i],depth:depthField[i]};
+}
+// Boat-only bilinear free-surface sampler. Dry samples are not terrain heights.
+function boatSurface(x,z){
+ const gx=(x+INNER_R)/DX-.5,gz=(z+INNER_R)/DX-.5;
+ const ix=Math.floor(gx),iz=Math.floor(gz),tx=gx-ix,tz=gz-iz;
+ let sum=0,weight=0;
+ for(let dz=0;dz<=1;dz++)for(let dx=0;dx<=1;dx++){
+  const xx=ix+dx,zz=iz+dz;
+  if(xx<0||xx>=GRID||zz<0||zz>=GRID)continue;
+  const i=zz*GRID+xx;
+  if(!wet[i]||depthField[i]<.06)continue;
+  const w=(dx?tx:1-tx)*(dz?tz:1-tz);
+  sum+=w*(bed[i]+depthField[i]);weight+=w;
+ }
+ return weight>.001?sum/weight:null;
+}
+function stepBoat(dt){
+ const b=boatState,c=boatCurrent(b.x,b.z);
+ // The skiff has a finite hull. Navigate within the *wet* basin, not the glass.
+ const shore=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));
+ const safe=Math.max(2.1,Math.min(shore-2.1,INNER_R-2.5));
+ const fx=Math.sin(b.heading),fz=Math.cos(b.heading);
+ const projectedX=b.x+fx*2.5+b.vx*.8,projectedZ=b.z+fz*2.5+b.vz*.8;
+ const danger=Math.hypot(projectedX,projectedZ)>safe;
+ const desired=danger?Math.atan2(-b.x,-b.z):Math.atan2(Math.sin(simTime*.17)*.8+fx,Math.cos(b.heading)+Math.cos(simTime*.11)*.4);
+ const turn=Math.atan2(Math.sin(desired-b.heading),Math.cos(desired-b.heading));
+ b.heading+=Math.max(-1,Math.min(1,turn))*dt*(danger?3.5:1);
+ if(danger)b.turns++;
+ const dx=Math.sin(b.heading),dz=Math.cos(b.heading);
+ const currentX=Math.max(-3,Math.min(3,c.vx)),currentZ=Math.max(-3,Math.min(3,c.vz));
+ b.vx+=(dx*1.3+(currentX-b.vx)*1.1)*dt;
+ b.vz+=(dz*1.3+(currentZ-b.vz)*1.1)*dt;
+ const speed=Math.hypot(b.vx,b.vz);if(speed>3.8){b.vx*=3.8/speed;b.vz*=3.8/speed}
+ b.x+=b.vx*dt;b.z+=b.vz*dt;
+ let radius=Math.hypot(b.x,b.z);
+ if(radius>safe){
+  b.x*=safe/radius;b.z*=safe/radius;
+  const outward=(b.vx*b.x+b.vz*b.z)/safe;
+  if(outward>0){b.vx-=outward*b.x/safe;b.vz-=outward*b.z/safe}
+  radius=safe;
+ }
+ // Vertical position is resolved against the ACTUAL rendered surface mesh.
+ // Horizontal movement is independent; no artificial vertical buoyancy integration.
+ b.vy=0;
+ b.pitch*=Math.max(0,1-dt*4);b.roll*=Math.max(0,1-dt*4);
+ skiff.position.set(b.x,b.y,b.z);
+ skiff.rotation.order='YXZ';skiff.rotation.set(b.pitch,b.heading,b.roll,'YXZ');
+ cargo.visible=b.cargoUnits>0;cargo.scale.y=Math.min(3,.7+b.cargoUnits*.05);
+}
+function simulate(dt){
+ const t=Math.min(dt,.022);simSteps++;simTime+=t;stepWater(t);stepBoat(t);
+ if(dripEnabled){emitCarry+=emitRate*t;const n=Math.min(160,Math.floor(emitCarry));let spawned=0;for(;spawned<n;spawned++)if(!spawnOne())break;emitCarry-=spawned;}
+ const limit=INNER_R-BEAD_R;
+ // Seed the first liquid on contact with the vessel, then merge at the waterline.
+ for(let i=particles.length-1;i>=0;i--){
+  const p=particles[i];p.life+=t;const dx=gravityPosition.x-p.x,dy=gravityPosition.y-p.y,dz=gravityPosition.z-p.z;const d2=dx*dx+dy*dy+dz*dz+gravitySoftening*gravitySoftening;const accel=GRAVITY*gravityOrbitalRadius*gravityOrbitalRadius/(d2*Math.sqrt(d2));p.vx+=dx*accel*t;p.vy+=dy*accel*t;p.vz+=dz*accel*t;
+  // Thick horizontal airflow band; lateral drag stays subordinate to gravity.
+  const height=p.y-localWaterHeight(p.x,p.z);
+  const band=Math.exp(-Math.pow((height-1.1)/2.3,2));
+  const air=2.1*band*t;
+  windSpeed=3.1+13*windGust();
+  const push=(windSpeed-p.vx)*air;
+  p.vx+=push;p.vz+=(-p.vz)*air*.38;
+  windImpulse+=Math.abs(push);if(band>.15)windAffected++;
+  p.x+=p.vx*t;p.y+=p.vy*t;p.z+=p.vz*t;
+  const r2=p.x*p.x+p.y*p.y+p.z*p.z;
+  if(r2>limit*limit){
+   const r=Math.sqrt(r2),nx=p.x/r,ny=p.y/r,nz=p.z/r;
+   p.x=nx*limit;p.y=ny*limit;p.z=nz*limit;
+   const vn=p.vx*nx+p.vy*ny+p.vz*nz;
+   if(vn>0){p.vx-=1.24*vn*nx;p.vy-=1.24*vn*ny;p.vz-=1.24*vn*nz}
+   p.vx*=.79;p.vz*=.79;collisionCount++;
+   if(settledCount===0){settle(p);particles[i]=particles[particles.length-1];particles.pop();continue;}
+  }
+  if(!p.splash&&Math.hypot(p.x-boatState.x,p.z-boatState.z)<.48&&p.y>=boatState.y-.02&&p.y<=boatState.y+.8&&p.vy<0){boatState.cargoUnits++;boatState.caught++;particles[i]=particles[particles.length-1];particles.pop();continue;}
+  const depth=p.y;const downward=-p.vy;
+  if(settledCount>0 && depth<=localWaterHeight(p.x,p.z)+BEAD_R && downward>0){
+   if(p.splash)settle(p);else splash(p,downward);particles[i]=particles[particles.length-1];particles.pop();
+  }
+ }
+}
+function renderBeads(){
+ for(let i=0;i<particles.length;i++){const p=particles[i];dummy.position.set(p.x,p.y,p.z);dummy.updateMatrix();activeMesh.setMatrixAt(i,dummy.matrix)}
+ activeMesh.count=particles.length;activeMesh.instanceMatrix.needsUpdate=true;
+
+ const fraction=Math.cbrt(sourceUnits/30000);source.scale.setScalar(fraction);sourceCore.scale.setScalar(fraction);
+}
+const BUILD='hermeticon-wanderer-water-v2';
+const buildLabel=document.querySelector('#build');
+buildLabel.textContent=BUILD;
+const hud=document.querySelector('#hud');
+hud.style.display='none';
+const dripButton=document.createElement('button');dripButton.textContent='💧 DRIP ON';hud.append(dripButton);
+dripButton.onclick=()=>{dripEnabled=!dripEnabled;dripButton.textContent=dripEnabled?'💧 DRIP ON':'💧 DRIP OFF'};
+const plopButton=document.createElement('button');plopButton.textContent='◉ PLOP';hud.append(plopButton);
+plopButton.onclick=()=>burst(120,2.8);
+const surgeButton=document.createElement('button');surgeButton.textContent='◉ THUMP';hud.append(surgeButton);
+surgeButton.onclick=()=>{thump()};
+const resetButton=document.createElement('button');resetButton.textContent='↺ RESET';hud.append(resetButton);
+resetButton.onclick=()=>{particles.length=0;settledCount=INITIAL_WATER_UNITS;updateCollector();windSurgeStart=-100;windSpeed=3.1;sourceUnits=30000;emitted=0;escaped=0;collisionCount=0;simTime=0;simSteps=0;emitCarry=0;peakActive=0;splashImpacts=0;splashEjected=0;splashReturned=0;windImpulse=0;windAffected=0;boatState.x=1.3;boatState.z=1.2;boatState.vx=boatState.vz=boatState.vy=0;boatState.y=-4.3;boatState.cargoUnits=boatState.caught=boatState.turns=0;transportReady=false;initializeTransport();thumpCount=0;thumpImpulse=0;wavePeak=0;waveEnergy=0;};
+const status=document.querySelector('#status');status.textContent='WATERWORLD MATERIAL · AUTONOMOUS TEST';
 const envelope=new T.Mesh(new T.SphereGeometry(BAUBLE_R,72,48),new T.MeshPhysicalMaterial({color:0xa0dce2,metalness:0,roughness:.08,transparent:true,opacity:.055,depthWrite:false,side:T.FrontSide}));world.add(envelope);
 const innerGlass=new T.Mesh(new T.SphereGeometry(INNER_R,72,48),new T.MeshPhysicalMaterial({color:0x9dcdd7,metalness:0,roughness:.09,transparent:true,opacity:.035,depthWrite:false,side:T.BackSide}));world.add(innerGlass);
 const equator=put(world,new T.TorusGeometry(BAUBLE_R,.095,10,120),brass);equator.rotation.x=Math.PI/2;
 for(const y of [-.15,.15]){const trim=put(world,new T.TorusGeometry(BAUBLE_R,.021,6,120),bright,0,y,0);trim.rotation.x=Math.PI/2}
 for(let i=0;i<8;i++){const a=i*Math.PI/4;ball(world,.12,bright,Math.cos(a)*BAUBLE_R,0,Math.sin(a)*BAUBLE_R)}
-
-// Containment verifier: geometry in scene coordinates, independent of camera/gravity.
-// Shell hardware is intentionally outside the INNER radius; only explicitly marked
-// objects may exceed the vessel. Mark external designs with userData.allowOutsideBauble=true.
-const shellParts=[envelope,innerGlass,equator];
-world.traverse(o=>{if(o.isMesh&&o!==envelope&&o!==innerGlass&&o!==equator&&
- (o.geometry?.type==='TorusGeometry'||o.geometry?.type==='SphereGeometry')&&
- o.material===bright)shellParts.push(o)});
-for(const o of shellParts)o.userData.allowOutsideBauble=true;
-const containment={checks:0,violations:[],maxOverflow:0,checkedObjects:0,lastCheckMs:0};
-const alarm=document.querySelector('#containmentAlarm');
-const scratchPoint=new T.Vector3(),scratchMatrix=new T.Matrix4();
-function verifyContainment(){
- world.updateMatrixWorld(true);
- const failures=[];let checked=0,maxOverflow=0;
- world.traverse(o=>{
-  if(!o.isMesh||!o.visible||o.userData.allowOutsideBauble||!o.geometry)return;
-  const g=o.geometry;if(!g.boundingBox)g.computeBoundingBox();
-  if(!g.boundingBox)return;
-  const count=o.isInstancedMesh?o.count:1;
-  for(let k=0;k<count;k++){
-   if(o.isInstancedMesh){o.getMatrixAt(k,scratchMatrix);scratchMatrix.premultiply(o.matrixWorld)}
-   else scratchMatrix.copy(o.matrixWorld);
-   // Test actual vertices, not bounding boxes (which falsely flag spherical shells).
-   const positions=g.getAttribute('position');if(!positions)continue;
-   let overflow=0;
-   for(let v=0;v<positions.count;v++){
-    scratchPoint.fromBufferAttribute(positions,v).applyMatrix4(scratchMatrix);
-    overflow=Math.max(overflow,scratchPoint.length()-INNER_R);
-   }
-   checked++;
-   if(overflow>.025){maxOverflow=Math.max(maxOverflow,overflow);if(failures.length<12)failures.push({object:o.name||o.uuid.slice(0,8),instance:o.isInstancedMesh?k:null,overflow:round(overflow,3)})}
-  }
- });
- containment.checks++;containment.violations=failures;containment.maxOverflow=round(maxOverflow,3);containment.checkedObjects=checked;containment.lastCheckMs=Math.round(performance.now());
- updateAlarm();
- return containment;
-}
-globalThis.BaubleVerifyContainment=verifyContainment;
-
-
-// Shared JIT machinery. Register world-specific checks; never silently swallow failures.
-const STEP=.008,MAX_STEPS=7,MAX_FRAME=.05;
-const clock={time:0,steps:0,droppedSeconds:0,accumulator:0};
-const invariantChecks=new Map();
-const invariantState={checks:0,failures:[],lastCheckMs:0};
-function registerInvariant(name,check){if(typeof name!=='string'||!name||typeof check!=='function')throw Error('Invalid invariant registration');invariantChecks.set(name,check);return()=>invariantChecks.delete(name)}
-function verifyInvariants(){
- const failures=[];
- for(const [name,check] of invariantChecks){
-  try{const result=check();if(result!==true&&result!==undefined&&result!==null){if(result===false||result?.ok===false)failures.push({name,detail:result?.detail||'Invariant failed'})}}
-  catch(e){failures.push({name,detail:String(e?.message||e)})}
- }
- invariantState.checks++;invariantState.failures=failures;invariantState.lastCheckMs=Math.round(performance.now());
- return invariantState;
-}
-
-
-/* Genesis: Hermeticon's 100k BB cloud, with rotating collapse, sink accretion,
-   and collision-coalesced disk aggregates. No buttons or authored orbits. */
-
-const genesisFactory=()=>{
-// Genesis v4: deterministic particle-mesh self-gravity, gas pressure, conservative sink.
-// One bead is one conserved mass unit. No authored planets, disk or Oort labels.
-const N=100000,SEED=918273,S=10,R=9.83,GRID=10,CELLS=GRID**3,H=2*R/GRID,SOFT=.8,G=.0032;
-const pos=new Float32Array(N*3),vel=new Float32Array(N*3),col=new Float32Array(N*3),live=new Uint8Array(N);
-const mass=new Float64Array(CELLS),px=new Float64Array(CELLS),py=new Float64Array(CELLS),pz=new Float64Array(CELLS),fx=new Float64Array(CELLS),fy=new Float64Array(CELLS),fz=new Float64Array(CELLS);
-const star={m:0,x:0,y:0,z:0,vx:0,vy:0,vz:0,Lx:0,Ly:0,Lz:0},starRadius=.34;
-let shock=null,shockCount=0,shockHits=0;let seed=SEED,elapsed=0,steps=0,free=N,escapes=0,outer=0,inner=0,initialL=null,initialP=null,perf=0,contacts=0,collisionPasses=0,discThickness=0;
-// Spatially local, bounded paired impulses adapted from Asteroid's inexpensive collision pass.
-const CG=32,CC=CG**3,head=new Int32Array(CC),next=new Int32Array(N);
-const ci=(x,y,z)=>Math.min(CG-1,Math.max(0,Math.floor((x+R)*CG/(2*R))))+CG*(Math.min(CG-1,Math.max(0,Math.floor((y+R)*CG/(2*R))))+CG*Math.min(CG-1,Math.max(0,Math.floor((z+R)*CG/(2*R)))));
-function collide(){
- head.fill(-1);let hits=0,ys=0,n=0;
- for(let i=0;i<N;i++){if(live[i])continue;const k=i*3,c=ci(pos[k],pos[k+1],pos[k+2]);next[i]=head[c];head[c]=i;ys+=pos[k+1]*pos[k+1];n++}
- for(let c=0;c<CC;c++){let i=head[c];while(i>=0){const j=next[i];if(j>=0){const k=i*3,l=j*3,dx=pos[k]-pos[l],dy=pos[k+1]-pos[l+1],dz=pos[k+2]-pos[l+2],d2=dx*dx+dy*dy+dz*dz;
- if(d2>.000001&&d2<.16){const d=Math.sqrt(d2),nx=dx/d,ny=dy/d,nz=dz/d,rv=(vel[k]-vel[l])*nx+(vel[k+1]-vel[l+1])*ny+(vel[k+2]-vel[l+2])*nz;
- const impulse=(.4-d)*.35+Math.max(0,-rv)*.28;
- vel[k]+=nx*impulse;vel[k+1]+=ny*impulse;vel[k+2]+=nz*impulse;vel[l]-=nx*impulse;vel[l+1]-=ny*impulse;vel[l+2]-=nz*impulse;hits++}
- }i=next[i]}}
- contacts+=hits;collisionPasses++;discThickness=n?Math.sqrt(ys/n):0;
-}
-// Read-only structure probe, computed only when INSPECT is requested.
-let priorPeaks=[],priorPeakTime=0;
-function structure(){
- const bins=new Int32Array(10),density=new Int32Array(CC),sumV=new Float64Array(CC*3),sampleContacts=contacts,peaks=[];
- let wall=0,radial=0,tangent=0,inward=0,outward=0,radialN=0;
- for(let i=0;i<N;i++){if(live[i])continue;const k=i*3,x=pos[k],y=pos[k+1],z=pos[k+2],vx=vel[k],vy=vel[k+1],vz=vel[k+2],r=Math.hypot(x,y,z),q=Math.hypot(x,z),c=ci(x,y,z);
- density[c]++;sumV[c*3]+=vx;sumV[c*3+1]+=vy;sumV[c*3+2]+=vz;
- bins[Math.min(9,Math.floor(r))]++;if(r>R-.55)wall++;
- if(q>.001){const vr=(x*vx+z*vz)/q,vt=(z*vx-x*vz)/q;radial+=vr;tangent+=vt;radialN++;if(vr>0)outward++;else inward++}
- }
- for(let c=0;c<CC;c++)if(density[c]>=8){const z=Math.floor(c/(CG*CG)),y=Math.floor(c/CG)%CG,x=c%CG,n=density[c],cell=2*R/CG;
- peaks.push({cell:c,beads:n,center:[+((x+.5)*cell-R).toFixed(2),+((y+.5)*cell-R).toFixed(2),+((z+.5)*cell-R).toFixed(2)],meanVelocity:[+(sumV[c*3]/n).toFixed(3),+(sumV[c*3+1]/n).toFixed(3),+(sumV[c*3+2]/n).toFixed(3)]})}
- peaks.sort((a,b)=>b.beads-a.beads);const top=peaks.slice(0,8);
- for(const p of top){let match=null,dist=Infinity;for(const old of priorPeaks){const d=Math.hypot(...p.center.map((v,i)=>v-old.center[i]));if(d<dist){dist=d;match=old}}
- p.previousCellDistance=match?+dist.toFixed(2):null;p.secondsSincePreviousProbe=priorPeakTime?+(elapsed-priorPeakTime).toFixed(2):null}
- priorPeaks=top.map(p=>({center:p.center}));priorPeakTime=elapsed;
- return{sampleTime:+elapsed.toFixed(2),radialShells0to1Through9to10:Array.from(bins),nearWallBeads:wall,nearWallFraction:free?+(wall/free).toFixed(4):0,meanRadialVelocity:radialN?+(radial/radialN).toFixed(4):0,meanTangentialVelocity:radialN?+(tangent/radialN).toFixed(4):0,inwardCount:inward,outwardCount:outward,densestCells:top,cellWidth:+(2*R/CG).toFixed(3),contactCountAtProbe:sampleContacts,notes:'Peaks are fixed-grid cells, not tracked physical clumps; nearest previous peak distance is suggestive only.'};
-}
-const rand=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
-const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(pos,3).setUsage(T.DynamicDrawUsage));geo.setAttribute('color',new T.BufferAttribute(col,3));geo.setDrawRange(0,N);
-const cloud=new T.Points(geo,new T.PointsMaterial({size:.065,vertexColors:true,sizeAttenuation:true,alphaTest:.5,map:(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d'),g=x.createRadialGradient(24,20,2,32,32,31);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.65,'rgba(230,230,230,1)');g.addColorStop(.95,'rgba(130,130,130,1)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,64,64);return new T.CanvasTexture(c)})()}));cloud.frustumCulled=false;world.add(cloud);
-const starMesh=new T.Mesh(new T.IcosahedronGeometry(1,2),new T.MeshStandardMaterial({color:0xffd99c,emissive:0xff9c35,emissiveIntensity:.85}));starMesh.visible=false;world.add(starMesh);
-const index=(x,y,z)=>Math.min(GRID-1,Math.max(0,Math.floor((x+R)/H)))+GRID*(Math.min(GRID-1,Math.max(0,Math.floor((y+R)/H)))+GRID*Math.min(GRID-1,Math.max(0,Math.floor((z+R)/H))));
-const center=(i,axis)=>((Math.floor(i/Math.pow(GRID,axis))%GRID)+.5)*H-R;
-function totals(){let mx=star.vx*star.m,my=star.vy*star.m,mz=star.vz*star.m,Lx=star.Lx+star.m*(star.y*star.vz-star.z*star.vy),Ly=star.Ly+star.m*(star.z*star.vx-star.x*star.vz),Lz=star.Lz+star.m*(star.x*star.vy-star.y*star.vx);
-for(let i=0;i<N;i++){if(live[i])continue;const k=i*3,x=pos[k],y=pos[k+1],z=pos[k+2],vx=vel[k],vy=vel[k+1],vz=vel[k+2];mx+=vx;my+=vy;mz+=vz;Lx+=y*vz-z*vy;Ly+=z*vx-x*vz;Lz+=x*vy-y*vx}return{momentum:[mx,my,mz],angular:[Lx,Ly,Lz]}}
-function reset(){shock=null;shockCount=shockHits=0;seed=SEED;elapsed=steps=star.m=star.vx=star.vy=star.vz=star.Lx=star.Ly=star.Lz=0;free=N;live.fill(0);
-for(let i=0;i<N;i++){const k=i*3;let x,y,z;do{x=(rand()*2-1)*8.7;y=(rand()*2-1)*8.7;z=(rand()*2-1)*8.7}while(x*x+y*y+z*z>75);pos[k]=x;pos[k+1]=y;pos[k+2]=z;
-const omega=.47;vel[k]=-omega*z+(rand()-.5)*.09;vel[k+1]=(rand()-.5)*.09;vel[k+2]=omega*x+(rand()-.5)*.09;
-const c=new T.Color().setHSL(.48+rand()*.16,.6,.62);col[k]=c.r;col[k+1]=c.g;col[k+2]=c.b;
-}geo.attributes.color.needsUpdate=true;geo.attributes.position.needsUpdate=true;initialL=totals().angular;initialP=totals().momentum}
-function sink(i){const k=i*3,x=pos[k],y=pos[k+1],z=pos[k+2],vx=vel[k],vy=vel[k+1],vz=vel[k+2],m=star.m;
-star.Lx+=y*vz-z*vy;star.Ly+=z*vx-x*vz;star.Lz+=x*vy-y*vx;
-star.vx=(star.vx*m+vx)/(m+1);star.vy=(star.vy*m+vy)/(m+1);star.vz=(star.vz*m+vz)/(m+1);star.m++;free--;live[i]=1;
-pos[k]=pos[k+1]=pos[k+2]=0;col[k]=col[k+1]=col[k+2]=0;geo.attributes.color.needsUpdate=true}
-// An expanding spherical impulse front. Each bead is struck once as the shell passes.
-function shockStep(dt){if(!shock)return;const before=shock.radius;shock.radius+=dt*13;const outer=shock.radius;for(let i=0;i<N;i++){if(live[i])continue;const k=i*3,dx=pos[k]-star.x,dy=pos[k+1]-star.y,dz=pos[k+2]-star.z,r=Math.hypot(dx,dy,dz);if(r<before||r>=outer||r<.0001)continue;const kick=125/(r*r+.36);vel[k]+=dx/r*kick;vel[k+1]+=dy/r*kick;vel[k+2]+=dz/r*kick;shockHits++}if(outer>R+1)shock=null}
-function solve(dt){shockStep(dt);
-mass.fill(0);px.fill(0);py.fill(0);pz.fill(0);
-for(let i=0;i<N;i++){if(live[i])continue;const k=i*3,c=index(pos[k],pos[k+1],pos[k+2]);mass[c]++;px[c]+=pos[k];py[c]+=pos[k+1];pz[c]+=pos[k+2]}
-for(let a=0;a<CELLS;a++){const ma=mass[a];if(!ma){fx[a]=fy[a]=fz[a]=0;continue}fx[a]=fy[a]=fz[a]=0;px[a]/=ma;py[a]/=ma;pz[a]/=ma}
- // Symmetric cell-pair gravity. Every force has an equal and opposite reaction.
-for(let a=0;a<CELLS;a++){if(!mass[a])continue;
- for(let b=a+1;b<CELLS;b++){if(!mass[b])continue;
- const dx=px[b]-px[a],dy=py[b]-py[a],dz=pz[b]-pz[a],d2=dx*dx+dy*dy+dz*dz+SOFT*SOFT,f=G/Math.pow(d2,1.5);
- const ax=f*mass[b],bx=f*mass[a];fx[a]+=dx*ax;fy[a]+=dy*ax;fz[a]+=dz*ax;fx[b]-=dx*bx;fy[b]-=dy*bx;fz[b]-=dz*bx;
- }}
- // Isothermal pressure: finite-volume density gradient, not arbitrary flattening.
- const cs2=.015,drag=0;
- let innerNow=0,outerNow=0;
- for(let i=0;i<N;i++){if(live[i])continue;const k=i*3,x=pos[k],y=pos[k+1],z=pos[k+2],c=index(x,y,z),ix=c%GRID,iy=Math.floor(c/GRID)%GRID,iz=Math.floor(c/(GRID*GRID));
- const x0=ix>0?mass[c-1]:mass[c],x1=ix<GRID-1?mass[c+1]:mass[c],y0=iy>0?mass[c-GRID]:mass[c],y1=iy<GRID-1?mass[c+GRID]:mass[c],z0=iz>0?mass[c-GRID*GRID]:mass[c],z1=iz<GRID-1?mass[c+GRID*GRID]:mass[c];
- const rho=Math.max(1,mass[c]),pressure=cs2/(2*H*rho);
- let ax=fx[c]-pressure*(x1-x0),ay=fy[c]-pressure*(y1-y0),az=fz[c]-pressure*(z1-z0);
- if(star.m){const dx=star.x-x,dy=star.y-y,dz=star.z-z,d2=dx*dx+dy*dy+dz*dz+SOFT*SOFT,q=G*star.m/Math.pow(d2,1.5);ax+=dx*q;ay+=dy*q;az+=dz*q}
- vel[k]+=ax*dt;vel[k+1]+=ay*dt;vel[k+2]+=az*dt;
- pos[k]+=vel[k]*dt;pos[k+1]+=vel[k+1]*dt;pos[k+2]+=vel[k+2]*dt;
- const rr=Math.hypot(pos[k],pos[k+1],pos[k+2]);
- // Reflective glass boundary: material stays in vessel; boundary impulse is external.
- if(rr>R-.15){const nx=pos[k]/rr,ny=pos[k+1]/rr,nz=pos[k+2]/rr,vn=vel[k]*nx+vel[k+1]*ny+vel[k+2]*nz,f=(R-.15)/rr;pos[k]*=f;pos[k+1]*=f;pos[k+2]*=f;if(vn>0){vel[k]-=2*vn*nx;vel[k+1]-=2*vn*ny;vel[k+2]-=2*vn*nz}}
- if(rr<starRadius&&star.m>0){sink(i);continue}
- if(rr<.16&&star.m===0){sink(i);continue}
- if(rr<2)innerNow++;if(rr>7)outerNow++;
- }
- inner=innerNow;outer=outerNow;collide();geo.attributes.position.needsUpdate=true;
- starMesh.visible=star.m>0;starMesh.scale.setScalar(Math.min(.65,.08+.017*Math.cbrt(star.m)));starMesh.position.set(star.x,star.y,star.z);
-}
-function advance(dt){elapsed+=dt;steps++;if(steps%2===0)solve(dt*2)}
-reset();
-registerInvariant('genesis-100k-accounting',()=>free+star.m===N);
-registerInvariant('genesis-finite',()=>Number.isFinite(pos[0])&&Number.isFinite(star.m));
-registerInvariant('genesis-initial-population',()=>pos.length===N*3);
-return{advance,triggerShock:()=>{shock={radius:0};shockCount++;return shockCount},starMesh,report:()=>{const now=totals();return{seed:SEED,elapsedSeconds:+elapsed.toFixed(2),formationTargetSeconds:30,continuousEvolution:true,population:N,freeBeads:free,starMassBeads:star.m,shock:{active:!!shock,radius:shock?+shock.radius.toFixed(2):null,triggerCount:shockCount,beadImpulses:shockHits,speed:13,impulseStrength:125,softeningSquared:.36},accounted:free+star.m,innerBeads:inner,outerBeads:outer,contacts,collisionPasses,discThickness,structure:structure(),collisionModel:'spatial-cell paired sloppy inelastic impulses',steps,initialMomentum:initialP,currentMomentum:now.momentum,initialAngularMomentum:initialL,currentAngularMomentum:now.angular,method:'particle-mesh gravity, grid pressure, central sink, spatial-cell paired dissipative contacts',limitations:['grid force approximation','wall impulses affect total momentum','sink angular momentum tracked as spin','no invented planetary aggregates','30 seconds simulated time not verified physical years']}}};
-};
-const genesis=null; // Dormant Genesis factory retained, not called.
-function simulate(dt){}
-function updateAlarm(){
- const breaches=containment.violations,errors=invariantState.failures;
- alarm.classList.toggle('on',breaches.length>0||errors.length>0);
- if(breaches.length||errors.length){
-  alarm.textContent=['⚠ BAUBLE VERIFIER FAILED',...breaches.slice(0,3).map(v=>'CONTAINMENT '+v.object+' +'+v.overflow),...errors.slice(0,4).map(v=>'INVARIANT '+v.name+': '+v.detail),'INSPECT → COPY REPORT'].join('\\n').replaceAll('\\n','\n');
-  if(!updateAlarm.warned){console.error('BAUBLE VERIFIER FAILED',{breaches,errors});updateAlarm.warned=true}
- }else{alarm.textContent='';updateAlarm.warned=false}
-}
-globalThis.BaubleRegisterInvariant=registerInvariant;
-globalThis.BaubleVerifyInvariants=verifyInvariants;
-
-let angle=.6,elev=.27,dist=27,targetY=0,lastX=0,lastY=0;
-const pointers=new Map();let pinch=0;renderer.domElement.addEventListener('pointerdown',e=>{pointers.set(e.pointerId,[e.clientX,e.clientY]);lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
-renderer.domElement.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;const old=pointers.get(e.pointerId);pointers.set(e.pointerId,[e.clientX,e.clientY]);const ps=[...pointers.values()];if(ps.length===1){angle+=(e.clientX-old[0])*.006;elev=T.MathUtils.clamp(elev+(e.clientY-old[1])*.004,-.4,1.2)}else if(ps.length===2){const d=Math.hypot(ps[0][0]-ps[1][0],ps[0][1]-ps[1][1]);if(pinch)dist=T.MathUtils.clamp(dist*pinch/d,2,100);pinch=d}});
-function end(e){pointers.delete(e.pointerId);pinch=0}renderer.domElement.addEventListener('pointerup',end);renderer.domElement.addEventListener('pointercancel',end);renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();dist=T.MathUtils.clamp(dist+e.deltaY*.022,2,100)},{passive:false});
-function fitBaubleDistance(){const halfV=T.MathUtils.degToRad(camera.fov)/2;const halfH=Math.atan(Math.tan(halfV)*camera.aspect);return BAUBLE_R/Math.sin(Math.min(halfV,halfH))*1.12}let firstFit=true;function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();const fit=fitBaubleDistance();if(firstFit){dist=fit;firstFit=false}else dist=T.MathUtils.clamp(dist,2,100)}addEventListener('resize',resize);resize();
+let angle=.6,elev=.27,dist=27,targetY=.3,lastX=0,lastY=0;
+const pointers=new Map();let pinch=0,vesselJostles=0;renderer.domElement.addEventListener('pointerdown',e=>{pointers.set(e.pointerId,[e.clientX,e.clientY]);lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
+renderer.domElement.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;const old=pointers.get(e.pointerId);pointers.set(e.pointerId,[e.clientX,e.clientY]);const ps=[...pointers.values()];if(ps.length===1){angle+=(e.clientX-old[0])*.006;elev=T.MathUtils.clamp(elev+(e.clientY-old[1])*.004,-.4,1.2)}else if(ps.length===2){const d=Math.hypot(ps[0][0]-ps[1][0],ps[0][1]-ps[1][1]);if(pinch)dist=T.MathUtils.clamp(dist*pinch/d,17,58);pinch=d}});
+function end(e){pointers.delete(e.pointerId);pinch=0}renderer.domElement.addEventListener('pointerup',end);renderer.domElement.addEventListener('pointercancel',end);renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();dist=T.MathUtils.clamp(dist+e.deltaY*.022,17,58)},{passive:false});
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();if(w<h)dist=Math.max(dist,27)}addEventListener('resize',resize);resize();
 
 const probeButton=document.querySelector('#probe'),probePanel=document.querySelector('#probePanel'),probeText=document.querySelector('#probeText');
-let probeReport='',probeLast=performance.now(),probeFrames=0;const perfWindow={renderMs:0,renderSamples:0,simulationMs:0,simulationSteps:0,droppedStart:0,last:null};const fpsState={value:null,windowMs:2500,stale:true};const fpsRow=document.querySelector('#fpsRow');const showMeasuring=()=>{fpsState.stale=true;fpsRow.textContent='FPS · ◌';};showMeasuring();
+let probeReport='',probeLast=0,probeFrames=0,probeFrameMs=0;
 const round=(n,d=2)=>Number.isFinite(n)?+n.toFixed(d):null;
+function fluidDiagnostics(){return {model:'discrete 3D ballistic beads',sourceUnits,emitted,active:particles.length,settled:settledCount,unrepresented:escaped,accounted:sourceUnits+particles.length+settledCount+escaped+boatState.cargoUnits,initialUnits:30000+INITIAL_WATER_UNITS,initialWaterUnits:INITIAL_WATER_UNITS,initialFillFraction:.2,gravity:{type:'pendular point source',position:gravityPosition.toArray().map(round),orbitalRadius:gravityOrbitalRadius,periodSeconds:gravityPeriod,swingAmplitudeRadians:gravitySwingAmplitude,stationary:false,strengthAtCenter:GRAVITY},wind:{direction:[1,0,0],bandCenterAboveSurface:1.1,bandThickness:2.3,baselineSpeed:3.1,currentSpeed:round(windSpeed),gustStrength:round(windGust()),affectedSteps:windAffected,impulse:round(windImpulse)},collisions:collisionCount,splashImpacts,splashEjected,splashReturned,peakActive,steps:simSteps,seconds:round(simTime),beadRadius:BEAD_R,activeCap:MAX_ACTIVE,boat:{position:[round(boatState.x),round(boatState.y),round(boatState.z)],velocity:[round(boatState.vx),round(boatState.vz)],heading:round(boatState.heading),verticalVelocity:round(boatState.vy),surfaceHeight:renderedSurfaceY(boatState.x,boatState.z),cargoUnits:boatState.cargoUnits,caught:boatState.caught,edgeAvoidanceSteps:boatState.turns},collectorVolume:round(waterVolume,4),waterline:round(waterY,4),collectorModel:'64x64 conservative finite-volume transport with point gravity and wind',wavePeak:round(wavePeak),waveEnergy:round(waveEnergy),transportVolume:round(transportVolume,4),wetCells,thumpCount,thumpImpulse:round(thumpImpulse)}}
 function inspectWorld(){
  camera.updateMatrixWorld();world.updateMatrixWorld(true);
  const center=new T.Vector3(0,0,0).project(camera);
- const report={build:BUILD,time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:0,contentsInstantiated:false},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:fpsState.stale?null:fpsState.value,fpsMeasuring:fpsState.stale,rollingWindow:perfWindow.last},containment:verifyContainment(),invariants:verifyInvariants(),genesis:{instantiated:false,preservedFactory:true},simulation:{time:round(clock.time,3),steps:clock.steps,droppedSeconds:round(clock.droppedSeconds,3),fixedStep:STEP},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:[]};
- report.vessel.inhabitants=0;report.vessel.contentsInstantiated=false;report.hermeticon={instantiated:false,legacyEngineDisabled:true};probeReport=JSON.stringify(report,null,2);probeText.textContent=probeReport;return report;
+ const report={integration:{source:'Waterworld v25 copied intact; autonomous THUMP every 6 seconds',waterworldBuild:'waterworld-smooth-surface-v25',genesis:'preserved separately; not instantiated',controlsRequired:false},build:BUILD,time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:2,contentsInstantiated:true,water:{phase:'liquid',model:'shrinking source / point gravity / merged volume',diagnostics:fluidDiagnostics()}},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:round(probeFrames?1000/(probeFrameMs/probeFrames):0)},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:[]};
+ probeReport=JSON.stringify(report,null,2);probeText.textContent=probeReport;return report;
 }
 probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};
 document.querySelector('#closeProbe').onclick=()=>probePanel.classList.remove('open');
@@ -237,7 +388,7 @@ function recordInteraction(type,data={}){interactionLog.push({seq:++interactionS
 function screenPoint(e){const rect=renderer.domElement.getBoundingClientRect();return{x:round((e.clientX-rect.left)/rect.width,3),y:round((e.clientY-rect.top)/rect.height,3)}}
 renderer.domElement.addEventListener('pointerdown',e=>{const p=screenPoint(e);if(!gesture)gesture={start:performance.now(),x:p.x,y:p.y,maxPointers:0,moves:0,travel:0};gesture.maxPointers=Math.max(gesture.maxPointers,renderer.domElement.hasPointerCapture(e.pointerId)?1:1);recordInteraction('pointer-down',{pointerType:e.pointerType,button:e.button,...p,camera:{azimuth:round(angle),elevation:round(elev),distance:round(dist)}})},{capture:true});
 renderer.domElement.addEventListener('pointermove',e=>{if(!gesture)return;const p=screenPoint(e);gesture.moves++;gesture.travel=Math.max(gesture.travel,Math.hypot(p.x-gesture.x,p.y-gesture.y));gesture.maxPointers=Math.max(gesture.maxPointers,pointers.size)},{capture:false});
-function endGesture(e,cancelled=false){const p=screenPoint(e);if(!cancelled&&gesture&&gesture.travel<.025&&gesture.maxPointers<=1&&performance.now()-gesture.start<650&&genesis?.starMesh?.visible){const projected=genesis.starMesh.getWorldPosition(new T.Vector3()).project(camera);const rect=renderer.domElement.getBoundingClientRect();const sx=(projected.x*.5+.5)*rect.width,sy=(-projected.y*.5+.5)*rect.height;const radius=Math.max(32,genesis.starMesh.scale.x*rect.height/(2*Math.tan(T.MathUtils.degToRad(camera.fov)/2)*dist));if(Math.hypot(e.clientX-rect.left-sx,e.clientY-rect.top-sy)<radius){const count=genesis.triggerShock();recordInteraction('star-shock',{count});}}recordInteraction(cancelled?'pointer-cancel':gesture?.travel<.025?'tap':'gesture-end',{pointerType:e.pointerType,...p,durationMs:gesture?Math.round(performance.now()-gesture.start):null,travel:round(gesture?.travel??0,3),maxPointers:gesture?.maxPointers??1,camera:{azimuth:round(angle),elevation:round(elev),distance:round(dist)}});if(pointers.size<=1)gesture=null}
+function endGesture(e,cancelled=false){const p=screenPoint(e);recordInteraction(cancelled?'pointer-cancel':gesture?.travel<.025?'tap':'gesture-end',{pointerType:e.pointerType,...p,durationMs:gesture?Math.round(performance.now()-gesture.start):null,travel:round(gesture?.travel??0,3),maxPointers:gesture?.maxPointers??1,camera:{azimuth:round(angle),elevation:round(elev),distance:round(dist)}});if(pointers.size<=1)gesture=null}
 renderer.domElement.addEventListener('pointerup',e=>endGesture(e),{capture:false});
 renderer.domElement.addEventListener('pointercancel',e=>endGesture(e,true),{capture:false});
 renderer.domElement.addEventListener('wheel',e=>recordInteraction('wheel',{deltaY:round(e.deltaY),cameraDistance:round(dist)}),{passive:true});
@@ -246,8 +397,39 @@ document.querySelector('#copyProbe').addEventListener('click',()=>recordInteract
 document.querySelector('#closeProbe').addEventListener('click',()=>recordInteraction('inspect-close'));
 
 
-let last=performance.now(),resumePending=true;function resetFpsWindow(now){probeLast=now;probeFrames=0;perfWindow.renderMs=perfWindow.renderSamples=perfWindow.simulationMs=perfWindow.simulationSteps=0;perfWindow.droppedStart=clock.droppedSeconds;perfWindow.last=null;clock.accumulator=0;showMeasuring();}document.addEventListener('visibilitychange',()=>{resumePending=true;resetFpsWindow(performance.now());});addEventListener('pageshow',()=>{resumePending=true;resetFpsWindow(performance.now());});document.querySelector('#fieldControls').style.display='none';document.querySelector('#status').textContent='EMPTY VESSEL · WANDERER';function frame(now){requestAnimationFrame(frame);const gap=now-last;last=now;if(document.hidden)return;if(resumePending||gap>500){resumePending=false;resetFpsWindow(now);}probeFrames++;const elapsed=resumePending?0:Math.max(0,Math.min(gap,50)/1000);clock.accumulator+=Math.min(MAX_FRAME,elapsed);clock.droppedSeconds+=Math.max(0,elapsed-MAX_FRAME);let steps=0;while(clock.accumulator>=STEP&&steps<MAX_STEPS){const stepT0=performance.now();simulate(STEP);perfWindow.simulationMs+=performance.now()-stepT0;perfWindow.simulationSteps++;clock.time+=STEP;clock.steps++;clock.accumulator-=STEP;steps++}if(clock.accumulator>=STEP){clock.droppedSeconds+=clock.accumulator;clock.accumulator=0}if(now-probeLast>=fpsState.windowMs){const duration=now-probeLast;fpsState.value=round(probeFrames*1000/duration);fpsState.stale=false;perfWindow.last={durationMs:round(duration),frames:probeFrames,fps:fpsState.value,meanRenderCallMs:round(perfWindow.renderMs/Math.max(1,perfWindow.renderSamples),3),meanSimulateStepMs:round(perfWindow.simulationMs/Math.max(1,perfWindow.simulationSteps),3),simulatedSteps:perfWindow.simulationSteps,simulationCpuMs:round(perfWindow.simulationMs,2),renderCallCpuMs:round(perfWindow.renderMs,2),droppedSimulationSeconds:round(clock.droppedSeconds-perfWindow.droppedStart,3),sampledPhysics:null,note:'Rolling window. Render call measures synchronous JS call only, not asynchronous GPU completion.'};perfWindow.renderMs=perfWindow.renderSamples=perfWindow.simulationMs=perfWindow.simulationSteps=0;perfWindow.droppedStart=clock.droppedSeconds;fpsRow.textContent='FPS · '+fpsState.value.toFixed(1);probeLast=now;probeFrames=0;verifyInvariants();verifyContainment();if(probePanel.classList.contains('open'))inspectWorld()}
-camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);const renderT0=performance.now();renderer.render(scene,camera);perfWindow.renderMs+=performance.now()-renderT0;perfWindow.renderSamples++}
+let last=performance.now(),accumulator=0;const orbitStart=performance.now();
+let autoThumpAt=0;
+const boatRay=new T.Raycaster();
+const boatRayOrigin=new T.Vector3(),boatRayDown=new T.Vector3(0,-1,0);
+function renderedSurfaceY(x,z){
+ boatRayOrigin.set(x,20,z);
+ boatRay.set(boatRayOrigin,boatRayDown);
+ const hits=boatRay.intersectObject(waterSurface,false);
+ return hits.length?hits[0].point.y:null;
+}
+function seatBoatOnRenderedSurface(){
+ // Resolve after the mesh has been updated for this frame.
+ waterSurface.updateMatrixWorld(true);
+ const b=boatState;
+ const radius=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));
+ const limit=Math.max(1,radius-1.4);
+ const r=Math.hypot(b.x,b.z);
+ if(r>limit){b.x*=limit/r;b.z*=limit/r}
+ const y=renderedSurfaceY(b.x,b.z);
+ if(y===null)return;
+ b.y=y+.03;
+ const fx=Math.sin(b.heading),fz=Math.cos(b.heading);
+ const front=renderedSurfaceY(b.x+fx*.45,b.z+fz*.45);
+ const back=renderedSurfaceY(b.x-fx*.45,b.z-fz*.45);
+ const left=renderedSurfaceY(b.x+fz*.3,b.z-fx*.3);
+ const right=renderedSurfaceY(b.x-fz*.3,b.z+fx*.3);
+ if(front!==null&&back!==null)b.pitch=Math.max(-.22,Math.min(.22,Math.atan2(front-back,.9)));
+ if(left!==null&&right!==null)b.roll=Math.max(-.24,Math.min(.24,Math.atan2(left-right,.6)));
+ skiff.position.set(b.x,b.y,b.z);
+ skiff.rotation.set(b.pitch,b.heading,b.roll,'YXZ');
+}
+function frame(now){requestAnimationFrame(frame);if(now-autoThumpAt>6000){autoThumpAt=now;thump()}updateGravity((now-orbitStart)/1000);accumulator+=Math.min(.05,(now-last)/1000);let steps=0;while(accumulator>=.008&&steps++<7){simulate(.008);accumulator-=.008}renderBeads();updateWindVisual();seatBoatOnRenderedSurface();probeFrames++;probeFrameMs+=Math.max(0,now-last);last=now;if(now-probeLast>2500){probeLast=now;if(probePanel.classList.contains('open'))inspectWorld();probeFrames=0;probeFrameMs=0}
+camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);renderer.render(scene,camera)}
 requestAnimationFrame(frame);
 }catch(e){window.BaubleFatal(e);console.error(e)}
 </script></body></html>

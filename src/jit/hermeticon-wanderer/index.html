@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-gpu-witness-v12';
+const BUILD='hermeticon-wanderer-radial-eyes-v13';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -122,28 +122,36 @@ const witnessTarget=new T.WebGLRenderTarget(1,1,{depthBuffer:true,stencilBuffer:
 const witnessPixel=new Uint8Array(4);
 function measureGpuAperture(){
  const previous=renderer.getRenderTarget(),previousAutoClear=renderer.autoClear;
+ const savedInfo={calls:renderer.info.render.calls,triangles:renderer.info.render.triangles};
  try{
   renderer.autoClear=true;
-  const sample=(x)=>{
-   // Use real terrain material and shader, with local coordinates matching the translated terrain.
+  const sample=(radius,axis)=>{
+   // A small plane centered on a chosen LOCAL vertex position; actual terrain mesh translation
+   // is irrelevant to the vertex shader, which reads position-apertureOffset.
+   const x=wanderX+(axis==='x'?radius:0),z=wanderZ+(axis==='z'?radius:0);
    const positions=witnessGeometry.getAttribute('position');
-   for(let i=0;i<positions.count;i++){positions.setXYZ(i,(i===0||i===2?-.5:.5)+x,(i<2?.5:-.5),wanderZ)}
+   for(let i=0;i<positions.count;i++){positions.setXYZ(i,x+(i===0||i===2?-.002:.002),i<2?.002:-.002,z)}
    positions.needsUpdate=true;
-   witnessCamera.position.set(x,0,wanderZ+5);witnessCamera.lookAt(x,0,wanderZ);witnessCamera.updateMatrixWorld();
+   witnessCamera.position.set(x,0,z+5);witnessCamera.lookAt(x,0,z);witnessCamera.updateMatrixWorld();
    renderer.setRenderTarget(witnessTarget);renderer.clear(true,true,true);
    renderer.render(witnessScene,witnessCamera);
    renderer.readRenderTargetPixels(witnessTarget,0,0,1,1,witnessPixel);
-   return [...witnessPixel];
+   return {radius,axis,pixel:[...witnessPixel],visible:(witnessPixel[0]+witnessPixel[1]+witnessPixel[2])>12};
   };
-  const inside=sample(wanderX),outside=sample(wanderX+12);
-  const luminance=p=>p[0]+p[1]+p[2];
-  const insideLit=luminance(inside)>12,outsideDark=luminance(outside)<12;
-  gpuEyes.samples={inside,outside,insideLit,outsideDark,offset:[wanderX,0,wanderZ]};
-  gpuEyes.status=insideLit&&outsideDark?'pass':'fail';gpuEyes.error=null;
+  const radii=[0,9.2,9.6,9.70,9.71,9.73,9.74,9.85,10.2,12];
+  const samples=['x','z'].flatMap(axis=>radii.map(radius=>sample(radius,axis)));
+  const perAxis=Object.fromEntries(['x','z'].map(axis=>{
+   const a=samples.filter(v=>v.axis===axis);
+   return [axis,{lastVisible:a.filter(v=>v.visible).at(-1)?.radius??null,firstDiscarded:a.find(v=>!v.visible)?.radius??null,monotonic:a.every((v,i)=>i===0||!a[i-1].visible||v.visible===false)}];
+  }));
+  const expected=samples.every(v=>v.visible===(v.radius<9.72));
+  gpuEyes.samples={radial:samples,perAxis,offset:[wanderX,0,wanderZ]};
+  gpuEyes.status=expected?'pass':'fail';gpuEyes.error=null;
  }catch(e){gpuEyes.status='error';gpuEyes.error=String(e?.message||e)}
  finally{renderer.setRenderTarget(previous);renderer.autoClear=previousAutoClear;gpuEyes.tests++;gpuEyes.lastTestMs=Math.round(performance.now())}
  return gpuEyes;
 }
+
 let cycle=0,seed=741,triangles=0,fieldMin=0,fieldMax=0,solidCount=0,voidCount=0,buildMs=0;
 let operations=[],events=[];
 const round=(n,d=2)=>Number.isFinite(n)?+n.toFixed(d):null;
@@ -225,7 +233,7 @@ function inspectWorld(){
  if(geometryEyes.fieldEdgeClearance<0)eyesWarnings.push('WORLD_FIELD_EDGE_INSIDE_APERTURE');
  if(geometryEyes.shaderOffsetError!==null&&geometryEyes.shaderOffsetError>.001)eyesWarnings.push('APERTURE_UNIFORM_OFFSET_MISMATCH');
  if(!geometryEyes.outsideVertices)eyesWarnings.push('NO_OUTSIDE_GEOMETRY_TO_TEST_CLIP');
- const report={build:BUILD,runtimeEyes:{aperture:{...apertureEyes,compiled:apertureEyes.compileCount>0},gpu:gpuEyes,geometry:geometryEyes,warnings:eyesWarnings,limits:'GPU 1-pixel inside/outside material witness plus CPU geometry. Tests shader discard, not full-scene occlusion or exact spherical boundary.'},wanderer:{x:wanderX,z:wanderZ,step:WANDER_STEP,history:wanderHistory.slice(),apertureRadius:9.72,mode:'vertex-initialized-fragment-sphere-scoop',extractionMargin:EXTRACTION_MARGIN,worldFieldStable:true},terrain:{kind:'3d-signed-field',dimensions:[NX,NY,NZ],samples:field.length,fieldRange:[fieldMin,fieldMax],solidSamples:solidCount,voidSamples:voidCount,mesh:{triangles,vertices:geo.attributes.position.count,doubleSided:true},cycle,seed,buildMs,operations,events},time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:1,contentsInstantiated:true},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:round(probeFrames?1000/(probeFrameMs/probeFrames):0)},containment:verifyContainment(),invariants:verifyInvariants(),simulation:{time:round(clock.time,3),steps:clock.steps,droppedSeconds:round(clock.droppedSeconds,3),fixedStep:STEP},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:eyesWarnings};
+ const report={build:BUILD,runtimeEyes:{aperture:{...apertureEyes,compiled:apertureEyes.compileCount>0},gpu:gpuEyes,geometry:geometryEyes,warnings:eyesWarnings,limits:'GPU radial samples on X/Z with 0.02-unit transition brackets; does not prove full-scene occlusion.'},wanderer:{x:wanderX,z:wanderZ,step:WANDER_STEP,history:wanderHistory.slice(),apertureRadius:9.72,mode:'vertex-initialized-fragment-sphere-scoop',extractionMargin:EXTRACTION_MARGIN,worldFieldStable:true},terrain:{kind:'3d-signed-field',dimensions:[NX,NY,NZ],samples:field.length,fieldRange:[fieldMin,fieldMax],solidSamples:solidCount,voidSamples:voidCount,mesh:{triangles,vertices:geo.attributes.position.count,doubleSided:true},cycle,seed,buildMs,operations,events},time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:1,contentsInstantiated:true},render:{calls:mainRenderStats.calls,triangles:mainRenderStats.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:round(probeFrames?1000/(probeFrameMs/probeFrames):0)},containment:verifyContainment(),invariants:verifyInvariants(),simulation:{time:round(clock.time,3),steps:clock.steps,droppedSeconds:round(clock.droppedSeconds,3),fixedStep:STEP},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:eyesWarnings};
  probeReport=JSON.stringify(report,null,2);probeText.textContent=probeReport;return report;
 }
 probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};
@@ -247,8 +255,8 @@ document.querySelector('#copyProbe').addEventListener('click',()=>recordInteract
 document.querySelector('#closeProbe').addEventListener('click',()=>recordInteraction('inspect-close'));
 
 
-let last=performance.now();function frame(now){requestAnimationFrame(frame);probeFrames++;const elapsed=Math.max(0,(now-last)/1000);probeFrameMs+=elapsed*1000;last=now;clock.accumulator+=Math.min(MAX_FRAME,elapsed);clock.droppedSeconds+=Math.max(0,elapsed-MAX_FRAME);let steps=0;while(clock.accumulator>=STEP&&steps<MAX_STEPS){simulate(STEP);clock.time+=STEP;clock.steps++;clock.accumulator-=STEP;steps++}if(clock.accumulator>=STEP){clock.droppedSeconds+=clock.accumulator;clock.accumulator=0}if(now-probeLast>2500){probeLast=now;document.querySelector('#fps').textContent=(probeFrames?1000/(probeFrameMs/probeFrames):0).toFixed(1)+' fps';verifyInvariants();verifyContainment();if(probePanel.classList.contains('open'))inspectWorld();probeFrames=0;probeFrameMs=0}
-camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);renderer.render(scene,camera)}
+const mainRenderStats={calls:0,triangles:0};let last=performance.now();function frame(now){requestAnimationFrame(frame);probeFrames++;const elapsed=Math.max(0,(now-last)/1000);probeFrameMs+=elapsed*1000;last=now;clock.accumulator+=Math.min(MAX_FRAME,elapsed);clock.droppedSeconds+=Math.max(0,elapsed-MAX_FRAME);let steps=0;while(clock.accumulator>=STEP&&steps<MAX_STEPS){simulate(STEP);clock.time+=STEP;clock.steps++;clock.accumulator-=STEP;steps++}if(clock.accumulator>=STEP){clock.droppedSeconds+=clock.accumulator;clock.accumulator=0}if(now-probeLast>2500){probeLast=now;document.querySelector('#fps').textContent=(probeFrames?1000/(probeFrameMs/probeFrames):0).toFixed(1)+' fps';verifyInvariants();verifyContainment();if(probePanel.classList.contains('open'))inspectWorld();probeFrames=0;probeFrameMs=0}
+camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);renderer.render(scene,camera);mainRenderStats.calls=renderer.info.render.calls;mainRenderStats.triangles=renderer.info.render.triangles}
 requestAnimationFrame(frame);
 }catch(e){window.BaubleFatal(e);console.error(e)}
 </script></body></html>

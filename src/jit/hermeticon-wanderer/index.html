@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-water-integration-v22';
+const BUILD='hermeticon-wanderer-composable-water-v23';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -283,57 +283,198 @@ function regenerate(){
 }
 regenerate();
 
-// Conserved surface-water transport on the resident geological height field.
-// Independent of the moving viewing aperture; holes are open drainage boundaries.
-const WATER_N=64,WATER_MIN=-14,WATER_SPAN=28,WATER_DX=WATER_SPAN/WATER_N;
-const waterDepth=new Float32Array(WATER_N*WATER_N),waterNext=new Float32Array(WATER_N*WATER_N),waterBed=new Float32Array(WATER_N*WATER_N),waterValid=new Uint8Array(WATER_N*WATER_N);
-let waterInitial=0,waterDrain=0,waterSteps=0;
-function waterCell(x,z){const i=Math.floor((x-WATER_MIN)/WATER_DX),j=Math.floor((z-WATER_MIN)/WATER_DX);return i>=0&&j>=0&&i<WATER_N&&j<WATER_N?j*WATER_N+i:-1}
-for(let j=0;j<WATER_N;j++)for(let i=0;i<WATER_N;i++){
- const k=j*WATER_N+i,x=WATER_MIN+(i+.5)*WATER_DX,z=WATER_MIN+(j+.5)*WATER_DX;
- let top=1.15;for(const op of operations){if(op.kind==='raise'||op.kind==='lower'){if(op.face!=='top')continue;const d=Math.hypot(x-op.x,z-op.z)/op.r;if(d<1)top+=op.delta*(1-d*d)**2}}
- waterBed[k]=top;waterValid[k]=operations.some(op=>op.kind==='through-hole'&&Math.hypot(x-op.x,z-op.z)<op.r)?0:1;
- if(waterValid[k]&&Math.hypot(x+3,z-2)<4){waterDepth[k]=Math.max(0,1.7-top)*.8;waterInitial+=waterDepth[k]*WATER_DX*WATER_DX}
+
+// Waterworld V25 donor-cell transport, adapted to arbitrary height fields.
+// Standalone ES module. No Hermeticon or rendering dependencies.
+// Source lineage: src/jit/waterworld/index.html (Waterworld V25).
+class ComposableWater {
+ constructor({heightAt, bounds, resolution=64, gravity=13.5, drag=.32, maxSpeed=24, beadRadius=.055, beadCapacity=2600, beadVolume=.004, adhesionTime=.12, onExit=()=>{}}){
+  if(typeof heightAt!=='function')throw Error('heightAt(x,z) required');
+  const {minX,maxX,minZ,maxZ}=bounds;
+  if(!(maxX>minX&&maxZ>minZ))throw Error('Invalid bounds');
+  Object.assign(this,{heightAt,bounds,resolution,gravity,drag,maxSpeed,beadRadius,beadCapacity,beadVolume,adhesionTime,onExit});
+  this.n=resolution*resolution;this.dx=(maxX-minX)/resolution;this.dz=(maxZ-minZ)/resolution;this.area=this.dx*this.dz;
+  this.bed=new Float32Array(this.n);this.wet=new Uint8Array(this.n);
+  this.depth=new Float32Array(this.n);this.vx=new Float32Array(this.n);this.vz=new Float32Array(this.n);
+  this.nextDepth=new Float32Array(this.n);this.nextVX=new Float32Array(this.n);this.nextVZ=new Float32Array(this.n);
+  this.beads=[];this.lips=new Map();this.emitted=0;this.exited=0;this.deposited=0;this.removed=0;this.initialVolume=0;this.lipReleased=0;
+  this.refreshTerrain();
+ }
+ index(x,z){const i=Math.floor((x-this.bounds.minX)/this.dx),j=Math.floor((z-this.bounds.minZ)/this.dz);return i<0||i>=this.resolution||j<0||j>=this.resolution?-1:j*this.resolution+i}
+ refreshTerrain(){
+  const {minX,minZ}=this.bounds,n=this.resolution;
+  for(let z=0;z<n;z++)for(let x=0;x<n;x++){
+   const i=z*n+x,h=this.heightAt(minX+(x+.5)*this.dx,minZ+(z+.5)*this.dz);
+   this.wet[i]=Number.isFinite(h)?1:0;this.bed[i]=this.wet[i]?h:0;
+  }
+ }
+ fillTo(level){for(let i=0;i<this.n;i++)this.depth[i]=this.wet[i]?Math.max(0,level-this.bed[i]):0;this.initialVolume=this.volume()}
+ volume(){let v=0;for(let i=0;i<this.n;i++)v+=this.depth[i]*this.area;return v}
+ surfaceAt(x,z){const i=this.index(x,z);return i<0||!this.wet[i]?null:this.bed[i]+this.depth[i]}
+ // Waterworld's donor-cell pairwise flux and pressure gradient; fixed downward gravity.
+ stepWater(dt){
+  const n=this.resolution,g=this.gravity,D=this.depth,B=this.bed,W=this.wet,VX=this.vx,VZ=this.vz,NX=this.nextVX,NZ=this.nextVZ,ND=this.nextDepth;
+  for(let z=0;z<n;z++)for(let x=0;x<n;x++){
+   const i=z*n+x;if(!W[i]||D[i]<.001){NX[i]=NZ[i]=0;continue}
+   const h=B[i]+D[i],L=x>0&&W[i-1]?B[i-1]+D[i-1]:h,R=x<n-1&&W[i+1]?B[i+1]+D[i+1]:h;
+   const down=z>0&&W[i-n]?B[i-n]+D[i-n]:h,up=z<n-1&&W[i+n]?B[i+n]+D[i+n]:h;
+   const drag=Math.exp(-this.drag*dt);
+   NX[i]=Math.max(-this.maxSpeed,Math.min(this.maxSpeed,(VX[i]-dt*g*(R-L)/(2*this.dx))*drag));
+   NZ[i]=Math.max(-this.maxSpeed,Math.min(this.maxSpeed,(VZ[i]-dt*g*(up-down)/(2*this.dz))*drag));
+  }
+  ND.set(D);
+  for(let z=0;z<n;z++)for(let x=0;x<n;x++){
+   const i=z*n+x;if(!W[i])continue;
+   for(let axis=0;axis<2;axis++){
+    if(axis===0&&x===n-1||axis===1&&z===n-1)continue;
+    const j=axis===0?i+1:i+n;if(!W[j])continue;
+    const velocity=axis===0?(NX[i]+NX[j])*.5:(NZ[i]+NZ[j])*.5;
+    const donor=velocity>=0?i:j,receiver=velocity>=0?j:i;
+    const width=axis===0?this.dx:this.dz;
+    const wanted=Math.abs(velocity)*dt*D[donor]/width;
+    const transfer=Math.min(wanted,Math.max(0,ND[donor])*.48);
+    ND[donor]-=transfer;ND[receiver]+=transfer;
+   }
+  }
+  for(let i=0;i<this.n;i++){D[i]=Math.max(0,ND[i]);VX[i]=NX[i];VZ[i]=NZ[i]}
+  this.stepEdges(dt);
+ }
+ addWater(x,z,volume){const i=this.index(x,z);if(i<0||!this.wet[i])return false;this.depth[i]+=volume/this.area;this.deposited+=volume;return true}
+ removeWater(x,z,volume){const i=this.index(x,z);if(i<0||!this.wet[i])return 0;const v=Math.min(volume,this.depth[i]*this.area);this.depth[i]-=v/this.area;this.removed+=v;return v}
+ thump(x,z,strength=18,radius=7.6){
+  const n=this.resolution,{minX,minZ}=this.bounds;
+  for(let j=0;j<n;j++)for(let k=0;k<n;k++){
+   const i=j*n+k;if(!this.wet[i]||this.depth[i]<.08)continue;
+   const dx=minX+(k+.5)*this.dx-x,dz=minZ+(j+.5)*this.dz-z,r=Math.hypot(dx,dz);
+   const impulse=strength*Math.exp(-r*r/(radius*radius));
+   this.vx[i]+=impulse*dx/Math.max(r,.3);this.vz[i]+=impulse*dz/Math.max(r,.3);
+  }
+ }
+ // Unsupported neighbors and outer boundaries share one conserved edge reservoir.
+ // Lip volume is held briefly before becoming ballistic BBs. No mass is created by rendering.
+ stepEdges(dt){
+  const n=this.resolution,D=this.depth,W=this.wet;
+  for(let z=0;z<n;z++)for(let x=0;x<n;x++){
+   const i=z*n+x;if(!W[i]||D[i]<=0)continue;
+   for(const [ox,oz,velocity,spacing] of [[1,0,this.vx[i],this.dx],[-1,0,-this.vx[i],this.dx],[0,1,this.vz[i],this.dz],[0,-1,-this.vz[i],this.dz]]){
+    const xx=x+ox,zz=z+oz;
+    if(xx>=0&&xx<n&&zz>=0&&zz<n&&W[zz*n+xx])continue;
+    if(velocity<=0)continue;
+    const available=D[i]*this.area;
+    const transfer=Math.min(available*.24,velocity*dt*D[i]*this.area/spacing);
+    if(transfer<=0)continue;
+    D[i]-=transfer/this.area;
+    const key=i+':'+ox+':'+oz;
+    let lip=this.lips.get(key);
+    if(!lip){
+     lip={volume:0,age:0,x:this.bounds.minX+(x+.5+ox*.5)*this.dx,
+      z:this.bounds.minZ+(z+.5+oz*.5)*this.dz,y:this.bed[i],vx:ox*velocity,vz:oz*velocity};
+     this.lips.set(key,lip);
+    }
+    lip.volume+=transfer;lip.vx=ox*velocity;lip.vz=oz*velocity;
+   }
+  }
+  for(const [key,lip] of this.lips){
+   lip.age+=dt;
+   if(lip.age<this.adhesionTime)continue;
+   while(lip.volume>=this.beadVolume&&this.beads.length<this.beadCapacity){
+    // Start just beyond the lip, slightly below the supported bed.
+    this.beads.push({x:lip.x+Math.sign(lip.vx)*this.beadRadius*2,
+     y:lip.y-this.beadRadius,z:lip.z+Math.sign(lip.vz)*this.beadRadius*2,
+     vx:lip.vx,vy:0,vz:lip.vz,volume:this.beadVolume});
+    lip.volume-=this.beadVolume;this.lipReleased+=this.beadVolume;
+   }
+   if(lip.volume<1e-10){this.lips.delete(key)}
+  }
+ }
+ // Waterworld V25 airborne BB transport: real x/y/z, velocity, gravity, surface deposition.
+ emitBead({x,y,z,vx=0,vy=0,vz=0,volume=1}){
+  if(!Number.isFinite(volume)||volume<=0||![x,y,z,vx,vy,vz].every(Number.isFinite))return false;
+  if(this.beads.length>=this.beadCapacity)return false;
+  this.beads.push({x,y,z,vx,vy,vz,volume});this.emitted+=volume;return true;
+ }
+ stepBeads(dt){
+  for(let k=this.beads.length-1;k>=0;k--){
+   const p=this.beads[k];p.vy-=this.gravity*dt;
+   p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;
+   const h=this.surfaceAt(p.x,p.z);
+   // Crossing a supported surface deposits; unsupported space remains ballistic.
+   if(h!==null&&p.vy<0&&p.y<=h+this.beadRadius){
+    this.addWater(p.x,p.z,p.volume);this.beads.splice(k,1);continue;
+   }
+   if(p.y< -1e5 || this.index(p.x,p.z)<0){
+    this.beads.splice(k,1);this.exited+=p.volume;this.onExit({...p});continue;
+   }
+  }
+ }
+ step(dt){this.stepWater(dt);this.stepBeads(dt)}
+ diagnostics(){
+  const airborne=this.beads.reduce((v,p)=>v+p.volume,0),liquid=this.volume();
+  const lip=[...this.lips.values()].reduce((v,p)=>v+p.volume,0);
+  return {liquid,airborne,lip,emitted:this.emitted,deposited:this.deposited,removed:this.removed,exited:this.exited,lipReleased:this.lipReleased,
+   residual:this.initialVolume+this.emitted-liquid-airborne-lip-this.exited-this.removed};
+ }
+ // Read-only bilinear surface for renderer. No simulation mutation.
+ renderedHeight(x,z){
+  const gx=(x-this.bounds.minX)/this.dx-.5,gz=(z-this.bounds.minZ)/this.dz-.5;
+  const ix=Math.floor(gx),iz=Math.floor(gz),tx=gx-ix,tz=gz-iz;let sum=0,weight=0;
+  for(let j=0;j<2;j++)for(let k=0;k<2;k++){
+   const xx=ix+k,zz=iz+j;if(xx<0||zz<0||xx>=this.resolution||zz>=this.resolution)continue;
+   const i=zz*this.resolution+xx;if(!this.wet[i])continue;
+   const w=(k?tx:1-tx)*(j?tz:1-tz);sum+=w*(this.bed[i]+this.depth[i]);weight+=w;
+  }
+  return weight>1e-6?sum/weight:null;
+ }
 }
-const waterGeometry=new T.PlaneGeometry(WATER_SPAN,WATER_SPAN,WATER_N-1,WATER_N-1);
-waterGeometry.rotateX(-Math.PI/2);
-const waterPositions=waterGeometry.attributes.position;
-const waterIndices=waterGeometry.index.array;
-const waterMaterial=new T.MeshPhysicalMaterial({color:0x258ba7,transparent:true,opacity:.76,roughness:.16,metalness:.12,side:T.DoubleSide,depthWrite:false});
+
+// Geological surface is a function of world coordinates, not of the moving aperture.
+function geologicalTop(x,z){
+ let top=1.15;
+ for(const op of operations){if(op.kind==='through-hole'&&Math.hypot(x-op.x,z-op.z)<op.r)return NaN;
+  if(op.face!=='top')continue;
+  const d=Math.hypot(x-op.x,z-op.z)/op.r;
+  if(d<1)top+=op.delta*(1-d*d)**2;
+ }
+ return top;
+}
+const WATER_N=64,WATER_MIN=-14,WATER_SPAN=28,WATER_DX=WATER_SPAN/WATER_N;
+const water=new ComposableWater({heightAt:geologicalTop,bounds:{minX:WATER_MIN,maxX:-WATER_MIN,minZ:WATER_MIN,maxZ:-WATER_MIN},resolution:WATER_N,beadCapacity:2600});
+water.fillTo(1.45);
+const waterMaterial=new T.MeshPhysicalMaterial({color:0x258ba7,transparent:true,opacity:.74,roughness:.14,metalness:.1,side:T.DoubleSide,depthWrite:false});
 waterMaterial.onBeforeCompile=shader=>{
- shader.uniforms.apertureOffset={value:sharedApertureOffset};shader.uniforms.apertureRadius={value:9.72};
+ shader.uniforms.apertureOffset={value:sharedApertureOffset};
  shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 waterWorldPosition;');
  shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nwaterWorldPosition=position;');
- shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 waterWorldPosition;\nuniform vec3 apertureOffset;\nuniform float apertureRadius;');
- shader.fragmentShader=shader.fragmentShader.replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\nif(length(waterWorldPosition.xz-apertureOffset.xz)>apertureRadius) discard;');
+ shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 waterWorldPosition;\nuniform vec3 apertureOffset;');
+ shader.fragmentShader=shader.fragmentShader.replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\nif(length(waterWorldPosition.xz-apertureOffset.xz)>9.72) discard;');
 };
+const waterGeometry=new T.BufferGeometry(),waterVertices=new Float32Array(WATER_N*WATER_N*3),waterTriangles=[];
+for(let j=0;j<WATER_N-1;j++)for(let i=0;i<WATER_N-1;i++){
+ const a=j*WATER_N+i,b=a+1,c=a+WATER_N,d=c+1;
+ if(water.wet[a]&&water.wet[b]&&water.wet[c])waterTriangles.push(a,c,b);
+ if(water.wet[b]&&water.wet[c]&&water.wet[d])waterTriangles.push(b,c,d);
+}
+waterGeometry.setAttribute('position',new T.BufferAttribute(waterVertices,3));waterGeometry.setIndex(waterTriangles);
 const waterMesh=new T.Mesh(waterGeometry,waterMaterial);waterMesh.frustumCulled=false;world.add(waterMesh);
+const beadGeometry=new T.SphereGeometry(.055,5,4),beadMaterial=new T.MeshPhysicalMaterial({color:0x66cfe2,roughness:.18,transparent:true,opacity:.85});
+const beadMesh=new T.InstancedMesh(beadGeometry,beadMaterial,water.beadCapacity);beadMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);world.add(beadMesh);
+const beadDummy=new T.Object3D();
 function refreshWaterMesh(){
  for(let j=0;j<WATER_N;j++)for(let i=0;i<WATER_N;i++){
   const k=j*WATER_N+i,v=k*3;
-  waterPositions.array[v+1]=waterBed[k]+waterDepth[k]+.018;
+  waterVertices[v]=WATER_MIN+(i+.5)*WATER_DX;
+  waterVertices[v+1]=water.bed[k]+water.depth[k]+.018;
+  waterVertices[v+2]=WATER_MIN+(j+.5)*WATER_DX;
  }
- waterPositions.needsUpdate=true;waterGeometry.computeVertexNormals();
+ waterGeometry.attributes.position.needsUpdate=true;waterGeometry.computeVertexNormals();
+ beadMesh.count=water.beads.length;
+ for(let k=0;k<water.beads.length;k++){const p=water.beads[k];beadDummy.position.set(p.x,p.y,p.z);beadDummy.updateMatrix();beadMesh.setMatrixAt(k,beadDummy.matrix)}
+ beadMesh.instanceMatrix.needsUpdate=true;
 }
 refreshWaterMesh();
-function stepWater(dt){
- waterNext.set(waterDepth);
- for(let j=0;j<WATER_N;j++)for(let i=0;i<WATER_N;i++){
-  const k=j*WATER_N+i;if(!waterValid[k]||waterDepth[k]<=0)continue;
-  for(const n of [i>0?k-1:-1,i<WATER_N-1?k+1:-1,j>0?k-WATER_N:-1,j<WATER_N-1?k+WATER_N:-1]){
-   if(n<0)continue;
-   const difference=waterBed[k]+waterDepth[k]-(waterBed[n]+waterDepth[n]);
-   if(difference<=0)continue;
-   const volume=Math.min(waterNext[k],Math.min(waterDepth[k]*.22,difference*dt*1.7));
-   if(volume<=0)continue;
-   waterNext[k]-=volume;
-   if(waterValid[n])waterNext[n]+=volume;else waterDrain+=volume*WATER_DX*WATER_DX;
-  }
- }
- waterDepth.set(waterNext);waterSteps++;
- if(waterSteps%4===0)refreshWaterMesh();
-}
-let driftDirection=null,lastMeshX=0,lastMeshZ=0;function simulate(dt){stepWater(dt);if(!driftDirection)return;const speed=1.8;wanderX=T.MathUtils.clamp(wanderX+driftDirection[0]*speed*dt,-14,14);wanderZ=T.MathUtils.clamp(wanderZ+driftDirection[1]*speed*dt,-14,14);solid.position.set(-wanderX,0,-wanderZ);sharedApertureOffset.set(wanderX,0,wanderZ);document.querySelector('#wanderCoords').textContent=wanderX.toFixed(1)+', '+wanderZ.toFixed(1);}
+let waterTicks=0;
+function stepWandererWater(dt){water.step(dt);if(++waterTicks%4===0)refreshWaterMesh()}
+let driftDirection=null,lastMeshX=0,lastMeshZ=0;function simulate(dt){stepWandererWater(dt);if(!driftDirection)return;const speed=1.8;wanderX=T.MathUtils.clamp(wanderX+driftDirection[0]*speed*dt,-14,14);wanderZ=T.MathUtils.clamp(wanderZ+driftDirection[1]*speed*dt,-14,14);solid.position.set(-wanderX,0,-wanderZ);sharedApertureOffset.set(wanderX,0,wanderZ);document.querySelector('#wanderCoords').textContent=wanderX.toFixed(1)+', '+wanderZ.toFixed(1);}
 const wanderHistory=[];function wander(dx,dz){const from=[wanderX,wanderZ];wanderX=T.MathUtils.clamp(wanderX+dx,-14,14);wanderZ=T.MathUtils.clamp(wanderZ+dz,-14,14);wanderHistory.push({from,to:[wanderX,wanderZ],triangles});if(wanderHistory.length>24)wanderHistory.shift();document.querySelector('#wanderCoords').textContent=`${wanderX}, ${wanderZ}`}
 for(const [key,dx,dz] of [['west',-1,0],['east',1,0],['north',0,-1],['south',0,1]]){const button=document.querySelector('#'+key);let held=false;button.onclick=()=>{if(!held)wander(dx*WANDER_STEP,dz*WANDER_STEP);held=false};button.addEventListener('pointerdown',e=>{if(Math.hypot(wanderX,wanderZ)>3){driftDirection=[dx,dz];held=true;button.setPointerCapture(e.pointerId)}});for(const event of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(event,()=>{driftDirection=null})}
 function updateAlarm(){

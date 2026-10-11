@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-genesis-v2';
+const BUILD='hermeticon-genesis-v3';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -201,7 +201,7 @@ function inspectWorld(){
  camera.updateMatrixWorld();world.updateMatrixWorld(true);
  const center=new T.Vector3(0,0,0).project(camera);
  const report={build:BUILD,time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:100000,contentsInstantiated:true},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:fpsState.stale?null:fpsState.value,fpsMeasuring:fpsState.stale,rollingWindow:perfWindow.last},containment:verifyContainment(),invariants:verifyInvariants(),genesis:genesis.report(),simulation:{time:round(clock.time,3),steps:clock.steps,droppedSeconds:round(clock.droppedSeconds,3),fixedStep:STEP},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:[]};
- report.vessel.inhabitants=hermeticon?100000:0;report.vessel.contentsInstantiated=!!hermeticon;report.hermeticon=hermeticon?hermeticon.inspect():{instantiated:false,count:0,active:0,phages:[],performanceProfile:null};probeReport=JSON.stringify(report,null,2);probeText.textContent=probeReport;return report;
+ report.vessel.inhabitants=100000;report.vessel.contentsInstantiated=true;report.hermeticon={instantiated:false,legacyEngineDisabled:true};probeReport=JSON.stringify(report,null,2);probeText.textContent=probeReport;return report;
 }
 probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};
 document.querySelector('#closeProbe').onclick=()=>probePanel.classList.remove('open');

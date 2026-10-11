@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-genesis-v7';
+const BUILD='hermeticon-genesis-v8';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -125,6 +125,24 @@ function collide(){
  }i=next[i]}}
  contacts+=hits;collisionPasses++;discThickness=n?Math.sqrt(ys/n):0;
 }
+// Read-only structure probe, computed only when INSPECT is requested.
+let priorPeaks=[],priorPeakTime=0;
+function structure(){
+ const bins=new Int32Array(10),density=new Int32Array(CC),sumV=new Float64Array(CC*3),sampleContacts=contacts,peaks=[];
+ let wall=0,radial=0,tangent=0,inward=0,outward=0,radialN=0;
+ for(let i=0;i<N;i++){if(live[i])continue;const k=i*3,x=pos[k],y=pos[k+1],z=pos[k+2],vx=vel[k],vy=vel[k+1],vz=vel[k+2],r=Math.hypot(x,y,z),q=Math.hypot(x,z),c=ci(x,y,z);
+ density[c]++;sumV[c*3]+=vx;sumV[c*3+1]+=vy;sumV[c*3+2]+=vz;
+ bins[Math.min(9,Math.floor(r))]++;if(r>R-.55)wall++;
+ if(q>.001){const vr=(x*vx+z*vz)/q,vt=(z*vx-x*vz)/q;radial+=vr;tangent+=vt;radialN++;if(vr>0)outward++;else inward++}
+ }
+ for(let c=0;c<CC;c++)if(density[c]>=8){const z=Math.floor(c/(CG*CG)),y=Math.floor(c/CG)%CG,x=c%CG,n=density[c],cell=2*R/CG;
+ peaks.push({cell:c,beads:n,center:[+((x+.5)*cell-R).toFixed(2),+((y+.5)*cell-R).toFixed(2),+((z+.5)*cell-R).toFixed(2)],meanVelocity:[+(sumV[c*3]/n).toFixed(3),+(sumV[c*3+1]/n).toFixed(3),+(sumV[c*3+2]/n).toFixed(3)]})}
+ peaks.sort((a,b)=>b.beads-a.beads);const top=peaks.slice(0,8);
+ for(const p of top){let match=null,dist=Infinity;for(const old of priorPeaks){const d=Math.hypot(...p.center.map((v,i)=>v-old.center[i]));if(d<dist){dist=d;match=old}}
+ p.previousCellDistance=match?+dist.toFixed(2):null;p.secondsSincePreviousProbe=priorPeakTime?+(elapsed-priorPeakTime).toFixed(2):null}
+ priorPeaks=top.map(p=>({center:p.center}));priorPeakTime=elapsed;
+ return{sampleTime:+elapsed.toFixed(2),radialShells0to1Through9to10:Array.from(bins),nearWallBeads:wall,nearWallFraction:free?+(wall/free).toFixed(4):0,meanRadialVelocity:radialN?+(radial/radialN).toFixed(4):0,meanTangentialVelocity:radialN?+(tangent/radialN).toFixed(4):0,inwardCount:inward,outwardCount:outward,densestCells:top,cellWidth:+(2*R/CG).toFixed(3),contactCountAtProbe:sampleContacts,notes:'Peaks are fixed-grid cells, not tracked physical clumps; nearest previous peak distance is suggestive only.'};
+}
 const rand=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
 const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(pos,3).setUsage(T.DynamicDrawUsage));geo.setAttribute('color',new T.BufferAttribute(col,3));geo.setDrawRange(0,N);
 const cloud=new T.Points(geo,new T.PointsMaterial({size:.065,vertexColors:true,sizeAttenuation:true}));cloud.frustumCulled=false;world.add(cloud);
@@ -177,7 +195,7 @@ reset();
 registerInvariant('genesis-100k-accounting',()=>free+star.m===N);
 registerInvariant('genesis-finite',()=>Number.isFinite(pos[0])&&Number.isFinite(star.m));
 registerInvariant('genesis-initial-population',()=>pos.length===N*3);
-return{advance,report:()=>{const now=totals();return{seed:SEED,elapsedSeconds:+elapsed.toFixed(2),formationTargetSeconds:30,continuousEvolution:true,population:N,freeBeads:free,starMassBeads:star.m,accounted:free+star.m,innerBeads:inner,outerBeads:outer,contacts,collisionPasses,discThickness,collisionModel:'spatial-cell paired sloppy inelastic impulses',steps,initialMomentum:initialP,currentMomentum:now.momentum,initialAngularMomentum:initialL,currentAngularMomentum:now.angular,method:'particle-mesh gravity, grid pressure, central sink, spatial-cell paired dissipative contacts',limitations:['grid force approximation','wall impulses affect total momentum','sink angular momentum tracked as spin','no invented planetary aggregates','30 seconds simulated time not verified physical years']}}};
+return{advance,report:()=>{const now=totals();return{seed:SEED,elapsedSeconds:+elapsed.toFixed(2),formationTargetSeconds:30,continuousEvolution:true,population:N,freeBeads:free,starMassBeads:star.m,accounted:free+star.m,innerBeads:inner,outerBeads:outer,contacts,collisionPasses,discThickness,structure:structure(),collisionModel:'spatial-cell paired sloppy inelastic impulses',steps,initialMomentum:initialP,currentMomentum:now.momentum,initialAngularMomentum:initialL,currentAngularMomentum:now.angular,method:'particle-mesh gravity, grid pressure, central sink, spatial-cell paired dissipative contacts',limitations:['grid force approximation','wall impulses affect total momentum','sink angular momentum tracked as spin','no invented planetary aggregates','30 seconds simulated time not verified physical years']}}};
 })();
 function simulate(dt){genesis.advance(dt)}
 function updateAlarm(){

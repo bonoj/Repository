@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='asteroid-bauble-v3';
+const BUILD='asteroid-bauble-v4';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -182,10 +182,17 @@ for(let z=0;z<AST_N-1;z++)for(let y=0;y<AST_N-1;y++)for(let x=0;x<AST_N-1;x++){
   else{const [a,b]=inside,[c,e]=outside;const q=isoPoint(p[a],p[c],d[a],d[c]),r=isoPoint(p[a],p[e],d[a],d[e]),t=isoPoint(p[b],p[c],d[b],d[c]),u=isoPoint(p[b],p[e],d[b],d[e]);emitTriangle(q,r,t,mat);emitTriangle(r,u,t,mat)}
  }
 }
+// Quantized geometric edge audit: detect cracks before treating the body as excavatable.
+const edgeUse=new Map(),vertexKeys=[];
+for(let i=0;i<verts.length;i+=3)vertexKeys.push([verts[i],verts[i+1],verts[i+2]].map(v=>Math.round(v*100000)).join(','));
+for(let i=0;i<vertexKeys.length;i+=3)for(const [a,b] of [[0,1],[1,2],[2,0]]){const ka=vertexKeys[i+a],kb=vertexKeys[i+b];if(ka===kb)continue;const key=ka<kb?ka+'|'+kb:kb+'|'+ka;edgeUse.set(key,(edgeUse.get(key)||0)+1)}
+let boundaryEdges=0,nonmanifoldEdges=0;for(const count of edgeUse.values()){if(count===1)boundaryEdges++;else if(count!==2)nonmanifoldEdges++}
+const topology={boundaryEdges,nonmanifoldEdges,uniqueEdges:edgeUse.size,watertight:boundaryEdges===0&&nonmanifoldEdges===0};
 const asteroidGeo=new T.BufferGeometry();asteroidGeo.setAttribute('position',new T.Float32BufferAttribute(verts,3));asteroidGeo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));asteroidGeo.setAttribute('color',new T.Float32BufferAttribute(colors,3));asteroidGeo.computeBoundingSphere();
 const asteroidMesh=new T.Mesh(asteroidGeo,new T.MeshStandardMaterial({vertexColors:true,roughness:.94,metalness:.07,side:T.DoubleSide,flatShading:false}));asteroidMesh.name='Bennu-inspired heterogeneous carbonaceous asteroid';world.add(asteroidMesh);
 const astInventory=astMatNames.map((name,i)=>({name,occupiedSamples:astCounts[i],fraction:Math.round(1000*astCounts[i]/Math.max(1,astCounts.reduce((a,b)=>a+b,0)))/10}));
-globalThis.AsteroidSpecimen={seed:AST_SEED,grid:AST_N,materialInventory:astInventory,surfaceTriangles:verts.length/9,provenance:'deterministic volumetric lithology; continuous world-space material visualization; Bennu-inspired, not measured Bennu mineral abundances'};
+globalThis.AsteroidSpecimen={seed:AST_SEED,grid:AST_N,materialInventory:astInventory,surfaceTriangles:verts.length/9,topology,provenance:'deterministic volumetric lithology; continuous world-space material visualization; Bennu-inspired, not measured Bennu mineral abundances'};
+registerInvariant('asteroid-topology',()=>({ok:topology.watertight,detail:JSON.stringify(topology)}));
 registerInvariant('asteroid-volume',()=>({ok:verts.length>0&&astCounts.reduce((a,b)=>a+b,0)>0,detail:'No volumetric material or surface'}));
 
 let angle=.6,elev=.27,dist=27,targetY=0,lastX=0,lastY=0;

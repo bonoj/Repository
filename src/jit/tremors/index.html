@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='tremors-bauble-v2';
+const BUILD='tremors-bauble-v3';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -115,6 +115,8 @@ globalThis.BaubleVerifyInvariants=verifyInvariants;
 const GRID=64,TR=7.1,spacing=TR*2/(GRID-1),heights=new Float32Array(GRID*GRID),beads=[];
 const idx=(x,z)=>z*GRID+x;
 const ground=new T.PlaneGeometry(TR*2,TR*2,GRID-1);ground.rotateX(-Math.PI/2);
+// Remove square corner triangles entirely; retain a circular deformable grid.
+{const src=ground.index.array, kept=[];for(let t=0;t<src.length;t+=3){const ok=[src[t],src[t+1],src[t+2]].every(v=>{const x=ground.attributes.position.getX(v),z=ground.attributes.position.getZ(v);return Math.hypot(x,z)<=TR-.02});if(ok)kept.push(src[t],src[t+1],src[t+2])}ground.setIndex(kept)}
 const groundMesh=new T.Mesh(ground,new T.MeshStandardMaterial({color:0x716452,roughness:.95,side:T.DoubleSide}));groundMesh.name='Tremors terrain';world.add(groundMesh);
 const pebbleGeometry=new T.IcosahedronGeometry(.085,0),pebbleMaterial=new T.MeshStandardMaterial({color:0xb6a18a,roughness:1});
 const MAX_BEADS=1500,pebbles=new T.InstancedMesh(pebbleGeometry,pebbleMaterial,MAX_BEADS);pebbles.name='Tremors scree';pebbles.count=0;world.add(pebbles);

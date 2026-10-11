@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-genesis-v6';
+const BUILD='hermeticon-genesis-v7';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -111,7 +111,20 @@ const N=100000,SEED=918273,S=10,R=9.83,GRID=10,CELLS=GRID**3,H=2*R/GRID,SOFT=.8,
 const pos=new Float32Array(N*3),vel=new Float32Array(N*3),col=new Float32Array(N*3),live=new Uint8Array(N);
 const mass=new Float64Array(CELLS),px=new Float64Array(CELLS),py=new Float64Array(CELLS),pz=new Float64Array(CELLS),fx=new Float64Array(CELLS),fy=new Float64Array(CELLS),fz=new Float64Array(CELLS);
 const star={m:0,x:0,y:0,z:0,vx:0,vy:0,vz:0,Lx:0,Ly:0,Lz:0},starRadius=.34;
-let seed=SEED,elapsed=0,steps=0,free=N,escapes=0,outer=0,inner=0,initialL=null,initialP=null,perf=0;
+let seed=SEED,elapsed=0,steps=0,free=N,escapes=0,outer=0,inner=0,initialL=null,initialP=null,perf=0,contacts=0,collisionPasses=0,discThickness=0;
+// Spatially local, bounded paired impulses adapted from Asteroid's inexpensive collision pass.
+const CG=32,CC=CG**3,head=new Int32Array(CC),next=new Int32Array(N);
+const ci=(x,y,z)=>Math.min(CG-1,Math.max(0,Math.floor((x+R)*CG/(2*R))))+CG*(Math.min(CG-1,Math.max(0,Math.floor((y+R)*CG/(2*R))))+CG*Math.min(CG-1,Math.max(0,Math.floor((z+R)*CG/(2*R)))));
+function collide(){
+ head.fill(-1);let hits=0,ys=0,n=0;
+ for(let i=0;i<N;i++){if(live[i])continue;const k=i*3,c=ci(pos[k],pos[k+1],pos[k+2]);next[i]=head[c];head[c]=i;ys+=pos[k+1]*pos[k+1];n++}
+ for(let c=0;c<CC;c++){let i=head[c];while(i>=0){const j=next[i];if(j>=0){const k=i*3,l=j*3,dx=pos[k]-pos[l],dy=pos[k+1]-pos[l+1],dz=pos[k+2]-pos[l+2],d2=dx*dx+dy*dy+dz*dz;
+ if(d2>.000001&&d2<.16){const d=Math.sqrt(d2),nx=dx/d,ny=dy/d,nz=dz/d,rv=(vel[k]-vel[l])*nx+(vel[k+1]-vel[l+1])*ny+(vel[k+2]-vel[l+2])*nz;
+ const impulse=(.4-d)*.35+Math.max(0,-rv)*.28;
+ vel[k]+=nx*impulse;vel[k+1]+=ny*impulse;vel[k+2]+=nz*impulse;vel[l]-=nx*impulse;vel[l+1]-=ny*impulse;vel[l+2]-=nz*impulse;hits++}
+ }i=next[i]}}
+ contacts+=hits;collisionPasses++;discThickness=n?Math.sqrt(ys/n):0;
+}
 const rand=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
 const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(pos,3).setUsage(T.DynamicDrawUsage));geo.setAttribute('color',new T.BufferAttribute(col,3));geo.setDrawRange(0,N);
 const cloud=new T.Points(geo,new T.PointsMaterial({size:.065,vertexColors:true,sizeAttenuation:true}));cloud.frustumCulled=false;world.add(cloud);
@@ -156,7 +169,7 @@ for(let a=0;a<CELLS;a++){if(!mass[a])continue;
  if(rr<.16&&star.m===0){sink(i);continue}
  if(rr<2)innerNow++;if(rr>7)outerNow++;
  }
- inner=innerNow;outer=outerNow;geo.attributes.position.needsUpdate=true;
+ inner=innerNow;outer=outerNow;collide();geo.attributes.position.needsUpdate=true;
  starMesh.visible=star.m>0;starMesh.scale.setScalar(Math.min(.65,.08+.017*Math.cbrt(star.m)));starMesh.position.set(star.x,star.y,star.z);
 }
 function advance(dt){elapsed+=dt;steps++;if(steps%2===0)solve(dt*2)}
@@ -164,7 +177,7 @@ reset();
 registerInvariant('genesis-100k-accounting',()=>free+star.m===N);
 registerInvariant('genesis-finite',()=>Number.isFinite(pos[0])&&Number.isFinite(star.m));
 registerInvariant('genesis-initial-population',()=>pos.length===N*3);
-return{advance,report:()=>{const now=totals();return{seed:SEED,elapsedSeconds:+elapsed.toFixed(2),formationTargetSeconds:30,continuousEvolution:true,population:N,freeBeads:free,starMassBeads:star.m,accounted:free+star.m,innerBeads:inner,outerBeads:outer,steps,initialMomentum:initialP,currentMomentum:now.momentum,initialAngularMomentum:initialL,currentAngularMomentum:now.angular,method:'symmetric particle-mesh gravity, isothermal grid pressure, momentum-accounted central sink',limitations:['grid force approximation','wall impulses affect total momentum','sink angular momentum tracked as spin','no invented planetary aggregates','30 seconds simulated time not verified physical years']}}};
+return{advance,report:()=>{const now=totals();return{seed:SEED,elapsedSeconds:+elapsed.toFixed(2),formationTargetSeconds:30,continuousEvolution:true,population:N,freeBeads:free,starMassBeads:star.m,accounted:free+star.m,innerBeads:inner,outerBeads:outer,contacts,collisionPasses,discThickness,collisionModel:'spatial-cell paired sloppy inelastic impulses',steps,initialMomentum:initialP,currentMomentum:now.momentum,initialAngularMomentum:initialL,currentAngularMomentum:now.angular,method:'particle-mesh gravity, grid pressure, central sink, spatial-cell paired dissipative contacts',limitations:['grid force approximation','wall impulses affect total momentum','sink angular momentum tracked as spin','no invented planetary aggregates','30 seconds simulated time not verified physical years']}}};
 })();
 function simulate(dt){genesis.advance(dt)}
 function updateAlarm(){

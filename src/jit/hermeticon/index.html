@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-genesis-v12';
+const BUILD='hermeticon-genesis-v11';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -111,7 +111,7 @@ const N=100000,SEED=918273,S=10,R=9.83,GRID=10,CELLS=GRID**3,H=2*R/GRID,SOFT=.8,
 const pos=new Float32Array(N*3),vel=new Float32Array(N*3),col=new Float32Array(N*3),live=new Uint8Array(N);
 const mass=new Float64Array(CELLS),px=new Float64Array(CELLS),py=new Float64Array(CELLS),pz=new Float64Array(CELLS),fx=new Float64Array(CELLS),fy=new Float64Array(CELLS),fz=new Float64Array(CELLS);
 const star={m:0,x:0,y:0,z:0,vx:0,vy:0,vz:0,Lx:0,Ly:0,Lz:0},starRadius=.34;
-let shock=null,shockCount=0,shockHits=0,supernovaCount=0,supernovaReleased=0,accretionPauseUntil=0;let seed=SEED,elapsed=0,steps=0,free=N,escapes=0,outer=0,inner=0,initialL=null,initialP=null,perf=0,contacts=0,collisionPasses=0,discThickness=0;
+let shock=null,shockCount=0,shockHits=0;let seed=SEED,elapsed=0,steps=0,free=N,escapes=0,outer=0,inner=0,initialL=null,initialP=null,perf=0,contacts=0,collisionPasses=0,discThickness=0;
 // Spatially local, bounded paired impulses adapted from Asteroid's inexpensive collision pass.
 const CG=32,CC=CG**3,head=new Int32Array(CC),next=new Int32Array(N);
 const ci=(x,y,z)=>Math.min(CG-1,Math.max(0,Math.floor((x+R)*CG/(2*R))))+CG*(Math.min(CG-1,Math.max(0,Math.floor((y+R)*CG/(2*R))))+CG*Math.min(CG-1,Math.max(0,Math.floor((z+R)*CG/(2*R)))));
@@ -151,7 +151,7 @@ const index=(x,y,z)=>Math.min(GRID-1,Math.max(0,Math.floor((x+R)/H)))+GRID*(Math
 const center=(i,axis)=>((Math.floor(i/Math.pow(GRID,axis))%GRID)+.5)*H-R;
 function totals(){let mx=star.vx*star.m,my=star.vy*star.m,mz=star.vz*star.m,Lx=star.Lx+star.m*(star.y*star.vz-star.z*star.vy),Ly=star.Ly+star.m*(star.z*star.vx-star.x*star.vz),Lz=star.Lz+star.m*(star.x*star.vy-star.y*star.vx);
 for(let i=0;i<N;i++){if(live[i])continue;const k=i*3,x=pos[k],y=pos[k+1],z=pos[k+2],vx=vel[k],vy=vel[k+1],vz=vel[k+2];mx+=vx;my+=vy;mz+=vz;Lx+=y*vz-z*vy;Ly+=z*vx-x*vz;Lz+=x*vy-y*vx}return{momentum:[mx,my,mz],angular:[Lx,Ly,Lz]}}
-function reset(){shock=null;shockCount=shockHits=supernovaCount=supernovaReleased=accretionPauseUntil=0;seed=SEED;elapsed=steps=star.m=star.vx=star.vy=star.vz=star.Lx=star.Ly=star.Lz=0;free=N;live.fill(0);
+function reset(){shock=null;shockCount=shockHits=0;seed=SEED;elapsed=steps=star.m=star.vx=star.vy=star.vz=star.Lx=star.Ly=star.Lz=0;free=N;live.fill(0);
 for(let i=0;i<N;i++){const k=i*3;let x,y,z;do{x=(rand()*2-1)*8.7;y=(rand()*2-1)*8.7;z=(rand()*2-1)*8.7}while(x*x+y*y+z*z>75);pos[k]=x;pos[k+1]=y;pos[k+2]=z;
 const omega=.47;vel[k]=-omega*z+(rand()-.5)*.09;vel[k+1]=(rand()-.5)*.09;vel[k+2]=omega*x+(rand()-.5)*.09;
 const c=new T.Color().setHSL(.48+rand()*.16,.6,.62);col[k]=c.r;col[k+1]=c.g;col[k+2]=c.b;
@@ -161,8 +161,6 @@ star.Lx+=y*vz-z*vy;star.Ly+=z*vx-x*vz;star.Lz+=x*vy-y*vx;
 star.vx=(star.vx*m+vx)/(m+1);star.vy=(star.vy*m+vy)/(m+1);star.vz=(star.vz*m+vz)/(m+1);star.m++;free--;live[i]=1;
 pos[k]=pos[k+1]=pos[k+2]=0;col[k]=col[k+1]=col[k+2]=0;geo.attributes.color.needsUpdate=true}
 // An expanding spherical impulse front. Each bead is struck once as the shell passes.
-function barycenter(){let x=star.m*star.x,y=star.m*star.y,z=star.m*star.z;for(let i=0;i<N;i++){if(live[i])continue;const k=i*3;x+=pos[k];y+=pos[k+1];z+=pos[k+2]}return[x/N,y/N,z/N]}
-function supernova(){const count=star.m;if(!count)return 0;const origin=[star.x,star.y,star.z],base=[star.vx,star.vy,star.vz];let j=0;for(let i=0;i<N;i++){if(!live[i])continue;const k=i*3;const a=2*Math.PI*((j*.61803398875)%1),u=1-2*(j+.5)/count,t=Math.sqrt(Math.max(0,1-u*u));const nx=t*Math.cos(a),ny=u,nz=t*Math.sin(a),radius=.42+.18*rand(),speed=11+5*rand();pos[k]=origin[0]+nx*radius;pos[k+1]=origin[1]+ny*radius;pos[k+2]=origin[2]+nz*radius;vel[k]=base[0]+nx*speed;vel[k+1]=base[1]+ny*speed;vel[k+2]=base[2]+nz*speed;col[k]=1;col[k+1]=.52+rand()*.3;col[k+2]=.12+rand()*.2;live[i]=0;j++}star.m=0;star.vx=star.vy=star.vz=star.Lx=star.Ly=star.Lz=0;free+=j;shock=null;accretionPauseUntil=elapsed+1.5;supernovaCount++;supernovaReleased+=j;geo.attributes.position.needsUpdate=true;geo.attributes.color.needsUpdate=true;starMesh.visible=false;return j}
 function shockStep(dt){if(!shock)return;const before=shock.radius;shock.radius+=dt*13;const outer=shock.radius;for(let i=0;i<N;i++){if(live[i])continue;const k=i*3,dx=pos[k]-star.x,dy=pos[k+1]-star.y,dz=pos[k+2]-star.z,r=Math.hypot(dx,dy,dz);if(r<before||r>=outer||r<.0001)continue;const kick=125/(r*r+.36);vel[k]+=dx/r*kick;vel[k+1]+=dy/r*kick;vel[k+2]+=dz/r*kick;shockHits++}if(outer>R+1)shock=null}
 function solve(dt){shockStep(dt);
 mass.fill(0);px.fill(0);py.fill(0);pz.fill(0);
@@ -187,8 +185,8 @@ for(let a=0;a<CELLS;a++){if(!mass[a])continue;
  const rr=Math.hypot(pos[k],pos[k+1],pos[k+2]);
  // Reflective glass boundary: material stays in vessel; boundary impulse is external.
  if(rr>R-.15){const nx=pos[k]/rr,ny=pos[k+1]/rr,nz=pos[k+2]/rr,vn=vel[k]*nx+vel[k+1]*ny+vel[k+2]*nz,f=(R-.15)/rr;pos[k]*=f;pos[k+1]*=f;pos[k+2]*=f;if(vn>0){vel[k]-=2*vn*nx;vel[k+1]-=2*vn*ny;vel[k+2]-=2*vn*nz}}
- if(elapsed>=accretionPauseUntil&&rr<starRadius&&star.m>0){sink(i);continue}
- if(elapsed>=accretionPauseUntil&&rr<.16&&star.m===0){sink(i);continue}
+ if(rr<starRadius&&star.m>0){sink(i);continue}
+ if(rr<.16&&star.m===0){sink(i);continue}
  if(rr<2)innerNow++;if(rr>7)outerNow++;
  }
  inner=innerNow;outer=outerNow;collide();geo.attributes.position.needsUpdate=true;
@@ -199,7 +197,7 @@ reset();
 registerInvariant('genesis-100k-accounting',()=>free+star.m===N);
 registerInvariant('genesis-finite',()=>Number.isFinite(pos[0])&&Number.isFinite(star.m));
 registerInvariant('genesis-initial-population',()=>pos.length===N*3);
-return{advance,triggerShock:()=>{shockCount++;if(shockCount%5===0)return{count:shockCount,supernova:true,released:supernova()};shock={radius:0};return{count:shockCount,supernova:false}},starMesh,report:()=>{const now=totals(),com=barycenter();return{centerOfMass:{position:com,starPosition:[star.x,star.y,star.z],offsetFromStar:Math.hypot(com[0]-star.x,com[1]-star.y,com[2]-star.z)},supernova:{count:supernovaCount,releasedBeads:supernovaReleased,accretionPaused:elapsed<accretionPauseUntil},seed:SEED,elapsedSeconds:+elapsed.toFixed(2),formationTargetSeconds:30,continuousEvolution:true,population:N,freeBeads:free,starMassBeads:star.m,shock:{active:!!shock,radius:shock?+shock.radius.toFixed(2):null,triggerCount:shockCount,beadImpulses:shockHits,speed:13,impulseStrength:125,softeningSquared:.36},accounted:free+star.m,innerBeads:inner,outerBeads:outer,contacts,collisionPasses,discThickness,structure:structure(),collisionModel:'spatial-cell paired sloppy inelastic impulses',steps,initialMomentum:initialP,currentMomentum:now.momentum,initialAngularMomentum:initialL,currentAngularMomentum:now.angular,method:'particle-mesh gravity, grid pressure, central sink, spatial-cell paired dissipative contacts',limitations:['grid force approximation','wall impulses affect total momentum','sink angular momentum tracked as spin','no invented planetary aggregates','30 seconds simulated time not verified physical years']}}};
+return{advance,triggerShock:()=>{shock={radius:0};shockCount++;return shockCount},starMesh,report:()=>{const now=totals();return{seed:SEED,elapsedSeconds:+elapsed.toFixed(2),formationTargetSeconds:30,continuousEvolution:true,population:N,freeBeads:free,starMassBeads:star.m,shock:{active:!!shock,radius:shock?+shock.radius.toFixed(2):null,triggerCount:shockCount,beadImpulses:shockHits,speed:13,impulseStrength:125,softeningSquared:.36},accounted:free+star.m,innerBeads:inner,outerBeads:outer,contacts,collisionPasses,discThickness,structure:structure(),collisionModel:'spatial-cell paired sloppy inelastic impulses',steps,initialMomentum:initialP,currentMomentum:now.momentum,initialAngularMomentum:initialL,currentAngularMomentum:now.angular,method:'particle-mesh gravity, grid pressure, central sink, spatial-cell paired dissipative contacts',limitations:['grid force approximation','wall impulses affect total momentum','sink angular momentum tracked as spin','no invented planetary aggregates','30 seconds simulated time not verified physical years']}}};
 })();
 function simulate(dt){genesis.advance(dt)}
 function updateAlarm(){
@@ -238,7 +236,7 @@ function recordInteraction(type,data={}){interactionLog.push({seq:++interactionS
 function screenPoint(e){const rect=renderer.domElement.getBoundingClientRect();return{x:round((e.clientX-rect.left)/rect.width,3),y:round((e.clientY-rect.top)/rect.height,3)}}
 renderer.domElement.addEventListener('pointerdown',e=>{const p=screenPoint(e);if(!gesture)gesture={start:performance.now(),x:p.x,y:p.y,maxPointers:0,moves:0,travel:0};gesture.maxPointers=Math.max(gesture.maxPointers,renderer.domElement.hasPointerCapture(e.pointerId)?1:1);recordInteraction('pointer-down',{pointerType:e.pointerType,button:e.button,...p,camera:{azimuth:round(angle),elevation:round(elev),distance:round(dist)}})},{capture:true});
 renderer.domElement.addEventListener('pointermove',e=>{if(!gesture)return;const p=screenPoint(e);gesture.moves++;gesture.travel=Math.max(gesture.travel,Math.hypot(p.x-gesture.x,p.y-gesture.y));gesture.maxPointers=Math.max(gesture.maxPointers,pointers.size)},{capture:false});
-function endGesture(e,cancelled=false){const p=screenPoint(e);if(!cancelled&&gesture&&gesture.travel<.025&&gesture.maxPointers<=1&&performance.now()-gesture.start<650&&genesis.starMesh.visible){const projected=genesis.starMesh.getWorldPosition(new T.Vector3()).project(camera);const rect=renderer.domElement.getBoundingClientRect();const sx=(projected.x*.5+.5)*rect.width,sy=(-projected.y*.5+.5)*rect.height;const radius=Math.max(32,genesis.starMesh.scale.x*rect.height/(2*Math.tan(T.MathUtils.degToRad(camera.fov)/2)*dist));if(Math.hypot(e.clientX-rect.left-sx,e.clientY-rect.top-sy)<radius){const result=genesis.triggerShock();recordInteraction(result.supernova?'star-supernova':'star-shock',result);}}recordInteraction(cancelled?'pointer-cancel':gesture?.travel<.025?'tap':'gesture-end',{pointerType:e.pointerType,...p,durationMs:gesture?Math.round(performance.now()-gesture.start):null,travel:round(gesture?.travel??0,3),maxPointers:gesture?.maxPointers??1,camera:{azimuth:round(angle),elevation:round(elev),distance:round(dist)}});if(pointers.size<=1)gesture=null}
+function endGesture(e,cancelled=false){const p=screenPoint(e);if(!cancelled&&gesture&&gesture.travel<.025&&gesture.maxPointers<=1&&performance.now()-gesture.start<650&&genesis.starMesh.visible){const projected=genesis.starMesh.getWorldPosition(new T.Vector3()).project(camera);const rect=renderer.domElement.getBoundingClientRect();const sx=(projected.x*.5+.5)*rect.width,sy=(-projected.y*.5+.5)*rect.height;const radius=Math.max(32,genesis.starMesh.scale.x*rect.height/(2*Math.tan(T.MathUtils.degToRad(camera.fov)/2)*dist));if(Math.hypot(e.clientX-rect.left-sx,e.clientY-rect.top-sy)<radius){const count=genesis.triggerShock();recordInteraction('star-shock',{count});}}recordInteraction(cancelled?'pointer-cancel':gesture?.travel<.025?'tap':'gesture-end',{pointerType:e.pointerType,...p,durationMs:gesture?Math.round(performance.now()-gesture.start):null,travel:round(gesture?.travel??0,3),maxPointers:gesture?.maxPointers??1,camera:{azimuth:round(angle),elevation:round(elev),distance:round(dist)}});if(pointers.size<=1)gesture=null}
 renderer.domElement.addEventListener('pointerup',e=>endGesture(e),{capture:false});
 renderer.domElement.addEventListener('pointercancel',e=>endGesture(e,true),{capture:false});
 renderer.domElement.addEventListener('wheel',e=>recordInteraction('wheel',{deltaY:round(e.deltaY),cameraDistance:round(dist)}),{passive:true});

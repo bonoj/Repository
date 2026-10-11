@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='asteroid-bauble-v4';
+const BUILD='asteroid-bauble-v5';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -123,7 +123,7 @@ const hash=(x,y,z)=>{let v=Math.sin(x*127.1+y*311.7+z*74.7+AST_SEED)*43758.5453;
 function rockField(x,y,z){
  const r=Math.hypot(x/1.05,y/.87,z/1.02);
  const theta=Math.atan2(z,x),phi=Math.atan2(y,Math.hypot(x,z));
- const facets=.32*Math.sin(theta*5+1.4*Math.sin(phi*3))+.22*Math.sin(phi*7+theta*2)+.14*Math.cos(theta*11-phi*5);
+ const polarFade=Math.pow(Math.min(1,Math.hypot(x,z)/1.6),2);const facets=polarFade*(.32*Math.sin(theta*5+1.4*Math.sin(phi*3))+.22*Math.sin(phi*7+theta*2)+.14*Math.cos(theta*11-phi*5));
  const hummocks=.21*Math.sin(x*1.7+y*.6)*Math.sin(z*1.9-y*.9)+.13*Math.sin(x*3.8+z*2.1)*Math.cos(y*2.9);
  const craters=.36*Math.exp(-((x-2.3)**2+(y-2.4)**2+(z-2.6)**2)/2.3)+.29*Math.exp(-((x+3.1)**2+(y+1.2)**2+(z-1.7)**2)/1.7);
  const fracture=.09*Math.sin(x*5.2+y*2.7-z*3.1)*Math.sin(z*4.7-y*3.9)+.055*Math.sin(x*9.1-z*7.3+y*5.7);const ridge=.11*Math.abs(Math.sin(x*2.1+y*1.4-z*1.7));return r-(4.75+facets+hummocks+fracture+ridge-craters);
@@ -187,7 +187,7 @@ const edgeUse=new Map(),vertexKeys=[];
 for(let i=0;i<verts.length;i+=3)vertexKeys.push([verts[i],verts[i+1],verts[i+2]].map(v=>Math.round(v*100000)).join(','));
 for(let i=0;i<vertexKeys.length;i+=3)for(const [a,b] of [[0,1],[1,2],[2,0]]){const ka=vertexKeys[i+a],kb=vertexKeys[i+b];if(ka===kb)continue;const key=ka<kb?ka+'|'+kb:kb+'|'+ka;edgeUse.set(key,(edgeUse.get(key)||0)+1)}
 let boundaryEdges=0,nonmanifoldEdges=0;for(const count of edgeUse.values()){if(count===1)boundaryEdges++;else if(count!==2)nonmanifoldEdges++}
-const topology={boundaryEdges,nonmanifoldEdges,uniqueEdges:edgeUse.size,watertight:boundaryEdges===0&&nonmanifoldEdges===0};
+const topology={boundaryEdges,nonmanifoldEdges,uniqueEdges:edgeUse.size,watertight:boundaryEdges===0&&nonmanifoldEdges===0,polarAngularSingularityRemoved:true};
 const asteroidGeo=new T.BufferGeometry();asteroidGeo.setAttribute('position',new T.Float32BufferAttribute(verts,3));asteroidGeo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));asteroidGeo.setAttribute('color',new T.Float32BufferAttribute(colors,3));asteroidGeo.computeBoundingSphere();
 const asteroidMesh=new T.Mesh(asteroidGeo,new T.MeshStandardMaterial({vertexColors:true,roughness:.94,metalness:.07,side:T.DoubleSide,flatShading:false}));asteroidMesh.name='Bennu-inspired heterogeneous carbonaceous asteroid';world.add(asteroidMesh);
 const astInventory=astMatNames.map((name,i)=>({name,occupiedSamples:astCounts[i],fraction:Math.round(1000*astCounts[i]/Math.max(1,astCounts.reduce((a,b)=>a+b,0)))/10}));

@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-genesis-v5';
+const BUILD='hermeticon-genesis-v6';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -122,7 +122,7 @@ function totals(){let mx=star.vx*star.m,my=star.vy*star.m,mz=star.vz*star.m,Lx=s
 for(let i=0;i<N;i++){if(live[i])continue;const k=i*3,x=pos[k],y=pos[k+1],z=pos[k+2],vx=vel[k],vy=vel[k+1],vz=vel[k+2];mx+=vx;my+=vy;mz+=vz;Lx+=y*vz-z*vy;Ly+=z*vx-x*vz;Lz+=x*vy-y*vx}return{momentum:[mx,my,mz],angular:[Lx,Ly,Lz]}}
 function reset(){seed=SEED;elapsed=steps=star.m=star.vx=star.vy=star.vz=star.Lx=star.Ly=star.Lz=0;free=N;live.fill(0);
 for(let i=0;i<N;i++){const k=i*3;let x,y,z;do{x=(rand()*2-1)*8.7;y=(rand()*2-1)*8.7;z=(rand()*2-1)*8.7}while(x*x+y*y+z*z>75);pos[k]=x;pos[k+1]=y;pos[k+2]=z;
-const omega=.11;vel[k]=-omega*z+(rand()-.5)*.09;vel[k+1]=(rand()-.5)*.09;vel[k+2]=omega*x+(rand()-.5)*.09;
+const omega=.47;vel[k]=-omega*z+(rand()-.5)*.09;vel[k+1]=(rand()-.5)*.09;vel[k+2]=omega*x+(rand()-.5)*.09;
 const c=new T.Color().setHSL(.48+rand()*.16,.6,.62);col[k]=c.r;col[k+1]=c.g;col[k+2]=c.b;
 }geo.attributes.color.needsUpdate=true;geo.attributes.position.needsUpdate=true;initialL=totals().angular;initialP=totals().momentum}
 function sink(i){const k=i*3,x=pos[k],y=pos[k+1],z=pos[k+2],vx=vel[k],vy=vel[k+1],vz=vel[k+2],m=star.m;

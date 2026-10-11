@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='tremors-bauble-v1';
+const BUILD='tremors-bauble-v2';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -137,12 +137,13 @@ renderer.domElement.addEventListener('pointerup',e=>{if(!tremorDown||Math.hypot(
 function simulateTremors(dt){
  for(let i=beads.length-1;i>=0;i--){const b=beads[i];b.vy-=14*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.z+=b.vz*dt;
  const radius=Math.hypot(b.x,b.z);if(radius>TR-.2){const k=(TR-.2)/radius;b.x*=k;b.z*=k;b.vx*=-.2;b.vz*=-.2}
+ const d3=Math.hypot(b.x,b.y,b.z);if(d3>INNER_R-.12){const k=(INNER_R-.12)/d3;b.x*=k;b.y*=k;b.z*=k;const radial=(b.vx*b.x+b.vy*b.y+b.vz*b.z)/(INNER_R-.12);if(radial>0){b.vx-=1.25*radial*b.x/(INNER_R-.12);b.vy-=1.25*radial*b.y/(INNER_R-.12);b.vz-=1.25*radial*b.z/(INNER_R-.12)}}
  const floor=heightAt(b.x,b.z)+.09;
  if(b.y<=floor){const ix=Math.round((b.x+TR)/spacing),iz=Math.round((b.z+TR)/spacing);if(ix>=0&&ix<GRID&&iz>=0&&iz<GRID)heights[idx(ix,iz)]+=.035;beads.splice(i,1)}
  }
  pebbles.count=beads.length;for(let i=0;i<beads.length;i++){const b=beads[i];pebblePosition.set(b.x,b.y,b.z);pebbleMatrix.compose(pebblePosition,pebbleQuat,pebbleScale);pebbles.setMatrixAt(i,pebbleMatrix)}pebbles.instanceMatrix.needsUpdate=true;updateGround();
 }
-registerInvariant('bead-finite-and-contained',()=>({ok:beads.every(b=>Number.isFinite(b.x+b.y+b.z)&&b.x*b.x+b.y*b.y<1e12&&Math.hypot(b.x,b.z)<=TR+.01),detail:'Bead state invalid or outside radial floor'}));
+registerInvariant('bead-finite-and-contained',()=>({ok:beads.every(b=>Number.isFinite(b.x+b.y+b.z)&&b.x*b.x+b.y*b.y<1e12&&Math.hypot(b.x,b.y,b.z)<=INNER_R+.01),detail:'Bead state invalid or outside radial floor'}));
 
 let angle=.6,elev=.27,dist=27,targetY=0,lastX=0,lastY=0;
 const pointers=new Map();let pinch=0;renderer.domElement.addEventListener('pointerdown',e=>{pointers.set(e.pointerId,[e.clientX,e.clientY]);lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});

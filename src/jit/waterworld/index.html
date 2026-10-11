@@ -78,13 +78,24 @@ const INITIAL_WATER_UNITS=Math.round((.2*4*Math.PI*INNER_R**3/3)/MATERIAL_UNIT);
 const basinMat=new T.MeshPhysicalMaterial({color:0x238db2,roughness:.12,transparent:true,opacity:.38,depthWrite:false,side:T.DoubleSide});
 const surfaceMat=new T.MeshPhysicalMaterial({color:0x79d7e5,roughness:.09,transparent:true,opacity:.58,depthWrite:false,side:T.DoubleSide});
 const basin=put(world,new T.SphereGeometry(INNER_R-.015,48,32),basinMat);
-// Free surface: the same 64x64 field used by boats and droplets.
-const surfaceGeo=new T.BufferGeometry();
-const surfacePositions=new Float32Array((65*65)*3);
-const surfaceIndices=new Uint16Array(64*64*6);
-surfaceGeo.setAttribute('position',new T.BufferAttribute(surfacePositions,3).setUsage(T.DynamicDrawUsage));
-surfaceGeo.setIndex(new T.BufferAttribute(surfaceIndices,1).setUsage(T.DynamicDrawUsage));
-const waterSurface=put(world,surfaceGeo,surfaceMat);
+// Circular rendered water body; transport grid remains authoritative for dynamics.
+const RADIAL=24,SEGMENTS=96;
+const vertices=[0,0,0],indices=[];
+for(let ring=1;ring<=RADIAL;ring++){
+ const r=ring/RADIAL;
+ for(let j=0;j<SEGMENTS;j++){const a=2*Math.PI*j/SEGMENTS;vertices.push(r*Math.cos(a),r*Math.sin(a),0)}
+}
+for(let j=0;j<SEGMENTS;j++)indices.push(0,1+j,1+(j+1)%SEGMENTS);
+for(let ring=1;ring<RADIAL;ring++)for(let j=0;j<SEGMENTS;j++){
+ const a=1+(ring-1)*SEGMENTS+j,b=1+(ring-1)*SEGMENTS+(j+1)%SEGMENTS;
+ const c=a+SEGMENTS,d=b+SEGMENTS;indices.push(a,c,b,b,c,d);
+}
+const rippleGeo=new T.BufferGeometry();
+rippleGeo.setAttribute('position',new T.Float32BufferAttribute(vertices,3));
+rippleGeo.setIndex(indices);rippleGeo.computeVertexNormals();
+const ripplePositions=rippleGeo.attributes.position,rippleBase=Float32Array.from(ripplePositions.array);
+const waterSurface=put(world,rippleGeo,surfaceMat);
+waterSurface.rotation.x=-Math.PI/2;
 let windImpulse=0,windAffected=0,windSurgeStart=-100,windSpeed=3.1;
 function windGust(){const elapsed=simTime-windSurgeStart;return elapsed>=0&&elapsed<5?Math.sin(Math.PI*elapsed/5)**2:0}
 // Conservative damped surface-height dynamics on a fixed horizontal disk.
@@ -170,23 +181,14 @@ function stepWater(dt){
  for(let i=0;i<NC;i++)if(depthField[i]>.02){wavePeak=Math.max(wavePeak,Math.abs(bed[i]+depthField[i]-waterY));waveEnergy+=depthField[i]*(velX[i]*velX[i]+velZ[i]*velZ[i])*CELL}
 }
 function updateWindVisual(){
- const p=surfacePositions,idx=surfaceIndices;
- let n=0;
- for(let z=0;z<=GRID;z++)for(let x=0;x<=GRID;x++){
-  const px=x*DX-INNER_R,pz=z*DX-INNER_R,i=(z*(GRID+1)+x)*3;
-  p[i]=px;p[i+1]=sampleWetSurface(px,pz);p[i+2]=pz;
+ const a=ripplePositions.array;
+ const radius=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));
+ for(let i=0;i<a.length;i+=3){
+  const x=rippleBase[i]*radius,z=-rippleBase[i+1]*radius;
+  a[i]=rippleBase[i];a[i+1]=rippleBase[i+1];
+  a[i+2]=(sampleHeight(x,z)-waterY)/Math.max(radius,.01);
  }
- for(let z=0;z<GRID;z++)for(let x=0;x<GRID;x++){
-  const px=(x+.5)*DX-INNER_R,pz=(z+.5)*DX-INNER_R;
-  if(!waterAt(px,pz))continue;
-  const a=z*(GRID+1)+x,b=a+1,c=a+GRID+1,d=c+1;
-  idx[n++]=a;idx[n++]=c;idx[n++]=b;
-  idx[n++]=b;idx[n++]=c;idx[n++]=d;
- }
- surfaceGeo.setDrawRange(0,n);
- surfaceGeo.attributes.position.needsUpdate=true;
- surfaceGeo.index.needsUpdate=true;
- surfaceGeo.computeVertexNormals();
+ ripplePositions.needsUpdate=true;rippleGeo.computeVertexNormals();
 }
 function waterAt(x,z){
  const ix=Math.floor((x+INNER_R)/DX),iz=Math.floor((z+INNER_R)/DX);
@@ -199,7 +201,7 @@ let waterY=-INNER_R,waterVolume=0;
 settledCount=INITIAL_WATER_UNITS;
 function capacityAt(y){const d=Math.max(0,Math.min(2*INNER_R,y+INNER_R));return Math.PI*d*d*(INNER_R-d/3)}
 function waterlineForVolume(v){let lo=-INNER_R,hi=INNER_R;for(let k=0;k<30;k++){const m=(lo+hi)*.5;if(capacityAt(m)<v)lo=m;else hi=m}return (lo+hi)*.5}
-function updateCollector(){waterVolume=settledCount*MATERIAL_UNIT;waterY=settledCount?waterlineForVolume(waterVolume):-INNER_R;clipPlane.constant=waterY;const r=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));waterSurface.visible=settledCount>0;basin.visible=false;if(!transportReady)initializeTransport()}
+function updateCollector(){waterVolume=settledCount*MATERIAL_UNIT;waterY=settledCount?waterlineForVolume(waterVolume):-INNER_R;clipPlane.constant=waterY;const r=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));waterSurface.position.set(0,waterY,0);waterSurface.scale.set(r,r,1);waterSurface.visible=settledCount>0;basin.visible=settledCount>0;if(!transportReady)initializeTransport()}
 let splashImpacts=0,splashEjected=0,splashReturned=0;
 function splash(p,impactSpeed){
  // Incoming unit merges first. Ejected units are debited from the collector.
@@ -319,7 +321,7 @@ function renderBeads(){
 
  const fraction=Math.cbrt(sourceUnits/30000);source.scale.setScalar(fraction);sourceCore.scale.setScalar(fraction);
 }
-const BUILD='waterworld-shared-surface-v21';
+const BUILD='waterworld-water-restored-v22';
 const buildLabel=document.querySelector('#build');
 buildLabel.textContent=BUILD;
 const hud=document.querySelector('#hud');

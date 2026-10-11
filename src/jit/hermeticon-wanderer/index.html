@@ -1,5 +1,5 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07101a"><title>Hermeticon · Wanderer — Water</title><style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:82px;right:10px;top:120px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:175px 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px}#buildRow{display:flex;justify-content:center;align-items:center;gap:5px;margin:3px auto 0;max-width:calc(100vw - 150px);color:#a6b7b9;font:11px ui-monospace,monospace;letter-spacing:.12em;pointer-events:auto}#build{font-size:10px;letter-spacing:0;overflow-wrap:anywhere;text-align:center}#fresh{display:inline-grid;place-items:center;width:40px;height:40px;min-height:40px;padding:0;border:0;background:transparent;color:#c4b291;font:23px system-ui;line-height:1;cursor:pointer} </style></head><body><div id="stage"></div><button id="probe" type="button">◉ INSPECT</button><div id="probePanel"><div id="probeActions"><button id="copyProbe">COPY REPORT</button><button id="closeProbe">CLOSE</button></div><div id="probeText"></div></div><div id="title"><h1>HERMETICON</h1><div id="tag">WANDERER · WATERWORLD MATERIAL</div><div id="buildRow"><span id="build"></span><button id="fresh" type="button" title="Fetch latest build" aria-label="Fetch latest build">↻</button></div></div><div id="hud"><div id="status">ORBIT: ONE FINGER · PINCH: ZOOM · WATER TESTS ITSELF</div></div><div id="error"></div><script>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07101a"><title>Hermeticon · Wanderer — Terrain</title><style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:82px;right:10px;top:120px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:175px 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px}#buildRow{display:flex;justify-content:center;align-items:center;gap:5px;margin:3px auto 0;max-width:calc(100vw - 150px);color:#a6b7b9;font:11px ui-monospace,monospace;letter-spacing:.12em;pointer-events:auto}#build{font-size:10px;letter-spacing:0;overflow-wrap:anywhere;text-align:center}#fresh{display:inline-grid;place-items:center;width:40px;height:40px;min-height:40px;padding:0;border:0;background:transparent;color:#c4b291;font:23px system-ui;line-height:1;cursor:pointer} </style></head><body><div id="stage"></div><button id="probe" type="button">◉ INSPECT</button><div id="probePanel"><div id="probeActions"><button id="copyProbe">COPY REPORT</button><button id="closeProbe">CLOSE</button></div><div id="probeText"></div></div><div id="title"><h1>HERMETICON</h1><div id="tag">WANDERER · GEOLOGICAL HISTORY</div><div id="buildRow"><span id="build"></span><button id="fresh" type="button" title="Fetch latest build" aria-label="Fetch latest build">↻</button></div></div><div id="hud"><div id="status">AUTONOMOUS GEOLOGICAL TEST</div></div><div id="error"></div><script>
 (function(){
  const el=document.getElementById('error');
  function fatal(error){
@@ -17,419 +17,335 @@
  addEventListener('unhandledrejection',e=>fatal(e.reason));
 })();
 </script><script type="module">
-import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
-
-
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+import {createQuadrantHistory} from './geological-history-torture.js';
 try {
+const BUILD='hermeticon-wanderer-terrain-v3';
+document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
-const scene=new T.Scene();scene.background=new T.Color(0x06101b);scene.fog=new T.FogExp2(0x071827,.012);
-const world=new T.Group();scene.add(world);
-const renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.38;document.querySelector('#stage').append(renderer.domElement);
-const camera=new T.PerspectiveCamera(42,1,.1,150);scene.add(new T.HemisphereLight(0x82c6dc,0x17202d,1.5));const sun=new T.DirectionalLight(0xffc77e,2.4);sun.position.set(-7,13,7);scene.add(sun);const blue=new T.PointLight(0x2cbed7,95,36);blue.position.set(2,-2,2);scene.add(blue);
-const M=(color,metalness=.1,roughness=.65,extra={})=>new T.MeshStandardMaterial({color,metalness,roughness,...extra});
-const brass=M(0xb78b4e,.78,.3),bright=M(0xf2cb7e,.45,.3),rock=M(0x242b33,.08,.94),basalt=M(0x3c4449,.04,.9),green=M(0x467b50,.08,.75),leaf=M(0x85a767,.04,.7),cyan=new T.MeshBasicMaterial({color:0x42d7dc}),purple=new T.MeshBasicMaterial({color:0xb06fe6}),glow=new T.MeshBasicMaterial({color:0xffc678}),glass=new T.MeshPhysicalMaterial({color:0x9dcdd7,transparent:true,opacity:.17,metalness:.05,roughness:.12,depthWrite:false,side:T.DoubleSide});
-function put(parent,geo,material,x=0,y=0,z=0){const o=new T.Mesh(geo,material);o.position.set(x,y,z);parent.add(o);return o}
-function ball(p,r,m,x,y,z){return put(p,new T.SphereGeometry(r,12,8),m,x,y,z)}
-function cyl(p,r1,r2,h,m,x,y,z,n=12){return put(p,new T.CylinderGeometry(r1,r2,h,n),m,x,y,z)}
-function ring(p,r,t,m,x,y,z){const o=put(p,new T.TorusGeometry(r,t,7,48),m,x,y,z);o.rotation.x=Math.PI/2;return o}
-function beam(a,b,r,m,p=world){const v=new T.Vector3(...a),w=new T.Vector3(...b),d=w.clone().sub(v),o=put(p,new T.CylinderGeometry(r,r,d.length(),7),m,...v.clone().add(w).multiplyScalar(.5).toArray());o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),d.normalize());return o}
-
-
-// Source → discrete transport → accumulated material. No pressure solver or wall mesh.
-const BAUBLE_R=10.25,INNER_R=BAUBLE_R-.18;
-const SOURCE_R=3.05,BEAD_R=.055,MAX_ACTIVE=2600,GRAVITY=13.5;
-const sourceMat=new T.MeshPhysicalMaterial({color:0x57c9df,metalness:0,roughness:.08,transparent:true,opacity:.49,depthWrite:false,clearcoat:1,clearcoatRoughness:.05,side:T.FrontSide});
-const source=put(world,new T.SphereGeometry(SOURCE_R,48,32),sourceMat);
-const sourceCore=put(world,new T.SphereGeometry(SOURCE_R*.97,40,28),new T.MeshPhysicalMaterial({color:0x167da8,roughness:.15,transparent:true,opacity:.17,depthWrite:false}));
-const beadMat=new T.MeshPhysicalMaterial({color:0x6acde8,metalness:.04,roughness:.12,transparent:true,opacity:.88,depthWrite:false});
-const beadGeo=new T.IcosahedronGeometry(BEAD_R,1);
-const activeMesh=new T.InstancedMesh(beadGeo,beadMat,MAX_ACTIVE);
-
-activeMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
-activeMesh.frustumCulled=false;
-world.add(activeMesh);
-const dummy=new T.Object3D(),particles=[];
-let emitted=0,escaped=0,settledCount=0,collisionCount=0,sourceUnits=30000,emitRate=65,emitCarry=0,simSteps=0,simTime=0,peakActive=0;
-let impactImpulse=0,dripEnabled=true;
-// Moving point-mass gravity source outside the vessel.
-const gravityOrbitalRadius=12.2,gravityPeriod=18,gravitySwingAmplitude=.36,gravitySoftening=3;
-const gravityPosition=new T.Vector3(),gravityDown=new T.Vector3(0,-1,0);
-const gravityOrb=put(world,new T.SphereGeometry(.48,24,16),new T.MeshStandardMaterial({color:0xb68a43,metalness:.88,roughness:.23}));
-const brassLight=new T.PointLight(0xffc578,3,7);world.add(brassLight);
-function updateGravity(t){
- const phase=gravitySwingAmplitude*Math.sin(2*Math.PI*t/gravityPeriod); // Pendulum, no full orbit.
- gravityPosition.set(Math.sin(phase)*gravityOrbitalRadius,-Math.cos(phase)*gravityOrbitalRadius,0);
- gravityOrb.position.copy(gravityPosition);brassLight.position.copy(gravityPosition);
- gravityDown.copy(gravityPosition).normalize();
- // Water has its own momentum; do not rotate the collector with gravity.
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x06101b);
+const world=new THREE.Group();scene.add(world);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.45;document.querySelector('#stage').append(renderer.domElement);
+const camera=new THREE.PerspectiveCamera(42,1,.1,200);
+scene.add(new THREE.HemisphereLight(0xb9d8e5,0x30303d,2));
+const sun=new THREE.DirectionalLight(0xffd6a0,2.8);sun.position.set(-15,25,12);scene.add(sun);
+const brass=new THREE.MeshStandardMaterial({color:0xb78b4e,metalness:.75,roughness:.3});
+const glass=new THREE.MeshPhysicalMaterial({color:0xa5d9e2,transparent:true,opacity:.14,metalness:.05,roughness:.12,depthWrite:false,side:THREE.DoubleSide});
+const BAUBLE_R=10.25;
+const shell=new THREE.Mesh(new THREE.SphereGeometry(BAUBLE_R,48,32),glass);world.add(shell);
+const rim=new THREE.Mesh(new THREE.TorusGeometry(10.14,.08,8,96),brass);rim.rotation.x=Math.PI/2;world.add(rim);
+let beyondWorldSeed=741,beyondMutation=0;
+let globe=null;
+const terrainScale=.17;
+const terrainEvents=[];
+let cycle=0;
+function rebuild(){
+ if(globe){globe.root.removeFromParent();globe.root.traverse(o=>{o.geometry?.dispose();if(o.material){const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>m.dispose())}})}
+ globe=createBeyondTerrain({parent:world,miniature:true});
+ globe.root.scale.setScalar(terrainScale);globe.root.position.y=.65;
+ terrainEvents.push({seconds:+(performance.now()/1000).toFixed(2),kind:'seed',seed:beyondWorldSeed,mutation:beyondMutation});if(terrainEvents.length>30)terrainEvents.shift();
 }
-const rand=()=>Math.random()*2-1;
-function spawnOne(boost=1){
- if(sourceUnits<=0||particles.length>=MAX_ACTIVE)return false;
- const theta=Math.random()*Math.PI*2,u=rand(),r=Math.sqrt(1-u*u);
- const nx=r*Math.cos(theta),ny=u,nz=r*Math.sin(theta);
- const radius=SOURCE_R+BEAD_R*.8;
- particles.push({x:nx*radius,y:ny*radius,z:nz*radius,vx:nx*(.8+Math.random()*.9)*boost,vy:ny*(.8+Math.random()*.9)*boost,vz:nz*(.8+Math.random()*.9)*boost,life:0});
- sourceUnits--;emitted++;peakActive=Math.max(peakActive,particles.length);return true;
-}
-function burst(n,boost=1){for(let i=0;i<n;i++)if(!spawnOne(boost))break}
-const MATERIAL_UNIT=4*Math.PI*SOURCE_R**3/(3*30000);
-const INITIAL_WATER_UNITS=Math.round((.2*4*Math.PI*INNER_R**3/3)/MATERIAL_UNIT);
-const basinMat=new T.MeshPhysicalMaterial({color:0x238db2,roughness:.12,transparent:true,opacity:.38,depthWrite:false,side:T.DoubleSide});
-const surfaceMat=new T.MeshPhysicalMaterial({color:0x79d7e5,roughness:.09,transparent:true,opacity:.58,depthWrite:false,side:T.DoubleSide});
-const basin=put(world,new T.SphereGeometry(INNER_R-.015,48,32),basinMat);
-// Circular rendered water body; transport grid remains authoritative for dynamics.
-const RADIAL=24,SEGMENTS=96;
-const vertices=[0,0,0],indices=[];
-for(let ring=1;ring<=RADIAL;ring++){
- const r=ring/RADIAL;
- for(let j=0;j<SEGMENTS;j++){const a=2*Math.PI*j/SEGMENTS;vertices.push(r*Math.cos(a),r*Math.sin(a),0)}
-}
-for(let j=0;j<SEGMENTS;j++)indices.push(0,1+j,1+(j+1)%SEGMENTS);
-for(let ring=1;ring<RADIAL;ring++)for(let j=0;j<SEGMENTS;j++){
- const a=1+(ring-1)*SEGMENTS+j,b=1+(ring-1)*SEGMENTS+(j+1)%SEGMENTS;
- const c=a+SEGMENTS,d=b+SEGMENTS;indices.push(a,c,b,b,c,d);
-}
-const rippleGeo=new T.BufferGeometry();
-rippleGeo.setAttribute('position',new T.Float32BufferAttribute(vertices,3));
-rippleGeo.setIndex(indices);rippleGeo.computeVertexNormals();
-const ripplePositions=rippleGeo.attributes.position,rippleBase=Float32Array.from(ripplePositions.array);
-const waterSurface=put(world,rippleGeo,surfaceMat);
-waterSurface.rotation.x=-Math.PI/2;
-let windImpulse=0,windAffected=0,windSurgeStart=-100,windSpeed=3.1;
-function windGust(){const elapsed=simTime-windSurgeStart;return elapsed>=0&&elapsed<5?Math.sin(Math.PI*elapsed/5)**2:0}
-// Conservative damped surface-height dynamics on a fixed horizontal disk.
-// Point gravity is sampled at each vertex; acceleration changes before water responds.
-// 64x64 finite-volume shallow-water transport; cell water volumes and momenta.
-const GRID=64,NC=GRID*GRID,DX=2*INNER_R/GRID,CELL=DX*DX;
-const depthField=new Float32Array(NC),velX=new Float32Array(NC),velZ=new Float32Array(NC);
-const nextDepth=new Float32Array(NC),nextVX=new Float32Array(NC),nextVZ=new Float32Array(NC);
-const bed=new Float32Array(NC),wet=new Uint8Array(NC);
-let transportReady=false,wavePeak=0,waveEnergy=0,transportVolume=0,wetCells=0,shorelineMotion=0;
-for(let z=0;z<GRID;z++)for(let x=0;x<GRID;x++){
- const i=z*GRID+x,px=(x+.5)*DX-INNER_R,pz=(z+.5)*DX-INNER_R;
- const r2=px*px+pz*pz;
- if(r2<INNER_R*INNER_R){wet[i]=1;bed[i]=-Math.sqrt(INNER_R*INNER_R-r2)}
-}
-function initializeTransport(){
- let lo=-INNER_R,hi=INNER_R;
- for(let k=0;k<35;k++){const m=(lo+hi)/2;let vol=0;for(let i=0;i<NC;i++)if(wet[i])vol+=Math.max(0,m-bed[i])*CELL;if(vol<waterVolume)lo=m;else hi=m}
- const level=(lo+hi)/2;
- for(let i=0;i<NC;i++){depthField[i]=wet[i]?Math.max(0,level-bed[i]):0;velX[i]=velZ[i]=0}
- transportReady=true;
-}
-function fieldVolume(){let v=0;for(let i=0;i<NC;i++)v+=depthField[i]*CELL;return v}
-function sampleHeight(x,z){
- const ix=Math.max(0,Math.min(GRID-1,Math.floor((x+INNER_R)/DX)));
- const iz=Math.max(0,Math.min(GRID-1,Math.floor((z+INNER_R)/DX)));
- const i=iz*GRID+ix;return wet[i]?bed[i]+depthField[i]:-INNER_R;
-}
-let thumpCount=0,thumpImpulse=0;
-function thump(){
- thumpCount++;
- for(let z=0;z<GRID;z++)for(let x=0;x<GRID;x++){
- const i=z*GRID+x;if(!wet[i]||depthField[i]<.08)continue;
- const px=(x+.5)*DX-INNER_R,pz=(z+.5)*DX-INNER_R,r=Math.hypot(px,pz);
- const impulse=18*Math.exp(-r*r/58);
- velX[i]+=impulse*px/Math.max(r,.3);velZ[i]+=impulse*pz/Math.max(r,.3);
- thumpImpulse+=impulse*depthField[i]*CELL;
- }
-}
-function stepWater(dt){
- if(!transportReady)return;
- // Explicit conservative donor-cell flux, capped by donor inventory.
- // Surface pressure gradients and spatially sampled pendular gravity accelerate currents.
- const speed=3.1+13*windGust(),g=GRAVITY;
- for(let z=0;z<GRID;z++)for(let x=0;x<GRID;x++){
-  const i=z*GRID+x;if(!wet[i]||depthField[i]<.001){nextVX[i]=nextVZ[i]=0;continue}
-  const px=(x+.5)*DX-INNER_R,pz=(z+.5)*DX-INNER_R,h=bed[i]+depthField[i];
-  const L=x>0&&wet[i-1]?bed[i-1]+depthField[i-1]:h;
-  const R=x<GRID-1&&wet[i+1]?bed[i+1]+depthField[i+1]:h;
-  const D=z>0&&wet[i-GRID]?bed[i-GRID]+depthField[i-GRID]:h;
-  const U=z<GRID-1&&wet[i+GRID]?bed[i+GRID]+depthField[i+GRID]:h;
-  const rx=gravityPosition.x-px,ry=gravityPosition.y-h,rz=gravityPosition.z-pz;
-  const d2=rx*rx+ry*ry+rz*rz+gravitySoftening*gravitySoftening;
-  const factor=g*gravityOrbitalRadius*gravityOrbitalRadius/(d2*Math.sqrt(d2));
-  const drag=Math.exp(-.32*dt);
-  nextVX[i]=(velX[i]+dt*(-g*(R-L)/(2*DX)+rx*factor+speed*.055))*drag;
-  nextVZ[i]=(velZ[i]+dt*(-g*(U-D)/(2*DX)+rz*factor))*drag;
-  nextVX[i]=Math.max(-24,Math.min(24,nextVX[i]));
-  nextVZ[i]=Math.max(-24,Math.min(24,nextVZ[i]));
- }
- nextDepth.set(depthField);
- // Pairwise edge flux: transfer equal and opposite volumes; dry cells may flood.
- for(let z=0;z<GRID;z++)for(let x=0;x<GRID;x++){
-  const i=z*GRID+x;if(!wet[i])continue;
-  for(let axis=0;axis<2;axis++){
-   const j=axis===0?i+1:i+GRID;
-   if(axis===0&&x===GRID-1||axis===1&&z===GRID-1||!wet[j])continue;
-   const vi=axis===0?nextVX[i]:nextVZ[i],vj=axis===0?nextVX[j]:nextVZ[j];
-   const velocity=(vi+vj)*.5;
-   const donor=velocity>=0?i:j,receiver=velocity>=0?j:i;
-   const wanted=Math.abs(velocity)*dt*depthField[donor]/DX;
-   const transfer=Math.min(wanted,Math.max(0,nextDepth[donor])*.48);
-   nextDepth[donor]-=transfer;nextDepth[receiver]+=transfer;
+function createBeyondTerrain(options={}){
+  // Beyond T1: compile a cheap geological history into one authoritative terrain surface.
+  // No terrain-type parcels. Continuous strata are deformed, incised, differentially
+  // eroded and mantled; dunes are terrain topology whose near-surface material is sand.
+  const root=new THREE.Group();root.name=options.miniature?'snowglobe:geology':'beyond:world-substance';(options.parent||world).add(root);
+  const SIZE=104,HALF=SIZE*.5,N=options.miniature?161:289,seed=beyondWorldSeed,STRATA=7;
+  const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),smooth=t=>t*t*(3-2*t),fract=v=>v-Math.floor(v),mix=(a,b,t)=>a+(b-a)*t;
+  const hash=(x,z,s=seed)=>fract(Math.sin(x*127.1+z*311.7+s*74.7)*43758.5453123);
+  function noise(x,z,s=seed){const ix=Math.floor(x),iz=Math.floor(z),fx=smooth(fract(x)),fz=smooth(fract(z));return mix(mix(hash(ix,iz,s),hash(ix+1,iz,s),fx),mix(hash(ix,iz+1,s),hash(ix+1,iz+1,s),fx),fz)*2-1}
+  const segDist=(x,z,ax,az,bx,bz)=>{const dx=bx-ax,dz=bz-az,l=dx*dx+dz*dz||1,t=clamp(((x-ax)*dx+(z-az)*dz)/l);return Math.hypot(x-ax-dx*t,z-az-dz*t)};
+  const strata=[
+    {thick:1.25,resist:.30,color:0x74695e},{thick:1.05,resist:.86,color:0x99836d},
+    {thick:1.45,resist:.42,color:0x806f60},{thick:.92,resist:.94,color:0xb09a7d},
+    {thick:1.38,resist:.34,color:0x776b5e},{thick:1.08,resist:.79,color:0x9c866c},
+    {thick:1.62,resist:.50,color:0x857563}
+  ];
+  const cycle=strata.reduce((n,s)=>n+s.thick,0);
+  function deformation(x,z){
+    // Broad uplift keeps the earned horizon-scale composition; a coherent tilted/folded
+    // front in the west lets resistant beds emerge as related fins rather than stamps.
+    const continental=.82+1.42*noise(x*.024,z*.024,751)+.62*noise(x*.055+8,z*.052-5,769);
+    const northRange=5.4*Math.exp(-.5*Math.pow(segDist(x,z,-50,22,-18,9)/8.2,2))+4.1*Math.exp(-.5*Math.pow(segDist(x,z,-18,9,12,16)/8.7,2))+3.5*Math.exp(-.5*Math.pow(segDist(x,z,12,16,50,29)/9.5,2));
+    const southRange=3.0*Math.exp(-.5*Math.pow(segDist(x,z,-45,-31,-12,-18)/10,2))+2.5*Math.exp(-.5*Math.pow(segDist(x,z,-12,-18,25,-26)/10.5,2));
+    const shelf=1.35*Math.tanh((x*.72-z*.34-21)/5.8);
+    const fold=1.15*Math.sin((x*.11+z*.035)+noise(x*.018,z*.018,763)*1.2)*Math.exp(-Math.pow((x+27)/20,2));
+    const tilt=(-x*.095+z*.018)*smooth(clamp((-x-5)/34));
+    return continental+northRange+southRange+shelf+fold+tilt;
   }
- }
- let current=0,active=0;
- for(let i=0;i<NC;i++){depthField[i]=Math.max(0,nextDepth[i]);velX[i]=nextVX[i];velZ[i]=nextVZ[i];current+=depthField[i]*CELL;if(depthField[i]>.03)active++}
- // Droplet additions/removals change target volume; normalize depths without creating mass.
- const scale=current>0?waterVolume/current:1;
- for(let i=0;i<NC;i++)depthField[i]*=scale;
- transportVolume=waterVolume;wetCells=active;
- wavePeak=0;waveEnergy=0;
- for(let i=0;i<NC;i++)if(depthField[i]>.02){wavePeak=Math.max(wavePeak,Math.abs(bed[i]+depthField[i]-waterY));waveEnergy+=depthField[i]*(velX[i]*velX[i]+velZ[i]*velZ[i])*CELL}
-}
-// Render-only bilinear sampling; never modifies the conservative transport field.
-function renderedHeight(x,z){
- const gx=(x+INNER_R)/DX-.5,gz=(z+INNER_R)/DX-.5;
- const ix=Math.floor(gx),iz=Math.floor(gz),tx=gx-ix,tz=gz-iz;
- let sum=0,weight=0;
- for(let dz=0;dz<2;dz++)for(let dx=0;dx<2;dx++){
-  const cx=ix+dx,cz=iz+dz;
-  if(cx<0||cx>=GRID||cz<0||cz>=GRID)continue;
-  const i=cz*GRID+cx;
-  if(!wet[i])continue;
-  const w=(dx?tx:1-tx)*(dz?tz:1-tz);
-  sum+=w*(bed[i]+depthField[i]);weight+=w;
- }
- return weight>1e-6?sum/weight:waterY;
-}
-function updateWindVisual(){
- const a=ripplePositions.array;
- const radius=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));
- for(let i=0;i<a.length;i+=3){
-  const x=rippleBase[i]*radius,z=-rippleBase[i+1]*radius;
-  a[i]=rippleBase[i];a[i+1]=rippleBase[i+1];
-  a[i+2]=(renderedHeight(x,z)-waterY)/Math.max(radius,.01);
- }
- ripplePositions.needsUpdate=true;rippleGeo.computeVertexNormals();
-}
-function waterAt(x,z){
- const ix=Math.floor((x+INNER_R)/DX),iz=Math.floor((z+INNER_R)/DX);
- return ix>=0&&ix<GRID&&iz>=0&&iz<GRID&&wet[iz*GRID+ix]&&depthField[iz*GRID+ix]>.035;
-}
-function sampleWetSurface(x,z){return waterAt(x,z)?sampleHeight(x,z):waterY}
-function localWaterHeight(x,z){return waterAt(x,z)?sampleHeight(x,z):-INNER_R}
-const clipPlane=new T.Plane(new T.Vector3(0,-1,0),-INNER_R);basinMat.clippingPlanes=[clipPlane];renderer.localClippingEnabled=true;
-let waterY=-INNER_R,waterVolume=0;
-settledCount=INITIAL_WATER_UNITS;
-function capacityAt(y){const d=Math.max(0,Math.min(2*INNER_R,y+INNER_R));return Math.PI*d*d*(INNER_R-d/3)}
-function waterlineForVolume(v){let lo=-INNER_R,hi=INNER_R;for(let k=0;k<30;k++){const m=(lo+hi)*.5;if(capacityAt(m)<v)lo=m;else hi=m}return (lo+hi)*.5}
-function updateCollector(){waterVolume=settledCount*MATERIAL_UNIT;waterY=settledCount?waterlineForVolume(waterVolume):-INNER_R;clipPlane.constant=waterY;const r=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));waterSurface.position.set(0,waterY,0);waterSurface.scale.set(r,r,1);waterSurface.visible=settledCount>0;basin.visible=settledCount>0;if(!transportReady)initializeTransport()}
-let splashImpacts=0,splashEjected=0,splashReturned=0;
-function splash(p,impactSpeed){
- // Incoming unit merges first. Ejected units are debited from the collector.
- settledCount++;
- // Only primary droplets can excite a splash; ejecta return without cascading.
- const energy=p.splash?0:Math.max(0,impactSpeed-4);
- const available=Math.min(settledCount-1,MAX_ACTIVE-particles.length+1);
- const n=Math.min(available,4,Math.floor(energy*.17));
- if(n>0){
-  const upx=0,upy=1,upz=0;
-  const cx=p.x,cy=localWaterHeight(p.x,p.z),cz=p.z;
-  for(let j=0;j<n;j++){
-   const a=Math.random()*Math.PI*2;
-   let tx=Math.cos(a),ty=0,tz=Math.sin(a);
-   const dot=tx*upx+ty*upy+tz*upz;
-   tx-=dot*upx;ty-=dot*upy;tz-=dot*upz;
-   const norm=Math.hypot(tx,ty,tz)||1;tx/=norm;ty/=norm;tz/=norm;
-   const kick=Math.min(5,1.4+energy*.16)*(0.7+Math.random()*.5);
-   particles.push({x:cx+upx*.12+tx*.07,y:cy+upy*.12+ty*.07,z:cz+upz*.12+tz*.07,
-    vx:upx*kick+tx*kick*.42,vy:upy*kick+ty*kick*.42,vz:upz*kick+tz*kick*.42,life:0,splash:true});
+  function drainage(x,z){
+    const trunk=Math.min(segDist(x,z,-54,-4,-27,-7),segDist(x,z,-27,-7,2,-2),segDist(x,z,2,-2,29,-9),segDist(x,z,29,-9,54,-4));
+    const t1=Math.min(segDist(x,z,-40,31,-25,13),segDist(x,z,-25,13,-17,-6));
+    const t2=Math.min(segDist(x,z,18,39,14,18),segDist(x,z,14,18,8,-3));
+    const t3=Math.min(segDist(x,z,43,-38,30,-23),segDist(x,z,30,-23,24,-8));
+    const tributary=Math.min(t1,t2,t3);
+    const trunkCut=5.9*Math.exp(-Math.pow(trunk/5.2,1.55))+2.5*Math.exp(-Math.pow(trunk/1.28,1.38));
+    const branchCut=2.65*Math.exp(-Math.pow(tributary/3.2,1.55))+.72*Math.exp(-Math.pow(tributary/.95,1.45));
+    return{trunk,tributary,cut:trunkCut+branchCut};
   }
-  settledCount-=n;splashEjected+=n;splashImpacts++;
- }
- updateCollector();
-}
-function settle(p){settledCount++;if(p.splash)splashReturned++;updateCollector()}
-updateCollector();
-// Autonomous brass skiff: depth-averaged currents, buoyancy and predictive edge avoidance.
-const skiff=new T.Group();world.add(skiff);
-const hull=put(skiff,new T.SphereGeometry(1,16,10),brass,0,-.12,0);hull.scale.set(.53,.23,1.08);
-const rim=put(skiff,new T.TorusGeometry(.53,.055,7,24),bright,0,.02,0);rim.rotation.x=Math.PI/2;rim.scale.set(1,2.0,1);
-const deck=put(skiff,new T.BoxGeometry(.67,.08,.95),brass,0,.035,0);
-const mast=cyl(skiff,.035,.045,.82,bright,0,.46,-.10);
-const sail=put(skiff,new T.ConeGeometry(.35,.76,3),bright,0,.52,-.12);sail.rotation.z=.13;
-const cargo=put(skiff,new T.CylinderGeometry(.27,.27,.075,16),surfaceMat,0,.11,.27);cargo.visible=false;
-const boatState={x:1.3,z:1.2,vx:0,vz:0,heading:.7,y:-4.3,vy:0,roll:0,pitch:0,cargoUnits:0,caught:0,turns:0};
-function boatCurrent(x,z){
- const ix=Math.max(0,Math.min(GRID-1,Math.floor((x+INNER_R)/DX))),iz=Math.max(0,Math.min(GRID-1,Math.floor((z+INNER_R)/DX))),i=iz*GRID+ix;
- return {vx:velX[i],vz:velZ[i],depth:depthField[i]};
-}
-// Boat-only bilinear free-surface sampler. Dry samples are not terrain heights.
-function boatSurface(x,z){
- const gx=(x+INNER_R)/DX-.5,gz=(z+INNER_R)/DX-.5;
- const ix=Math.floor(gx),iz=Math.floor(gz),tx=gx-ix,tz=gz-iz;
- let sum=0,weight=0;
- for(let dz=0;dz<=1;dz++)for(let dx=0;dx<=1;dx++){
-  const xx=ix+dx,zz=iz+dz;
-  if(xx<0||xx>=GRID||zz<0||zz>=GRID)continue;
-  const i=zz*GRID+xx;
-  if(!wet[i]||depthField[i]<.06)continue;
-  const w=(dx?tx:1-tx)*(dz?tz:1-tz);
-  sum+=w*(bed[i]+depthField[i]);weight+=w;
- }
- return weight>.001?sum/weight:null;
-}
-function stepBoat(dt){
- const b=boatState,c=boatCurrent(b.x,b.z);
- // The skiff has a finite hull. Navigate within the *wet* basin, not the glass.
- const shore=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));
- const safe=Math.max(2.1,Math.min(shore-2.1,INNER_R-2.5));
- const fx=Math.sin(b.heading),fz=Math.cos(b.heading);
- const projectedX=b.x+fx*2.5+b.vx*.8,projectedZ=b.z+fz*2.5+b.vz*.8;
- const danger=Math.hypot(projectedX,projectedZ)>safe;
- const desired=danger?Math.atan2(-b.x,-b.z):Math.atan2(Math.sin(simTime*.17)*.8+fx,Math.cos(b.heading)+Math.cos(simTime*.11)*.4);
- const turn=Math.atan2(Math.sin(desired-b.heading),Math.cos(desired-b.heading));
- b.heading+=Math.max(-1,Math.min(1,turn))*dt*(danger?3.5:1);
- if(danger)b.turns++;
- const dx=Math.sin(b.heading),dz=Math.cos(b.heading);
- const currentX=Math.max(-3,Math.min(3,c.vx)),currentZ=Math.max(-3,Math.min(3,c.vz));
- b.vx+=(dx*1.3+(currentX-b.vx)*1.1)*dt;
- b.vz+=(dz*1.3+(currentZ-b.vz)*1.1)*dt;
- const speed=Math.hypot(b.vx,b.vz);if(speed>3.8){b.vx*=3.8/speed;b.vz*=3.8/speed}
- b.x+=b.vx*dt;b.z+=b.vz*dt;
- let radius=Math.hypot(b.x,b.z);
- if(radius>safe){
-  b.x*=safe/radius;b.z*=safe/radius;
-  const outward=(b.vx*b.x+b.vz*b.z)/safe;
-  if(outward>0){b.vx-=outward*b.x/safe;b.vz-=outward*b.z/safe}
-  radius=safe;
- }
- // Vertical position is resolved against the ACTUAL rendered surface mesh.
- // Horizontal movement is independent; no artificial vertical buoyancy integration.
- b.vy=0;
- b.pitch*=Math.max(0,1-dt*4);b.roll*=Math.max(0,1-dt*4);
- skiff.position.set(b.x,b.y,b.z);
- skiff.rotation.order='YXZ';skiff.rotation.set(b.pitch,b.heading,b.roll,'YXZ');
- cargo.visible=b.cargoUnits>0;cargo.scale.y=Math.min(3,.7+b.cargoUnits*.05);
-}
-function simulate(dt){
- const t=Math.min(dt,.022);simSteps++;simTime+=t;stepWater(t);stepBoat(t);
- if(dripEnabled){emitCarry+=emitRate*t;const n=Math.min(160,Math.floor(emitCarry));let spawned=0;for(;spawned<n;spawned++)if(!spawnOne())break;emitCarry-=spawned;}
- const limit=INNER_R-BEAD_R;
- // Seed the first liquid on contact with the vessel, then merge at the waterline.
- for(let i=particles.length-1;i>=0;i--){
-  const p=particles[i];p.life+=t;const dx=gravityPosition.x-p.x,dy=gravityPosition.y-p.y,dz=gravityPosition.z-p.z;const d2=dx*dx+dy*dy+dz*dz+gravitySoftening*gravitySoftening;const accel=GRAVITY*gravityOrbitalRadius*gravityOrbitalRadius/(d2*Math.sqrt(d2));p.vx+=dx*accel*t;p.vy+=dy*accel*t;p.vz+=dz*accel*t;
-  // Thick horizontal airflow band; lateral drag stays subordinate to gravity.
-  const height=p.y-localWaterHeight(p.x,p.z);
-  const band=Math.exp(-Math.pow((height-1.1)/2.3,2));
-  const air=2.1*band*t;
-  windSpeed=3.1+13*windGust();
-  const push=(windSpeed-p.vx)*air;
-  p.vx+=push;p.vz+=(-p.vz)*air*.38;
-  windImpulse+=Math.abs(push);if(band>.15)windAffected++;
-  p.x+=p.vx*t;p.y+=p.vy*t;p.z+=p.vz*t;
-  const r2=p.x*p.x+p.y*p.y+p.z*p.z;
-  if(r2>limit*limit){
-   const r=Math.sqrt(r2),nx=p.x/r,ny=p.y/r,nz=p.z/r;
-   p.x=nx*limit;p.y=ny*limit;p.z=nz*limit;
-   const vn=p.vx*nx+p.vy*ny+p.vz*nz;
-   if(vn>0){p.vx-=1.24*vn*nx;p.vy-=1.24*vn*ny;p.vz-=1.24*vn*nz}
-   p.vx*=.79;p.vz*=.79;collisionCount++;
-   if(settledCount===0){settle(p);particles[i]=particles[particles.length-1];particles.pop();continue;}
+  function stratumState(structuralHeight,erosion){
+    // Identity remains categorical, but morphology consumes a continuous resistance
+    // field across contacts. This prevents a one-sample layer flip from becoming a
+    // one-sample erosion cliff while preserving the actual stratigraphic boundary.
+    let phase=((structuralHeight-erosion)*.92+cycle*64)%cycle;if(phase<0)phase+=cycle;
+    let acc=0;
+    for(let i=0;i<strata.length;i++){
+      const start=acc,end=acc+strata[i].thick;
+      if(phase<=end){
+        const local=(phase-start)/strata[i].thick,edge=.22;
+        let resistance=strata[i].resist;
+        if(local<edge){
+          const prev=(i+strata.length-1)%strata.length,t=smooth(local/edge);
+          resistance=mix(strata[prev].resist,strata[i].resist,t);
+        }else if(local>1-edge){
+          const next=(i+1)%strata.length,t=smooth((local-(1-edge))/edge);
+          resistance=mix(strata[i].resist,strata[next].resist,t);
+        }
+        return{layer:i,resistance};
+      }
+      acc=end;
+    }
+    return{layer:strata.length-1,resistance:strata[strata.length-1].resist};
   }
-  if(!p.splash&&Math.hypot(p.x-boatState.x,p.z-boatState.z)<.48&&p.y>=boatState.y-.02&&p.y<=boatState.y+.8&&p.vy<0){boatState.cargoUnits++;boatState.caught++;particles[i]=particles[particles.length-1];particles.pop();continue;}
-  const depth=p.y;const downward=-p.vy;
-  if(settledCount>0 && depth<=localWaterHeight(p.x,p.z)+BEAD_R && downward>0){
-   if(p.splash)settle(p);else splash(p,downward);particles[i]=particles[particles.length-1];particles.pop();
+  const exposedStratum=(structuralHeight,erosion)=>stratumState(structuralHeight,erosion).layer;
+  const torture=createQuadrantHistory({noise,clamp,smooth,seed,mutation:beyondMutation});
+  function mesaRetreat(x,z){
+    // T6 adversary: cliffs by survival, not incision. A coherent resistant cap survives
+    // regional retreat; the edge is warped continuously so no polygon is authored.
+    const cx=-29,cz=28;
+    const qx=(x-cx)/18,qz=(z-cz)/13;
+    const warp=noise(x*.035,z*.035,1109)*.22+noise(x*.081,z*.074,1117)*.055;
+    const radial=Math.sqrt(qx*qx+qz*qz)+warp;
+    const cap=smooth(clamp((1.03-radial)/.16));
+    const shoulder=smooth(clamp((1.30-radial)/.28))*(1-cap);
+    const capWeather=.18*noise(x*.065,z*.061,1123);
+    return{lift:cap*(4.35+capWeather)+shoulder*1.05,cap,shoulder,radial};
   }
- }
+  function geology(x,z){
+    const structural=deformation(x,z),d=drainage(x,z);
+    const broadWeather=1.05+.78*(noise(x*.035,z*.035,821)+1)*.5;
+    let erosion=d.cut+broadWeather;
+    // Two cheap differential-erosion passes: resistance of the newly exposed layer
+    // feeds back into retreat. This makes benches and coherent tilted outcrops.
+    let state=stratumState(structural,erosion);
+    erosion+=smooth(clamp(d.cut/5.5))*(.50-state.resistance)*.72;
+    state=stratumState(structural,erosion);
+    const layer=state.layer,resistance=state.resistance;
+    const beddingPhase=(structural-erosion)*2.2+noise(x*.025,z*.025,827)*.65;
+    const rawBedRelief=(resistance-.48)*.48*Math.tanh(Math.sin(beddingPhase)*1.25);
+    const retreat=mesaRetreat(x,z);
+    // T7: retreat owns the large cliff. Suppress repeated bedding relief only where
+    // that younger survival process is actively shaping the face; keep sharpness and
+    // stratigraphic evidence everywhere else.
+    const retreatAuthority=clamp(retreat.cap+retreat.shoulder);
+    const bedRelief=rawBedRelief*(1-.82*retreatAuthority);
+    const inherited=structural-erosion+bedRelief;
+    const broken=torture.apply(x,z,{baseHeight:inherited,resistance});
+    const bedrock=inherited+broken.delta;
+    return{bedrock,layer,resistance,drainage:d,retreat:{...retreat,...broken.signals},jurisdictions:broken.jurisdictions};
+  }
+  function mantle(x,z,g){
+    // White-Sands adversary: a closed basin receives a mobile-material history.
+    // Its compiled dunes are already authoritative terrain topology. The mantle field
+    // records that their near-surface matter is gypsum-like sand for later realization.
+    const basin=Math.exp(-(Math.pow((x-27)/17,2)+Math.pow((z-18)/12.5,2)));
+    const shelter=clamp((2.7-g.bedrock)/5.4);
+    const source=clamp(basin*1.34*shelter);
+    const warp=noise(x*.032,z*.032,907)*3.6;
+    const duneAxis=x*.54+z*.17+warp;
+    const envelope=smooth(clamp((source-.14)/.66));
+    const dunes=envelope*(.58+.26*noise(x*.12,z*.09,911))*Math.max(0,.5+.5*Math.sin(duneAxis*1.12));
+    const sheet=envelope*.48;
+    return{depth:Math.max(0,sheet+dunes),sand:envelope,kind:envelope>.18?'gypsum-sand':'bedrock'};
+  }
+  function sampleWorld(x,z){
+    const g=geology(x,z),m=mantle(x,z,g);
+    return{height:g.bedrock+m.depth,bedrock:g.bedrock,layer:g.layer,resistance:g.resistance,mantle:m,drainage:g.drainage,retreat:g.retreat,jurisdictions:g.jurisdictions};
+  }
+  const positions=new Float32Array(N*N*3),colors=new Float32Array(N*N*3),heights=new Float32Array(N*N);
+  const col=new THREE.Color(),sandColor=new THREE.Color(0xd7d2bd);
+  function writeVertex(ix,iz){
+    const x=-HALF+SIZE*ix/(N-1),z=-HALF+SIZE*iz/(N-1),w=sampleWorld(x,z),k=ix+N*iz;
+    heights[k]=w.height;positions[k*3]=x;positions[k*3+1]=w.height;positions[k*3+2]=z;
+    col.setHex(strata[w.layer].color);
+    // Exposed stratum is visible evidence of latent geology; sand mantle can cover it
+    // without ceasing to be the same authoritative terrain surface.
+    col.lerp(sandColor,clamp(w.mantle.sand*.88));
+    const grain=.91+.09*noise(x*.39,z*.39,887);col.multiplyScalar(grain);
+    colors[k*3]=col.r;colors[k*3+1]=col.g;colors[k*3+2]=col.b;
+  }
+  for(let z=0;z<N;z++)for(let x=0;x<N;x++)writeVertex(x,z);
+  // T2 representation pass: geology remains the generator; this only band-limits its
+  // projection to the spatial vocabulary of the mesh. A tiny separable kernel spreads
+  // sub-cell stratigraphic/incision jumps across several triangles without inventing
+  // parcels or changing the large-scale geological history.
+  const filtered=new Float32Array(N*N),tmp=new Float32Array(N*N);
+  const kernel=[1,2,1],ks=4;
+  for(let z=0;z<N;z++)for(let x=0;x<N;x++){
+    let v=0,w=0;for(let o=-1;o<=1;o++){const xx=Math.max(0,Math.min(N-1,x+o)),kw=kernel[o+1];v+=heights[xx+N*z]*kw;w+=kw}tmp[x+N*z]=v/w;
+  }
+  for(let z=0;z<N;z++)for(let x=0;x<N;x++){
+    let v=0,w=0;for(let o=-1;o<=1;o++){const zz=Math.max(0,Math.min(N-1,z+o)),kw=kernel[o+1];v+=tmp[x+N*zz]*kw;w+=kw}filtered[x+N*z]=v/w;
+  }
+  heights.set(filtered);
+  for(let i=0;i<N*N;i++)positions[i*3+1]=heights[i];
+  // Miniature surface is sampled from the untouched geological height/color field.
+  // Polar topology gives an exact shared circular rim instead of a grid-cell staircase.
+  const BEDROCK_Y=-12;
+  const R=49,SECTORS=192,RINGS=76;
+  const surfacePositions=[],surfaceColors=[],indices=[];
+  const sample=(array,x,z,component)=>{
+    const fx=clamp((x+HALF)/SIZE*(N-1),0,N-1.00001),fz=clamp((z+HALF)/SIZE*(N-1),0,N-1.00001);
+    const ix=Math.floor(fx),iz=Math.floor(fz),tx=fx-ix,tz=fz-iz,stride=component===null?1:3,c=component||0;
+    const get=(dx,dz)=>array[(ix+dx+N*(iz+dz))*stride+c];
+    return mix(mix(get(0,0),get(1,0),tx),mix(get(0,1),get(1,1),tx),tz);
+  };
+  const vertexAt=(x,z)=>{
+    surfacePositions.push(x,Math.max(BEDROCK_Y,sample(heights,x,z,null)),z);
+    for(let c=0;c<3;c++)surfaceColors.push(sample(colors,x,z,c));
+  };
+  vertexAt(0,0);
+  for(let ring=1;ring<=RINGS;ring++)for(let t=0;t<SECTORS;t++){
+    const angle=t*Math.PI*2/SECTORS,rad=R*ring/RINGS;
+    vertexAt(Math.cos(angle)*rad,Math.sin(angle)*rad);
+  }
+  for(let t=0;t<SECTORS;t++)indices.push(0,1+(t+1)%SECTORS,1+t);
+  for(let ring=1;ring<RINGS;ring++)for(let t=0;t<SECTORS;t++){
+    const a=1+(ring-1)*SECTORS+t,b=1+(ring-1)*SECTORS+(t+1)%SECTORS;
+    const c=a+SECTORS,d=b+SECTORS;
+    indices.push(a,b,c,b,d,c);
+  }
+  const specimenPositions=new Float32Array(surfacePositions);
+  const specimenColors=new Float32Array(surfaceColors);
+  // Geological section: the same deformed stratigraphic coordinates used by
+  // the surface, sampled at depth. Continuous angular columns share vertices.
+  const WALL_LEVELS=64,WALL_COLUMNS=SECTORS+1;
+  const wallPositions=new Float32Array(WALL_COLUMNS*(WALL_LEVELS+1)*3);
+  const wallColors=new Float32Array(wallPositions.length),wallIndices=[];
+  const wallVertex=(t,l)=>t*(WALL_LEVELS+1)+l;
+  // Single material authority for both exposed surface and cross-section.
+  // Erosion determines the existing exposed layer, while depth traverses
+  // older strata in the same structural coordinate. The sand mantle is a
+  // distinct surficial cover, not a change to the underlying rock identity.
+  function materialAt(x,z,y,surfaceY){
+    const w=sampleWorld(x,z);
+    const depth=Math.max(0,surfaceY-y);
+    const layer=depth<1e-5?w.layer:stratumState(deformation(x,z),Math.max(0,deformation(x,z)-w.bedrock)+depth).layer;
+    return {layer,mantle:depth<1e-5?w.mantle.sand:0};
+  }
+  function sectionColor(x,z,y,surfaceY){
+    const m=materialAt(x,z,y,surfaceY);
+    const material=new THREE.Color(strata[m.layer].color);
+    if(m.mantle)material.lerp(sandColor,clamp(m.mantle*.88));
+    const grain=.91+.09*noise(x*.39,z*.39,887);
+    material.multiplyScalar(grain);
+    return material;
+  }
+  for(let t=0;t<WALL_COLUMNS;t++)for(let l=0;l<=WALL_LEVELS;l++){
+    const angle=(t%SECTORS)*Math.PI*2/SECTORS;
+    const x=Math.cos(angle)*R,z=Math.sin(angle)*R;
+    const rim=1+(RINGS-1)*SECTORS+(t%SECTORS);
+    const top=specimenPositions[rim*3+1],f=l/WALL_LEVELS;
+    const y=BEDROCK_Y+(top-BEDROCK_Y)*f,off=wallVertex(t,l)*3;
+    wallPositions[off]=x;wallPositions[off+1]=y;wallPositions[off+2]=z;
+    const c=sectionColor(x,z,y,top);
+    wallColors[off]=c.r;wallColors[off+1]=c.g;wallColors[off+2]=c.b;
+    if(t<SECTORS&&l<WALL_LEVELS){
+      const a=wallVertex(t,l),b=wallVertex(t+1,l);
+      wallIndices.push(a,a+1,b,b,a+1,b+1);
+    }
+  }
+  const wallGeo=new THREE.BufferGeometry();
+  wallGeo.setAttribute('position',new THREE.BufferAttribute(wallPositions,3));
+  wallGeo.setAttribute('color',new THREE.BufferAttribute(wallColors,3));
+  wallGeo.setIndex(wallIndices);wallGeo.computeVertexNormals();
+  const wallMesh=new THREE.Mesh(wallGeo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,side:THREE.DoubleSide}));
+  wallMesh.name='snowglobe:geological-strata-section';wallMesh.receiveShadow=true;root.add(wallMesh);
+  function refreshEarthWalls(){
+    for(let t=0;t<WALL_COLUMNS;t++)for(let l=0;l<=WALL_LEVELS;l++){
+      const angle=(t%SECTORS)*Math.PI*2/SECTORS,x=Math.cos(angle)*R,z=Math.sin(angle)*R;
+      const rim=1+(RINGS-1)*SECTORS+(t%SECTORS);
+      const top=specimenPositions[rim*3+1],y=BEDROCK_Y+(top-BEDROCK_Y)*l/WALL_LEVELS,off=wallVertex(t,l)*3;
+      wallPositions[off+1]=y;
+      const c=sectionColor(x,z,y,top);
+      wallColors[off]=c.r;wallColors[off+1]=c.g;wallColors[off+2]=c.b;
+    }
+    wallGeo.attributes.position.needsUpdate=true;
+    wallGeo.attributes.color.needsUpdate=true;
+    wallGeo.computeVertexNormals();
+  }
+  // Bedrock owns the bottom cap. Inset its cylindrical edge beneath the
+  // geological wall, and keep its top just below the immutable height floor:
+  // no coincident faces, no shader depth bias, no visible perimeter gap.
+  const BEDROCK_CAP_CLEARANCE=.035;
+  const bedrock=new THREE.Mesh(new THREE.CylinderGeometry(R-.08,R-.08,.55,SECTORS),
+    new THREE.MeshStandardMaterial({color:0x555458,roughness:.96,metalness:.03}));
+  bedrock.name='snowglobe:bedrock';bedrock.position.y=BEDROCK_Y-BEDROCK_CAP_CLEARANCE-.275;root.add(bedrock);
+  function refreshSpecimen(){
+    if(!options.miniature)return;
+    for(let k=0;k<specimenPositions.length/3;k++){
+      const x=specimenPositions[k*3],z=specimenPositions[k*3+2];
+      specimenPositions[k*3+1]=Math.max(BEDROCK_Y,sample(heights,x,z,null));
+    }
+    geo.attributes.position.needsUpdate=true;geo.computeVertexNormals();refreshEarthWalls();
+  }
+  const finalPositions=options.miniature?specimenPositions:positions;
+  const finalColors=options.miniature?specimenColors:colors;
+  const finalIndices=options.miniature?indices:(()=>{const ids=[];for(let z=0;z<N-1;z++)for(let x=0;x<N-1;x++){const a=x+N*z,b=a+1,d=a+N,e=d+1;if((x+z)&1)ids.push(a,d,b,b,d,e);else ids.push(a,d,e,a,e,b)}return ids})();
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(finalPositions,3));geo.setAttribute('color',new THREE.BufferAttribute(finalColors,3));geo.setIndex(finalIndices);geo.computeVertexNormals();
+  const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.96,metalness:.012,flatShading:true});
+  const mesh=new THREE.Mesh(geo,mat);mesh.name='beyond:geological-history-topology';mesh.receiveShadow=true;root.add(mesh);
+  function groundHeight(x,z){const fx=clamp((x+HALF)/SIZE*(N-1),0,N-1.001),fz=clamp((z+HALF)/SIZE*(N-1),0,N-1.001),x0=Math.floor(fx),z0=Math.floor(fz),tx=fx-x0,tz=fz-z0,A=heights[x0+N*z0],B=heights[x0+1+N*z0],C=heights[x0+N*(z0+1)],D=heights[x0+1+N*(z0+1)];return THREE.MathUtils.lerp(THREE.MathUtils.lerp(A,B,tx),THREE.MathUtils.lerp(C,D,tx),tz)}
+  const inert=()=>({locked:true,reason:'beyond-geological-history-t9'});
+  function deform(x,z,radius=7,delta=2){
+    if(!options.miniature)return inert();
+    for(let iz=0;iz<N;iz++)for(let ix=0;ix<N;ix++){
+      const px=-HALF+SIZE*ix/(N-1),pz=-HALF+SIZE*iz/(N-1),d2=(px-x)**2+(pz-z)**2;
+      if(d2>=radius*radius||px*px+pz*pz>49*49)continue;
+      const k=ix+N*iz,t=1-d2/(radius*radius);
+      heights[k]=Math.max(BEDROCK_Y,heights[k]+delta*t*t*(3-2*t));positions[k*3+1]=heights[k];
+    }
+    refreshSpecimen();
+    window.vestibuleDirty=true;return {x,z,radius,delta};
+  }
+  function resetMiniature(){
+    if(!options.miniature)return inert();
+    for(let k=0;k<heights.length;k++){heights[k]=filtered[k];positions[k*3+1]=filtered[k];}
+    refreshSpecimen();window.vestibuleDirty=true;
+  }
+  return{root,mesh,deform,resetMiniature,maps:(x,z)=>{const w=sampleWorld(x,z);return{height:groundHeight(x,z),bedrock:w.bedrock,exposedStratum:w.layer,resistance:w.resistance,mantle:w.mantle,drainage:{trunk:w.drainage.trunk,tributary:w.drainage.tributary},retreat:w.retreat,jurisdictions:w.jurisdictions}},reset:()=>{},seatRect:()=>{},raise:inert,excavate:inert,groundHeight,inspect:()=>({kind:'beyond-geological-history-t9',size:SIZE,resolution:N,seed,mutation:beyondMutation,genome:torture.genome,strata:STRATA,jurisdictions:0,representation:{bandlimit:'separable-121',bedReliefGain:1.25,resistance:'continuous-contact-blend',cliffs:'four-history-genome-sampler'},history:['layered-crust','four-overlapping-jurisdictions','fault-displacement','block-tilt','fold-compression','exposure-erosion','subsidence-deposition','collapse-mass-transport','late-incision']})};
 }
-function renderBeads(){
- for(let i=0;i<particles.length;i++){const p=particles[i];dummy.position.set(p.x,p.y,p.z);dummy.updateMatrix();activeMesh.setMatrixAt(i,dummy.matrix)}
- activeMesh.count=particles.length;activeMesh.instanceMatrix.needsUpdate=true;
 
- const fraction=Math.cbrt(sourceUnits/30000);source.scale.setScalar(fraction);sourceCore.scale.setScalar(fraction);
+rebuild();
+function deform(x,z,radius,delta){const r=globe.deform(x,z,radius,delta);terrainEvents.push({seconds:+(performance.now()/1000).toFixed(2),kind:'deform',...r});if(terrainEvents.length>30)terrainEvents.shift()}
+let lastCycle=performance.now();
+function auto(now){
+ if(now-lastCycle<4200)return;
+ lastCycle=now;cycle++;
+ if(cycle%3===0){beyondWorldSeed=[741,742,743,751,769][Math.floor(cycle/3)%5];rebuild()}
+ else if(cycle%3===1)deform(-14,8,11,4);
+ else deform(12,-10,9,-3);
 }
-const BUILD='hermeticon-wanderer-water-v2';
-const buildLabel=document.querySelector('#build');
-buildLabel.textContent=BUILD;
-const hud=document.querySelector('#hud');
-hud.style.display='none';
-const dripButton=document.createElement('button');dripButton.textContent='💧 DRIP ON';hud.append(dripButton);
-dripButton.onclick=()=>{dripEnabled=!dripEnabled;dripButton.textContent=dripEnabled?'💧 DRIP ON':'💧 DRIP OFF'};
-const plopButton=document.createElement('button');plopButton.textContent='◉ PLOP';hud.append(plopButton);
-plopButton.onclick=()=>burst(120,2.8);
-const surgeButton=document.createElement('button');surgeButton.textContent='◉ THUMP';hud.append(surgeButton);
-surgeButton.onclick=()=>{thump()};
-const resetButton=document.createElement('button');resetButton.textContent='↺ RESET';hud.append(resetButton);
-resetButton.onclick=()=>{particles.length=0;settledCount=INITIAL_WATER_UNITS;updateCollector();windSurgeStart=-100;windSpeed=3.1;sourceUnits=30000;emitted=0;escaped=0;collisionCount=0;simTime=0;simSteps=0;emitCarry=0;peakActive=0;splashImpacts=0;splashEjected=0;splashReturned=0;windImpulse=0;windAffected=0;boatState.x=1.3;boatState.z=1.2;boatState.vx=boatState.vz=boatState.vy=0;boatState.y=-4.3;boatState.cargoUnits=boatState.caught=boatState.turns=0;transportReady=false;initializeTransport();thumpCount=0;thumpImpulse=0;wavePeak=0;waveEnergy=0;};
-const status=document.querySelector('#status');status.textContent='WATERWORLD MATERIAL · AUTONOMOUS TEST';
-const envelope=new T.Mesh(new T.SphereGeometry(BAUBLE_R,72,48),new T.MeshPhysicalMaterial({color:0xa0dce2,metalness:0,roughness:.08,transparent:true,opacity:.055,depthWrite:false,side:T.FrontSide}));world.add(envelope);
-const innerGlass=new T.Mesh(new T.SphereGeometry(INNER_R,72,48),new T.MeshPhysicalMaterial({color:0x9dcdd7,metalness:0,roughness:.09,transparent:true,opacity:.035,depthWrite:false,side:T.BackSide}));world.add(innerGlass);
-const equator=put(world,new T.TorusGeometry(BAUBLE_R,.095,10,120),brass);equator.rotation.x=Math.PI/2;
-for(const y of [-.15,.15]){const trim=put(world,new T.TorusGeometry(BAUBLE_R,.021,6,120),bright,0,y,0);trim.rotation.x=Math.PI/2}
-for(let i=0;i<8;i++){const a=i*Math.PI/4;ball(world,.12,bright,Math.cos(a)*BAUBLE_R,0,Math.sin(a)*BAUBLE_R)}
-let angle=.6,elev=.27,dist=27,targetY=.3,lastX=0,lastY=0;
-const pointers=new Map();let pinch=0,vesselJostles=0;renderer.domElement.addEventListener('pointerdown',e=>{pointers.set(e.pointerId,[e.clientX,e.clientY]);lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
-renderer.domElement.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;const old=pointers.get(e.pointerId);pointers.set(e.pointerId,[e.clientX,e.clientY]);const ps=[...pointers.values()];if(ps.length===1){angle+=(e.clientX-old[0])*.006;elev=T.MathUtils.clamp(elev+(e.clientY-old[1])*.004,-.4,1.2)}else if(ps.length===2){const d=Math.hypot(ps[0][0]-ps[1][0],ps[0][1]-ps[1][1]);if(pinch)dist=T.MathUtils.clamp(dist*pinch/d,17,58);pinch=d}});
-function end(e){pointers.delete(e.pointerId);pinch=0}renderer.domElement.addEventListener('pointerup',end);renderer.domElement.addEventListener('pointercancel',end);renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();dist=T.MathUtils.clamp(dist+e.deltaY*.022,17,58)},{passive:false});
-function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();if(w<h)dist=Math.max(dist,27)}addEventListener('resize',resize);resize();
-
-const probeButton=document.querySelector('#probe'),probePanel=document.querySelector('#probePanel'),probeText=document.querySelector('#probeText');
-let probeReport='',probeLast=0,probeFrames=0,probeFrameMs=0;
-const round=(n,d=2)=>Number.isFinite(n)?+n.toFixed(d):null;
-function fluidDiagnostics(){return {model:'discrete 3D ballistic beads',sourceUnits,emitted,active:particles.length,settled:settledCount,unrepresented:escaped,accounted:sourceUnits+particles.length+settledCount+escaped+boatState.cargoUnits,initialUnits:30000+INITIAL_WATER_UNITS,initialWaterUnits:INITIAL_WATER_UNITS,initialFillFraction:.2,gravity:{type:'pendular point source',position:gravityPosition.toArray().map(round),orbitalRadius:gravityOrbitalRadius,periodSeconds:gravityPeriod,swingAmplitudeRadians:gravitySwingAmplitude,stationary:false,strengthAtCenter:GRAVITY},wind:{direction:[1,0,0],bandCenterAboveSurface:1.1,bandThickness:2.3,baselineSpeed:3.1,currentSpeed:round(windSpeed),gustStrength:round(windGust()),affectedSteps:windAffected,impulse:round(windImpulse)},collisions:collisionCount,splashImpacts,splashEjected,splashReturned,peakActive,steps:simSteps,seconds:round(simTime),beadRadius:BEAD_R,activeCap:MAX_ACTIVE,boat:{position:[round(boatState.x),round(boatState.y),round(boatState.z)],velocity:[round(boatState.vx),round(boatState.vz)],heading:round(boatState.heading),verticalVelocity:round(boatState.vy),surfaceHeight:renderedSurfaceY(boatState.x,boatState.z),cargoUnits:boatState.cargoUnits,caught:boatState.caught,edgeAvoidanceSteps:boatState.turns},collectorVolume:round(waterVolume,4),waterline:round(waterY,4),collectorModel:'64x64 conservative finite-volume transport with point gravity and wind',wavePeak:round(wavePeak),waveEnergy:round(waveEnergy),transportVolume:round(transportVolume,4),wetCells,thumpCount,thumpImpulse:round(thumpImpulse)}}
+let angle=.7,elev=.35,dist=34,targetY=.5;
+const pointers=new Map();
+renderer.domElement.addEventListener('pointerdown',e=>{renderer.domElement.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY})});
+renderer.domElement.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;const p=pointers.get(e.pointerId);const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;if(pointers.size===1){angle-=dx*.005;elev=Math.max(-1.25,Math.min(1.35,elev+dy*.005))}else{dist=Math.max(19,Math.min(65,dist-dy*.025))}});
+for(const ev of ['pointerup','pointercancel'])renderer.domElement.addEventListener(ev,e=>pointers.delete(e.pointerId));
+renderer.domElement.addEventListener('wheel',e=>{dist=Math.max(19,Math.min(65,dist+e.deltaY*.018))},{passive:true});
+function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix()}addEventListener('resize',resize);resize();
+let frames=0,frameMs=0,last=performance.now(),fps=0;
+const panel=document.querySelector('#probePanel'),probeText=document.querySelector('#probeText');
 function inspectWorld(){
- camera.updateMatrixWorld();world.updateMatrixWorld(true);
- const center=new T.Vector3(0,0,0).project(camera);
- const report={integration:{source:'Waterworld v25 copied intact; autonomous THUMP every 6 seconds',waterworldBuild:'waterworld-smooth-surface-v25',genesis:'preserved separately; not instantiated',controlsRequired:false},build:BUILD,time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:2,contentsInstantiated:true,water:{phase:'liquid',model:'shrinking source / point gravity / merged volume',diagnostics:fluidDiagnostics()}},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:round(probeFrames?1000/(probeFrameMs/probeFrames):0)},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:[]};
- probeReport=JSON.stringify(report,null,2);probeText.textContent=probeReport;return report;
+ const pos=globe.mesh.geometry.attributes.position;let min=Infinity,max=-Infinity,sum=0;
+ for(let i=0;i<pos.count;i++){const y=pos.getY(i);min=Math.min(min,y);max=Math.max(max,y);sum+=y}
+ const report={build:BUILD,time:new Date().toISOString(),integration:{source:'Repository/src/betwixt/world-lab.html createBeyondTerrain unchanged; geological-history-torture.js copied intact',water:'preserved in previous Wanderer v2, not instantiated',controlsRequired:false},viewport:{width:innerWidth,height:innerHeight,pixelRatio:renderer.getPixelRatio()},vessel:{outerRadius:BAUBLE_R,inhabitants:1,contentsInstantiated:true},terrain:{...globe.inspect(),scale:terrainScale,mesh:{vertices:pos.count,triangles:globe.mesh.geometry.index.count/3},height:{min,max,mean:sum/pos.count},samples:[[-20,0],[0,0],[20,0],[0,20]].map(([x,z])=>({x,z,...globe.maps(x,z)})),events:terrainEvents.slice(),cycle},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:fps},warnings:[]};
+ const t=JSON.stringify(report,null,2);probeText.textContent=t;return t;
 }
-probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};
-document.querySelector('#closeProbe').onclick=()=>probePanel.classList.remove('open');
-document.querySelector('#copyProbe').onclick=async()=>{inspectWorld();try{await navigator.clipboard.writeText(probeReport);document.querySelector('#copyProbe').textContent='COPIED'}catch(e){const t=document.createElement('textarea');t.value=probeReport;document.body.append(t);t.select();document.execCommand('copy');t.remove();document.querySelector('#copyProbe').textContent='COPIED'}};
+document.querySelector('#probe').onclick=()=>{panel.classList.toggle('open');if(panel.classList.contains('open'))inspectWorld()};
+document.querySelector('#closeProbe').onclick=()=>panel.classList.remove('open');
+document.querySelector('#copyProbe').onclick=async()=>{const t=inspectWorld();try{await navigator.clipboard.writeText(t)}catch(e){const a=document.createElement('textarea');a.value=t;document.body.append(a);a.select();document.execCommand('copy');a.remove()}};
 globalThis.BaubleInspect=inspectWorld;
-// Bounded, privacy-minimal interaction trace: canvas gestures and instrument controls only.
-const interactionLog=[],interactionLimit=240;let interactionSeq=0,interactionStart=performance.now(),gesture=null;
-function recordInteraction(type,data={}){interactionLog.push({seq:++interactionSeq,ms:Math.round(performance.now()-interactionStart),type,...data});if(interactionLog.length>interactionLimit)interactionLog.shift()}
-function screenPoint(e){const rect=renderer.domElement.getBoundingClientRect();return{x:round((e.clientX-rect.left)/rect.width,3),y:round((e.clientY-rect.top)/rect.height,3)}}
-renderer.domElement.addEventListener('pointerdown',e=>{const p=screenPoint(e);if(!gesture)gesture={start:performance.now(),x:p.x,y:p.y,maxPointers:0,moves:0,travel:0};gesture.maxPointers=Math.max(gesture.maxPointers,renderer.domElement.hasPointerCapture(e.pointerId)?1:1);recordInteraction('pointer-down',{pointerType:e.pointerType,button:e.button,...p,camera:{azimuth:round(angle),elevation:round(elev),distance:round(dist)}})},{capture:true});
-renderer.domElement.addEventListener('pointermove',e=>{if(!gesture)return;const p=screenPoint(e);gesture.moves++;gesture.travel=Math.max(gesture.travel,Math.hypot(p.x-gesture.x,p.y-gesture.y));gesture.maxPointers=Math.max(gesture.maxPointers,pointers.size)},{capture:false});
-function endGesture(e,cancelled=false){const p=screenPoint(e);recordInteraction(cancelled?'pointer-cancel':gesture?.travel<.025?'tap':'gesture-end',{pointerType:e.pointerType,...p,durationMs:gesture?Math.round(performance.now()-gesture.start):null,travel:round(gesture?.travel??0,3),maxPointers:gesture?.maxPointers??1,camera:{azimuth:round(angle),elevation:round(elev),distance:round(dist)}});if(pointers.size<=1)gesture=null}
-renderer.domElement.addEventListener('pointerup',e=>endGesture(e),{capture:false});
-renderer.domElement.addEventListener('pointercancel',e=>endGesture(e,true),{capture:false});
-renderer.domElement.addEventListener('wheel',e=>recordInteraction('wheel',{deltaY:round(e.deltaY),cameraDistance:round(dist)}),{passive:true});
-probeButton.addEventListener('click',()=>recordInteraction('inspect-toggle',{open:probePanel.classList.contains('open')}));
-document.querySelector('#copyProbe').addEventListener('click',()=>recordInteraction('copy-report'));
-document.querySelector('#closeProbe').addEventListener('click',()=>recordInteraction('inspect-close'));
-
-
-let last=performance.now(),accumulator=0;const orbitStart=performance.now();
-let autoThumpAt=0;
-const boatRay=new T.Raycaster();
-const boatRayOrigin=new T.Vector3(),boatRayDown=new T.Vector3(0,-1,0);
-function renderedSurfaceY(x,z){
- boatRayOrigin.set(x,20,z);
- boatRay.set(boatRayOrigin,boatRayDown);
- const hits=boatRay.intersectObject(waterSurface,false);
- return hits.length?hits[0].point.y:null;
-}
-function seatBoatOnRenderedSurface(){
- // Resolve after the mesh has been updated for this frame.
- waterSurface.updateMatrixWorld(true);
- const b=boatState;
- const radius=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));
- const limit=Math.max(1,radius-1.4);
- const r=Math.hypot(b.x,b.z);
- if(r>limit){b.x*=limit/r;b.z*=limit/r}
- const y=renderedSurfaceY(b.x,b.z);
- if(y===null)return;
- b.y=y+.03;
- const fx=Math.sin(b.heading),fz=Math.cos(b.heading);
- const front=renderedSurfaceY(b.x+fx*.45,b.z+fz*.45);
- const back=renderedSurfaceY(b.x-fx*.45,b.z-fz*.45);
- const left=renderedSurfaceY(b.x+fz*.3,b.z-fx*.3);
- const right=renderedSurfaceY(b.x-fz*.3,b.z+fx*.3);
- if(front!==null&&back!==null)b.pitch=Math.max(-.22,Math.min(.22,Math.atan2(front-back,.9)));
- if(left!==null&&right!==null)b.roll=Math.max(-.24,Math.min(.24,Math.atan2(left-right,.6)));
- skiff.position.set(b.x,b.y,b.z);
- skiff.rotation.set(b.pitch,b.heading,b.roll,'YXZ');
-}
-function frame(now){requestAnimationFrame(frame);if(now-autoThumpAt>6000){autoThumpAt=now;thump()}updateGravity((now-orbitStart)/1000);accumulator+=Math.min(.05,(now-last)/1000);let steps=0;while(accumulator>=.008&&steps++<7){simulate(.008);accumulator-=.008}renderBeads();updateWindVisual();seatBoatOnRenderedSurface();probeFrames++;probeFrameMs+=Math.max(0,now-last);last=now;if(now-probeLast>2500){probeLast=now;if(probePanel.classList.contains('open'))inspectWorld();probeFrames=0;probeFrameMs=0}
-camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);renderer.render(scene,camera)}
+function frame(now){requestAnimationFrame(frame);auto(now);frames++;frameMs+=now-last;last=now;if(frameMs>=2500){fps=1000*frames/frameMs;frames=0;frameMs=0;if(panel.classList.contains('open'))inspectWorld()}camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);renderer.render(scene,camera)}
 requestAnimationFrame(frame);
 }catch(e){window.BaubleFatal(e);console.error(e)}
 </script></body></html>

@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-continuous-traversal-v21';
+const BUILD='hermeticon-wanderer-water-integration-v22';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -282,7 +282,58 @@ function regenerate(){
  events.push({cycle,seed,triangles,buildMs:+buildMs.toFixed(1),operations:operations.map(o=>({...o}))});if(events.length>5)events.shift();
 }
 regenerate();
-let driftDirection=null,lastMeshX=0,lastMeshZ=0;function simulate(dt){if(!driftDirection)return;const speed=1.8;wanderX=T.MathUtils.clamp(wanderX+driftDirection[0]*speed*dt,-14,14);wanderZ=T.MathUtils.clamp(wanderZ+driftDirection[1]*speed*dt,-14,14);solid.position.set(-wanderX,0,-wanderZ);sharedApertureOffset.set(wanderX,0,wanderZ);document.querySelector('#wanderCoords').textContent=wanderX.toFixed(1)+', '+wanderZ.toFixed(1);}
+
+// Conserved surface-water transport on the resident geological height field.
+// Independent of the moving viewing aperture; holes are open drainage boundaries.
+const WATER_N=64,WATER_MIN=-14,WATER_SPAN=28,WATER_DX=WATER_SPAN/WATER_N;
+const waterDepth=new Float32Array(WATER_N*WATER_N),waterNext=new Float32Array(WATER_N*WATER_N),waterBed=new Float32Array(WATER_N*WATER_N),waterValid=new Uint8Array(WATER_N*WATER_N);
+let waterInitial=0,waterDrain=0,waterSteps=0;
+function waterCell(x,z){const i=Math.floor((x-WATER_MIN)/WATER_DX),j=Math.floor((z-WATER_MIN)/WATER_DX);return i>=0&&j>=0&&i<WATER_N&&j<WATER_N?j*WATER_N+i:-1}
+for(let j=0;j<WATER_N;j++)for(let i=0;i<WATER_N;i++){
+ const k=j*WATER_N+i,x=WATER_MIN+(i+.5)*WATER_DX,z=WATER_MIN+(j+.5)*WATER_DX;
+ let top=1.15;for(const op of operations){if(op.kind==='raise'||op.kind==='lower'){if(op.face!=='top')continue;const d=Math.hypot(x-op.x,z-op.z)/op.r;if(d<1)top+=op.delta*(1-d*d)**2}}
+ waterBed[k]=top;waterValid[k]=operations.some(op=>op.kind==='through-hole'&&Math.hypot(x-op.x,z-op.z)<op.r)?0:1;
+ if(waterValid[k]&&Math.hypot(x+3,z-2)<4){waterDepth[k]=Math.max(0,1.7-top)*.8;waterInitial+=waterDepth[k]*WATER_DX*WATER_DX}
+}
+const waterGeometry=new T.PlaneGeometry(WATER_SPAN,WATER_SPAN,WATER_N-1,WATER_N-1);
+waterGeometry.rotateX(-Math.PI/2);
+const waterPositions=waterGeometry.attributes.position;
+const waterIndices=waterGeometry.index.array;
+const waterMaterial=new T.MeshPhysicalMaterial({color:0x258ba7,transparent:true,opacity:.76,roughness:.16,metalness:.12,side:T.DoubleSide,depthWrite:false});
+waterMaterial.onBeforeCompile=shader=>{
+ shader.uniforms.apertureOffset={value:sharedApertureOffset};shader.uniforms.apertureRadius={value:9.72};
+ shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 waterWorldPosition;');
+ shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nwaterWorldPosition=position;');
+ shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 waterWorldPosition;\nuniform vec3 apertureOffset;\nuniform float apertureRadius;');
+ shader.fragmentShader=shader.fragmentShader.replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\nif(length(waterWorldPosition.xz-apertureOffset.xz)>apertureRadius) discard;');
+};
+const waterMesh=new T.Mesh(waterGeometry,waterMaterial);waterMesh.frustumCulled=false;world.add(waterMesh);
+function refreshWaterMesh(){
+ for(let j=0;j<WATER_N;j++)for(let i=0;i<WATER_N;i++){
+  const k=j*WATER_N+i,v=k*3;
+  waterPositions.array[v+1]=waterBed[k]+waterDepth[k]+.018;
+ }
+ waterPositions.needsUpdate=true;waterGeometry.computeVertexNormals();
+}
+refreshWaterMesh();
+function stepWater(dt){
+ waterNext.set(waterDepth);
+ for(let j=0;j<WATER_N;j++)for(let i=0;i<WATER_N;i++){
+  const k=j*WATER_N+i;if(!waterValid[k]||waterDepth[k]<=0)continue;
+  for(const n of [i>0?k-1:-1,i<WATER_N-1?k+1:-1,j>0?k-WATER_N:-1,j<WATER_N-1?k+WATER_N:-1]){
+   if(n<0)continue;
+   const difference=waterBed[k]+waterDepth[k]-(waterBed[n]+waterDepth[n]);
+   if(difference<=0)continue;
+   const volume=Math.min(waterNext[k],Math.min(waterDepth[k]*.22,difference*dt*1.7));
+   if(volume<=0)continue;
+   waterNext[k]-=volume;
+   if(waterValid[n])waterNext[n]+=volume;else waterDrain+=volume*WATER_DX*WATER_DX;
+  }
+ }
+ waterDepth.set(waterNext);waterSteps++;
+ if(waterSteps%4===0)refreshWaterMesh();
+}
+let driftDirection=null,lastMeshX=0,lastMeshZ=0;function simulate(dt){stepWater(dt);if(!driftDirection)return;const speed=1.8;wanderX=T.MathUtils.clamp(wanderX+driftDirection[0]*speed*dt,-14,14);wanderZ=T.MathUtils.clamp(wanderZ+driftDirection[1]*speed*dt,-14,14);solid.position.set(-wanderX,0,-wanderZ);sharedApertureOffset.set(wanderX,0,wanderZ);document.querySelector('#wanderCoords').textContent=wanderX.toFixed(1)+', '+wanderZ.toFixed(1);}
 const wanderHistory=[];function wander(dx,dz){const from=[wanderX,wanderZ];wanderX=T.MathUtils.clamp(wanderX+dx,-14,14);wanderZ=T.MathUtils.clamp(wanderZ+dz,-14,14);wanderHistory.push({from,to:[wanderX,wanderZ],triangles});if(wanderHistory.length>24)wanderHistory.shift();document.querySelector('#wanderCoords').textContent=`${wanderX}, ${wanderZ}`}
 for(const [key,dx,dz] of [['west',-1,0],['east',1,0],['north',0,-1],['south',0,1]]){const button=document.querySelector('#'+key);let held=false;button.onclick=()=>{if(!held)wander(dx*WANDER_STEP,dz*WANDER_STEP);held=false};button.addEventListener('pointerdown',e=>{if(Math.hypot(wanderX,wanderZ)>3){driftDirection=[dx,dz];held=true;button.setPointerCapture(e.pointerId)}});for(const event of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(event,()=>{driftDirection=null})}
 function updateAlarm(){

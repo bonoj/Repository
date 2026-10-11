@@ -316,12 +316,13 @@ const waterMat=new T.MeshPhysicalMaterial({color:0x32b7c9,metalness:.06,roughnes
 waterMat.onBeforeCompile=shader=>{
  shader.uniforms.apertureOffset={value:sharedApertureOffset};
  shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWaterAperture;\nuniform vec3 apertureOffset;');
- shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvWaterAperture=position-apertureOffset;');
+ shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvWaterAperture=(modelMatrix*vec4(position,1.0)).xyz;');
  shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWaterAperture;');
  shader.fragmentShader=shader.fragmentShader.replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\nif(dot(vWaterAperture,vWaterAperture)>94.4784)discard;');
  shader.fragmentShader=shader.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\ngl_FragColor.rgb=mix(gl_FragColor.rgb,vec3(.045,.115,.16),smoothstep(7.1,9.7,length(vWaterAperture)));');
 };
 const waterPositions=new Float32Array(WN*18),waterGeo=new T.BufferGeometry();
+const waterNormals=new Float32Array(WN*18);for(let i=1;i<waterNormals.length;i+=3)waterNormals[i]=1;waterGeo.setAttribute('normal',new T.BufferAttribute(waterNormals,3));
 waterGeo.setAttribute('position',new T.BufferAttribute(waterPositions,3).setUsage(T.DynamicDrawUsage));
 const waterMesh=new T.Mesh(waterGeo,waterMat);waterMesh.name='waterworld:surface';waterMesh.frustumCulled=false;waterRoot.add(waterMesh);
 const waterCloudMat=new T.PointsMaterial({color:0x7beeff,size:.12,sizeAttenuation:true,transparent:true,opacity:.9,depthWrite:false});
@@ -381,6 +382,9 @@ function stepWaterworld(dt){
  transportSteps++;
 }
 function updateWaterVisual(){
+ sourceVisual.visible=Math.hypot(sourcePosition.x-wanderX,sourcePosition.y,sourcePosition.z-wanderZ)<9.65;
+ catchVisual.visible=Math.hypot(hole.x-wanderX,-3.17,hole.z-wanderZ)<9.65;
+ catchWater.visible=catchVisual.visible;
  let n=0;
  for(let z=0;z<WG;z++)for(let x=0;x<WG;x++){
   const i=z*WG+x;if(drain[i]||depthField[i]<.022)continue;

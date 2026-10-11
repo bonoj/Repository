@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-waterworld-heightfield-v24';
+const BUILD='hermeticon-wanderer-bead-transport-v25';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -352,12 +352,18 @@ function renderedHeight(X,Z){
  }
  return weight>1e-6?sum/weight:null;
 }
-const waterCloudMat=new T.PointsMaterial({color:0x7beeff,size:.12,sizeAttenuation:true,transparent:true,opacity:.9,depthWrite:false});
-const MAX_DROPS=440,dropPositions=new Float32Array(MAX_DROPS*3),dropGeo=new T.BufferGeometry();
-dropGeo.setAttribute('position',new T.BufferAttribute(dropPositions,3).setUsage(T.DynamicDrawUsage));
-const dropMesh=new T.Points(dropGeo,waterCloudMat);dropMesh.frustumCulled=false;dropMesh.userData.worldDomain=true;waterRoot.add(dropMesh);
+// Waterworld V25 bead geometry, optical material and instanced rendering.
+const BEAD_R=.055,MAX_DROPS=2600;
+const beadMat=new T.MeshPhysicalMaterial({color:0x6acde8,metalness:.04,roughness:.12,transparent:true,opacity:.88,depthWrite:false});
+clipWaterMaterial(beadMat);
+const beadGeo=new T.IcosahedronGeometry(BEAD_R,1);
+const dropMesh=new T.InstancedMesh(beadGeo,beadMat,MAX_DROPS);
+dropMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);dropMesh.frustumCulled=false;dropMesh.userData.worldDomain=true;waterRoot.add(dropMesh);
+const beadDummy=new T.Object3D();
 const drops=[];let emitted=0,collected=0,lost=0,drained=0,waterTime=0,waterAccum=0,emissionAccum=0,transportSteps=0,hydrologyEyes={wetCells:0,maxDepth:0,maxSpeed:0,fluxVolume:0,overflowVolume:0,drainVolume:0,rainDeposits:0,collectorArrivals:0,minimumDepth:0,maximumSurface:0};
 const DROP_VOLUME=.042,EMISSION_RATE=65;
+const pooledBeads=[];let poolReleased=0;
+const POOL_CAPACITY=120,POOL_R=2.1;
 const sourcePosition={x:transportSite.basin.x-.45,z:transportSite.basin.z,y:5.15};
 const sourceVisual=put(waterRoot,new T.IcosahedronGeometry(.46,1),new T.MeshPhysicalMaterial({color:0x4bd5ec,transparent:true,opacity:.68,metalness:.2,roughness:.16}),sourcePosition.x,sourcePosition.y,sourcePosition.z);
 sourceVisual.name='rain-source';sourceVisual.userData.worldDomain=true;
@@ -366,7 +372,7 @@ catchVisual.name='underside-collector';catchVisual.userData.worldDomain=true;
 const catchWater=put(waterRoot,new T.CylinderGeometry(1.22,1.22,.1,32),surfaceMat,hole.x,-3.05,hole.z);
 catchWater.name='collected-water';catchWater.userData.worldDomain=true;
 function waterCell(x,z){const ix=Math.floor((x-waterOrigin.x)/WD),iz=Math.floor((z-waterOrigin.z)/WD);return ix>=0&&iz>=0&&ix<WG&&iz<WG?iz*WG+ix:-1}
-function poolVolume(){let v=0;for(let i=0;i<WN;i++)v+=depthField[i]*WC;return v}
+function poolVolume(){return pooledBeads.length*DROP_VOLUME}
 function dropMass(){let v=0;for(const d of drops)v+=d.mass;return v}
 function addDrop(x,y,z,vy,mass,kind){
  if(drops.length>=MAX_DROPS){if(kind==='rain'){const i=waterCell(x,z);if(i>=0){depthField[i]+=mass/WC;return}}collected+=mass;return}
@@ -414,74 +420,52 @@ function stepWaterworld(dt){
  Object.assign(hydrologyEyes,{wetCells:active,maxDepth:maximum,maxSpeed:fastest,minimumDepth:minimum,maximumSurface:surface});
 }
 function updateWaterVisual(){
+ // V25: no invented continuous water sheet or hydrology solver.
+ waterMesh.visible=false;waterBedMesh.visible=false;
  sourceVisual.visible=Math.hypot(sourcePosition.x-wanderX,sourcePosition.y,sourcePosition.z-wanderZ)<9.65;
  catchVisual.visible=Math.hypot(hole.x-wanderX,-3.17,hole.z-wanderZ)<9.65;
  catchWater.visible=catchVisual.visible;
- // Waterworld's smooth continuous sheet, now following geological bed levels.
- let wetTriangles=0,wetVertexCount=0;
- for(let z=0;z<=WG;z++)for(let x=0;x<=WG;x++){
-  const X=waterOrigin.x+x*WD,Z=waterOrigin.z+z*WD;
-  const h=renderedHeight(X,Z);
-  const j=(z*(WG+1)+x)*3;
-  waterPositions[j]=X;waterPositions[j+1]=h===null?surfaceAt(X,Z):h+.012;waterPositions[j+2]=Z;
-  if(h!==null)wetVertexCount++;
+ let count=0;
+ for(const d of drops){
+  if(count>=MAX_DROPS)break;
+  if(Math.hypot(d.x-wanderX,d.y,d.z-wanderZ)>9.65)continue;
+  beadDummy.position.set(d.x,d.y,d.z);beadDummy.updateMatrix();dropMesh.setMatrixAt(count++,beadDummy.matrix);
  }
- // Triangles in dry regions are suppressed via degenerate index positions,
- // not a separate sheet per cell. Hole cells remain open.
- const indices=waterGeo.index.array;
- for(let z=0;z<WG;z++)for(let x=0;x<WG;x++){
-  const i=z*WG+x,offset=i*6;
-  const a=z*(WG+1)+x,b=a+1,c=a+WG+1,d=c+1;
-  const active=!drain[i]&&depthField[i]>.022;
-  if(active){indices.set([a,c,b,b,c,d],offset);wetTriangles+=2}
-  else indices.set([a,a,a,a,a,a],offset);
+ for(let i=0;i<pooledBeads.length&&count<MAX_DROPS;i++){
+  const p=pooledBeads[i];if(Math.hypot(p.x-wanderX,p.y,p.z-wanderZ)>9.65)continue;
+  beadDummy.position.set(p.x,p.y,p.z);beadDummy.updateMatrix();dropMesh.setMatrixAt(count++,beadDummy.matrix);
  }
- waterGeo.index.needsUpdate=true;waterGeo.attributes.position.needsUpdate=true;
- waterGeo.computeVertexNormals();
- // A water volume shell connects each wet surface cell to its terrain bed.
- // It shares the exact Waterworld basin optical material, not an invented shader.
- const body=[];
- for(let z=0;z<WG;z++)for(let x=0;x<WG;x++){
-  const i=z*WG+x;if(drain[i]||depthField[i]<.035)continue;
-  const X=waterOrigin.x+x*WD,Z=waterOrigin.z+z*WD;
-  const y=bed[i]+.014,h=bed[i]+depthField[i];
-  for(const [dx,dz,neighbor] of [[1,0,x+1<WG?i+1:-1],[-1,0,x>0?i-1:-1],[0,1,z+1<WG?i+WG:-1],[0,-1,z>0?i-WG:-1]]){
-   if(neighbor>=0&&!drain[neighbor]&&depthField[neighbor]>.035)continue;
-   const x0=X+(dx===1?WD:0),x1=X+(dx===-1?0:WD);
-   const z0=Z+(dz===1?WD:0),z1=Z+(dz===-1?0:WD);
-   const ax=dx?x0:X,az=dz?z0:Z,bx=dx?x0:X+WD,bz=dz?z0:Z+WD;
-   body.push(ax,y,az,bx,y,bz,ax,h,az,bx,y,bz,bx,h,bz,ax,h,az);
-  }
- }
- const bodyGeo=new T.BufferGeometry();
- bodyGeo.setAttribute('position',new T.Float32BufferAttribute(body,3));bodyGeo.computeVertexNormals();
- waterBedMesh.geometry.dispose();waterBedMesh.geometry=bodyGeo;
- hydrologyEyes.render={surfaceTriangles:wetTriangles,wetVertices:wetVertexCount,bodyTriangles:body.length/9,interpolation:'waterworld-v25-wet-neighbor-bilinear',surfaceMaterial:'waterworld-v25',bodyMaterial:'waterworld-v25'};
- let count=0;for(const d of drops){if(Math.hypot(d.x-wanderX,d.y,d.z-wanderZ)>9.65)continue;if(count>=MAX_DROPS)break;dropPositions.set([d.x-wanderX,d.y,d.z-wanderZ],count++*3)}
- // The point cloud is bauble-local; waterRoot holds world coordinates for other meshes.
- dropMesh.position.set(wanderX,0,wanderZ);
- dropGeo.setDrawRange(0,count);dropGeo.attributes.position.needsUpdate=true;
+ dropMesh.count=count;dropMesh.instanceMatrix.needsUpdate=true;
  catchWater.scale.y=Math.max(.12,Math.min(6,collected/5));
  catchWater.position.y=-3.02+.05*(catchWater.scale.y-1);
+ hydrologyEyes.render={mode:'waterworld-v25-instanced-beads',visibleBeads:count,pooledBeads:pooledBeads.length,solver:'disabled',surface:'disabled'};
 }
 function stepTransport(dt){
  waterTime+=dt;emissionAccum+=dt*EMISSION_RATE;
- while(emissionAccum>=1){emissionAccum--;const j=emitted/DROP_VOLUME;
-  const a=j*2.3999632,r=.65*Math.sqrt(((Math.floor(j)*37)%101)/101);
+ while(emissionAccum>=1){
+  emissionAccum--;const j=emitted/DROP_VOLUME,a=j*2.3999632,r=.65*Math.sqrt(((Math.floor(j)*37)%101)/101);
   addDrop(sourcePosition.x+Math.cos(a)*r,sourcePosition.y,sourcePosition.z+Math.sin(a)*r,-.1,DROP_VOLUME,'rain');
   emitted+=DROP_VOLUME;
  }
  for(let i=drops.length-1;i>=0;i--){
-  const d=drops[i];d.vy-=12*dt;d.y+=d.vy*dt;
-  if(d.kind==='rain'){
-   const cell=waterCell(d.x,d.z);
-   if(cell>=0&&d.y<=Math.max(bed[cell],bed[cell]+depthField[cell])){
-    depthField[cell]+=d.mass/WC;hydrologyEyes.rainDeposits+=d.mass;drops.splice(i,1);continue;
+  const d=drops[i];d.vy-=13.5*dt;d.y+=d.vy*dt;
+  if(d.kind==='rain'&&d.y<=surfaceAt(d.x,d.z)){
+   const n=pooledBeads.length;
+   if(n<POOL_CAPACITY){
+    const a=n*2.3999632,r=POOL_R*Math.sqrt((n+.5)/POOL_CAPACITY);
+    pooledBeads.push({x:transportSite.basin.x+Math.cos(a)*r,z:transportSite.basin.z+Math.sin(a)*r,y:surfaceAt(transportSite.basin.x,transportSite.basin.z)+.09+Math.floor(n/45)*.11});
+   }else{
+    addDrop(hole.x,hole.r*.4,hole.z,-1,d.mass,'fall');
+    drained+=d.mass;hydrologyEyes.drainVolume+=d.mass;hydrologyEyes.overflowVolume+=d.mass;
    }
+   hydrologyEyes.rainDeposits+=d.mass;drops.splice(i,1);continue;
   }
   if(d.y<=-3.05){collected+=d.mass;hydrologyEyes.collectorArrivals+=d.mass;drops.splice(i,1)}
  }
- waterAccum+=dt;while(waterAccum>=.032){stepWaterworld(.032);waterAccum-=.032}
+ hydrologyEyes.wetCells=pooledBeads.length;
+ hydrologyEyes.maxDepth=pooledBeads.length/POOL_CAPACITY*.4;
+ hydrologyEyes.maxSpeed=0;
+ transportSteps++;
 }
 registerInvariant('waterworld-no-negative-depth',()=>{for(let i=0;i<WN;i++)if(!Number.isFinite(depthField[i])||depthField[i]<-1e-5)return{ok:false,detail:'cell '+i+' depth '+depthField[i]};return true});
 registerInvariant('waterworld-material-conservation',()=>{
@@ -527,7 +511,7 @@ function inspectWorld(){
  if(geometryEyes.fieldEdgeClearance<0)eyesWarnings.push('WORLD_FIELD_EDGE_INSIDE_APERTURE');
  if(geometryEyes.shaderOffsetError!==null&&geometryEyes.shaderOffsetError>.001)eyesWarnings.push('APERTURE_UNIFORM_OFFSET_MISMATCH');
  
- const report={build:BUILD,waterworld:{mode:'conserved-donor-cell-transport',grid:[WG,WG],cellSize:WD,source:sourcePosition,basin:transportSite.basin,hole:transportSite.hole,emitted:round(emitted,4),surface:round(poolVolume(),4),inFlight:round(dropMass(),4),collected:round(collected,4),drained:round(drained,4),lost:round(lost,4),conservationResidual:round(emitted-poolVolume()-dropMass()-collected-lost,6),activeDrops:drops.length,transportSteps,hydrology:{...hydrologyEyes,fluxVolume:round(hydrologyEyes.fluxVolume,4),maxDepth:round(hydrologyEyes.maxDepth,4),maxSpeed:round(hydrologyEyes.maxSpeed,4),minimumDepth:round(hydrologyEyes.minimumDepth,4),maximumSurface:round(hydrologyEyes.maximumSurface,4),poolVolume:round(poolVolume(),4),surfaceDomainCells:WN,drainCells:drain.reduce((a,b)=>a+b,0),unitVolume:DROP_VOLUME,rateUnitsPerSecond:EMISSION_RATE*DROP_VOLUME}},runtimeEyes:{aperture:{...apertureEyes,compiled:apertureEyes.compileCount>0},gpu:gpuEyes,scene:sceneEyes,skin:skinEyes,scoop:scoopEyes,geometry:geometryEyes,warnings:eyesWarnings,limits:'Shared live aperture uniform; 4-position radial witness; lit 32x32 real terrain pixel occupancy. Blind scene is a failure. Projection cannot alone diagnose valid terrain silhouettes or glass composition.'},wanderer:{x:wanderX,z:wanderZ,step:WANDER_STEP,history:wanderHistory.slice(),drifting:!!driftDirection,centralRadius:3,apertureRadius:9.72,mode:'vertex-initialized-fragment-sphere-scoop',extractionMargin:EXTRACTION_MARGIN,worldFieldStable:true},terrain:{kind:'3d-signed-field',dimensions:[NX,NY,NZ],samples:field.length,fieldRange:[fieldMin,fieldMax],solidSamples:solidCount,voidSamples:voidCount,mesh:{triangles,vertices:geo.attributes.position.count,doubleSided:true},cycle,seed,buildMs,operationCount:operations.length,events:events.map(e=>({cycle:e.cycle,seed:e.seed,triangles:e.triangles,buildMs:e.buildMs,operationCount:e.operations?.length||0}))},time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:1,contentsInstantiated:true},render:{calls:mainRenderStats.calls,triangles:mainRenderStats.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:fpsMeasuring?null:round(displayFps),fpsMeasuring},containment:verifyContainment(),invariants:verifyInvariants(),simulation:{time:round(clock.time,3),steps:clock.steps,droppedSeconds:round(clock.droppedSeconds,3),fixedStep:STEP},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:eyesWarnings};
+ const report={build:BUILD,waterworld:{mode:'waterworld-v25-instanced-beads-no-solver',grid:null,cellSize:WD,source:sourcePosition,basin:transportSite.basin,hole:transportSite.hole,emitted:round(emitted,4),surface:round(poolVolume(),4),inFlight:round(dropMass(),4),collected:round(collected,4),drained:round(drained,4),lost:round(lost,4),conservationResidual:round(emitted-poolVolume()-dropMass()-collected-lost,6),activeDrops:drops.length,pooledBeads:pooledBeads.length,transportSteps,hydrology:{...hydrologyEyes,fluxVolume:round(hydrologyEyes.fluxVolume,4),maxDepth:round(hydrologyEyes.maxDepth,4),maxSpeed:round(hydrologyEyes.maxSpeed,4),minimumDepth:round(hydrologyEyes.minimumDepth,4),maximumSurface:round(hydrologyEyes.maximumSurface,4),poolVolume:round(poolVolume(),4),surfaceDomainCells:WN,drainCells:null,unitVolume:DROP_VOLUME,rateUnitsPerSecond:EMISSION_RATE*DROP_VOLUME}},runtimeEyes:{aperture:{...apertureEyes,compiled:apertureEyes.compileCount>0},gpu:gpuEyes,scene:sceneEyes,skin:skinEyes,scoop:scoopEyes,geometry:geometryEyes,warnings:eyesWarnings,limits:'Shared live aperture uniform; 4-position radial witness; lit 32x32 real terrain pixel occupancy. Blind scene is a failure. Projection cannot alone diagnose valid terrain silhouettes or glass composition.'},wanderer:{x:wanderX,z:wanderZ,step:WANDER_STEP,history:wanderHistory.slice(),drifting:!!driftDirection,centralRadius:3,apertureRadius:9.72,mode:'vertex-initialized-fragment-sphere-scoop',extractionMargin:EXTRACTION_MARGIN,worldFieldStable:true},terrain:{kind:'3d-signed-field',dimensions:[NX,NY,NZ],samples:field.length,fieldRange:[fieldMin,fieldMax],solidSamples:solidCount,voidSamples:voidCount,mesh:{triangles,vertices:geo.attributes.position.count,doubleSided:true},cycle,seed,buildMs,operationCount:operations.length,events:events.map(e=>({cycle:e.cycle,seed:e.seed,triangles:e.triangles,buildMs:e.buildMs,operationCount:e.operations?.length||0}))},time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:1,contentsInstantiated:true},render:{calls:mainRenderStats.calls,triangles:mainRenderStats.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:fpsMeasuring?null:round(displayFps),fpsMeasuring},containment:verifyContainment(),invariants:verifyInvariants(),simulation:{time:round(clock.time,3),steps:clock.steps,droppedSeconds:round(clock.droppedSeconds,3),fixedStep:STEP},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:eyesWarnings};
  probeReport=JSON.stringify(report,null,2);probeText.textContent=probeReport;return report;
 }
 probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};

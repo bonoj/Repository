@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-genesis-v4';
+const BUILD='hermeticon-genesis-v5';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -159,12 +159,12 @@ for(let a=0;a<CELLS;a++){if(!mass[a])continue;
  inner=innerNow;outer=outerNow;geo.attributes.position.needsUpdate=true;
  starMesh.visible=star.m>0;starMesh.scale.setScalar(Math.min(.65,.08+.017*Math.cbrt(star.m)));starMesh.position.set(star.x,star.y,star.z);
 }
-function advance(dt){if(elapsed>=30)return;elapsed=Math.min(30,elapsed+dt);steps++;if(steps%2===0)solve(dt*2)}
+function advance(dt){elapsed+=dt;steps++;if(steps%2===0)solve(dt*2)}
 reset();
 registerInvariant('genesis-100k-accounting',()=>free+star.m===N);
 registerInvariant('genesis-finite',()=>Number.isFinite(pos[0])&&Number.isFinite(star.m));
 registerInvariant('genesis-initial-population',()=>pos.length===N*3);
-return{advance,report:()=>{const now=totals();return{seed:SEED,elapsedSeconds:+elapsed.toFixed(2),population:N,freeBeads:free,starMassBeads:star.m,accounted:free+star.m,innerBeads:inner,outerBeads:outer,steps,initialMomentum:initialP,currentMomentum:now.momentum,initialAngularMomentum:initialL,currentAngularMomentum:now.angular,method:'symmetric particle-mesh gravity, isothermal grid pressure, momentum-accounted central sink',limitations:['grid force approximation','wall impulses affect total momentum','sink angular momentum tracked as spin','no invented planetary aggregates','30 seconds simulated time not verified physical years']}}};
+return{advance,report:()=>{const now=totals();return{seed:SEED,elapsedSeconds:+elapsed.toFixed(2),formationTargetSeconds:30,continuousEvolution:true,population:N,freeBeads:free,starMassBeads:star.m,accounted:free+star.m,innerBeads:inner,outerBeads:outer,steps,initialMomentum:initialP,currentMomentum:now.momentum,initialAngularMomentum:initialL,currentAngularMomentum:now.angular,method:'symmetric particle-mesh gravity, isothermal grid pressure, momentum-accounted central sink',limitations:['grid force approximation','wall impulses affect total momentum','sink angular momentum tracked as spin','no invented planetary aggregates','30 seconds simulated time not verified physical years']}}};
 })();
 function simulate(dt){genesis.advance(dt)}
 function updateAlarm(){

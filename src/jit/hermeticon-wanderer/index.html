@@ -111,6 +111,7 @@ const geo=new T.BufferGeometry(),solid=new T.Mesh(geo,terrainMaterial);solid.nam
 
 let geometryEyes={};let cycle=0,seed=741,triangles=0,fieldMin=0,fieldMax=0,solidCount=0,voidCount=0,buildMs=0;
 let operations=[],events=[];
+const round=(n,d=2)=>Number.isFinite(n)?+n.toFixed(d):null;
 const rand=(n)=>{let v=Math.sin(n*127.1+seed*311.7)*43758.5453;return v-Math.floor(v)};
 function regenerate(){
  const start=performance.now();
@@ -144,7 +145,7 @@ function regenerate(){
  const apertureR=9.72,cellX=2*WORLD_HALF/(NX-1),cellZ=2*WORLD_HALF/(NZ-1);
  for(let i=0;i<pos.length;i+=3){const dx=pos[i]-wanderX,dy=pos[i+1],dz=pos[i+2];const d=Math.hypot(dx,dy,dz);minDistance=Math.min(minDistance,d);maxDistance=Math.max(maxDistance,d);if(d>apertureR)outside++;else inside++;if(Math.abs(d-apertureR)<Math.max(cellX,cellZ))nearBoundary++}
  // Extraction is cell-origin culled: ensure the full sphere is inside the generated cell neighborhood.
- const effectiveMargin=EXTRACTION_MARGIN-Math.max(cellX,cellZ);
+ const effectiveMargin=R+EXTRACTION_MARGIN-Math.max(cellX,cellZ);
  const nearestFieldEdge=Math.min(WORLD_HALF-Math.abs(wanderX),WORLD_HALF-Math.abs(wanderZ));
  const uniformOffset=apertureUniform?.value;
  const offsetError=uniformOffset?Math.hypot(uniformOffset.x-wanderX,uniformOffset.y,uniformOffset.z-wanderZ):null;
@@ -175,7 +176,6 @@ function fitBaubleDistance(){const halfV=T.MathUtils.degToRad(camera.fov)/2;cons
 
 const probeButton=document.querySelector('#probe'),probePanel=document.querySelector('#probePanel'),probeText=document.querySelector('#probeText');
 let probeReport='',probeLast=0,probeFrames=0,probeFrameMs=0;
-const round=(n,d=2)=>Number.isFinite(n)?+n.toFixed(d):null;
 function inspectWorld(){
  camera.updateMatrixWorld();world.updateMatrixWorld(true);
  const center=new T.Vector3(0,0,0).project(camera);

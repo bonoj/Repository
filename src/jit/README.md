@@ -1,6 +1,12 @@
-# JIT — build and publish
+# JIT — cold-start entry point / build and publish
 
 This directory is the **source** for small, standalone JIT sites. Each site lives at `src/jit/<slug>/index.html` in `bonoj/Repository`.
+
+## Cold-start discovery
+
+For a **new JIT bauble**, start here, then read [`bonoj/Gate/README.md`](https://github.com/bonoj/Gate/blob/main/README.md) **before any build, commit, sling or deployment**. Gate is the delivery authority for JIT as well as Betwixt; this JIT README supplies the route-specific map. Inspect a neighboring JIT source for the established standalone, mobile-first pattern. Choose a new unused slug under `src/jit/<slug>/`; do not overwrite Waterworld or other existing experiments. Do not assume the current chat contains the publishing steps.
+
+For **existing Waterworld**, distinguish the [current working specification](WATERWORLD.md) (ambitious future 3D-water goals, not an implementation authorization) from the [v25 executable handoff](waterworld/WATERWORLD.md) (what the present 2.5D hybrid actually does). The [Ledger technical account](https://github.com/bonoj/Ledger/blob/main/notes/2026-10-10-waterworld-conserved-liquid.md) is historical evidence, not deployment authority.
 
 ## Canonical publication route
 
@@ -12,7 +18,7 @@ This directory is the **source** for small, standalone JIT sites. Each site live
 
 The public Pages repo is `bonoj/bonoj.github.io` — **not** `bonoj/jit` (which is not the JIT publishing repo). Existing examples: `spellbook`, `genesis`, `false-gods`, `chem001`, `crossing`, `fieldwork`.
 
-**No Betwixt sling for ordinary JIT pages.** `bonoj/Gate` governs the Betwixt Repository → Home → Interstice publication route; don't apply that route to a standalone JIT page. If touching Betwixt deployment, read Gate first.
+**Do not use the Betwixt publication chain for ordinary JIT pages.** Gate governs both routes; its JIT route is direct Repository → `bonoj.github.io` publication. Betwixt alone uses Repository → Home → Interstice. Read Gate first for either route.
 
 ## Guardrails
 

@@ -101,7 +101,7 @@ function verifyInvariants(){
 }
 // Authoritative signed volume. Positive=solid, negative=void.
 // The equator y=0 is the fixed datum; both surfaces and tunnels are extracted.
-const R=9.65, EXTRACTION_MARGIN=4.0, NX=85,NY=21,NZ=85, MINY=-3.6,MAXY=3.6; const WORLD_HALF=25.2; let wanderX=0,wanderZ=0; const WANDER_STEP=2;
+const R=9.65, EXTRACTION_MARGIN=4.0, NX=85,NY=21,NZ=85, MINY=-3.6,MAXY=3.6; const WORLD_HALF=25.2; let wanderX=-4.6,wanderZ=6.3; const WANDER_STEP=2;
 const field=new Float32Array(NX*NY*NZ),id=(x,y,z)=>x+NX*(y+NY*z);
 const xp=x=>(x/(NX-1)*2-1)*WORLD_HALF,yp=y=>MINY+y/(NY-1)*(MAXY-MINY),zp=z=>(z/(NZ-1)*2-1)*WORLD_HALF;
 const corners=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
@@ -286,13 +286,13 @@ function regenerate(){
 
  events.push({cycle,seed,triangles,buildMs:+buildMs.toFixed(1),operations:operations.map(o=>({...o}))});if(events.length>5)events.shift();
 }
-regenerate();
+regenerate();document.querySelector('#wanderCoords').textContent=wanderX.toFixed(1)+', '+wanderZ.toFixed(1);
 
 /* Waterworld v25 transport adaptation: same conservative donor-cell pairwise
    flux and depth/velocity arrays, now seated on Hermeticon's geological bed.
    A bounded local domain and explicit outlet replace Waterworld's glass bowl.
    Render surface is separate from authoritative conserved transport. */
-const waterRoot=new T.Group();world.add(waterRoot);waterRoot.userData.worldDomain=true;
+const waterRoot=new T.Group();world.add(waterRoot);waterRoot.position.set(-wanderX,0,-wanderZ);waterRoot.userData.worldDomain=true;
 const WG=36,WN=WG*WG,WD=.205,WC=WD*WD;
 const depthField=new Float32Array(WN),velX=new Float32Array(WN),velZ=new Float32Array(WN);
 const nextDepth=new Float32Array(WN),nextVX=new Float32Array(WN),nextVZ=new Float32Array(WN);
@@ -324,11 +324,11 @@ waterMat.onBeforeCompile=shader=>{
 const waterPositions=new Float32Array(WN*18),waterGeo=new T.BufferGeometry();
 const waterNormals=new Float32Array(WN*18);for(let i=1;i<waterNormals.length;i+=3)waterNormals[i]=1;waterGeo.setAttribute('normal',new T.BufferAttribute(waterNormals,3));
 waterGeo.setAttribute('position',new T.BufferAttribute(waterPositions,3).setUsage(T.DynamicDrawUsage));
-const waterMesh=new T.Mesh(waterGeo,waterMat);waterMesh.name='waterworld:surface';waterMesh.frustumCulled=false;waterRoot.add(waterMesh);
+const waterMesh=new T.Mesh(waterGeo,waterMat);waterMesh.name='waterworld:surface';waterMesh.userData.worldDomain=true;waterMesh.frustumCulled=false;waterRoot.add(waterMesh);
 const waterCloudMat=new T.PointsMaterial({color:0x7beeff,size:.12,sizeAttenuation:true,transparent:true,opacity:.9,depthWrite:false});
 const MAX_DROPS=440,dropPositions=new Float32Array(MAX_DROPS*3),dropGeo=new T.BufferGeometry();
 dropGeo.setAttribute('position',new T.BufferAttribute(dropPositions,3).setUsage(T.DynamicDrawUsage));
-const dropMesh=new T.Points(dropGeo,waterCloudMat);dropMesh.frustumCulled=false;waterRoot.add(dropMesh);
+const dropMesh=new T.Points(dropGeo,waterCloudMat);dropMesh.frustumCulled=false;dropMesh.userData.worldDomain=true;waterRoot.add(dropMesh);
 const drops=[];let emitted=0,collected=0,lost=0,drained=0,waterTime=0,waterAccum=0,emissionAccum=0,transportSteps=0;
 const DROP_VOLUME=.042,EMISSION_RATE=65;
 const sourcePosition={x:transportSite.basin.x-.45,z:transportSite.basin.z,y:5.15};

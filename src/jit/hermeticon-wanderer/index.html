@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-scoop-v10';
+const BUILD='hermeticon-wanderer-runtime-eyes-v11';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -106,10 +106,10 @@ const field=new Float32Array(NX*NY*NZ),id=(x,y,z)=>x+NX*(y+NY*z);
 const xp=x=>(x/(NX-1)*2-1)*WORLD_HALF,yp=y=>MINY+y/(NY-1)*(MAXY-MINY),zp=z=>(z/(NZ-1)*2-1)*WORLD_HALF;
 const corners=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
 const tets=[[0,5,1,6],[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6]];
-let apertureUniform=null;const terrainMaterial=new T.MeshStandardMaterial({color:0x927963,roughness:.92,metalness:.02,side:T.DoubleSide,flatShading:true,onBeforeCompile:shader=>{shader.uniforms.apertureRadius={value:9.72};shader.uniforms.apertureOffset={value:new T.Vector3()};apertureUniform=shader.uniforms.apertureOffset;shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vAperturePosition;\nuniform vec3 apertureOffset;');shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvAperturePosition=position-apertureOffset;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vAperturePosition;\nuniform float apertureRadius;\nuniform vec3 apertureOffset;');shader.fragmentShader=shader.fragmentShader.replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\nif(dot(vAperturePosition,vAperturePosition)>apertureRadius*apertureRadius) discard;')}});
+const apertureEyes={compileCount:0,vertexHook:false,fragmentHook:false,shaderRadius:9.72,compileFailures:[],lastCompiledAt:null};let apertureUniform=null;const terrainMaterial=new T.MeshStandardMaterial({color:0x927963,roughness:.92,metalness:.02,side:T.DoubleSide,flatShading:true,onBeforeCompile:shader=>{shader.uniforms.apertureRadius={value:9.72};shader.uniforms.apertureOffset={value:new T.Vector3()};apertureUniform=shader.uniforms.apertureOffset;apertureEyes.compileCount++;apertureEyes.lastCompiledAt=performance.now();apertureEyes.vertexHook=shader.vertexShader.includes('#include <begin_vertex>');apertureEyes.fragmentHook=shader.fragmentShader.includes('#include <clipping_planes_fragment>');if(!apertureEyes.vertexHook||!apertureEyes.fragmentHook)apertureEyes.compileFailures.push('Missing shader injection anchor');shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vAperturePosition;\nuniform vec3 apertureOffset;');shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvAperturePosition=position-apertureOffset;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vAperturePosition;\nuniform float apertureRadius;\nuniform vec3 apertureOffset;');shader.fragmentShader=shader.fragmentShader.replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\nif(dot(vAperturePosition,vAperturePosition)>apertureRadius*apertureRadius) discard;')}});
 const geo=new T.BufferGeometry(),solid=new T.Mesh(geo,terrainMaterial);solid.name='terrain:signed-volume';solid.receiveShadow=true;solid.userData.worldDomain=true;world.add(solid);
 
-let cycle=0,seed=741,triangles=0,fieldMin=0,fieldMax=0,solidCount=0,voidCount=0,buildMs=0;
+let geometryEyes={};let cycle=0,seed=741,triangles=0,fieldMin=0,fieldMax=0,solidCount=0,voidCount=0,buildMs=0;
 let operations=[],events=[];
 const rand=(n)=>{let v=Math.sin(n*127.1+seed*311.7)*43758.5453;return v-Math.floor(v)};
 function regenerate(){
@@ -139,6 +139,17 @@ function regenerate(){
  }
  geo.setAttribute('position',new T.Float32BufferAttribute(pos,3));geo.computeVertexNormals();geo.computeBoundingSphere();
  triangles=pos.length/9;buildMs=performance.now()-start;solid.position.set(-wanderX,0,-wanderZ);if(apertureUniform)apertureUniform.value.set(wanderX,0,wanderZ);
+ // Independent CPU witness of what the GPU clipping should receive.
+ let outside=0,inside=0,nearBoundary=0,minDistance=Infinity,maxDistance=0,edgeCells=0;
+ const apertureR=9.72,cellX=2*WORLD_HALF/(NX-1),cellZ=2*WORLD_HALF/(NZ-1);
+ for(let i=0;i<pos.length;i+=3){const dx=pos[i]-wanderX,dy=pos[i+1],dz=pos[i+2];const d=Math.hypot(dx,dy,dz);minDistance=Math.min(minDistance,d);maxDistance=Math.max(maxDistance,d);if(d>apertureR)outside++;else inside++;if(Math.abs(d-apertureR)<Math.max(cellX,cellZ))nearBoundary++}
+ // Extraction is cell-origin culled: ensure the full sphere is inside the generated cell neighborhood.
+ const effectiveMargin=EXTRACTION_MARGIN-Math.max(cellX,cellZ);
+ const nearestFieldEdge=Math.min(WORLD_HALF-Math.abs(wanderX),WORLD_HALF-Math.abs(wanderZ));
+ const uniformOffset=apertureUniform?.value;
+ const offsetError=uniformOffset?Math.hypot(uniformOffset.x-wanderX,uniformOffset.y,uniformOffset.z-wanderZ):null;
+ geometryEyes={insideVertices:inside,outsideVertices:outside,nearApertureVertices:nearBoundary,minVertexRadius:round(minDistance,3),maxVertexRadius:round(maxDistance,3),cellSize:[round(cellX,3),round(cellZ,3)],effectiveExtractionMargin:round(effectiveMargin,3),nearestFieldEdge:round(nearestFieldEdge,3),fieldEdgeClearance:round(nearestFieldEdge-apertureR,3),shaderOffsetError:offsetError===null?null:round(offsetError,5),worldTranslation:[-wanderX,0,-wanderZ],expectedUniformOffset:[wanderX,0,wanderZ],apertureRadius:apertureR};
+
  events.push({cycle,seed,triangles,buildMs:+buildMs.toFixed(1),operations:operations.map(o=>({...o}))});if(events.length>5)events.shift();
 }
 regenerate();
@@ -168,7 +179,15 @@ const round=(n,d=2)=>Number.isFinite(n)?+n.toFixed(d):null;
 function inspectWorld(){
  camera.updateMatrixWorld();world.updateMatrixWorld(true);
  const center=new T.Vector3(0,0,0).project(camera);
- const report={build:BUILD,wanderer:{x:wanderX,z:wanderZ,step:WANDER_STEP,history:wanderHistory.slice(),apertureRadius:9.72,mode:'vertex-initialized-fragment-sphere-scoop',extractionMargin:EXTRACTION_MARGIN,worldFieldStable:true},terrain:{kind:'3d-signed-field',dimensions:[NX,NY,NZ],samples:field.length,fieldRange:[fieldMin,fieldMax],solidSamples:solidCount,voidSamples:voidCount,mesh:{triangles,vertices:geo.attributes.position.count,doubleSided:true},cycle,seed,buildMs,operations,events},time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:1,contentsInstantiated:true},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:round(probeFrames?1000/(probeFrameMs/probeFrames):0)},containment:verifyContainment(),invariants:verifyInvariants(),simulation:{time:round(clock.time,3),steps:clock.steps,droppedSeconds:round(clock.droppedSeconds,3),fixedStep:STEP},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:[]};
+ const eyesWarnings=[];
+ if(!apertureEyes.compileCount)eyesWarnings.push('APERTURE_SHADER_NOT_COMPILED');
+ if(!apertureEyes.vertexHook||!apertureEyes.fragmentHook)eyesWarnings.push('APERTURE_SHADER_INJECTION_MISSING');
+ if(apertureEyes.compileFailures.length)eyesWarnings.push('APERTURE_SHADER_COMPILE_HOOK_FAILURE');
+ if(geometryEyes.effectiveExtractionMargin<geometryEyes.apertureRadius)eyesWarnings.push('EXTRACTION_MARGIN_INSIDE_APERTURE');
+ if(geometryEyes.fieldEdgeClearance<0)eyesWarnings.push('WORLD_FIELD_EDGE_INSIDE_APERTURE');
+ if(geometryEyes.shaderOffsetError!==null&&geometryEyes.shaderOffsetError>.001)eyesWarnings.push('APERTURE_UNIFORM_OFFSET_MISMATCH');
+ if(!geometryEyes.outsideVertices)eyesWarnings.push('NO_OUTSIDE_GEOMETRY_TO_TEST_CLIP');
+ const report={build:BUILD,runtimeEyes:{aperture:{...apertureEyes,compiled:apertureEyes.compileCount>0},geometry:geometryEyes,warnings:eyesWarnings,limits:'CPU geometry and shader-hook witness; does not prove GPU fragments were discarded. Screenshot remains visual evidence.'},wanderer:{x:wanderX,z:wanderZ,step:WANDER_STEP,history:wanderHistory.slice(),apertureRadius:9.72,mode:'vertex-initialized-fragment-sphere-scoop',extractionMargin:EXTRACTION_MARGIN,worldFieldStable:true},terrain:{kind:'3d-signed-field',dimensions:[NX,NY,NZ],samples:field.length,fieldRange:[fieldMin,fieldMax],solidSamples:solidCount,voidSamples:voidCount,mesh:{triangles,vertices:geo.attributes.position.count,doubleSided:true},cycle,seed,buildMs,operations,events},time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:1,contentsInstantiated:true},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:round(probeFrames?1000/(probeFrameMs/probeFrames):0)},containment:verifyContainment(),invariants:verifyInvariants(),simulation:{time:round(clock.time,3),steps:clock.steps,droppedSeconds:round(clock.droppedSeconds,3),fixedStep:STEP},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:eyesWarnings};
  probeReport=JSON.stringify(report,null,2);probeText.textContent=probeReport;return report;
 }
 probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};

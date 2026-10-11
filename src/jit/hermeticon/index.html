@@ -1,0 +1,338 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07101a"><title>Hermeticon · Chaotic Bead Vessel</title><style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:82px;right:10px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:118px 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px} #fpsRow{margin:-2px auto 0;text-align:center;color:#b9d4cc;font:11px ui-monospace,monospace;letter-spacing:.06em;pointer-events:none}#buildRow{display:flex;align-items:center;justify-content:center;gap:6px;margin:5px auto 0;pointer-events:auto;color:#a6b7b9;font:10px ui-monospace,monospace}#fresh{width:40px;height:40px;padding:0;min-height:40px;border:0;background:transparent;color:#c4b291;font-size:23px;cursor:pointer}#containmentAlarm{display:none;position:fixed;z-index:35;left:10px;right:10px;top:calc(65px + env(safe-area-inset-top));background:#531b19ee;color:#ffe9d7;border:2px solid #ff6955;border-radius:9px;padding:12px;font:700 12px/1.4 ui-monospace,monospace;white-space:pre-wrap;pointer-events:none}#containmentAlarm.on{display:block}#fieldControls{position:fixed;z-index:22;left:10px;right:10px;bottom:calc(105px + env(safe-area-inset-bottom));display:flex;gap:8px}#fieldControls button{flex:1;padding:11px 5px;font-size:11px;background:#102b38ee}#fieldControls .active{border-color:#b5e7d5;background:#31535b}</style></head><body><div id="stage"></div><div id="containmentAlarm" role="alert"></div><button id="probe" type="button">◉ INSPECT</button><div id="probePanel"><div id="probeActions"><button id="copyProbe">COPY REPORT</button><button id="closeProbe">CLOSE</button></div><div id="probeText"></div></div><div id="title"><h1>HERMETICON</h1><div id="tag">100,000 BEADS IN MOTION</div><div id="buildRow"><span id="build"></span><button id="fresh" type="button" aria-label="Fetch latest build" title="Fetch latest build">↻</button></div><div id="fpsRow">FPS · —</div></div><div id="fieldControls"><button id="impulse" type="button">✦ IMPULSE</button><button id="spawnPhage" type="button">🦠 PHAGE</button><button id="gravityMode">◎ GRAVITY · STRONG</button></div><div id="hud"><div id="status">EMPTY VESSEL · ORBIT / PINCH TO EXPLORE</div></div><div id="error"></div><script>
+(function(){
+ const el=document.getElementById('error');
+ function fatal(error){
+  const message=String(error&&error.stack||error&&error.message||error||'Unknown error');
+  const report=['BAUBLE FAILED TO WAKE',message,'URL: '+location.href,'Time: '+new Date().toISOString()].join('\n');
+  el.replaceChildren();
+  el.style.cssText='position:fixed;z-index:9999;top:15%;bottom:12%;left:12px;right:12px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#211a20;color:#ffe1d6;padding:16px;border:2px solid #ff9784;border-radius:12px;font:13px/1.5 monospace';
+  const heading=document.createElement('div');heading.textContent=report;el.append(heading);
+  const button=document.createElement('button');button.textContent='COPY ERROR';button.style.cssText='display:block;width:100%;min-height:56px;margin:14px 0;font:700 17px system-ui';el.append(button);
+  const manual=document.createElement('textarea');manual.value=report;manual.readOnly=true;manual.style.cssText='display:block;width:100%;min-height:110px;font:12px monospace';el.append(manual);
+  button.onclick=async()=>{try{await navigator.clipboard.writeText(report);button.textContent='COPIED'}catch(_){manual.focus();manual.select();button.textContent='SELECTED — TAP COPY IN MENU'}};
+ }
+ window.BaubleFatal=fatal;
+ addEventListener('error',e=>fatal(e.error||e.message));
+ addEventListener('unhandledrejection',e=>fatal(e.reason));
+})();
+</script><script type="module">
+import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+// One canonical build identity: UI and inspection report share this constant.
+const BUILD='hermeticon-v15-fps-lifecycle';
+document.querySelector('#build').textContent=BUILD;
+document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
+
+
+try {
+const scene=new T.Scene();scene.background=new T.Color(0x06101b);scene.fog=new T.FogExp2(0x071827,.012);
+const world=new T.Group();scene.add(world);
+const renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.38;document.querySelector('#stage').append(renderer.domElement);
+const camera=new T.PerspectiveCamera(42,1,.1,150);scene.add(new T.HemisphereLight(0x82c6dc,0x17202d,1.5));const sun=new T.DirectionalLight(0xffc77e,2.4);sun.position.set(-7,13,7);scene.add(sun);const blue=new T.PointLight(0x2cbed7,95,36);blue.position.set(2,-2,2);scene.add(blue);
+const M=(color,metalness=.1,roughness=.65,extra={})=>new T.MeshStandardMaterial({color,metalness,roughness,...extra});
+const brass=M(0xb78b4e,.78,.3),bright=M(0xf2cb7e,.45,.3),rock=M(0x242b33,.08,.94),basalt=M(0x3c4449,.04,.9),green=M(0x467b50,.08,.75),leaf=M(0x85a767,.04,.7),cyan=new T.MeshBasicMaterial({color:0x42d7dc}),purple=new T.MeshBasicMaterial({color:0xb06fe6}),glow=new T.MeshBasicMaterial({color:0xffc678}),glass=new T.MeshPhysicalMaterial({color:0x9dcdd7,transparent:true,opacity:.17,metalness:.05,roughness:.12,depthWrite:false,side:T.DoubleSide});
+function put(parent,geo,material,x=0,y=0,z=0){const o=new T.Mesh(geo,material);o.position.set(x,y,z);parent.add(o);return o}
+function ball(p,r,m,x,y,z){return put(p,new T.SphereGeometry(r,12,8),m,x,y,z)}
+function cyl(p,r1,r2,h,m,x,y,z,n=12){return put(p,new T.CylinderGeometry(r1,r2,h,n),m,x,y,z)}
+function ring(p,r,t,m,x,y,z){const o=put(p,new T.TorusGeometry(r,t,7,48),m,x,y,z);o.rotation.x=Math.PI/2;return o}
+function beam(a,b,r,m,p=world){const v=new T.Vector3(...a),w=new T.Vector3(...b),d=w.clone().sub(v),o=put(p,new T.CylinderGeometry(r,r,d.length(),7),m,...v.clone().add(w).multiplyScalar(.5).toArray());o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),d.normalize());return o}
+
+const BAUBLE_R=10.25,INNER_R=BAUBLE_R-.18;
+const envelope=new T.Mesh(new T.SphereGeometry(BAUBLE_R,72,48),new T.MeshPhysicalMaterial({color:0xa0dce2,metalness:0,roughness:.08,transparent:true,opacity:.055,depthWrite:false,side:T.FrontSide}));world.add(envelope);
+const innerGlass=new T.Mesh(new T.SphereGeometry(INNER_R,72,48),new T.MeshPhysicalMaterial({color:0x9dcdd7,metalness:0,roughness:.09,transparent:true,opacity:.035,depthWrite:false,side:T.BackSide}));world.add(innerGlass);
+const equator=put(world,new T.TorusGeometry(BAUBLE_R,.095,10,120),brass);equator.rotation.x=Math.PI/2;
+for(const y of [-.15,.15]){const trim=put(world,new T.TorusGeometry(BAUBLE_R,.021,6,120),bright,0,y,0);trim.rotation.x=Math.PI/2}
+for(let i=0;i<8;i++){const a=i*Math.PI/4;ball(world,.12,bright,Math.cos(a)*BAUBLE_R,0,Math.sin(a)*BAUBLE_R)}
+
+// Containment verifier: geometry in scene coordinates, independent of camera/gravity.
+// Shell hardware is intentionally outside the INNER radius; only explicitly marked
+// objects may exceed the vessel. Mark external designs with userData.allowOutsideBauble=true.
+const shellParts=[envelope,innerGlass,equator];
+world.traverse(o=>{if(o.isMesh&&o!==envelope&&o!==innerGlass&&o!==equator&&
+ (o.geometry?.type==='TorusGeometry'||o.geometry?.type==='SphereGeometry')&&
+ o.material===bright)shellParts.push(o)});
+for(const o of shellParts)o.userData.allowOutsideBauble=true;
+const containment={checks:0,violations:[],maxOverflow:0,checkedObjects:0,lastCheckMs:0};
+const alarm=document.querySelector('#containmentAlarm');
+const scratchPoint=new T.Vector3(),scratchMatrix=new T.Matrix4();
+function verifyContainment(){
+ world.updateMatrixWorld(true);
+ const failures=[];let checked=0,maxOverflow=0;
+ world.traverse(o=>{
+  if(!o.isMesh||!o.visible||o.userData.allowOutsideBauble||!o.geometry)return;
+  const g=o.geometry;if(!g.boundingBox)g.computeBoundingBox();
+  if(!g.boundingBox)return;
+  const count=o.isInstancedMesh?o.count:1;
+  for(let k=0;k<count;k++){
+   if(o.isInstancedMesh){o.getMatrixAt(k,scratchMatrix);scratchMatrix.premultiply(o.matrixWorld)}
+   else scratchMatrix.copy(o.matrixWorld);
+   // Test actual vertices, not bounding boxes (which falsely flag spherical shells).
+   const positions=g.getAttribute('position');if(!positions)continue;
+   let overflow=0;
+   for(let v=0;v<positions.count;v++){
+    scratchPoint.fromBufferAttribute(positions,v).applyMatrix4(scratchMatrix);
+    overflow=Math.max(overflow,scratchPoint.length()-INNER_R);
+   }
+   checked++;
+   if(overflow>.025){maxOverflow=Math.max(maxOverflow,overflow);if(failures.length<12)failures.push({object:o.name||o.uuid.slice(0,8),instance:o.isInstancedMesh?k:null,overflow:round(overflow,3)})}
+  }
+ });
+ containment.checks++;containment.violations=failures;containment.maxOverflow=round(maxOverflow,3);containment.checkedObjects=checked;containment.lastCheckMs=Math.round(performance.now());
+ updateAlarm();
+ return containment;
+}
+globalThis.BaubleVerifyContainment=verifyContainment;
+
+
+// Shared JIT machinery. Register world-specific checks; never silently swallow failures.
+const STEP=.008,MAX_STEPS=7,MAX_FRAME=.05;
+const clock={time:0,steps:0,droppedSeconds:0,accumulator:0};
+const invariantChecks=new Map();
+const invariantState={checks:0,failures:[],lastCheckMs:0};
+function registerInvariant(name,check){if(typeof name!=='string'||!name||typeof check!=='function')throw Error('Invalid invariant registration');invariantChecks.set(name,check);return()=>invariantChecks.delete(name)}
+function verifyInvariants(){
+ const failures=[];
+ for(const [name,check] of invariantChecks){
+  try{const result=check();if(result!==true&&result!==undefined&&result!==null){if(result===false||result?.ok===false)failures.push({name,detail:result?.detail||'Invariant failed'})}}
+  catch(e){failures.push({name,detail:String(e?.message||e)})}
+ }
+ invariantState.checks++;invariantState.failures=failures;invariantState.lastCheckMs=Math.round(performance.now());
+ return invariantState;
+}
+
+// Single instantiation boundary: set true to restore the entire Hermeticon payload.
+const INSTANTIATE_HERMETICON=false;
+const hermeticon=INSTANTIATE_HERMETICON?(()=>{
+const N=100000,R=9.83,G=44,C=2*R/G,xyz=new Float32Array(N*3),v=new Float32Array(N*3),rgb=new Float32Array(N*3),head=new Int32Array(G*G*G);
+let seed=918273,contacts=0,bounces=0,ticks=0,mode=2,captured=0,impulses=0,lastImpulseStep=-1,lastImpulseBeads=0,lastImpulseMomentum=0;const impulseHistory=[];const swallowed=new Uint8Array(N);const phages=[];let phageConsumed=0,phageSpawns=0,phageCaptures=0,phageDigestions=0,phageBounces=0,peakFeedingPerStep=0,exhaustTotal=0,exhaustReconsumed=0,escapeAttempts=0,escapeSuccesses=0,escapeFailures=0,thrustImpulseTotal=0;const events=[];const log=(type,data)=>{events.push({step:ticks,type,...data});if(events.length>80)events.shift()};const exhaustFlag=new Uint8Array(N);const exhaustFree=[];const visibleExhaust=[];let colorsDirty=false;const exhaustColor=new T.Color(0xffdf38);const BBV=.095**3,CORE=.3**3,EXHAUST_SPEED=18,ESCAPE_RANGE=5,ESCAPE_COOLDOWN=.45;const FEED_RATE=20,DIGEST_TIME=2;let feedCursor=0;const feedingCellHeads=new Int32Array(G*G*G),feedingNodePhage=[],feedingNodeNext=[];let feedingCandidates=0,feedingCells=0,feedingContacts=0,feedingNodes=0;const timings={samples:0,phageMs:0,gridMs:0,beadMs:0,feedingMs:0,totalMs:0,maxStepMs:0,stepSamples:[],feedCandidateSamples:[]};let stepFeedCandidates=0,stepFeedContacts=0;const rollingPhysics={phage:0,grid:0,bead:0,total:0,samples:0,max:0};
+const beadRadius=.095,phageBaseRadius=.3,phageGeo=new T.IcosahedronGeometry(1,2),phageMat=new T.MeshStandardMaterial({color:0xf22c43,roughness:.48,metalness:.08,emissive:0x4d020b,emissiveIntensity:.22}),hunterMat=phageMat.clone();hunterMat.color.setHex(0xeb24bf);hunterMat.emissive.setHex(0x590045);const HUNT_RANGE=6.5,HUNT_COOLDOWN=.55;let huntAttempts=0,huntExhaust=0,huntCaptures=0;
+const rand=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+for(let i=0;i<N;i++){const j=i*3;let x,y,z;do{x=(rand()*2-1)*8.8;y=(rand()*2-1)*8.8;z=(rand()*2-1)*8.8}while(x*x+y*y+z*z>76);xyz[j]=x;xyz[j+1]=y;xyz[j+2]=z;v[j]=(rand()-.5)*9;v[j+1]=(rand()-.5)*9;v[j+2]=(rand()-.5)*9;const c=new T.Color().setHSL(.47+rand()*.27,.8,.6);rgb[j]=c.r;rgb[j+1]=c.g;rgb[j+2]=c.b}
+const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(xyz,3).setUsage(T.DynamicDrawUsage));geo.setAttribute('color',new T.BufferAttribute(rgb,3));
+const cloud=new T.Points(geo,new T.PointsMaterial({size:.065,vertexColors:true,sizeAttenuation:true}));cloud.frustumCulled=false;world.add(cloud);
+const exhaustOverlayArray=new Float32Array(4096*3),exhaustOverlayGeo=new T.BufferGeometry();exhaustOverlayGeo.setAttribute('position',new T.BufferAttribute(exhaustOverlayArray,3).setUsage(T.DynamicDrawUsage));exhaustOverlayGeo.setDrawRange(0,0);const exhaustOverlay=new T.Points(exhaustOverlayGeo,new T.PointsMaterial({color:0xffe64d,size:.42,sizeAttenuation:true,depthWrite:false}));exhaustOverlay.frustumCulled=false;world.add(exhaustOverlay);
+const gravityButton=document.querySelector('#gravityMode'),modes=['ZERO G','MICROGRAVITY','STRONG','OVERWHELMING','BLACK HOLE'];
+function labels(){gravityButton.textContent='◎ GRAVITY · '+modes[mode];gravityButton.classList.toggle('active',mode>2)}
+gravityButton.onclick=()=>{mode=(mode+1)%modes.length;log('gravity',{mode:modes[mode]});labels()};labels();
+document.querySelector('#spawnPhage').onclick=()=>{
+let x,y,z;do{x=(rand()*2-1)*8.5;y=(rand()*2-1)*8.5;z=(rand()*2-1)*8.5}while(x*x+y*y+z*z>(R-phageBaseRadius-.1)**2);
+const mesh=new T.Mesh(phageGeo,phageMat);mesh.position.set(x,y,z);mesh.scale.setScalar(phageBaseRadius);world.add(mesh);
+phages.push({id:phageSpawns+1,x,y,z,vx:(rand()-.5)*7,vy:(rand()-.5)*7,vz:(rand()-.5)*7,r:phageBaseRadius,eaten:0,credit:0,feedingStep:0,peakFeedingStep:0,alive:true,host:null,digest:0,initialVolume:CORE,mesh,exhausted:0,escapes:0,escapeSuccesses:0,escapeFailures:0,cooldown:0,thrustImpulse:0,threat:null,escapeWatch:null,gravAcc:0,hunting:null,huntCooldown:0,huntBursts:0,huntExpelled:0,huntStartingEaten:0,huntCaptures:0});phageSpawns++;log('spawn',{id:phageSpawns});
+};
+document.querySelector('#impulse').onclick=()=>{
+let affected=0,momentum=0;
+for(let i=0;i<N;i++){if(swallowed[i])continue;const j=i*3,x=xyz[j],y=xyz[j+1],z=xyz[j+2],r=Math.hypot(x,y,z);
+if(r<3.5&&r>.0001){const kick=15*(1-r/3.5);v[j]+=x/r*kick;v[j+1]+=y/r*kick;v[j+2]+=z/r*kick;affected++;momentum+=kick}}
+log('impulse',{affected});impulses++;lastImpulseStep=ticks;lastImpulseBeads=affected;lastImpulseMomentum=momentum;
+impulseHistory.push({step:ticks,affected,momentum:+momentum.toFixed(2)});if(impulseHistory.length>12)impulseHistory.shift();
+};
+function advance(dt){
+const sampled=(ticks&63)===0,stepStart=sampled?performance.now():0;
+stepFeedCandidates=0;stepFeedContacts=0;
+for(const p of phages){if(!p.alive)continue;
+p.feedingStep=0;p.credit=Math.min(1,p.credit+FEED_RATE*dt);p.cooldown=Math.max(0,p.cooldown-dt);p.huntCooldown=Math.max(0,p.huntCooldown-dt);
+const r=Math.hypot(p.x,p.y,p.z)+1e-6,rs=r*r;
+let a=(mode===0?0:mode===1?.3:mode===2?9:mode===3?105:230)/(1+rs*(mode<=2?.12:mode===3?.055:.025));
+if(mode===3&&r<1.7)a=-125*(1.7-r);
+a=Math.max(-500,Math.min(500,a));p.gravAcc=a;
+p.vx-=p.x/r*a*dt;p.vy-=p.y/r*a*dt;p.vz-=p.z/r*a*dt;
+const speed=Math.hypot(p.vx,p.vy,p.vz),cap=mode===4?85:mode===3?42:26;
+if(speed>cap){p.vx*=cap/speed;p.vy*=cap/speed;p.vz*=cap/speed}
+// Escape: only from a >=2x predator with approaching relative motion and close predicted approach.
+let threat=null,nearest=Infinity,closing=0;
+for(const q of phages){if(!q.alive||q===p||q.r<2*p.r)continue;
+const dx=q.x-p.x,dy=q.y-p.y,dz=q.z-p.z,d=Math.hypot(dx,dy,dz);if(d>ESCAPE_RANGE+p.r+q.r||d<1e-5)continue;
+const approach=-((q.vx-p.vx)*dx+(q.vy-p.vy)*dy+(q.vz-p.vz)*dz)/d;
+if(approach<=0)continue;
+const t=Math.min(1.2,Math.max(0,(d-p.r-q.r)/approach));
+const cx=dx+(q.vx-p.vx)*t,cy=dy+(q.vy-p.vy)*t,cz=dz+(q.vz-p.vz)*t;
+if(Math.hypot(cx,cy,cz)>p.r+q.r+1.5)continue;
+if(d<nearest){nearest=d;threat=q;closing=approach}
+}
+p.threat=threat?.id??null;
+if(p.escapeWatch){const w=p.escapeWatch;if(!phages.some(q=>q.id===w.id&&q.alive)||nearest>w.startDistance+2||ticks>=w.until){escapeSuccesses++;p.escapeSuccesses++;log('escape-success',{id:p.id,threat:w.id});p.escapeWatch=null}}
+if(threat&&p.cooldown===0){
+const reserve=CORE*.35,available=Math.max(0,p.initialVolume+p.eaten*BBV-reserve);
+if(available>=BBV){
+const dx=threat.x-p.x,dy=threat.y-p.y,dz=threat.z-p.z,d=Math.hypot(dx,dy,dz);
+const ux=dx/d,uy=dy/d,uz=dz/d;
+const count=Math.min(4,Math.floor(available/BBV),exhaustFree.length);
+if(count>0){
+const mass=p.initialVolume+p.eaten*BBV,dm=count*BBV;
+p.initialVolume-=dm;p.r=Math.cbrt(p.initialVolume+p.eaten*BBV);
+const dv=dm/(mass-dm)*EXHAUST_SPEED;
+p.vx-=ux*dv;p.vy-=uy*dv;p.vz-=uz*dv;
+for(let k=0;k<count;k++){const i=exhaustFree.pop(),j=i*3;
+const spread=(k-(count-1)/2)*.07;
+const ex=p.x+ux*(p.r+beadRadius+.03),ey=p.y+uy*(p.r+beadRadius+.03),ez=p.z+uz*(p.r+beadRadius+.03);
+const rr=Math.hypot(ex,ey,ez),scale=Math.min(1,(R-.01)/Math.max(rr,1e-6));
+xyz[j]=ex*scale;xyz[j+1]=ey*scale;xyz[j+2]=ez*scale;
+v[j]=p.vx+ux*EXHAUST_SPEED+spread;v[j+1]=p.vy+uy*EXHAUST_SPEED;v[j+2]=p.vz+uz*EXHAUST_SPEED;
+rgb[j]=exhaustColor.r;rgb[j+1]=exhaustColor.g;rgb[j+2]=exhaustColor.b;colorsDirty=true;colorsDirty=true;
+swallowed[i]=0;exhaustFlag[i]=1;visibleExhaust.push(i);phageConsumed--;exhaustTotal++;
+}
+geo.attributes.color.needsUpdate=true;
+p.cooldown=ESCAPE_COOLDOWN;p.escapes++;escapeAttempts++;p.exhausted+=count;p.thrustImpulse+=dm*EXHAUST_SPEED;thrustImpulseTotal+=dm*EXHAUST_SPEED;
+if(!p.escapeWatch)p.escapeWatch={id:threat.id,startDistance:nearest,until:ticks+Math.ceil(2/STEP)};
+log('escape',{id:p.id,threat:threat.id,range:+nearest.toFixed(2),closing:+closing.toFixed(2),ejected:count,deltaV:+dv.toFixed(4)});
+}
+}}
+// Hunting is an intent state, not a thrust flash. Threat response always wins.
+let prey=null,preyDistance=Infinity;
+if(!threat&&p.cooldown===0&&p.initialVolume+p.eaten*BBV>CORE*.35+4*BBV){
+ for(const q of phages){if(!q.alive||q===p||p.r<2*q.r)continue;
+  const dx=q.x-p.x,dy=q.y-p.y,dz=q.z-p.z,d=Math.hypot(dx,dy,dz);
+  if(d>HUNT_RANGE+p.r+q.r||d<.0001)continue;
+  if(d<preyDistance){prey=q;preyDistance=d}
+ }
+}
+if(threat||!prey){if(p.hunting!==null){log('hunt-end',{id:p.id,prey:p.hunting,reason:threat?'threat':'no-eligible-prey'});p.hunting=null}}
+else {
+ if(p.hunting!==prey.id){p.hunting=prey.id;p.huntStartingEaten=p.eaten;log('hunt-start',{id:p.id,prey:prey.id,range:+preyDistance.toFixed(2)})}
+ if(p.huntCooldown===0){
+  const reserve=CORE*.35,available=p.initialVolume+p.eaten*BBV-reserve;
+  const count=Math.min(4,Math.floor(available/BBV),exhaustFree.length);
+  if(count>0){
+   const dx=prey.x-p.x,dy=prey.y-p.y,dz=prey.z-p.z,d=Math.hypot(dx,dy,dz);
+   // Exhaust points away from prey; reaction thrust points toward prey.
+   const ux=-dx/d,uy=-dy/d,uz=-dz/d;
+   const mass=p.initialVolume+p.eaten*BBV,dm=count*BBV;
+   p.initialVolume-=dm;p.r=Math.cbrt(p.initialVolume+p.eaten*BBV);
+   const dv=dm/(mass-dm)*EXHAUST_SPEED;
+   p.vx-=ux*dv;p.vy-=uy*dv;p.vz-=uz*dv;
+   for(let k=0;k<count;k++){
+    const i=exhaustFree.pop(),j=i*3,spread=(k-(count-1)/2)*.07;
+    const ex=p.x+ux*(p.r+beadRadius+.03),ey=p.y+uy*(p.r+beadRadius+.03),ez=p.z+uz*(p.r+beadRadius+.03);
+    const rr=Math.hypot(ex,ey,ez),scale=Math.min(1,(R-.01)/Math.max(rr,1e-6));
+    xyz[j]=ex*scale;xyz[j+1]=ey*scale;xyz[j+2]=ez*scale;
+    v[j]=p.vx+ux*EXHAUST_SPEED+spread;v[j+1]=p.vy+uy*EXHAUST_SPEED;v[j+2]=p.vz+uz*EXHAUST_SPEED;
+    rgb[j]=exhaustColor.r;rgb[j+1]=exhaustColor.g;rgb[j+2]=exhaustColor.b;
+    swallowed[i]=0;exhaustFlag[i]=1;visibleExhaust.push(i);phageConsumed--;exhaustTotal++;huntExhaust++;
+   }
+   colorsDirty=true;p.huntCooldown=HUNT_COOLDOWN;p.huntBursts++;p.huntExpelled+=count;
+   huntAttempts++;p.exhausted+=count;p.thrustImpulse+=dm*EXHAUST_SPEED;thrustImpulseTotal+=dm*EXHAUST_SPEED;
+   log('hunt-thrust',{id:p.id,prey:prey.id,range:+d.toFixed(2),ejected:count,deltaV:+dv.toFixed(4)});
+  }
+ }
+}
+p.mesh.material=p.hunting!==null?hunterMat:phageMat;
+p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;const d=Math.hypot(p.x,p.y,p.z),limit=R-p.r-.01;if(d>limit&&d>0){const nx=p.x/d,ny=p.y/d,nz=p.z/d,dot=p.vx*nx+p.vy*ny+p.vz*nz;p.x=nx*limit;p.y=ny*limit;p.z=nz*limit;if(dot>0){p.vx-=1.9*dot*nx;p.vy-=1.9*dot*ny;p.vz-=1.9*dot*nz}}p.mesh.position.set(p.x,p.y,p.z)}
+// Phage contact: comparable sizes rebound; >=2:1 radius captures on contact.
+for(let a=0;a<phages.length;a++){const p=phages[a];if(!p.alive)continue;for(let b=a+1;b<phages.length;b++){const q=phages[b];if(!q.alive)continue;const dx=q.x-p.x,dy=q.y-p.y,dz=q.z-p.z,d=Math.hypot(dx,dy,dz);if(d>=p.r+q.r)continue;const big=p.r>=q.r?p:q,small=big===p?q:p;if(big.r>=2*small.r){small.alive=false;small.host=big.id;if(big.hunting===small.id){big.huntCaptures++;huntCaptures++;log('hunt-capture',{id:big.id,prey:small.id,netBeads:big.eaten-big.huntStartingEaten-big.huntExpelled})}small.hunting=null;small.mesh.material=phageMat;small.digest=0;if(small.escapeWatch){escapeFailures++;small.escapeFailures++;small.escapeWatch=null}log('capture',{predator:big.id,prey:small.id});small.mesh.visible=true;phageCaptures++;continue}
+const nx=d>1e-8?dx/d:1,ny=d>1e-8?dy/d:0,nz=d>1e-8?dz/d:0,overlap=p.r+q.r-d,shift=overlap*.5+.0001;
+p.x-=nx*shift;p.y-=ny*shift;p.z-=nz*shift;q.x+=nx*shift;q.y+=ny*shift;q.z+=nz*shift;
+const rel=(q.vx-p.vx)*nx+(q.vy-p.vy)*ny+(q.vz-p.vz)*nz;
+if(rel<0){const imp=-.95*rel;p.vx-=imp*nx;p.vy-=imp*ny;p.vz-=imp*nz;q.vx+=imp*nx;q.vy+=imp*ny;q.vz+=imp*nz}
+p.mesh.position.set(p.x,p.y,p.z);q.mesh.position.set(q.x,q.y,q.z);phageBounces++;
+}}
+for(const p of phages){if(p.alive||p.host===null)continue;const host=phages.find(q=>q.id===p.host);if(!host)continue;
+const before=p.digest;p.digest=Math.min(1,p.digest+dt/DIGEST_TIME);
+const transferred=(p.initialVolume+p.eaten*beadRadius**3)*(p.digest-before);
+host.initialVolume+=transferred;host.r=Math.cbrt(host.initialVolume+host.eaten*beadRadius**3);host.mesh.scale.setScalar(host.r);
+const offset=host.r+p.r*(1-p.digest)*.6;p.mesh.position.set(host.x+offset,host.y,host.z);p.mesh.scale.setScalar(p.r*(1-p.digest));
+if(p.digest>=1&&!p.digested){p.mesh.visible=false;p.digested=true;phageDigestions++;log('digested',{id:p.id,host:p.host})}
+}
+const phageEnd=sampled?performance.now():0;
+// Index each eligible phage into all grid cells intersecting its contact AABB.
+// Exact spherical overlap is still checked per bead; radius growth happens after feeding.
+feedingCellHeads.fill(-1);feedingNodePhage.length=0;feedingNodeNext.length=0;
+for(let pi=0;pi<phages.length;pi++){const p=phages[pi];if(!p.alive||p.credit<1)continue;
+ const reach=p.r+beadRadius;
+ const loX=Math.max(0,Math.min(G-1,Math.floor((p.x-reach+R)/C))),hiX=Math.max(0,Math.min(G-1,Math.floor((p.x+reach+R)/C)));
+ const loY=Math.max(0,Math.min(G-1,Math.floor((p.y-reach+R)/C))),hiY=Math.max(0,Math.min(G-1,Math.floor((p.y+reach+R)/C)));
+ const loZ=Math.max(0,Math.min(G-1,Math.floor((p.z-reach+R)/C))),hiZ=Math.max(0,Math.min(G-1,Math.floor((p.z+reach+R)/C)));
+ for(let a=loX;a<=hiX;a++)for(let b=loY;b<=hiY;b++)for(let c=loZ;c<=hiZ;c++){const cell=(a*G+b)*G+c,node=feedingNodePhage.length;feedingNodePhage.push(pi);feedingNodeNext.push(feedingCellHeads[cell]);feedingCellHeads[cell]=node}
+}
+feedingNodes=feedingNodePhage.length;feedingCells=feedingCellHeads.length;
+const gridEnd=sampled?performance.now():0;
+head.fill(-1);
+for(let i=0;i<N;i++){const j=i*3;if(swallowed[i])continue;let x=xyz[j],y=xyz[j+1],z=xyz[j+2],vx=v[j],vy=v[j+1],vz=v[j+2];
+vx+=(-z*.3+Math.sin(y+ticks*.01))*.1*dt;vy+=(x*.3+Math.cos(z+ticks*.01))*.1*dt;vz+=(y*.3+Math.sin(x+ticks*.01))*.1*dt;
+const radiusSq=x*x+y*y+z*z,radius=Math.sqrt(radiusSq)+1e-6;
+let fieldAcc=(mode===0?0:mode===1?.3:mode===2?9:mode===3?105:230)/(1+radiusSq*(mode<=2?.12:mode===3?.055:.025));
+if(mode===3&&radius<1.7)fieldAcc=-125*(1.7-radius);
+fieldAcc=Math.max(-500,Math.min(500,fieldAcc));vx-=x/radius*fieldAcc*dt;vy-=y/radius*fieldAcc*dt;vz-=z/radius*fieldAcc*dt;
+const speed=Math.hypot(vx,vy,vz),limit=mode===4?85:mode===3?42:26;if(speed>limit){vx*=limit/speed;vy*=limit/speed;vz*=limit/speed}
+x+=vx*dt;y+=vy*dt;z+=vz*dt;
+if(mode===4&&x*x+y*y+z*z<.3025){swallowed[i]=1;captured++;if(exhaustFlag[i])exhaustFlag[i]=0;xyz[j]=xyz[j+1]=xyz[j+2]=0;v[j]=v[j+1]=v[j+2]=0;continue}
+const d2=x*x+y*y+z*z;if(d2>R*R){const d=Math.sqrt(d2),nx=x/d,ny=y/d,nz=z/d,dot=vx*nx+vy*ny+vz*nz;x=nx*(R-.002);y=ny*(R-.002);z=nz*(R-.002);if(dot>0){vx-=1.96*dot*nx;vy-=1.96*dot*ny;vz-=1.96*dot*nz;bounces++}}
+let eaten=false;
+// Spatial broadphase: only phages indexed in this bead's cell.
+// Resolve multiple contacts by original rotating feed priority.
+const fa=Math.max(0,Math.min(G-1,Math.floor((x+R)/C))),fb=Math.max(0,Math.min(G-1,Math.floor((y+R)/C))),fc=Math.max(0,Math.min(G-1,Math.floor((z+R)/C)));
+const feedCell=(fa*G+fb)*G+fc;
+let winner=-1,bestPriority=phages.length;
+for(let node=feedingCellHeads[feedCell];node!==-1;node=feedingNodeNext[node]){
+ const pi=feedingNodePhage[node],p=phages[pi];if(!p.alive||p.credit<1)continue;
+ stepFeedCandidates++;
+ const dx=x-p.x,dy=y-p.y,dz=z-p.z,contact=p.r+beadRadius;
+ if(dx*dx+dy*dy+dz*dz<=contact*contact){stepFeedContacts++;const priority=(pi-feedCursor+phages.length)%phages.length;if(priority<bestPriority){winner=pi;bestPriority=priority}}
+}
+if(winner!==-1){const p=phages[winner];p.credit-=1;p.eaten++;p.feedingStep++;phageConsumed++;swallowed[i]=2;if(exhaustFlag[i]){exhaustReconsumed++;exhaustFlag[i]=0}exhaustFree.push(i);xyz[j]=xyz[j+1]=xyz[j+2]=0;v[j]=v[j+1]=v[j+2]=0;rgb[j]=rgb[j+1]=rgb[j+2]=0;colorsDirty=true;eaten=true}
+
+if(eaten)continue;
+xyz[j]=x;xyz[j+1]=y;xyz[j+2]=z;v[j]=vx;v[j+1]=vy;v[j+2]=vz;
+const a=Math.max(0,Math.min(G-1,((x+R)/C)|0)),b=Math.max(0,Math.min(G-1,((y+R)/C)|0)),c=Math.max(0,Math.min(G-1,((z+R)/C)|0)),h=(a*G+b)*G+c,k=head[h];
+if(k>=0){const q=k*3,dx=x-xyz[q],dy=y-xyz[q+1],dz=z-xyz[q+2],dd=dx*dx+dy*dy+dz*dz;if(dd>1e-9&&dd<.19*.19){const inv=1/Math.sqrt(dd),nx=dx*inv,ny=dy*inv,nz=dz*inv,rel=(vx-v[q])*nx+(vy-v[q+1])*ny+(vz-v[q+2])*nz;if(rel<0){const impulse=-.96*rel;v[j]+=impulse*nx;v[j+1]+=impulse*ny;v[j+2]+=impulse*nz;v[q]-=impulse*nx;v[q+1]-=impulse*ny;v[q+2]-=impulse*nz;contacts++}}}head[h]=i}
+for(const p of phages){if(!p.alive)continue;p.r=Math.cbrt(p.initialVolume+p.eaten*beadRadius**3);p.mesh.scale.setScalar(p.r);p.peakFeedingStep=Math.max(p.peakFeedingStep,p.feedingStep);peakFeedingPerStep=Math.max(peakFeedingPerStep,p.feedingStep)}
+if(phages.length)feedCursor=(feedCursor+1)%phages.length;
+feedingCandidates+=stepFeedCandidates;feedingContacts+=stepFeedContacts;
+if(sampled){const end=performance.now(),duration=end-stepStart;rollingPhysics.phage+=phageEnd-stepStart;rollingPhysics.grid+=gridEnd-phageEnd;rollingPhysics.bead+=end-gridEnd;rollingPhysics.total+=duration;rollingPhysics.samples++;rollingPhysics.max=Math.max(rollingPhysics.max,duration);timings.samples++;timings.phageMs+=phageEnd-stepStart;timings.gridMs+=gridEnd-phageEnd;timings.beadMs+=end-gridEnd;timings.totalMs+=duration;timings.maxStepMs=Math.max(timings.maxStepMs,duration);timings.stepSamples.push(duration);if(timings.stepSamples.length>256)timings.stepSamples.shift();timings.feedCandidateSamples.push(stepFeedCandidates);if(timings.feedCandidateSamples.length>256)timings.feedCandidateSamples.shift()}
+ticks++;geo.attributes.position.needsUpdate=true;if(colorsDirty){geo.attributes.color.needsUpdate=true;colorsDirty=false}let count=0,write=0;for(let k=0;k<visibleExhaust.length;k++){const i=visibleExhaust[k];if(!exhaustFlag[i])continue;visibleExhaust[write++]=i;if(count>=4096)continue;const j=i*3,q=count++*3;exhaustOverlayArray[q]=xyz[j];exhaustOverlayArray[q+1]=xyz[j+1];exhaustOverlayArray[q+2]=xyz[j+2]}visibleExhaust.length=write;exhaustOverlayGeo.setDrawRange(0,count);if(count)exhaustOverlayGeo.attributes.position.needsUpdate=true}
+function profile(){const n=timings.samples||1,ordered=timings.stepSamples.slice().sort((a,b)=>a-b),pct=p=>ordered.length?+(ordered[Math.min(ordered.length-1,Math.floor((ordered.length-1)*p))]).toFixed(3):null;return{sampleEverySteps:64,samples:timings.samples,meanStepMs:+(timings.totalMs/n).toFixed(3),p50StepMs:pct(.5),p95StepMs:pct(.95),maxStepMs:+timings.maxStepMs.toFixed(3),meanPhageMs:+(timings.phageMs/n).toFixed(3),meanFeedingGridMs:+(timings.gridMs/n).toFixed(3),meanBeadLoopMs:+(timings.beadMs/n).toFixed(3),lastStepFeedingCandidates:stepFeedCandidates,lastStepFeedingContacts:stepFeedContacts,totalFeedingCandidates:feedingCandidates,totalFeedingContacts:feedingContacts,indexedPhageCellEntries:feedingNodes,gridCells:feedingCells,activePhages:phages.filter(p=>p.alive).length,note:'Boundary-only sampling: no per-bead timer calls. Bead-loop includes feeding, collisions and integration; render not timed here.'}}
+function inspect(){let outside=0,energy=0,radial=Array(10).fill(0),radialMomentum=Array(10).fill(0),angular=[0,0,0],active=0;for(let i=0;i<N;i++){if(swallowed[i])continue;active++;const j=i*3,x=xyz[j],y=xyz[j+1],z=xyz[j+2],vx=v[j],vy=v[j+1],vz=v[j+2],r2=x*x+y*y+z*z;if(r2>R*R+.02)outside++;const shell=Math.min(9,Math.floor(Math.sqrt(r2)/R*10));radial[shell]++;if(r2>1e-8)radialMomentum[shell]+=(x*vx+y*vy+z*vz)/Math.sqrt(r2);energy+=vx*vx+vy*vy+vz*vz;angular[0]+=y*vz-z*vy;angular[1]+=z*vx-x*vz;angular[2]+=x*vy-y*vx}return{count:N,active,captured,phageConsumed,phageSpawns,phageCaptures,phageDigestions,phageBounces,peakFeedingPerStep,exhaustTotal,exhaustReconsumed,huntAttempts,huntExhaust,huntCaptures,activeHunters:phages.filter(p=>p.alive&&p.hunting!==null).length,yellowBBsActive:exhaustFlag.reduce((a,b)=>a+b,0),escapeAttempts,escapeSuccesses,escapeFailures,thrustImpulseTotal:+thrustImpulseTotal.toFixed(4),events:events.slice(),material:{phageVolumeUnits:+phages.reduce((sum,p)=>sum+(p.initialVolume+p.eaten*BBV)*(p.alive?1:1-p.digest),0).toFixed(5),pendingDigestionUnits:+phages.reduce((sum,p)=>sum+(!p.alive?(p.initialVolume+p.eaten*BBV)*(1-p.digest):0),0).toFixed(5),initialSeedUnits:+(phageSpawns*CORE).toFixed(5),beadVolumeUnits:BBV},performanceProfile:profile(),feedRatePerSecond:FEED_RATE,digestSeconds:DIGEST_TIME,accountedBeads:active+captured+phageConsumed,phages:phages.map(p=>({id:p.id,alive:p.alive,host:p.host,digestion:+p.digest.toFixed(3),position:[+p.x.toFixed(2),+p.y.toFixed(2),+p.z.toFixed(2)],radius:+p.r.toFixed(3),eaten:p.eaten,gravityAcceleration:+p.gravAcc.toFixed(3),threatId:p.threat,huntingPreyId:p.hunting,huntBursts:p.huntBursts,huntExpelled:p.huntExpelled,huntCaptures:p.huntCaptures,huntNetBeads:p.eaten-p.huntStartingEaten-p.huntExpelled,exhausted:p.exhausted,escapes:p.escapes,escapeSuccesses:p.escapeSuccesses,escapeFailures:p.escapeFailures,thrustImpulse:+p.thrustImpulse.toFixed(4),feedingCredit:+p.credit.toFixed(3),lastStepFed:p.feedingStep,peakFeedingStep:p.peakFeedingStep})),contacts,bounces,ticks,outside,gravity:modes[mode],impulses,lastImpulseStep,lastImpulseBeads,lastImpulseMomentum:+lastImpulseMomentum.toFixed(2),secondsSinceImpulse:lastImpulseStep<0?null:+((ticks-lastImpulseStep)*.008).toFixed(3),impulseHistory,radialDensityShellCounts:radial,radialMomentumByShell:radialMomentum.map(value=>+value.toFixed(2)),meanSpeedSquared:active?+(energy/active).toFixed(3):0,angularMomentumPerBead:angular.map(value=>+(value/N).toFixed(3)),collisionModel:'one candidate per cell; approximate O(N) contacts',captureModel:'black-hole captures and phage consumption tracked separately; phage volume grows by consumed bead volume'}}
+registerInvariant('hermeticon-population',()=>xyz.length===N*3&&captured+phageConsumed<=N);registerInvariant('phage-digestions',()=>phageDigestions<=phageCaptures);registerInvariant('phage-mass',()=>phages.every(p=>p.initialVolume+p.eaten*BBV>=CORE*.35-1e-7));registerInvariant('hermeticon-finite',()=>Number.isFinite(xyz[0])&&Number.isFinite(v[0]));
+globalThis.HermeticonInspect=inspect;document.querySelector('#status').textContent='100,000 BEADS · CHAOTIC CONTACTS';return{advance,inspect,drainPhysics:()=>{const n=rollingPhysics.samples||1;const out={sampleEverySteps:64,samples:rollingPhysics.samples,meanStepMs:+(rollingPhysics.total/n).toFixed(3),maxStepMs:+rollingPhysics.max.toFixed(3),meanPhageMs:+(rollingPhysics.phage/n).toFixed(3),meanFeedingGridMs:+(rollingPhysics.grid/n).toFixed(3),meanBeadLoopMs:+(rollingPhysics.bead/n).toFixed(3)};rollingPhysics.phage=rollingPhysics.grid=rollingPhysics.bead=rollingPhysics.total=rollingPhysics.max=rollingPhysics.samples=0;return out}}
+})():null;
+
+function simulate(dt){hermeticon?.advance(dt)}
+function updateAlarm(){
+ const breaches=containment.violations,errors=invariantState.failures;
+ alarm.classList.toggle('on',breaches.length>0||errors.length>0);
+ if(breaches.length||errors.length){
+  alarm.textContent=['⚠ BAUBLE VERIFIER FAILED',...breaches.slice(0,3).map(v=>'CONTAINMENT '+v.object+' +'+v.overflow),...errors.slice(0,4).map(v=>'INVARIANT '+v.name+': '+v.detail),'INSPECT → COPY REPORT'].join('\\n').replaceAll('\\n','\n');
+  if(!updateAlarm.warned){console.error('BAUBLE VERIFIER FAILED',{breaches,errors});updateAlarm.warned=true}
+ }else{alarm.textContent='';updateAlarm.warned=false}
+}
+globalThis.BaubleRegisterInvariant=registerInvariant;
+globalThis.BaubleVerifyInvariants=verifyInvariants;
+
+let angle=.6,elev=.27,dist=27,targetY=0,lastX=0,lastY=0;
+const pointers=new Map();let pinch=0;renderer.domElement.addEventListener('pointerdown',e=>{pointers.set(e.pointerId,[e.clientX,e.clientY]);lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
+renderer.domElement.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;const old=pointers.get(e.pointerId);pointers.set(e.pointerId,[e.clientX,e.clientY]);const ps=[...pointers.values()];if(ps.length===1){angle+=(e.clientX-old[0])*.006;elev=T.MathUtils.clamp(elev+(e.clientY-old[1])*.004,-.4,1.2)}else if(ps.length===2){const d=Math.hypot(ps[0][0]-ps[1][0],ps[0][1]-ps[1][1]);if(pinch)dist=T.MathUtils.clamp(dist*pinch/d,2,100);pinch=d}});
+function end(e){pointers.delete(e.pointerId);pinch=0}renderer.domElement.addEventListener('pointerup',end);renderer.domElement.addEventListener('pointercancel',end);renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();dist=T.MathUtils.clamp(dist+e.deltaY*.022,2,100)},{passive:false});
+function fitBaubleDistance(){const halfV=T.MathUtils.degToRad(camera.fov)/2;const halfH=Math.atan(Math.tan(halfV)*camera.aspect);return BAUBLE_R/Math.sin(Math.min(halfV,halfH))*1.12}let firstFit=true;function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();const fit=fitBaubleDistance();if(firstFit){dist=fit;firstFit=false}else dist=T.MathUtils.clamp(dist,2,100)}addEventListener('resize',resize);resize();
+
+const probeButton=document.querySelector('#probe'),probePanel=document.querySelector('#probePanel'),probeText=document.querySelector('#probeText');
+let probeReport='',probeLast=performance.now(),probeFrames=0;const perfWindow={renderMs:0,renderSamples:0,simulationMs:0,simulationSteps:0,droppedStart:0,last:null};const fpsState={value:null,windowMs:2500,stale:true};const fpsRow=document.querySelector('#fpsRow');const showMeasuring=()=>{fpsState.stale=true;fpsRow.textContent='FPS · ◌';};showMeasuring();
+const round=(n,d=2)=>Number.isFinite(n)?+n.toFixed(d):null;
+function inspectWorld(){
+ camera.updateMatrixWorld();world.updateMatrixWorld(true);
+ const center=new T.Vector3(0,0,0).project(camera);
+ const report={build:BUILD,time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:0,contentsInstantiated:false},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:fpsState.stale?null:fpsState.value,fpsMeasuring:fpsState.stale,rollingWindow:perfWindow.last},containment:verifyContainment(),invariants:verifyInvariants(),simulation:{time:round(clock.time,3),steps:clock.steps,droppedSeconds:round(clock.droppedSeconds,3),fixedStep:STEP},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:[]};
+ report.vessel.inhabitants=hermeticon?100000:0;report.vessel.contentsInstantiated=!!hermeticon;report.hermeticon=hermeticon?hermeticon.inspect():{instantiated:false,count:0,active:0,phages:[],performanceProfile:null};probeReport=JSON.stringify(report,null,2);probeText.textContent=probeReport;return report;
+}
+probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};
+document.querySelector('#closeProbe').onclick=()=>probePanel.classList.remove('open');
+document.querySelector('#copyProbe').onclick=async()=>{inspectWorld();try{await navigator.clipboard.writeText(probeReport);document.querySelector('#copyProbe').textContent='COPIED'}catch(e){const t=document.createElement('textarea');t.value=probeReport;document.body.append(t);t.select();document.execCommand('copy');t.remove();document.querySelector('#copyProbe').textContent='COPIED'}};
+globalThis.BaubleInspect=inspectWorld;
+// Bounded, privacy-minimal interaction trace: canvas gestures and instrument controls only.
+const interactionLog=[],interactionLimit=240;let interactionSeq=0,interactionStart=performance.now(),gesture=null;
+function recordInteraction(type,data={}){interactionLog.push({seq:++interactionSeq,ms:Math.round(performance.now()-interactionStart),type,...data});if(interactionLog.length>interactionLimit)interactionLog.shift()}
+function screenPoint(e){const rect=renderer.domElement.getBoundingClientRect();return{x:round((e.clientX-rect.left)/rect.width,3),y:round((e.clientY-rect.top)/rect.height,3)}}
+renderer.domElement.addEventListener('pointerdown',e=>{const p=screenPoint(e);if(!gesture)gesture={start:performance.now(),x:p.x,y:p.y,maxPointers:0,moves:0,travel:0};gesture.maxPointers=Math.max(gesture.maxPointers,renderer.domElement.hasPointerCapture(e.pointerId)?1:1);recordInteraction('pointer-down',{pointerType:e.pointerType,button:e.button,...p,camera:{azimuth:round(angle),elevation:round(elev),distance:round(dist)}})},{capture:true});
+renderer.domElement.addEventListener('pointermove',e=>{if(!gesture)return;const p=screenPoint(e);gesture.moves++;gesture.travel=Math.max(gesture.travel,Math.hypot(p.x-gesture.x,p.y-gesture.y));gesture.maxPointers=Math.max(gesture.maxPointers,pointers.size)},{capture:false});
+function endGesture(e,cancelled=false){const p=screenPoint(e);recordInteraction(cancelled?'pointer-cancel':gesture?.travel<.025?'tap':'gesture-end',{pointerType:e.pointerType,...p,durationMs:gesture?Math.round(performance.now()-gesture.start):null,travel:round(gesture?.travel??0,3),maxPointers:gesture?.maxPointers??1,camera:{azimuth:round(angle),elevation:round(elev),distance:round(dist)}});if(pointers.size<=1)gesture=null}
+renderer.domElement.addEventListener('pointerup',e=>endGesture(e),{capture:false});
+renderer.domElement.addEventListener('pointercancel',e=>endGesture(e,true),{capture:false});
+renderer.domElement.addEventListener('wheel',e=>recordInteraction('wheel',{deltaY:round(e.deltaY),cameraDistance:round(dist)}),{passive:true});
+probeButton.addEventListener('click',()=>recordInteraction('inspect-toggle',{open:probePanel.classList.contains('open')}));
+document.querySelector('#copyProbe').addEventListener('click',()=>recordInteraction('copy-report'));
+document.querySelector('#closeProbe').addEventListener('click',()=>recordInteraction('inspect-close'));
+
+
+let last=performance.now(),resumePending=true;function resetFpsWindow(now){probeLast=now;probeFrames=0;perfWindow.renderMs=perfWindow.renderSamples=perfWindow.simulationMs=perfWindow.simulationSteps=0;perfWindow.droppedStart=clock.droppedSeconds;perfWindow.last=null;clock.accumulator=0;showMeasuring();}document.addEventListener('visibilitychange',()=>{resumePending=true;resetFpsWindow(performance.now());});addEventListener('pageshow',()=>{resumePending=true;resetFpsWindow(performance.now());});if(!INSTANTIATE_HERMETICON){document.querySelector('#fieldControls').style.display='none';document.querySelector('#status').textContent='EMPTY VESSEL · INSTRUMENTATION ONLY';}function frame(now){requestAnimationFrame(frame);const gap=now-last;last=now;if(document.hidden)return;if(resumePending||gap>500){resumePending=false;resetFpsWindow(now);}probeFrames++;const elapsed=resumePending?0:Math.max(0,Math.min(gap,50)/1000);if(INSTANTIATE_HERMETICON)clock.accumulator+=Math.min(MAX_FRAME,elapsed);if(INSTANTIATE_HERMETICON)clock.droppedSeconds+=Math.max(0,elapsed-MAX_FRAME);let steps=0;while(INSTANTIATE_HERMETICON&&clock.accumulator>=STEP&&steps<MAX_STEPS){const stepT0=performance.now();simulate(STEP);perfWindow.simulationMs+=performance.now()-stepT0;perfWindow.simulationSteps++;clock.time+=STEP;clock.steps++;clock.accumulator-=STEP;steps++}if(clock.accumulator>=STEP){clock.droppedSeconds+=clock.accumulator;clock.accumulator=0}if(now-probeLast>=fpsState.windowMs){const duration=now-probeLast;fpsState.value=round(probeFrames*1000/duration);fpsState.stale=false;perfWindow.last={durationMs:round(duration),frames:probeFrames,fps:fpsState.value,meanRenderCallMs:round(perfWindow.renderMs/Math.max(1,perfWindow.renderSamples),3),meanSimulateStepMs:round(perfWindow.simulationMs/Math.max(1,perfWindow.simulationSteps),3),simulatedSteps:perfWindow.simulationSteps,simulationCpuMs:round(perfWindow.simulationMs,2),renderCallCpuMs:round(perfWindow.renderMs,2),droppedSimulationSeconds:round(clock.droppedSeconds-perfWindow.droppedStart,3),sampledPhysics:hermeticon?.drainPhysics()??null,note:'Rolling window. Render call measures synchronous JS call only, not asynchronous GPU completion.'};perfWindow.renderMs=perfWindow.renderSamples=perfWindow.simulationMs=perfWindow.simulationSteps=0;perfWindow.droppedStart=clock.droppedSeconds;fpsRow.textContent='FPS · '+fpsState.value.toFixed(1);probeLast=now;probeFrames=0;verifyInvariants();verifyContainment();if(probePanel.classList.contains('open'))inspectWorld()}
+camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);const renderT0=performance.now();renderer.render(scene,camera);perfWindow.renderMs+=performance.now()-renderT0;perfWindow.renderSamples++}
+requestAnimationFrame(frame);
+}catch(e){window.BaubleFatal(e);console.error(e)}
+</script></body></html>

@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07101a"><title>Hermeticon · Wanderer — Terrain</title><style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:82px;right:10px;top:120px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:175px 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px}#buildRow{display:flex;justify-content:center;align-items:center;gap:5px;margin:3px auto 0;max-width:calc(100vw - 150px);color:#a6b7b9;font:11px ui-monospace,monospace;letter-spacing:.12em;pointer-events:auto}#build{font-size:10px;letter-spacing:0;overflow-wrap:anywhere;text-align:center}#fresh{display:inline-grid;place-items:center;width:40px;height:40px;min-height:40px;padding:0;border:0;background:transparent;color:#c4b291;font:23px system-ui;line-height:1;cursor:pointer} </style></head><body><div id="stage"></div><button id="probe" type="button">◉ INSPECT</button><div id="probePanel"><div id="probeActions"><button id="copyProbe">COPY REPORT</button><button id="closeProbe">CLOSE</button></div><div id="probeText"></div></div><div id="title"><h1>HERMETICON</h1><div id="tag">WANDERER · EQUATORIAL MATERIAL</div><div id="buildRow"><span id="build"></span><button id="fresh" type="button" title="Fetch latest build" aria-label="Fetch latest build">↻</button></div></div><div id="hud"><div id="status">SOLID TERRAIN · ZERO DATUM</div></div><div id="error"></div><script>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:82px;right:10px;top:120px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:175px 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px}#buildRow{display:flex;justify-content:center;align-items:center;gap:5px;margin:3px auto 0;max-width:calc(100vw - 150px);color:#a6b7b9;font:11px ui-monospace,monospace;letter-spacing:.12em;pointer-events:auto}#build{font-size:10px;letter-spacing:0;overflow-wrap:anywhere;text-align:center}#fresh{display:inline-grid;place-items:center;width:40px;height:40px;min-height:40px;padding:0;border:0;background:transparent;color:#c4b291;font:23px system-ui;line-height:1;cursor:pointer}  #fps{font:12px ui-monospace,monospace;color:#e7dbb7;margin-left:8px}</style></head><body><div id="stage"></div><button id="probe" type="button">◉ INSPECT</button><div id="probePanel"><div id="probeActions"><button id="copyProbe">COPY REPORT</button><button id="closeProbe">CLOSE</button></div><div id="probeText"></div></div><div id="title"><h1>HERMETICON</h1><div id="tag">WANDERER · EQUATORIAL MATERIAL</div><div id="buildRow"><span id="build"></span><span id="fps">-- fps</span><button id="fresh" type="button" title="Fetch latest build" aria-label="Fetch latest build">↻</button></div></div><div id="hud"><div id="status">VOLUMETRIC TERRAIN · AUTONOMOUS TEST</div></div><div id="error"></div><script>
 (function(){
  const el=document.getElementById('error');
  function fatal(error){
@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 try {
-const BUILD='hermeticon-wanderer-equatorial-volume-v4';
+const BUILD='hermeticon-wanderer-volume-torture-v5';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x06101b);
@@ -33,15 +33,53 @@ const glass=new THREE.MeshPhysicalMaterial({color:0xa5d9e2,transparent:true,opac
 const BAUBLE_R=10.25;
 const shell=new THREE.Mesh(new THREE.SphereGeometry(BAUBLE_R,48,32),glass);world.add(shell);
 const rim=new THREE.Mesh(new THREE.TorusGeometry(10.14,.08,8,96),brass);rim.rotation.x=Math.PI/2;world.add(rim);
-// World datum is the sphere equator: y=0. The specimen is a sealed,
-// opaque solid, with two planar faces and a cylindrical boundary.
-const INNER_R=10.07,TOP_Y=1.2,BOTTOM_Y=-1.2;
-const MATERIAL_R=Math.sqrt(INNER_R*INNER_R-TOP_Y*TOP_Y)-.07;
-const slabMaterial=new THREE.MeshStandardMaterial({color:0x9a8067,roughness:.92,metalness:0,side:THREE.FrontSide});
-const slab=new THREE.Mesh(new THREE.CylinderGeometry(MATERIAL_R,MATERIAL_R,TOP_Y-BOTTOM_Y,128,1,false),slabMaterial);
-slab.name='terrain:closed-equatorial-solid';slab.receiveShadow=true;slab.castShadow=true;world.add(slab);
-const datum=new THREE.Mesh(new THREE.TorusGeometry(10.16,.022,6,128),new THREE.MeshBasicMaterial({color:0xe4c58d}));
-datum.rotation.x=Math.PI/2;world.add(datum);
+// Authoritative signed volume. Positive=solid, negative=void.
+// The equator y=0 is the fixed datum; both surfaces and tunnels are extracted.
+const INNER_R=10.07, R=9.65, NX=43,NY=21,NZ=43, MINY=-3.6,MAXY=3.6;
+const field=new Float32Array(NX*NY*NZ),id=(x,y,z)=>x+NX*(y+NY*z);
+const xp=x=>(x/(NX-1)*2-1)*10.2,yp=y=>MINY+y/(NY-1)*(MAXY-MINY),zp=z=>(z/(NZ-1)*2-1)*10.2;
+const corners=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
+const tets=[[0,5,1,6],[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6]];
+const terrainMaterial=new THREE.MeshStandardMaterial({color:0x927963,roughness:.92,metalness:.02,side:THREE.DoubleSide,flatShading:true});
+const geo=new THREE.BufferGeometry(),solid=new THREE.Mesh(geo,terrainMaterial);solid.name='terrain:signed-volume';solid.receiveShadow=true;world.add(solid);
+const datum=new THREE.Mesh(new THREE.TorusGeometry(10.16,.022,6,128),new THREE.MeshBasicMaterial({color:0xe4c58d}));datum.rotation.x=Math.PI/2;world.add(datum);
+let cycle=0,seed=741,triangles=0,fieldMin=0,fieldMax=0,solidCount=0,voidCount=0,buildMs=0;
+let operations=[],events=[];
+const rand=(n)=>{let v=Math.sin(n*127.1+seed*311.7)*43758.5453;return v-Math.floor(v)};
+function regenerate(){
+ const start=performance.now();
+ operations=[];
+ // Vertical bores pierce the complete slab; raised and lowered regions act
+ // independently on upper and lower surfaces.
+ for(let k=0;k<4;k++)operations.push({kind:'through-hole',x:(rand(k+2)-.5)*12,z:(rand(k+11)-.5)*12,r:1+rand(k+29)*.7});
+ for(let k=0;k<7;k++)operations.push({kind:k%2?'lower':'raise',face:k%3?'top':'bottom',x:(rand(k+49)-.5)*13,z:(rand(k+61)-.5)*13,r:1.7+rand(k+73)*1.4,delta:(k%2?-1:1)*(0.65+rand(k+91)*1.25)});
+ fieldMin=Infinity;fieldMax=-Infinity;solidCount=0;voidCount=0;
+ for(let z=0;z<NZ;z++)for(let y=0;y<NY;y++)for(let x=0;x<NX;x++){
+  const X=xp(x),Y=yp(y),Z=zp(z),rad=Math.hypot(X,Z);
+  let top=1.15,bottom=-1.15;
+  for(const op of operations){if(op.kind==='through-hole')continue;const d=Math.hypot(X-op.x,Z-op.z)/op.r;if(d<1){const w=(1-d*d)**2;if(op.face==='top')top+=op.delta*w;else bottom-=op.delta*w}}
+  let v=Math.min(top-Y,Y-bottom,R-rad);
+  for(const op of operations){if(op.kind!=='through-hole')continue;const d=Math.hypot(X-op.x,Z-op.z);v=Math.min(v,d-op.r)}
+  // Keep the signed field negative at the outermost volume boundary.
+  v=Math.min(v,9.91-Math.hypot(X,Y,Z));
+  field[id(x,y,z)]=v;fieldMin=Math.min(fieldMin,v);fieldMax=Math.max(fieldMax,v);if(v>0)solidCount++;else voidCount++;
+ }
+ const pos=[],lerp=(p,q,a,b)=>{const t=Math.max(0,Math.min(1,a/(a-b)));return[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t,p[2]+(q[2]-p[2])*t]};
+ const tri=(a,b,c)=>{pos.push(...a,...b,...c)};
+ for(let z=0;z<NZ-1;z++)for(let y=0;y<NY-1;y++)for(let x=0;x<NX-1;x++){
+  const p=corners.map(c=>[xp(x+c[0]),yp(y+c[1]),zp(z+c[2])]),v=corners.map(c=>field[id(x+c[0],y+c[1],z+c[2])]);
+  for(const tet of tets){const inside=tet.filter(i=>v[i]>0),outside=tet.filter(i=>v[i]<=0);if(!inside.length||!outside.length)continue;
+   if(inside.length===1||outside.length===1){const inv=outside.length===1,A=(inv?outside:inside)[0],others=inv?inside:outside;const q=others.map(i=>lerp(p[A],p[i],v[A],v[i]));if(inv)tri(q[0],q[2],q[1]);else tri(q[0],q[1],q[2])}
+   else{const[a,b]=inside,[c,d]=outside;const q0=lerp(p[a],p[c],v[a],v[c]),q1=lerp(p[a],p[d],v[a],v[d]),q2=lerp(p[b],p[c],v[b],v[c]),q3=lerp(p[b],p[d],v[b],v[d]);tri(q0,q1,q2);tri(q2,q1,q3)}
+  }
+ }
+ geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));geo.computeVertexNormals();geo.computeBoundingSphere();
+ triangles=pos.length/9;buildMs=performance.now()-start;
+ events.push({cycle,seed,triangles,buildMs:+buildMs.toFixed(1),operations:operations.map(o=>({...o}))});if(events.length>5)events.shift();
+}
+regenerate();
+let lastCycle=performance.now();
+function auto(now){if(now-lastCycle<6500)return;lastCycle=now;cycle++;seed=[741,742,743,751,769][cycle%5];regenerate()}
 let angle=.7,elev=.35,dist=34,targetY=.5;
 const pointers=new Map();
 renderer.domElement.addEventListener('pointerdown',e=>{renderer.domElement.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY})});
@@ -52,14 +90,14 @@ function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWi
 let frames=0,frameMs=0,last=performance.now(),fps=0;
 const panel=document.querySelector('#probePanel'),probeText=document.querySelector('#probeText');
 function inspectWorld(){
- const report={build:BUILD,time:new Date().toISOString(),integration:{source:'sealed equatorial volume; no geology or water instantiated',controlsRequired:false},viewport:{width:innerWidth,height:innerHeight,pixelRatio:renderer.getPixelRatio()},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R},datum:{worldY:0,equatorial:true},terrain:{kind:'closed-solid-volume',topY:TOP_Y,bottomY:BOTTOM_Y,radius:MATERIAL_R,thickness:TOP_Y-BOTTOM_Y,topFace:'opaque',bottomFace:'opaque',side:'sealed',volume:Math.PI*MATERIAL_R*MATERIAL_R*(TOP_Y-BOTTOM_Y)},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:fps},warnings:[]};
+ const report={build:BUILD,time:new Date().toISOString(),integration:{source:'signed scalar volume; six tetrahedra per voxel; autonomous perturbation',controlsRequired:false},viewport:{width:innerWidth,height:innerHeight,pixelRatio:renderer.getPixelRatio()},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R},datum:{worldY:0,equatorial:true},terrain:{kind:'3d-signed-field',dimensions:[NX,NY,NZ],samples:field.length,fieldRange:[fieldMin,fieldMax],solidSamples:solidCount,voidSamples:voidCount,mesh:{triangles,vertices:geo.attributes.position.count,doubleSided:terrainMaterial.side===THREE.DoubleSide},cycle,seed,buildMs,operations,events},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries},performance:{fpsApprox:fps},warnings:[]};
  const t=JSON.stringify(report,null,2);probeText.textContent=t;return t;
 }
 document.querySelector('#probe').onclick=()=>{panel.classList.toggle('open');if(panel.classList.contains('open'))inspectWorld()};
 document.querySelector('#closeProbe').onclick=()=>panel.classList.remove('open');
 document.querySelector('#copyProbe').onclick=async()=>{const t=inspectWorld();try{await navigator.clipboard.writeText(t)}catch(e){const a=document.createElement('textarea');a.value=t;document.body.append(a);a.select();document.execCommand('copy');a.remove()}};
 globalThis.BaubleInspect=inspectWorld;
-function frame(now){requestAnimationFrame(frame);frames++;frameMs+=now-last;last=now;if(frameMs>=2500){fps=1000*frames/frameMs;frames=0;frameMs=0;if(panel.classList.contains('open'))inspectWorld()}camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);renderer.render(scene,camera)}
+function frame(now){requestAnimationFrame(frame);auto(now);frames++;frameMs+=now-last;last=now;if(frameMs>=2500){fps=1000*frames/frameMs;document.querySelector('#fps').textContent=fps.toFixed(1)+' fps';frames=0;frameMs=0;if(panel.classList.contains('open'))inspectWorld()}camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);renderer.render(scene,camera)}
 requestAnimationFrame(frame);
 }catch(e){window.BaubleFatal(e);console.error(e)}
 </script></body></html>

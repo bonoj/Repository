@@ -282,33 +282,10 @@ function stepBoat(dt){
   if(outward>0){b.vx-=outward*b.x/safe;b.vz-=outward*b.z/safe}
   radius=safe;
  }
- // Five hull probes, all sampling the same scalar field. Never use dry bed as water.
- const probes=[[0,0,4],[0,.55,1],[0,-.55,1],[.35,0,1],[-.35,0,1]];
- let total=0,weight=0,front=0,back=0,left=0,right=0;
- for(const [side,forward,w] of probes){
-  const x=b.x+dx*forward+dz*side,z=b.z+dz*forward-dx*side;
-  const h=boatSurface(x,z);
-  if(h===null)continue;
-  total+=h*w;weight+=w;
-  if(forward>0)front=h;if(forward<0)back=h;
-  if(side>0)left=h;if(side<0)right=h;
- }
- const surface=weight?total/weight:null;
- // Vertical spring from immersion: displaced-water restoring force plus damping.
- // The freeboard equilibrium sits slightly below the sampled surface.
- const target=surface===null?b.y:surface-.12;
- const displacement=target-b.y;
- const acceleration=surface===null?-3.0:Math.max(-30,Math.min(30,18*displacement-7*b.vy));
- b.vy=Math.max(-5,Math.min(5,b.vy+acceleration*dt));
- b.y+=b.vy*dt;
- // Keep the finite hull inside glass; this is containment, not buoyancy.
- const maxY=Math.sqrt(Math.max(0,(INNER_R-1.35)**2-radius*radius));
- if(b.y>maxY){b.y=maxY;b.vy=Math.min(0,b.vy)}
- if(b.y< -maxY){b.y=-maxY;b.vy=Math.max(0,b.vy)}
- const pitchTarget=front&&back?Math.atan2(front-back,1.1):0;
- const rollTarget=left&&right?Math.atan2(left-right,.7):0;
- b.pitch+=(Math.max(-.22,Math.min(.22,pitchTarget))-b.pitch)*Math.min(1,dt*3);
- b.roll+=(Math.max(-.24,Math.min(.24,rollTarget))-b.roll)*Math.min(1,dt*3);
+ // Vertical position is resolved against the ACTUAL rendered surface mesh.
+ // Horizontal movement is independent; no artificial vertical buoyancy integration.
+ b.vy=0;
+ b.pitch*=Math.max(0,1-dt*4);b.roll*=Math.max(0,1-dt*4);
  skiff.position.set(b.x,b.y,b.z);
  skiff.rotation.order='YXZ';skiff.rotation.set(b.pitch,b.heading,b.roll,'YXZ');
  cargo.visible=b.cargoUnits>0;cargo.scale.y=Math.min(3,.7+b.cargoUnits*.05);
@@ -351,7 +328,7 @@ function renderBeads(){
 
  const fraction=Math.cbrt(sourceUnits/30000);source.scale.setScalar(fraction);sourceCore.scale.setScalar(fraction);
 }
-const BUILD='waterworld-skiff-buoyancy-v23';
+const BUILD='waterworld-rendered-surface-seat-v24';
 const buildLabel=document.querySelector('#build');
 buildLabel.textContent=BUILD;
 const hud=document.querySelector('#hud');
@@ -378,7 +355,7 @@ function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.
 const probeButton=document.querySelector('#probe'),probePanel=document.querySelector('#probePanel'),probeText=document.querySelector('#probeText');
 let probeReport='',probeLast=0,probeFrames=0,probeFrameMs=0;
 const round=(n,d=2)=>Number.isFinite(n)?+n.toFixed(d):null;
-function fluidDiagnostics(){return {model:'discrete 3D ballistic beads',sourceUnits,emitted,active:particles.length,settled:settledCount,unrepresented:escaped,accounted:sourceUnits+particles.length+settledCount+escaped+boatState.cargoUnits,initialUnits:30000+INITIAL_WATER_UNITS,initialWaterUnits:INITIAL_WATER_UNITS,initialFillFraction:.2,gravity:{type:'pendular point source',position:gravityPosition.toArray().map(round),orbitalRadius:gravityOrbitalRadius,periodSeconds:gravityPeriod,swingAmplitudeRadians:gravitySwingAmplitude,stationary:false,strengthAtCenter:GRAVITY},wind:{direction:[1,0,0],bandCenterAboveSurface:1.1,bandThickness:2.3,baselineSpeed:3.1,currentSpeed:round(windSpeed),gustStrength:round(windGust()),affectedSteps:windAffected,impulse:round(windImpulse)},collisions:collisionCount,splashImpacts,splashEjected,splashReturned,peakActive,steps:simSteps,seconds:round(simTime),beadRadius:BEAD_R,activeCap:MAX_ACTIVE,boat:{position:[round(boatState.x),round(boatState.y),round(boatState.z)],velocity:[round(boatState.vx),round(boatState.vz)],heading:round(boatState.heading),verticalVelocity:round(boatState.vy),surfaceHeight:boatSurface(boatState.x,boatState.z),cargoUnits:boatState.cargoUnits,caught:boatState.caught,edgeAvoidanceSteps:boatState.turns},collectorVolume:round(waterVolume,4),waterline:round(waterY,4),collectorModel:'64x64 conservative finite-volume transport with point gravity and wind',wavePeak:round(wavePeak),waveEnergy:round(waveEnergy),transportVolume:round(transportVolume,4),wetCells,thumpCount,thumpImpulse:round(thumpImpulse)}}
+function fluidDiagnostics(){return {model:'discrete 3D ballistic beads',sourceUnits,emitted,active:particles.length,settled:settledCount,unrepresented:escaped,accounted:sourceUnits+particles.length+settledCount+escaped+boatState.cargoUnits,initialUnits:30000+INITIAL_WATER_UNITS,initialWaterUnits:INITIAL_WATER_UNITS,initialFillFraction:.2,gravity:{type:'pendular point source',position:gravityPosition.toArray().map(round),orbitalRadius:gravityOrbitalRadius,periodSeconds:gravityPeriod,swingAmplitudeRadians:gravitySwingAmplitude,stationary:false,strengthAtCenter:GRAVITY},wind:{direction:[1,0,0],bandCenterAboveSurface:1.1,bandThickness:2.3,baselineSpeed:3.1,currentSpeed:round(windSpeed),gustStrength:round(windGust()),affectedSteps:windAffected,impulse:round(windImpulse)},collisions:collisionCount,splashImpacts,splashEjected,splashReturned,peakActive,steps:simSteps,seconds:round(simTime),beadRadius:BEAD_R,activeCap:MAX_ACTIVE,boat:{position:[round(boatState.x),round(boatState.y),round(boatState.z)],velocity:[round(boatState.vx),round(boatState.vz)],heading:round(boatState.heading),verticalVelocity:round(boatState.vy),surfaceHeight:renderedSurfaceY(boatState.x,boatState.z),cargoUnits:boatState.cargoUnits,caught:boatState.caught,edgeAvoidanceSteps:boatState.turns},collectorVolume:round(waterVolume,4),waterline:round(waterY,4),collectorModel:'64x64 conservative finite-volume transport with point gravity and wind',wavePeak:round(wavePeak),waveEnergy:round(waveEnergy),transportVolume:round(transportVolume,4),wetCells,thumpCount,thumpImpulse:round(thumpImpulse)}}
 function inspectWorld(){
  camera.updateMatrixWorld();world.updateMatrixWorld(true);
  const center=new T.Vector3(0,0,0).project(camera);
@@ -405,7 +382,36 @@ document.querySelector('#closeProbe').addEventListener('click',()=>recordInterac
 
 
 let last=performance.now(),accumulator=0;const orbitStart=performance.now();
-function frame(now){requestAnimationFrame(frame);updateGravity((now-orbitStart)/1000);accumulator+=Math.min(.05,(now-last)/1000);let steps=0;while(accumulator>=.008&&steps++<7){simulate(.008);accumulator-=.008}renderBeads();updateWindVisual();probeFrames++;probeFrameMs+=Math.max(0,now-last);last=now;if(now-probeLast>2500){probeLast=now;if(probePanel.classList.contains('open'))inspectWorld();probeFrames=0;probeFrameMs=0}
+const boatRay=new T.Raycaster();
+const boatRayOrigin=new T.Vector3(),boatRayDown=new T.Vector3(0,-1,0);
+function renderedSurfaceY(x,z){
+ boatRayOrigin.set(x,20,z);
+ boatRay.set(boatRayOrigin,boatRayDown);
+ const hits=boatRay.intersectObject(waterSurface,false);
+ return hits.length?hits[0].point.y:null;
+}
+function seatBoatOnRenderedSurface(){
+ // Resolve after the mesh has been updated for this frame.
+ waterSurface.updateMatrixWorld(true);
+ const b=boatState;
+ const radius=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));
+ const limit=Math.max(1,radius-1.4);
+ const r=Math.hypot(b.x,b.z);
+ if(r>limit){b.x*=limit/r;b.z*=limit/r}
+ const y=renderedSurfaceY(b.x,b.z);
+ if(y===null)return;
+ b.y=y-.12;
+ const fx=Math.sin(b.heading),fz=Math.cos(b.heading);
+ const front=renderedSurfaceY(b.x+fx*.45,b.z+fz*.45);
+ const back=renderedSurfaceY(b.x-fx*.45,b.z-fz*.45);
+ const left=renderedSurfaceY(b.x+fz*.3,b.z-fx*.3);
+ const right=renderedSurfaceY(b.x-fz*.3,b.z+fx*.3);
+ if(front!==null&&back!==null)b.pitch=Math.max(-.22,Math.min(.22,Math.atan2(front-back,.9)));
+ if(left!==null&&right!==null)b.roll=Math.max(-.24,Math.min(.24,Math.atan2(left-right,.6)));
+ skiff.position.set(b.x,b.y,b.z);
+ skiff.rotation.set(b.pitch,b.heading,b.roll,'YXZ');
+}
+function frame(now){requestAnimationFrame(frame);updateGravity((now-orbitStart)/1000);accumulator+=Math.min(.05,(now-last)/1000);let steps=0;while(accumulator>=.008&&steps++<7){simulate(.008);accumulator-=.008}renderBeads();updateWindVisual();seatBoatOnRenderedSurface();probeFrames++;probeFrameMs+=Math.max(0,now-last);last=now;if(now-probeLast>2500){probeLast=now;if(probePanel.classList.contains('open'))inspectWorld();probeFrames=0;probeFrameMs=0}
 camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);renderer.render(scene,camera)}
 requestAnimationFrame(frame);
 }catch(e){window.BaubleFatal(e);console.error(e)}

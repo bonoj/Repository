@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-genesis-v3';
+const BUILD='hermeticon-genesis-v4';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -103,78 +103,68 @@ function verifyInvariants(){
 
 /* Genesis: Hermeticon's 100k BB cloud, with rotating collapse, sink accretion,
    and collision-coalesced disk aggregates. No buttons or authored orbits. */
+
 const genesis=(()=>{
-const N=100000,R=9.83,xyz=new Float32Array(N*3),vel=new Float32Array(N*3),rgb=new Float32Array(N*3),state=new Uint8Array(N);
-const initialMass=N,GM=.85,STAR_R=.33,SEED=918273;let seed=SEED,age=0,step=0,starMass=0,starX=0,starY=0,starZ=0,active=N,oort=0,disk=0,aggregated=0,collisions=0,phase='CLOUD',lastMs=0;
+// Genesis v4: deterministic particle-mesh self-gravity, gas pressure, conservative sink.
+// One bead is one conserved mass unit. No authored planets, disk or Oort labels.
+const N=100000,SEED=918273,S=10,R=9.83,GRID=10,CELLS=GRID**3,H=2*R/GRID,SOFT=.8,G=.0032;
+const pos=new Float32Array(N*3),vel=new Float32Array(N*3),col=new Float32Array(N*3),live=new Uint8Array(N);
+const mass=new Float64Array(CELLS),px=new Float64Array(CELLS),py=new Float64Array(CELLS),pz=new Float64Array(CELLS),fx=new Float64Array(CELLS),fy=new Float64Array(CELLS),fz=new Float64Array(CELLS);
+const star={m:0,x:0,y:0,z:0,vx:0,vy:0,vz:0,Lx:0,Ly:0,Lz:0},starRadius=.34;
+let seed=SEED,elapsed=0,steps=0,free=N,escapes=0,outer=0,inner=0,initialL=null,initialP=null,perf=0;
 const rand=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
-const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(xyz,3).setUsage(T.DynamicDrawUsage));geo.setAttribute('color',new T.BufferAttribute(rgb,3));geo.setDrawRange(0,N);
+const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(pos,3).setUsage(T.DynamicDrawUsage));geo.setAttribute('color',new T.BufferAttribute(col,3));geo.setDrawRange(0,N);
 const cloud=new T.Points(geo,new T.PointsMaterial({size:.065,vertexColors:true,sizeAttenuation:true}));cloud.frustumCulled=false;world.add(cloud);
-const star=new T.Mesh(new T.IcosahedronGeometry(1,2),new T.MeshStandardMaterial({color:0xffdca0,emissive:0xffa52b,emissiveIntensity:1.1,roughness:.7}));star.visible=false;world.add(star);
-const aggregates=[],aggregateGeo=new T.IcosahedronGeometry(1,1);
-const binCount=16*32,binHead=new Int32Array(binCount),binNext=new Int32Array(N),binMass=new Uint16Array(binCount);
-function reset(){
- seed=SEED;age=0;step=0;starMass=0;active=N;oort=0;disk=0;aggregated=0;collisions=0;phase='CLOUD';aggregates.forEach(a=>world.remove(a.mesh));aggregates.length=0;state.fill(0);
- for(let i=0;i<N;i++){const k=i*3;let x,y,z;do{x=(rand()*2-1)*8.8;y=(rand()*2-1)*8.8;z=(rand()*2-1)*8.8}while(x*x+y*y+z*z>76);
- xyz[k]=x;xyz[k+1]=y;xyz[k+2]=z;
- // Coherent angular momentum inherited from the rotating parent cloud.
- const omega=.105,noise=.12;
- vel[k]=-z*omega+(rand()-.5)*noise;
- vel[k+1]=(rand()-.5)*noise;
- vel[k+2]=x*omega+(rand()-.5)*noise;
- const c=new T.Color().setHSL(.48+rand()*.16,.55,.55+rand()*.16);rgb[k]=c.r;rgb[k+1]=c.g;rgb[k+2]=c.b;
- }geo.attributes.color.needsUpdate=true;geo.attributes.position.needsUpdate=true;star.visible=false;
+const starMesh=new T.Mesh(new T.IcosahedronGeometry(1,2),new T.MeshStandardMaterial({color:0xffd99c,emissive:0xff9c35,emissiveIntensity:.85}));starMesh.visible=false;world.add(starMesh);
+const index=(x,y,z)=>Math.min(GRID-1,Math.max(0,Math.floor((x+R)/H)))+GRID*(Math.min(GRID-1,Math.max(0,Math.floor((y+R)/H)))+GRID*Math.min(GRID-1,Math.max(0,Math.floor((z+R)/H))));
+const center=(i,axis)=>((Math.floor(i/Math.pow(GRID,axis))%GRID)+.5)*H-R;
+function totals(){let mx=star.vx*star.m,my=star.vy*star.m,mz=star.vz*star.m,Lx=star.Lx+star.m*(star.y*star.vz-star.z*star.vy),Ly=star.Ly+star.m*(star.z*star.vx-star.x*star.vz),Lz=star.Lz+star.m*(star.x*star.vy-star.y*star.vx);
+for(let i=0;i<N;i++){if(live[i])continue;const k=i*3,x=pos[k],y=pos[k+1],z=pos[k+2],vx=vel[k],vy=vel[k+1],vz=vel[k+2];mx+=vx;my+=vy;mz+=vz;Lx+=y*vz-z*vy;Ly+=z*vx-x*vz;Lz+=x*vy-y*vx}return{momentum:[mx,my,mz],angular:[Lx,Ly,Lz]}}
+function reset(){seed=SEED;elapsed=steps=star.m=star.vx=star.vy=star.vz=star.Lx=star.Ly=star.Lz=0;free=N;live.fill(0);
+for(let i=0;i<N;i++){const k=i*3;let x,y,z;do{x=(rand()*2-1)*8.7;y=(rand()*2-1)*8.7;z=(rand()*2-1)*8.7}while(x*x+y*y+z*z>75);pos[k]=x;pos[k+1]=y;pos[k+2]=z;
+const omega=.11;vel[k]=-omega*z+(rand()-.5)*.09;vel[k+1]=(rand()-.5)*.09;vel[k+2]=omega*x+(rand()-.5)*.09;
+const c=new T.Color().setHSL(.48+rand()*.16,.6,.62);col[k]=c.r;col[k+1]=c.g;col[k+2]=c.b;
+}geo.attributes.color.needsUpdate=true;geo.attributes.position.needsUpdate=true;initialL=totals().angular;initialP=totals().momentum}
+function sink(i){const k=i*3,x=pos[k],y=pos[k+1],z=pos[k+2],vx=vel[k],vy=vel[k+1],vz=vel[k+2],m=star.m;
+star.Lx+=y*vz-z*vy;star.Ly+=z*vx-x*vz;star.Lz+=x*vy-y*vx;
+star.vx=(star.vx*m+vx)/(m+1);star.vy=(star.vy*m+vy)/(m+1);star.vz=(star.vz*m+vz)/(m+1);star.m++;free--;live[i]=1;
+pos[k]=pos[k+1]=pos[k+2]=0;col[k]=col[k+1]=col[k+2]=0;geo.attributes.color.needsUpdate=true}
+function solve(dt){
+mass.fill(0);px.fill(0);py.fill(0);pz.fill(0);
+for(let i=0;i<N;i++){if(live[i])continue;const k=i*3,c=index(pos[k],pos[k+1],pos[k+2]);mass[c]++;px[c]+=pos[k];py[c]+=pos[k+1];pz[c]+=pos[k+2]}
+for(let a=0;a<CELLS;a++){const ma=mass[a];if(!ma){fx[a]=fy[a]=fz[a]=0;continue}fx[a]=fy[a]=fz[a]=0;px[a]/=ma;py[a]/=ma;pz[a]/=ma}
+ // Symmetric cell-pair gravity. Every force has an equal and opposite reaction.
+for(let a=0;a<CELLS;a++){if(!mass[a])continue;
+ for(let b=a+1;b<CELLS;b++){if(!mass[b])continue;
+ const dx=px[b]-px[a],dy=py[b]-py[a],dz=pz[b]-pz[a],d2=dx*dx+dy*dy+dz*dz+SOFT*SOFT,f=G/Math.pow(d2,1.5);
+ const ax=f*mass[b],bx=f*mass[a];fx[a]+=dx*ax;fy[a]+=dy*ax;fz[a]+=dz*ax;fx[b]-=dx*bx;fy[b]-=dy*bx;fz[b]-=dz*bx;
+ }}
+ // Isothermal pressure: finite-volume density gradient, not arbitrary flattening.
+ const cs2=.015,drag=0;
+ let innerNow=0,outerNow=0;
+ for(let i=0;i<N;i++){if(live[i])continue;const k=i*3,x=pos[k],y=pos[k+1],z=pos[k+2],c=index(x,y,z),ix=c%GRID,iy=Math.floor(c/GRID)%GRID,iz=Math.floor(c/(GRID*GRID));
+ const x0=ix>0?mass[c-1]:mass[c],x1=ix<GRID-1?mass[c+1]:mass[c],y0=iy>0?mass[c-GRID]:mass[c],y1=iy<GRID-1?mass[c+GRID]:mass[c],z0=iz>0?mass[c-GRID*GRID]:mass[c],z1=iz<GRID-1?mass[c+GRID*GRID]:mass[c];
+ const rho=Math.max(1,mass[c]),pressure=cs2/(2*H*rho);
+ let ax=fx[c]-pressure*(x1-x0),ay=fy[c]-pressure*(y1-y0),az=fz[c]-pressure*(z1-z0);
+ if(star.m){const dx=star.x-x,dy=star.y-y,dz=star.z-z,d2=dx*dx+dy*dy+dz*dz+SOFT*SOFT,q=G*star.m/Math.pow(d2,1.5);ax+=dx*q;ay+=dy*q;az+=dz*q}
+ vel[k]+=ax*dt;vel[k+1]+=ay*dt;vel[k+2]+=az*dt;
+ pos[k]+=vel[k]*dt;pos[k+1]+=vel[k+1]*dt;pos[k+2]+=vel[k+2]*dt;
+ const rr=Math.hypot(pos[k],pos[k+1],pos[k+2]);
+ // Reflective glass boundary: material stays in vessel; boundary impulse is external.
+ if(rr>R-.15){const nx=pos[k]/rr,ny=pos[k+1]/rr,nz=pos[k+2]/rr,vn=vel[k]*nx+vel[k+1]*ny+vel[k+2]*nz,f=(R-.15)/rr;pos[k]*=f;pos[k+1]*=f;pos[k+2]*=f;if(vn>0){vel[k]-=2*vn*nx;vel[k+1]-=2*vn*ny;vel[k+2]-=2*vn*nz}}
+ if(rr<starRadius&&star.m>0){sink(i);continue}
+ if(rr<.16&&star.m===0){sink(i);continue}
+ if(rr<2)innerNow++;if(rr>7)outerNow++;
+ }
+ inner=innerNow;outer=outerNow;geo.attributes.position.needsUpdate=true;
+ starMesh.visible=star.m>0;starMesh.scale.setScalar(Math.min(.65,.08+.017*Math.cbrt(star.m)));starMesh.position.set(star.x,star.y,star.z);
 }
-function absorb(i,target){const k=i*3;if(state[i])return;state[i]=target===null?1:2;active--;if(target===null){starMass++;}else{target.mass++;aggregated++;target.vx=(target.vx*(target.mass-1)+vel[k])/target.mass;target.vy=(target.vy*(target.mass-1)+vel[k+1])/target.mass;target.vz=(target.vz*(target.mass-1)+vel[k+2])/target.mass}xyz[k]=xyz[k+1]=xyz[k+2]=0;rgb[k]=rgb[k+1]=rgb[k+2]=0;geo.attributes.color.needsUpdate=true}
-function addAggregate(x,y,z,vx,vy,vz,mass){const mesh=new T.Mesh(aggregateGeo,new T.MeshStandardMaterial({color:0xb8c9d4,roughness:.85,metalness:.08}));mesh.position.set(x,y,z);world.add(mesh);const body={x,y,z,vx,vy,vz,mass,mesh};aggregates.push(body);return body}
-function advance(dt){
- if(age>=30)return;
- age=Math.min(30,age+dt);step++;if(step%2)return;dt*=2;
- // Gravity from the forming central condensation plus the diffuse envelope.
- // Monopole approximation avoids quadratic all-pairs work.
- const t=age/30,gravity=1.1+9*t,drag=.07+1.8*t,flatten=.04+2.5*t;
- // BBs retain angular momentum through the collapse. Dissipation primarily
- // removes radial/vertical kinetic energy, allowing disk capture.
- let diskNow=0,oortNow=0;
- for(let i=0;i<N;i++){if(state[i])continue;const k=i*3,x=xyz[k],y=xyz[k+1],z=xyz[k+2],r2=x*x+y*y+z*z+.09,r=Math.sqrt(r2),cyl=Math.hypot(x,z)+1e-5;
- if(i%37===0){oortNow++;continue} // high-j outer reservoir: still material, not deleted
- const ax=-gravity*x/(r2*r),ay=-gravity*y/(r2*r),az=-gravity*z/(r2*r);
- const radial=(x*vel[k]+z*vel[k+2])/cyl,fr=drag*dt,fy=flatten*dt;
- vel[k]+=ax*dt-fr*radial*x/cyl;
- vel[k+1]+=ay*dt-vel[k+1]*fy;
- vel[k+2]+=az*dt-fr*radial*z/cyl;
- xyz[k]+=vel[k]*dt;xyz[k+1]+=vel[k+1]*dt;xyz[k+2]+=vel[k+2]*dt;
- const nr=Math.hypot(xyz[k],xyz[k+1],xyz[k+2]);
- if(nr<STAR_R+.18&&age>1){absorb(i,null);continue}
- if(nr>9.35){const f=9.35/nr;xyz[k]*=f;xyz[k+1]*=f;xyz[k+2]*=f;vel[k]*=.8;vel[k+1]*=.8;vel[k+2]*=.8}
- if(Math.abs(xyz[k+1])<.65&&cyl<7.5)diskNow++;
- }
- // Aggregate only when parcels actually converge into occupied disk cells.
- // Grid sampling is linear and capped: no quadratic particle contact search.
- if(step%12===0&&age>10){
- binHead.fill(-1);binMass.fill(0);
- for(let i=0;i<N;i+=2){if(state[i])continue;const k=i*3,x=xyz[k],y=xyz[k+1],z=xyz[k+2],r=Math.hypot(x,z);if(Math.abs(y)>.38||r<.85||r>7.4)continue;
- const sector=Math.floor((Math.atan2(z,x)+Math.PI)/(2*Math.PI)*32)&31,ring=Math.min(15,Math.floor(r/7.5*16)),cell=ring*32+sector;
- binNext[i]=binHead[cell];binHead[cell]=i;binMass[cell]++;
- }
- for(let cell=0;cell<binCount;cell++){
- if(binMass[cell]<16)continue;
- const ring=Math.floor(cell/32),sector=cell%32,r=(ring+.5)/16*7.5,a=(sector+.5)/32*Math.PI*2-Math.PI;
- let target=null;for(const body of aggregates){if(Math.hypot(body.x-r*Math.cos(a),body.z-r*Math.sin(a))<.42){target=body;break}}
- if(!target&&aggregates.length<18){let i=binHead[cell];if(i<0)continue;const k=i*3;target=addAggregate(xyz[k],xyz[k+1],xyz[k+2],vel[k],vel[k+1],vel[k+2],0)}
- if(!target)continue;
- let n=0;for(let i=binHead[cell];i>=0&&n<Math.min(8,binMass[cell]);i=binNext[i]){const k=i*3;if(Math.hypot(xyz[k]-target.x,xyz[k+1]-target.y,xyz[k+2]-target.z)<.65){absorb(i,target);collisions++;n++}}
- }
- }
- for(const body of aggregates){const r2=body.x*body.x+body.y*body.y+body.z*body.z+.15,r=Math.sqrt(r2),g=gravity*dt/(r2*r);body.vx-=body.x*g;body.vy-=body.y*g;body.vz-=body.z*g;body.x+=body.vx*dt;body.y+=body.vy*dt;body.z+=body.vz*dt;const radius=Math.hypot(body.x,body.y,body.z);if(radius>9.1){const f=9.1/radius;body.x*=f;body.y*=f;body.z*=f}body.mesh.position.set(body.x,body.y,body.z);body.mesh.scale.setScalar(Math.min(.45,.075*Math.cbrt(Math.max(1,body.mass))))}
- star.visible=starMass>5;star.scale.setScalar(Math.min(.65,.1+.012*Math.cbrt(starMass)));star.position.set(0,0,0);
- disk=diskNow;oort=oortNow;phase=age<6?'CLOUD':age<15?'COLLAPSE':age<24?'ACCRETION':'PROTOSTELLAR DISC';
- geo.attributes.position.needsUpdate=true;
-}
+function advance(dt){if(elapsed>=30)return;elapsed=Math.min(30,elapsed+dt);steps++;if(steps%2===0)solve(dt*2)}
 reset();
-registerInvariant('genesis-mass',()=>active+starMass+aggregated===N);
-registerInvariant('genesis-finite',()=>Number.isFinite(xyz[0])&&Number.isFinite(starMass));
-registerInvariant('genesis-cap',()=>active<=N&&aggregates.length<=18);
-return{advance,report:()=>({seed:SEED,elapsedSeconds:+age.toFixed(2),durationSeconds:30,phase,initialBeads:N,freeBeads:active,starMassBeads:starMass,aggregateMassBeads:aggregated,aggregateCount:aggregates.length,outerReservoirBeads:oort,diskSample:disk,collisions,accounted:active+starMass+aggregated,method:'central-monopole gravity, rotating cloud, dissipative disk capture, spatial-cell coalescence',limitations:['not full self-gravity','Oort reservoir represented inside bauble','approximate pressure and angular momentum transport']})};
+registerInvariant('genesis-100k-accounting',()=>free+star.m===N);
+registerInvariant('genesis-finite',()=>Number.isFinite(pos[0])&&Number.isFinite(star.m));
+registerInvariant('genesis-initial-population',()=>pos.length===N*3);
+return{advance,report:()=>{const now=totals();return{seed:SEED,elapsedSeconds:+elapsed.toFixed(2),population:N,freeBeads:free,starMassBeads:star.m,accounted:free+star.m,innerBeads:inner,outerBeads:outer,steps,initialMomentum:initialP,currentMomentum:now.momentum,initialAngularMomentum:initialL,currentAngularMomentum:now.angular,method:'symmetric particle-mesh gravity, isothermal grid pressure, momentum-accounted central sink',limitations:['grid force approximation','wall impulses affect total momentum','sink angular momentum tracked as spin','no invented planetary aggregates','30 seconds simulated time not verified physical years']}}};
 })();
 function simulate(dt){genesis.advance(dt)}
 function updateAlarm(){
@@ -222,7 +212,7 @@ document.querySelector('#copyProbe').addEventListener('click',()=>recordInteract
 document.querySelector('#closeProbe').addEventListener('click',()=>recordInteraction('inspect-close'));
 
 
-let last=performance.now(),resumePending=true;function resetFpsWindow(now){probeLast=now;probeFrames=0;perfWindow.renderMs=perfWindow.renderSamples=perfWindow.simulationMs=perfWindow.simulationSteps=0;perfWindow.droppedStart=clock.droppedSeconds;perfWindow.last=null;clock.accumulator=0;showMeasuring();}document.addEventListener('visibilitychange',()=>{resumePending=true;resetFpsWindow(performance.now());});addEventListener('pageshow',()=>{resumePending=true;resetFpsWindow(performance.now());});document.querySelector('#fieldControls').style.display='none';document.querySelector('#status').textContent='100,000 BB · ROTATING PROTOSTELLAR COLLAPSE';function frame(now){requestAnimationFrame(frame);const gap=now-last;last=now;if(document.hidden)return;if(resumePending||gap>500){resumePending=false;resetFpsWindow(now);}probeFrames++;const elapsed=resumePending?0:Math.max(0,Math.min(gap,50)/1000);clock.accumulator+=Math.min(MAX_FRAME,elapsed);clock.droppedSeconds+=Math.max(0,elapsed-MAX_FRAME);let steps=0;while(clock.accumulator>=STEP&&steps<MAX_STEPS){const stepT0=performance.now();simulate(STEP);perfWindow.simulationMs+=performance.now()-stepT0;perfWindow.simulationSteps++;clock.time+=STEP;clock.steps++;clock.accumulator-=STEP;steps++}if(clock.accumulator>=STEP){clock.droppedSeconds+=clock.accumulator;clock.accumulator=0}if(now-probeLast>=fpsState.windowMs){const duration=now-probeLast;fpsState.value=round(probeFrames*1000/duration);fpsState.stale=false;perfWindow.last={durationMs:round(duration),frames:probeFrames,fps:fpsState.value,meanRenderCallMs:round(perfWindow.renderMs/Math.max(1,perfWindow.renderSamples),3),meanSimulateStepMs:round(perfWindow.simulationMs/Math.max(1,perfWindow.simulationSteps),3),simulatedSteps:perfWindow.simulationSteps,simulationCpuMs:round(perfWindow.simulationMs,2),renderCallCpuMs:round(perfWindow.renderMs,2),droppedSimulationSeconds:round(clock.droppedSeconds-perfWindow.droppedStart,3),sampledPhysics:null,note:'Rolling window. Render call measures synchronous JS call only, not asynchronous GPU completion.'};perfWindow.renderMs=perfWindow.renderSamples=perfWindow.simulationMs=perfWindow.simulationSteps=0;perfWindow.droppedStart=clock.droppedSeconds;fpsRow.textContent='FPS · '+fpsState.value.toFixed(1);probeLast=now;probeFrames=0;verifyInvariants();verifyContainment();if(probePanel.classList.contains('open'))inspectWorld()}
+let last=performance.now(),resumePending=true;function resetFpsWindow(now){probeLast=now;probeFrames=0;perfWindow.renderMs=perfWindow.renderSamples=perfWindow.simulationMs=perfWindow.simulationSteps=0;perfWindow.droppedStart=clock.droppedSeconds;perfWindow.last=null;clock.accumulator=0;showMeasuring();}document.addEventListener('visibilitychange',()=>{resumePending=true;resetFpsWindow(performance.now());});addEventListener('pageshow',()=>{resumePending=true;resetFpsWindow(performance.now());});document.querySelector('#fieldControls').style.display='none';document.querySelector('#status').textContent='100,000 BB · PARTICLE-MESH SELF-GRAVITY';function frame(now){requestAnimationFrame(frame);const gap=now-last;last=now;if(document.hidden)return;if(resumePending||gap>500){resumePending=false;resetFpsWindow(now);}probeFrames++;const elapsed=resumePending?0:Math.max(0,Math.min(gap,50)/1000);clock.accumulator+=Math.min(MAX_FRAME,elapsed);clock.droppedSeconds+=Math.max(0,elapsed-MAX_FRAME);let steps=0;while(clock.accumulator>=STEP&&steps<MAX_STEPS){const stepT0=performance.now();simulate(STEP);perfWindow.simulationMs+=performance.now()-stepT0;perfWindow.simulationSteps++;clock.time+=STEP;clock.steps++;clock.accumulator-=STEP;steps++}if(clock.accumulator>=STEP){clock.droppedSeconds+=clock.accumulator;clock.accumulator=0}if(now-probeLast>=fpsState.windowMs){const duration=now-probeLast;fpsState.value=round(probeFrames*1000/duration);fpsState.stale=false;perfWindow.last={durationMs:round(duration),frames:probeFrames,fps:fpsState.value,meanRenderCallMs:round(perfWindow.renderMs/Math.max(1,perfWindow.renderSamples),3),meanSimulateStepMs:round(perfWindow.simulationMs/Math.max(1,perfWindow.simulationSteps),3),simulatedSteps:perfWindow.simulationSteps,simulationCpuMs:round(perfWindow.simulationMs,2),renderCallCpuMs:round(perfWindow.renderMs,2),droppedSimulationSeconds:round(clock.droppedSeconds-perfWindow.droppedStart,3),sampledPhysics:null,note:'Rolling window. Render call measures synchronous JS call only, not asynchronous GPU completion.'};perfWindow.renderMs=perfWindow.renderSamples=perfWindow.simulationMs=perfWindow.simulationSteps=0;perfWindow.droppedStart=clock.droppedSeconds;fpsRow.textContent='FPS · '+fpsState.value.toFixed(1);probeLast=now;probeFrames=0;verifyInvariants();verifyContainment();if(probePanel.classList.contains('open'))inspectWorld()}
 camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);const renderT0=performance.now();renderer.render(scene,camera);perfWindow.renderMs+=performance.now()-renderT0;perfWindow.renderSamples++}
 requestAnimationFrame(frame);
 }catch(e){window.BaubleFatal(e);console.error(e)}

@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='asteroid-bauble-v6';
+const BUILD='asteroid-bauble-v7';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -216,68 +216,129 @@ bbGeo.setAttribute('color',new T.BufferAttribute(bbColor,3));
 bbGeo.computeBoundingSphere();
 const bbCloud=new T.Points(bbGeo,new T.PointsMaterial({size:.11,vertexColors:true,sizeAttenuation:true,transparent:false,depthWrite:true}));
 bbCloud.name='Conserved material BBs';bbCloud.visible=false;bbCloud.frustumCulled=false;world.add(bbCloud);
-let debrisMode=false,blastTime=0,blastFired=0,collisionTick=0;
+let debrisMode=false,reforming=false,blastTime=0,blastFired=0,collisionTick=0,reformTime=0;
 const blasts=Array.from({length:10},(_,i)=>{
  const a=i*2.399963229728653,up=1-2*(i+.5)/10,rad=Math.sqrt(1-up*up);
  return {x:Math.cos(a)*rad*3.4,y:up*3.4,z:Math.sin(a)*rad*3.4,
  dx:Math.sin(a*1.7),dy:Math.cos(a*2.3)*.8,dz:Math.cos(a*1.3)};
 });
+// Partition existing surface triangles into ten intact shards; reveal interior BBs by shard.
+const shardPos=Array.from({length:10},()=>[]),shardCol=Array.from({length:10},()=>[]);
+for(let i=0;i<verts.length;i+=9){
+ const cx=(verts[i]+verts[i+3]+verts[i+6])/3,cy=(verts[i+1]+verts[i+4]+verts[i+7])/3,cz=(verts[i+2]+verts[i+5]+verts[i+8])/3;
+ let nearest=0,best=Infinity;
+ for(let k=0;k<10;k++){const b=blasts[k],d=(cx-b.x)**2+(cy-b.y)**2+(cz-b.z)**2;if(d<best){best=d;nearest=k}}
+ for(let q=0;q<9;q++){shardPos[nearest].push(verts[i+q]);shardCol[nearest].push(cols[i+q])}
+}
+const shardMeshes=shardPos.map((positions,k)=>{
+ const g=new T.BufferGeometry();
+ g.setAttribute('position',new T.Float32BufferAttribute(positions,3));
+ g.setAttribute('color',new T.Float32BufferAttribute(shardCol[k],3));
+ g.computeVertexNormals();
+ const mesh=new T.Mesh(g,asteroidMesh.material);mesh.name='Fracture shard '+k;mesh.visible=false;world.add(mesh);return mesh;
+});
+const bbReleased=new Uint8Array(BB_TOTAL);
+const bbActivePosition=new Float32Array(BB_TOTAL*3);
+const bbActiveColor=new Float32Array(BB_TOTAL*3);
+let releasedCount=0;
+const activeGeo=new T.BufferGeometry();
+activeGeo.setAttribute('position',new T.BufferAttribute(bbActivePosition,3).setUsage(T.DynamicDrawUsage));
+activeGeo.setAttribute('color',new T.BufferAttribute(bbActiveColor,3));
+activeGeo.setDrawRange(0,0);
+const activeCloud=new T.Points(activeGeo,bbCloud.material);
+activeCloud.name='Released BBs';activeCloud.frustumCulled=false;activeCloud.visible=false;world.add(activeCloud);
+bbCloud.visible=false;
+function setStatus(message){document.querySelector('#status').textContent=message}
 function resetDebris(){
- debrisMode=false;blastTime=0;blastFired=0;
- bbCloud.visible=false;asteroidMesh.visible=true;
- bbPosition.set(bbOrigin);bbVelocity.fill(0);bbGeo.attributes.position.needsUpdate=true;
+ debrisMode=false;reforming=false;blastTime=0;blastFired=0;releasedCount=0;reformTime=0;
+ bbCloud.visible=false;activeCloud.visible=false;activeGeo.setDrawRange(0,0);
+ shardMeshes.forEach(m=>m.visible=false);asteroidMesh.visible=true;
+ bbReleased.fill(0);bbPosition.set(bbOrigin);bbVelocity.fill(0);
  document.querySelector('#detonate').textContent='☄ BLOW APART';
- document.querySelector('#status').textContent='CARBONACEOUS ROCK · ORBIT / PINCH TO INSPECT';
+ setStatus('CARBONACEOUS ROCK · ORBIT / PINCH TO INSPECT');
 }
 function detonate(){
- debrisMode=true;blastTime=0;blastFired=0;collisionTick=0;
- bbPosition.set(bbOrigin);bbVelocity.fill(0);
- asteroidMesh.visible=false;bbCloud.visible=true;
+ debrisMode=true;reforming=false;blastTime=0;blastFired=0;collisionTick=0;releasedCount=0;
+ bbReleased.fill(0);bbPosition.set(bbOrigin);bbVelocity.fill(0);
+ asteroidMesh.visible=false;shardMeshes.forEach(m=>m.visible=true);
+ activeCloud.visible=true;bbCloud.visible=false;
  document.querySelector('#detonate').textContent='↺ REFORM';
- document.querySelector('#status').textContent='68,035 CONSERVED BBs · 10 ERRATIC BLASTS';
+ setStatus('TEN FRACTURES · 68,035 CONSERVED MATERIAL BBs');
 }
-document.querySelector('#detonate').addEventListener('click',()=>{if(debrisMode)resetDebris();else detonate()});
+function reform(){
+ reforming=true;reformTime=0;
+ document.querySelector('#detonate').textContent='↺ REFORMING';
+ setStatus('MATERIAL RETURNING TO ORIGINAL VOLUME');
+}
+document.querySelector('#detonate').addEventListener('click',()=>{if(!debrisMode)detonate();else if(!reforming)reform()});
 function stepDebris(dt){
  if(!debrisMode)return;
- blastTime+=dt;
- while(blastFired<10&&blastTime>=blastFired*.19){
-  const b=blasts[blastFired],index=blastFired++;
+ if(reforming){
+  reformTime+=dt;
+  const attraction=10,damper=Math.exp(-3.1*dt);
+  let maxError=0;
   for(let j=0;j<BB_TOTAL;j++){
-   const i=j*3,x=bbPosition[i]-b.x,y=bbPosition[i+1]-b.y,z=bbPosition[i+2]-b.z;
-   const dist2=x*x+y*y+z*z+.8,inv=1/Math.sqrt(dist2);
-   const spread=2.8+6.4/(1+dist2*.12);
-   const local=bbGroup[j]===index?1.7:1;
-   bbVelocity[i]+=(x*inv*spread+b.dx*2.2)*local;
-   bbVelocity[i+1]+=(y*inv*spread+b.dy*2.2)*local;
-   bbVelocity[i+2]+=(z*inv*spread+b.dz*2.2)*local;
+   if(!bbReleased[j])continue;
+   const i=j*3;
+   for(let axis=0;axis<3;axis++){
+    const q=i+axis,delta=bbOrigin[q]-bbPosition[q];
+    bbVelocity[q]=(bbVelocity[q]+delta*attraction*dt)*damper;
+    bbPosition[q]+=bbVelocity[q]*dt;
+    maxError=Math.max(maxError,Math.abs(delta));
+   }
+  }
+  if(reformTime>5.2 || (reformTime>3.2&&maxError<.13)){resetDebris();return}
+ }else{
+  blastTime+=dt;
+  while(blastFired<10&&blastTime>=blastFired*.42){
+   const b=blasts[blastFired],index=blastFired++;
+   shardMeshes[index].visible=false;
+   for(let j=0;j<BB_TOTAL;j++){
+    if(bbGroup[j]!==index)continue;
+    bbReleased[j]=1;
+    const i=j*3,x=bbPosition[i]-b.x,y=bbPosition[i+1]-b.y,z=bbPosition[i+2]-b.z;
+    const dist2=x*x+y*y+z*z+.8,inv=1/Math.sqrt(dist2);
+    const spread=6+8/(1+dist2*.12),twist=hash(j,index,AST_SEED)-.5;
+    bbVelocity[i]=x*inv*spread+b.dx*4+twist*4;
+    bbVelocity[i+1]=y*inv*spread+b.dy*4+twist*2;
+    bbVelocity[i+2]=z*inv*spread+b.dz*4-twist*4;
+   }
+  }
+  const wall=INNER_R-.26,wall2=wall*wall,drag=Math.exp(-.085*dt);
+  for(let j=0;j<BB_TOTAL;j++){
+   if(!bbReleased[j])continue;
+   const i=j*3;
+   let x=bbPosition[i]+bbVelocity[i]*dt,y=bbPosition[i+1]+bbVelocity[i+1]*dt,z=bbPosition[i+2]+bbVelocity[i+2]*dt;
+   const r2=x*x+y*y+z*z;
+   if(r2>wall2){
+    const inv=1/Math.sqrt(r2),nx=x*inv,ny=y*inv,nz=z*inv;
+    x=nx*wall;y=ny*wall;z=nz*wall;
+    const dot=bbVelocity[i]*nx+bbVelocity[i+1]*ny+bbVelocity[i+2]*nz;
+    if(dot>0){bbVelocity[i]-=1.72*dot*nx;bbVelocity[i+1]-=1.72*dot*ny;bbVelocity[i+2]-=1.72*dot*nz}
+   }
+   bbPosition[i]=x;bbPosition[i+1]=y;bbPosition[i+2]=z;
+   bbVelocity[i]*=drag;bbVelocity[i+1]*=drag;bbVelocity[i+2]*=drag;
+  }
+  if((collisionTick++&3)===0)for(let j=0;j<BB_TOTAL-1;j+=2){
+   if(!bbReleased[j]||!bbReleased[j+1])continue;
+   const i=j*3,k=i+3,dx=bbPosition[i]-bbPosition[k],dy=bbPosition[i+1]-bbPosition[k+1],dz=bbPosition[i+2]-bbPosition[k+2],d2=dx*dx+dy*dy+dz*dz;
+   if(d2>.0001&&d2<.09){
+    const push=(.3-Math.sqrt(d2))*.35/Math.sqrt(d2);
+    bbVelocity[i]+=dx*push;bbVelocity[i+1]+=dy*push;bbVelocity[i+2]+=dz*push;
+    bbVelocity[k]-=dx*push;bbVelocity[k+1]-=dy*push;bbVelocity[k+2]-=dz*push;
+   }
   }
  }
- const wall=INNER_R-.26,wall2=wall*wall,drag=Math.exp(-.085*dt);
- for(let j=0;j<BB_TOTAL;j++){
-  const i=j*3;
-  let x=bbPosition[i]+bbVelocity[i]*dt,y=bbPosition[i+1]+bbVelocity[i+1]*dt,z=bbPosition[i+2]+bbVelocity[i+2]*dt;
-  const r2=x*x+y*y+z*z;
-  if(r2>wall2){
-   const inv=1/Math.sqrt(r2),nx=x*inv,ny=y*inv,nz=z*inv;
-   x=nx*wall;y=ny*wall;z=nz*wall;
-   const dot=bbVelocity[i]*nx+bbVelocity[i+1]*ny+bbVelocity[i+2]*nz;
-   if(dot>0){bbVelocity[i]-=1.72*dot*nx;bbVelocity[i+1]-=1.72*dot*ny;bbVelocity[i+2]-=1.72*dot*nz}
-  }
-  bbPosition[i]=x;bbPosition[i+1]=y;bbPosition[i+2]=z;
-  bbVelocity[i]*=drag;bbVelocity[i+1]*=drag;bbVelocity[i+2]*=drag;
+ let n=0;
+ for(let j=0;j<BB_TOTAL;j++)if(bbReleased[j]){
+  const i=j*3,k=n++*3;
+  bbActivePosition[k]=bbPosition[i];bbActivePosition[k+1]=bbPosition[i+1];bbActivePosition[k+2]=bbPosition[i+2];
+  bbActiveColor[k]=bbColor[i];bbActiveColor[k+1]=bbColor[i+1];bbActiveColor[k+2]=bbColor[i+2];
  }
- // Sloppy, bounded near-neighbor agitation: deliberately not an O(N²) hard-sphere solver.
- if((collisionTick++&3)===0)for(let j=0;j<BB_TOTAL-1;j+=2){
-  const i=j*3,k=(j+1)*3,dx=bbPosition[i]-bbPosition[k],dy=bbPosition[i+1]-bbPosition[k+1],dz=bbPosition[i+2]-bbPosition[k+2],d2=dx*dx+dy*dy+dz*dz;
-  if(d2>.0001&&d2<.09){
-   const push=(.3-Math.sqrt(d2))*.35/Math.sqrt(d2);
-   bbVelocity[i]+=dx*push;bbVelocity[i+1]+=dy*push;bbVelocity[i+2]+=dz*push;
-   bbVelocity[k]-=dx*push;bbVelocity[k+1]-=dy*push;bbVelocity[k+2]-=dz*push;
-  }
- }
- bbGeo.attributes.position.needsUpdate=true;
+ releasedCount=n;activeGeo.setDrawRange(0,n);activeGeo.attributes.position.needsUpdate=true;
+ activeGeo.attributes.color.needsUpdate=true;
 }
-globalThis.AsteroidDebris={count:BB_TOTAL,blasts:10,get active(){return debrisMode},get fired(){return blastFired},collisionModel:'bounded paired-neighbor sloppy impulses, not global pairwise contacts',conserved:true};
+globalThis.AsteroidDebris={count:BB_TOTAL,blasts:10,get active(){return debrisMode},get fired(){return blastFired},get released(){return releasedCount},get reforming(){return reforming},collisionModel:'bounded paired-neighbor sloppy impulses, not global pairwise contacts',conserved:true};
 registerInvariant('material-bb-count',()=>({ok:BB_TOTAL===68035&&bbCount===BB_TOTAL,detail:'Expected 68,035 conserved BBs'}));
 
 const astInventory=astMatNames.map((name,i)=>({name,occupiedSamples:astCounts[i],fraction:Math.round(1000*astCounts[i]/Math.max(1,astCounts.reduce((a,b)=>a+b,0)))/10}));
@@ -297,7 +358,7 @@ const round=(n,d=2)=>Number.isFinite(n)?+n.toFixed(d):null;
 function inspectWorld(){
  camera.updateMatrixWorld();world.updateMatrixWorld(true);
  const center=new T.Vector3(0,0,0).project(camera);
- const report={build:BUILD,time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:1,contentsInstantiated:true},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:round(probeFrames?1000/(probeFrameMs/probeFrames):0)},containment:verifyContainment(),invariants:verifyInvariants(),asteroid:globalThis.AsteroidSpecimen,debris:{active:debrisMode,blastsFired:blastFired,bbCount:BB_TOTAL,collisionModel:globalThis.AsteroidDebris.collisionModel},simulation:{time:round(clock.time,3),steps:clock.steps,droppedSeconds:round(clock.droppedSeconds,3),fixedStep:STEP},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:[]};
+ const report={build:BUILD,time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:1,contentsInstantiated:true},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:round(probeFrames?1000/(probeFrameMs/probeFrames):0)},containment:verifyContainment(),invariants:verifyInvariants(),asteroid:globalThis.AsteroidSpecimen,debris:{active:debrisMode,reforming,blastsFired:blastFired,releasedBBs:releasedCount,bbCount:BB_TOTAL,collisionModel:globalThis.AsteroidDebris.collisionModel},simulation:{time:round(clock.time,3),steps:clock.steps,droppedSeconds:round(clock.droppedSeconds,3),fixedStep:STEP},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:[]};
  probeReport=JSON.stringify(report,null,2);probeText.textContent=probeReport;return report;
 }
 probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};

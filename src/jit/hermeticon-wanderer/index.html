@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07101a"><title>Hermeticon · Wanderer — Terrain</title><style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:82px;right:10px;top:120px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:175px 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px}#buildRow{display:flex;justify-content:center;align-items:center;gap:5px;margin:3px auto 0;max-width:calc(100vw - 150px);color:#a6b7b9;font:11px ui-monospace,monospace;letter-spacing:.12em;pointer-events:auto}#build{font-size:10px;letter-spacing:0;overflow-wrap:anywhere;text-align:center}#fresh{display:inline-grid;place-items:center;width:40px;height:40px;min-height:40px;padding:0;border:0;background:transparent;color:#c4b291;font:23px system-ui;line-height:1;cursor:pointer} </style></head><body><div id="stage"></div><button id="probe" type="button">◉ INSPECT</button><div id="probePanel"><div id="probeActions"><button id="copyProbe">COPY REPORT</button><button id="closeProbe">CLOSE</button></div><div id="probeText"></div></div><div id="title"><h1>HERMETICON</h1><div id="tag">WANDERER · GEOLOGICAL HISTORY</div><div id="buildRow"><span id="build"></span><button id="fresh" type="button" title="Fetch latest build" aria-label="Fetch latest build">↻</button></div></div><div id="hud"><div id="status">AUTONOMOUS GEOLOGICAL TEST</div></div><div id="error"></div><script>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:82px;right:10px;top:120px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:175px 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px}#buildRow{display:flex;justify-content:center;align-items:center;gap:5px;margin:3px auto 0;max-width:calc(100vw - 150px);color:#a6b7b9;font:11px ui-monospace,monospace;letter-spacing:.12em;pointer-events:auto}#build{font-size:10px;letter-spacing:0;overflow-wrap:anywhere;text-align:center}#fresh{display:inline-grid;place-items:center;width:40px;height:40px;min-height:40px;padding:0;border:0;background:transparent;color:#c4b291;font:23px system-ui;line-height:1;cursor:pointer} </style></head><body><div id="stage"></div><button id="probe" type="button">◉ INSPECT</button><div id="probePanel"><div id="probeActions"><button id="copyProbe">COPY REPORT</button><button id="closeProbe">CLOSE</button></div><div id="probeText"></div></div><div id="title"><h1>HERMETICON</h1><div id="tag">WANDERER · EQUATORIAL MATERIAL</div><div id="buildRow"><span id="build"></span><button id="fresh" type="button" title="Fetch latest build" aria-label="Fetch latest build">↻</button></div></div><div id="hud"><div id="status">SOLID TERRAIN · ZERO DATUM</div></div><div id="error"></div><script>
 (function(){
  const el=document.getElementById('error');
  function fatal(error){
@@ -18,9 +18,8 @@
 })();
 </script><script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
-import {createQuadrantHistory} from './geological-history-torture.js';
 try {
-const BUILD='hermeticon-wanderer-terrain-v3';
+const BUILD='hermeticon-wanderer-equatorial-volume-v4';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x06101b);
@@ -34,298 +33,15 @@ const glass=new THREE.MeshPhysicalMaterial({color:0xa5d9e2,transparent:true,opac
 const BAUBLE_R=10.25;
 const shell=new THREE.Mesh(new THREE.SphereGeometry(BAUBLE_R,48,32),glass);world.add(shell);
 const rim=new THREE.Mesh(new THREE.TorusGeometry(10.14,.08,8,96),brass);rim.rotation.x=Math.PI/2;world.add(rim);
-let beyondWorldSeed=741,beyondMutation=0;
-let globe=null;
-const terrainScale=.17;
-const terrainEvents=[];
-let cycle=0;
-function rebuild(){
- if(globe){globe.root.removeFromParent();globe.root.traverse(o=>{o.geometry?.dispose();if(o.material){const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>m.dispose())}})}
- globe=createBeyondTerrain({parent:world,miniature:true});
- globe.root.scale.setScalar(terrainScale);globe.root.position.y=.65;
- terrainEvents.push({seconds:+(performance.now()/1000).toFixed(2),kind:'seed',seed:beyondWorldSeed,mutation:beyondMutation});if(terrainEvents.length>30)terrainEvents.shift();
-}
-function createBeyondTerrain(options={}){
-  // Beyond T1: compile a cheap geological history into one authoritative terrain surface.
-  // No terrain-type parcels. Continuous strata are deformed, incised, differentially
-  // eroded and mantled; dunes are terrain topology whose near-surface material is sand.
-  const root=new THREE.Group();root.name=options.miniature?'snowglobe:geology':'beyond:world-substance';(options.parent||world).add(root);
-  const SIZE=104,HALF=SIZE*.5,N=options.miniature?161:289,seed=beyondWorldSeed,STRATA=7;
-  const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),smooth=t=>t*t*(3-2*t),fract=v=>v-Math.floor(v),mix=(a,b,t)=>a+(b-a)*t;
-  const hash=(x,z,s=seed)=>fract(Math.sin(x*127.1+z*311.7+s*74.7)*43758.5453123);
-  function noise(x,z,s=seed){const ix=Math.floor(x),iz=Math.floor(z),fx=smooth(fract(x)),fz=smooth(fract(z));return mix(mix(hash(ix,iz,s),hash(ix+1,iz,s),fx),mix(hash(ix,iz+1,s),hash(ix+1,iz+1,s),fx),fz)*2-1}
-  const segDist=(x,z,ax,az,bx,bz)=>{const dx=bx-ax,dz=bz-az,l=dx*dx+dz*dz||1,t=clamp(((x-ax)*dx+(z-az)*dz)/l);return Math.hypot(x-ax-dx*t,z-az-dz*t)};
-  const strata=[
-    {thick:1.25,resist:.30,color:0x74695e},{thick:1.05,resist:.86,color:0x99836d},
-    {thick:1.45,resist:.42,color:0x806f60},{thick:.92,resist:.94,color:0xb09a7d},
-    {thick:1.38,resist:.34,color:0x776b5e},{thick:1.08,resist:.79,color:0x9c866c},
-    {thick:1.62,resist:.50,color:0x857563}
-  ];
-  const cycle=strata.reduce((n,s)=>n+s.thick,0);
-  function deformation(x,z){
-    // Broad uplift keeps the earned horizon-scale composition; a coherent tilted/folded
-    // front in the west lets resistant beds emerge as related fins rather than stamps.
-    const continental=.82+1.42*noise(x*.024,z*.024,751)+.62*noise(x*.055+8,z*.052-5,769);
-    const northRange=5.4*Math.exp(-.5*Math.pow(segDist(x,z,-50,22,-18,9)/8.2,2))+4.1*Math.exp(-.5*Math.pow(segDist(x,z,-18,9,12,16)/8.7,2))+3.5*Math.exp(-.5*Math.pow(segDist(x,z,12,16,50,29)/9.5,2));
-    const southRange=3.0*Math.exp(-.5*Math.pow(segDist(x,z,-45,-31,-12,-18)/10,2))+2.5*Math.exp(-.5*Math.pow(segDist(x,z,-12,-18,25,-26)/10.5,2));
-    const shelf=1.35*Math.tanh((x*.72-z*.34-21)/5.8);
-    const fold=1.15*Math.sin((x*.11+z*.035)+noise(x*.018,z*.018,763)*1.2)*Math.exp(-Math.pow((x+27)/20,2));
-    const tilt=(-x*.095+z*.018)*smooth(clamp((-x-5)/34));
-    return continental+northRange+southRange+shelf+fold+tilt;
-  }
-  function drainage(x,z){
-    const trunk=Math.min(segDist(x,z,-54,-4,-27,-7),segDist(x,z,-27,-7,2,-2),segDist(x,z,2,-2,29,-9),segDist(x,z,29,-9,54,-4));
-    const t1=Math.min(segDist(x,z,-40,31,-25,13),segDist(x,z,-25,13,-17,-6));
-    const t2=Math.min(segDist(x,z,18,39,14,18),segDist(x,z,14,18,8,-3));
-    const t3=Math.min(segDist(x,z,43,-38,30,-23),segDist(x,z,30,-23,24,-8));
-    const tributary=Math.min(t1,t2,t3);
-    const trunkCut=5.9*Math.exp(-Math.pow(trunk/5.2,1.55))+2.5*Math.exp(-Math.pow(trunk/1.28,1.38));
-    const branchCut=2.65*Math.exp(-Math.pow(tributary/3.2,1.55))+.72*Math.exp(-Math.pow(tributary/.95,1.45));
-    return{trunk,tributary,cut:trunkCut+branchCut};
-  }
-  function stratumState(structuralHeight,erosion){
-    // Identity remains categorical, but morphology consumes a continuous resistance
-    // field across contacts. This prevents a one-sample layer flip from becoming a
-    // one-sample erosion cliff while preserving the actual stratigraphic boundary.
-    let phase=((structuralHeight-erosion)*.92+cycle*64)%cycle;if(phase<0)phase+=cycle;
-    let acc=0;
-    for(let i=0;i<strata.length;i++){
-      const start=acc,end=acc+strata[i].thick;
-      if(phase<=end){
-        const local=(phase-start)/strata[i].thick,edge=.22;
-        let resistance=strata[i].resist;
-        if(local<edge){
-          const prev=(i+strata.length-1)%strata.length,t=smooth(local/edge);
-          resistance=mix(strata[prev].resist,strata[i].resist,t);
-        }else if(local>1-edge){
-          const next=(i+1)%strata.length,t=smooth((local-(1-edge))/edge);
-          resistance=mix(strata[i].resist,strata[next].resist,t);
-        }
-        return{layer:i,resistance};
-      }
-      acc=end;
-    }
-    return{layer:strata.length-1,resistance:strata[strata.length-1].resist};
-  }
-  const exposedStratum=(structuralHeight,erosion)=>stratumState(structuralHeight,erosion).layer;
-  const torture=createQuadrantHistory({noise,clamp,smooth,seed,mutation:beyondMutation});
-  function mesaRetreat(x,z){
-    // T6 adversary: cliffs by survival, not incision. A coherent resistant cap survives
-    // regional retreat; the edge is warped continuously so no polygon is authored.
-    const cx=-29,cz=28;
-    const qx=(x-cx)/18,qz=(z-cz)/13;
-    const warp=noise(x*.035,z*.035,1109)*.22+noise(x*.081,z*.074,1117)*.055;
-    const radial=Math.sqrt(qx*qx+qz*qz)+warp;
-    const cap=smooth(clamp((1.03-radial)/.16));
-    const shoulder=smooth(clamp((1.30-radial)/.28))*(1-cap);
-    const capWeather=.18*noise(x*.065,z*.061,1123);
-    return{lift:cap*(4.35+capWeather)+shoulder*1.05,cap,shoulder,radial};
-  }
-  function geology(x,z){
-    const structural=deformation(x,z),d=drainage(x,z);
-    const broadWeather=1.05+.78*(noise(x*.035,z*.035,821)+1)*.5;
-    let erosion=d.cut+broadWeather;
-    // Two cheap differential-erosion passes: resistance of the newly exposed layer
-    // feeds back into retreat. This makes benches and coherent tilted outcrops.
-    let state=stratumState(structural,erosion);
-    erosion+=smooth(clamp(d.cut/5.5))*(.50-state.resistance)*.72;
-    state=stratumState(structural,erosion);
-    const layer=state.layer,resistance=state.resistance;
-    const beddingPhase=(structural-erosion)*2.2+noise(x*.025,z*.025,827)*.65;
-    const rawBedRelief=(resistance-.48)*.48*Math.tanh(Math.sin(beddingPhase)*1.25);
-    const retreat=mesaRetreat(x,z);
-    // T7: retreat owns the large cliff. Suppress repeated bedding relief only where
-    // that younger survival process is actively shaping the face; keep sharpness and
-    // stratigraphic evidence everywhere else.
-    const retreatAuthority=clamp(retreat.cap+retreat.shoulder);
-    const bedRelief=rawBedRelief*(1-.82*retreatAuthority);
-    const inherited=structural-erosion+bedRelief;
-    const broken=torture.apply(x,z,{baseHeight:inherited,resistance});
-    const bedrock=inherited+broken.delta;
-    return{bedrock,layer,resistance,drainage:d,retreat:{...retreat,...broken.signals},jurisdictions:broken.jurisdictions};
-  }
-  function mantle(x,z,g){
-    // White-Sands adversary: a closed basin receives a mobile-material history.
-    // Its compiled dunes are already authoritative terrain topology. The mantle field
-    // records that their near-surface matter is gypsum-like sand for later realization.
-    const basin=Math.exp(-(Math.pow((x-27)/17,2)+Math.pow((z-18)/12.5,2)));
-    const shelter=clamp((2.7-g.bedrock)/5.4);
-    const source=clamp(basin*1.34*shelter);
-    const warp=noise(x*.032,z*.032,907)*3.6;
-    const duneAxis=x*.54+z*.17+warp;
-    const envelope=smooth(clamp((source-.14)/.66));
-    const dunes=envelope*(.58+.26*noise(x*.12,z*.09,911))*Math.max(0,.5+.5*Math.sin(duneAxis*1.12));
-    const sheet=envelope*.48;
-    return{depth:Math.max(0,sheet+dunes),sand:envelope,kind:envelope>.18?'gypsum-sand':'bedrock'};
-  }
-  function sampleWorld(x,z){
-    const g=geology(x,z),m=mantle(x,z,g);
-    return{height:g.bedrock+m.depth,bedrock:g.bedrock,layer:g.layer,resistance:g.resistance,mantle:m,drainage:g.drainage,retreat:g.retreat,jurisdictions:g.jurisdictions};
-  }
-  const positions=new Float32Array(N*N*3),colors=new Float32Array(N*N*3),heights=new Float32Array(N*N);
-  const col=new THREE.Color(),sandColor=new THREE.Color(0xd7d2bd);
-  function writeVertex(ix,iz){
-    const x=-HALF+SIZE*ix/(N-1),z=-HALF+SIZE*iz/(N-1),w=sampleWorld(x,z),k=ix+N*iz;
-    heights[k]=w.height;positions[k*3]=x;positions[k*3+1]=w.height;positions[k*3+2]=z;
-    col.setHex(strata[w.layer].color);
-    // Exposed stratum is visible evidence of latent geology; sand mantle can cover it
-    // without ceasing to be the same authoritative terrain surface.
-    col.lerp(sandColor,clamp(w.mantle.sand*.88));
-    const grain=.91+.09*noise(x*.39,z*.39,887);col.multiplyScalar(grain);
-    colors[k*3]=col.r;colors[k*3+1]=col.g;colors[k*3+2]=col.b;
-  }
-  for(let z=0;z<N;z++)for(let x=0;x<N;x++)writeVertex(x,z);
-  // T2 representation pass: geology remains the generator; this only band-limits its
-  // projection to the spatial vocabulary of the mesh. A tiny separable kernel spreads
-  // sub-cell stratigraphic/incision jumps across several triangles without inventing
-  // parcels or changing the large-scale geological history.
-  const filtered=new Float32Array(N*N),tmp=new Float32Array(N*N);
-  const kernel=[1,2,1],ks=4;
-  for(let z=0;z<N;z++)for(let x=0;x<N;x++){
-    let v=0,w=0;for(let o=-1;o<=1;o++){const xx=Math.max(0,Math.min(N-1,x+o)),kw=kernel[o+1];v+=heights[xx+N*z]*kw;w+=kw}tmp[x+N*z]=v/w;
-  }
-  for(let z=0;z<N;z++)for(let x=0;x<N;x++){
-    let v=0,w=0;for(let o=-1;o<=1;o++){const zz=Math.max(0,Math.min(N-1,z+o)),kw=kernel[o+1];v+=tmp[x+N*zz]*kw;w+=kw}filtered[x+N*z]=v/w;
-  }
-  heights.set(filtered);
-  for(let i=0;i<N*N;i++)positions[i*3+1]=heights[i];
-  // Miniature surface is sampled from the untouched geological height/color field.
-  // Polar topology gives an exact shared circular rim instead of a grid-cell staircase.
-  const BEDROCK_Y=-12;
-  const R=49,SECTORS=192,RINGS=76;
-  const surfacePositions=[],surfaceColors=[],indices=[];
-  const sample=(array,x,z,component)=>{
-    const fx=clamp((x+HALF)/SIZE*(N-1),0,N-1.00001),fz=clamp((z+HALF)/SIZE*(N-1),0,N-1.00001);
-    const ix=Math.floor(fx),iz=Math.floor(fz),tx=fx-ix,tz=fz-iz,stride=component===null?1:3,c=component||0;
-    const get=(dx,dz)=>array[(ix+dx+N*(iz+dz))*stride+c];
-    return mix(mix(get(0,0),get(1,0),tx),mix(get(0,1),get(1,1),tx),tz);
-  };
-  const vertexAt=(x,z)=>{
-    surfacePositions.push(x,Math.max(BEDROCK_Y,sample(heights,x,z,null)),z);
-    for(let c=0;c<3;c++)surfaceColors.push(sample(colors,x,z,c));
-  };
-  vertexAt(0,0);
-  for(let ring=1;ring<=RINGS;ring++)for(let t=0;t<SECTORS;t++){
-    const angle=t*Math.PI*2/SECTORS,rad=R*ring/RINGS;
-    vertexAt(Math.cos(angle)*rad,Math.sin(angle)*rad);
-  }
-  for(let t=0;t<SECTORS;t++)indices.push(0,1+(t+1)%SECTORS,1+t);
-  for(let ring=1;ring<RINGS;ring++)for(let t=0;t<SECTORS;t++){
-    const a=1+(ring-1)*SECTORS+t,b=1+(ring-1)*SECTORS+(t+1)%SECTORS;
-    const c=a+SECTORS,d=b+SECTORS;
-    indices.push(a,b,c,b,d,c);
-  }
-  const specimenPositions=new Float32Array(surfacePositions);
-  const specimenColors=new Float32Array(surfaceColors);
-  // Geological section: the same deformed stratigraphic coordinates used by
-  // the surface, sampled at depth. Continuous angular columns share vertices.
-  const WALL_LEVELS=64,WALL_COLUMNS=SECTORS+1;
-  const wallPositions=new Float32Array(WALL_COLUMNS*(WALL_LEVELS+1)*3);
-  const wallColors=new Float32Array(wallPositions.length),wallIndices=[];
-  const wallVertex=(t,l)=>t*(WALL_LEVELS+1)+l;
-  // Single material authority for both exposed surface and cross-section.
-  // Erosion determines the existing exposed layer, while depth traverses
-  // older strata in the same structural coordinate. The sand mantle is a
-  // distinct surficial cover, not a change to the underlying rock identity.
-  function materialAt(x,z,y,surfaceY){
-    const w=sampleWorld(x,z);
-    const depth=Math.max(0,surfaceY-y);
-    const layer=depth<1e-5?w.layer:stratumState(deformation(x,z),Math.max(0,deformation(x,z)-w.bedrock)+depth).layer;
-    return {layer,mantle:depth<1e-5?w.mantle.sand:0};
-  }
-  function sectionColor(x,z,y,surfaceY){
-    const m=materialAt(x,z,y,surfaceY);
-    const material=new THREE.Color(strata[m.layer].color);
-    if(m.mantle)material.lerp(sandColor,clamp(m.mantle*.88));
-    const grain=.91+.09*noise(x*.39,z*.39,887);
-    material.multiplyScalar(grain);
-    return material;
-  }
-  for(let t=0;t<WALL_COLUMNS;t++)for(let l=0;l<=WALL_LEVELS;l++){
-    const angle=(t%SECTORS)*Math.PI*2/SECTORS;
-    const x=Math.cos(angle)*R,z=Math.sin(angle)*R;
-    const rim=1+(RINGS-1)*SECTORS+(t%SECTORS);
-    const top=specimenPositions[rim*3+1],f=l/WALL_LEVELS;
-    const y=BEDROCK_Y+(top-BEDROCK_Y)*f,off=wallVertex(t,l)*3;
-    wallPositions[off]=x;wallPositions[off+1]=y;wallPositions[off+2]=z;
-    const c=sectionColor(x,z,y,top);
-    wallColors[off]=c.r;wallColors[off+1]=c.g;wallColors[off+2]=c.b;
-    if(t<SECTORS&&l<WALL_LEVELS){
-      const a=wallVertex(t,l),b=wallVertex(t+1,l);
-      wallIndices.push(a,a+1,b,b,a+1,b+1);
-    }
-  }
-  const wallGeo=new THREE.BufferGeometry();
-  wallGeo.setAttribute('position',new THREE.BufferAttribute(wallPositions,3));
-  wallGeo.setAttribute('color',new THREE.BufferAttribute(wallColors,3));
-  wallGeo.setIndex(wallIndices);wallGeo.computeVertexNormals();
-  const wallMesh=new THREE.Mesh(wallGeo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,side:THREE.DoubleSide}));
-  wallMesh.name='snowglobe:geological-strata-section';wallMesh.receiveShadow=true;root.add(wallMesh);
-  function refreshEarthWalls(){
-    for(let t=0;t<WALL_COLUMNS;t++)for(let l=0;l<=WALL_LEVELS;l++){
-      const angle=(t%SECTORS)*Math.PI*2/SECTORS,x=Math.cos(angle)*R,z=Math.sin(angle)*R;
-      const rim=1+(RINGS-1)*SECTORS+(t%SECTORS);
-      const top=specimenPositions[rim*3+1],y=BEDROCK_Y+(top-BEDROCK_Y)*l/WALL_LEVELS,off=wallVertex(t,l)*3;
-      wallPositions[off+1]=y;
-      const c=sectionColor(x,z,y,top);
-      wallColors[off]=c.r;wallColors[off+1]=c.g;wallColors[off+2]=c.b;
-    }
-    wallGeo.attributes.position.needsUpdate=true;
-    wallGeo.attributes.color.needsUpdate=true;
-    wallGeo.computeVertexNormals();
-  }
-  // Bedrock owns the bottom cap. Inset its cylindrical edge beneath the
-  // geological wall, and keep its top just below the immutable height floor:
-  // no coincident faces, no shader depth bias, no visible perimeter gap.
-  const BEDROCK_CAP_CLEARANCE=.035;
-  const bedrock=new THREE.Mesh(new THREE.CylinderGeometry(R-.08,R-.08,.55,SECTORS),
-    new THREE.MeshStandardMaterial({color:0x555458,roughness:.96,metalness:.03}));
-  bedrock.name='snowglobe:bedrock';bedrock.position.y=BEDROCK_Y-BEDROCK_CAP_CLEARANCE-.275;root.add(bedrock);
-  function refreshSpecimen(){
-    if(!options.miniature)return;
-    for(let k=0;k<specimenPositions.length/3;k++){
-      const x=specimenPositions[k*3],z=specimenPositions[k*3+2];
-      specimenPositions[k*3+1]=Math.max(BEDROCK_Y,sample(heights,x,z,null));
-    }
-    geo.attributes.position.needsUpdate=true;geo.computeVertexNormals();refreshEarthWalls();
-  }
-  const finalPositions=options.miniature?specimenPositions:positions;
-  const finalColors=options.miniature?specimenColors:colors;
-  const finalIndices=options.miniature?indices:(()=>{const ids=[];for(let z=0;z<N-1;z++)for(let x=0;x<N-1;x++){const a=x+N*z,b=a+1,d=a+N,e=d+1;if((x+z)&1)ids.push(a,d,b,b,d,e);else ids.push(a,d,e,a,e,b)}return ids})();
-  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(finalPositions,3));geo.setAttribute('color',new THREE.BufferAttribute(finalColors,3));geo.setIndex(finalIndices);geo.computeVertexNormals();
-  const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.96,metalness:.012,flatShading:true});
-  const mesh=new THREE.Mesh(geo,mat);mesh.name='beyond:geological-history-topology';mesh.receiveShadow=true;root.add(mesh);
-  function groundHeight(x,z){const fx=clamp((x+HALF)/SIZE*(N-1),0,N-1.001),fz=clamp((z+HALF)/SIZE*(N-1),0,N-1.001),x0=Math.floor(fx),z0=Math.floor(fz),tx=fx-x0,tz=fz-z0,A=heights[x0+N*z0],B=heights[x0+1+N*z0],C=heights[x0+N*(z0+1)],D=heights[x0+1+N*(z0+1)];return THREE.MathUtils.lerp(THREE.MathUtils.lerp(A,B,tx),THREE.MathUtils.lerp(C,D,tx),tz)}
-  const inert=()=>({locked:true,reason:'beyond-geological-history-t9'});
-  function deform(x,z,radius=7,delta=2){
-    if(!options.miniature)return inert();
-    for(let iz=0;iz<N;iz++)for(let ix=0;ix<N;ix++){
-      const px=-HALF+SIZE*ix/(N-1),pz=-HALF+SIZE*iz/(N-1),d2=(px-x)**2+(pz-z)**2;
-      if(d2>=radius*radius||px*px+pz*pz>49*49)continue;
-      const k=ix+N*iz,t=1-d2/(radius*radius);
-      heights[k]=Math.max(BEDROCK_Y,heights[k]+delta*t*t*(3-2*t));positions[k*3+1]=heights[k];
-    }
-    refreshSpecimen();
-    window.vestibuleDirty=true;return {x,z,radius,delta};
-  }
-  function resetMiniature(){
-    if(!options.miniature)return inert();
-    for(let k=0;k<heights.length;k++){heights[k]=filtered[k];positions[k*3+1]=filtered[k];}
-    refreshSpecimen();window.vestibuleDirty=true;
-  }
-  return{root,mesh,deform,resetMiniature,maps:(x,z)=>{const w=sampleWorld(x,z);return{height:groundHeight(x,z),bedrock:w.bedrock,exposedStratum:w.layer,resistance:w.resistance,mantle:w.mantle,drainage:{trunk:w.drainage.trunk,tributary:w.drainage.tributary},retreat:w.retreat,jurisdictions:w.jurisdictions}},reset:()=>{},seatRect:()=>{},raise:inert,excavate:inert,groundHeight,inspect:()=>({kind:'beyond-geological-history-t9',size:SIZE,resolution:N,seed,mutation:beyondMutation,genome:torture.genome,strata:STRATA,jurisdictions:0,representation:{bandlimit:'separable-121',bedReliefGain:1.25,resistance:'continuous-contact-blend',cliffs:'four-history-genome-sampler'},history:['layered-crust','four-overlapping-jurisdictions','fault-displacement','block-tilt','fold-compression','exposure-erosion','subsidence-deposition','collapse-mass-transport','late-incision']})};
-}
-
-rebuild();
-function deform(x,z,radius,delta){const r=globe.deform(x,z,radius,delta);terrainEvents.push({seconds:+(performance.now()/1000).toFixed(2),kind:'deform',...r});if(terrainEvents.length>30)terrainEvents.shift()}
-let lastCycle=performance.now();
-function auto(now){
- if(now-lastCycle<4200)return;
- lastCycle=now;cycle++;
- if(cycle%3===0){beyondWorldSeed=[741,742,743,751,769][Math.floor(cycle/3)%5];rebuild()}
- else if(cycle%3===1)deform(-14,8,11,4);
- else deform(12,-10,9,-3);
-}
+// World datum is the sphere equator: y=0. The specimen is a sealed,
+// opaque solid, with two planar faces and a cylindrical boundary.
+const INNER_R=10.07,TOP_Y=1.2,BOTTOM_Y=-1.2;
+const MATERIAL_R=Math.sqrt(INNER_R*INNER_R-TOP_Y*TOP_Y)-.07;
+const slabMaterial=new THREE.MeshStandardMaterial({color:0x9a8067,roughness:.92,metalness:0,side:THREE.FrontSide});
+const slab=new THREE.Mesh(new THREE.CylinderGeometry(MATERIAL_R,MATERIAL_R,TOP_Y-BOTTOM_Y,128,1,false),slabMaterial);
+slab.name='terrain:closed-equatorial-solid';slab.receiveShadow=true;slab.castShadow=true;world.add(slab);
+const datum=new THREE.Mesh(new THREE.TorusGeometry(10.16,.022,6,128),new THREE.MeshBasicMaterial({color:0xe4c58d}));
+datum.rotation.x=Math.PI/2;world.add(datum);
 let angle=.7,elev=.35,dist=34,targetY=.5;
 const pointers=new Map();
 renderer.domElement.addEventListener('pointerdown',e=>{renderer.domElement.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY})});
@@ -336,16 +52,14 @@ function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWi
 let frames=0,frameMs=0,last=performance.now(),fps=0;
 const panel=document.querySelector('#probePanel'),probeText=document.querySelector('#probeText');
 function inspectWorld(){
- const pos=globe.mesh.geometry.attributes.position;let min=Infinity,max=-Infinity,sum=0;
- for(let i=0;i<pos.count;i++){const y=pos.getY(i);min=Math.min(min,y);max=Math.max(max,y);sum+=y}
- const report={build:BUILD,time:new Date().toISOString(),integration:{source:'Repository/src/betwixt/world-lab.html createBeyondTerrain unchanged; geological-history-torture.js copied intact',water:'preserved in previous Wanderer v2, not instantiated',controlsRequired:false},viewport:{width:innerWidth,height:innerHeight,pixelRatio:renderer.getPixelRatio()},vessel:{outerRadius:BAUBLE_R,inhabitants:1,contentsInstantiated:true},terrain:{...globe.inspect(),scale:terrainScale,mesh:{vertices:pos.count,triangles:globe.mesh.geometry.index.count/3},height:{min,max,mean:sum/pos.count},samples:[[-20,0],[0,0],[20,0],[0,20]].map(([x,z])=>({x,z,...globe.maps(x,z)})),events:terrainEvents.slice(),cycle},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:fps},warnings:[]};
+ const report={build:BUILD,time:new Date().toISOString(),integration:{source:'sealed equatorial volume; no geology or water instantiated',controlsRequired:false},viewport:{width:innerWidth,height:innerHeight,pixelRatio:renderer.getPixelRatio()},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R},datum:{worldY:0,equatorial:true},terrain:{kind:'closed-solid-volume',topY:TOP_Y,bottomY:BOTTOM_Y,radius:MATERIAL_R,thickness:TOP_Y-BOTTOM_Y,topFace:'opaque',bottomFace:'opaque',side:'sealed',volume:Math.PI*MATERIAL_R*MATERIAL_R*(TOP_Y-BOTTOM_Y)},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:fps},warnings:[]};
  const t=JSON.stringify(report,null,2);probeText.textContent=t;return t;
 }
 document.querySelector('#probe').onclick=()=>{panel.classList.toggle('open');if(panel.classList.contains('open'))inspectWorld()};
 document.querySelector('#closeProbe').onclick=()=>panel.classList.remove('open');
 document.querySelector('#copyProbe').onclick=async()=>{const t=inspectWorld();try{await navigator.clipboard.writeText(t)}catch(e){const a=document.createElement('textarea');a.value=t;document.body.append(a);a.select();document.execCommand('copy');a.remove()}};
 globalThis.BaubleInspect=inspectWorld;
-function frame(now){requestAnimationFrame(frame);auto(now);frames++;frameMs+=now-last;last=now;if(frameMs>=2500){fps=1000*frames/frameMs;frames=0;frameMs=0;if(panel.classList.contains('open'))inspectWorld()}camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);renderer.render(scene,camera)}
+function frame(now){requestAnimationFrame(frame);frames++;frameMs+=now-last;last=now;if(frameMs>=2500){fps=1000*frames/frameMs;frames=0;frameMs=0;if(panel.classList.contains('open'))inspectWorld()}camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);renderer.render(scene,camera)}
 requestAnimationFrame(frame);
 }catch(e){window.BaubleFatal(e);console.error(e)}
 </script></body></html>

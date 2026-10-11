@@ -224,8 +224,47 @@ function splash(p,impactSpeed){
 }
 function settle(p){settledCount++;if(p.splash)splashReturned++;updateCollector()}
 updateCollector();
+// Autonomous brass skiff: depth-averaged currents, buoyancy and predictive edge avoidance.
+const skiff=new T.Group();world.add(skiff);
+const hull=put(skiff,new T.SphereGeometry(1,16,10),brass,0,-.12,0);hull.scale.set(.53,.23,1.08);
+const rim=put(skiff,new T.TorusGeometry(.53,.055,7,24),bright,0,.02,0);rim.rotation.x=Math.PI/2;rim.scale.set(1,2.0,1);
+const deck=put(skiff,new T.BoxGeometry(.67,.08,.95),brass,0,.035,0);
+const mast=cyl(skiff,.035,.045,.82,bright,0,.46,-.10);
+const sail=put(skiff,new T.ConeGeometry(.35,.76,3),bright,0,.52,-.12);sail.rotation.z=.13;
+const cargo=put(skiff,new T.CylinderGeometry(.27,.27,.075,16),surfaceMat,0,.11,.27);cargo.visible=false;
+const boatState={x:1.3,z:1.2,vx:0,vz:0,heading:.7,y:0,roll:0,pitch:0,cargoUnits:0,caught:0,turns:0};
+function boatCurrent(x,z){
+ const ix=Math.max(0,Math.min(GRID-1,Math.floor((x+INNER_R)/DX))),iz=Math.max(0,Math.min(GRID-1,Math.floor((z+INNER_R)/DX))),i=iz*GRID+ix;
+ return {vx:velX[i],vz:velZ[i],depth:depthField[i]};
+}
+function stepBoat(dt){
+ const b=boatState,c=boatCurrent(b.x,b.z),r=Math.hypot(b.x,b.z);
+ const shore=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));
+ const safe=Math.max(2.4,shore-1.5),ahead=2.1;
+ const fx=Math.sin(b.heading),fz=Math.cos(b.heading);
+ const futureR=Math.hypot(b.x+fx*ahead+b.vx*.6,b.z+fz*ahead+b.vz*.6);
+ const desired=futureR>safe?Math.atan2(-b.x,-b.z):Math.atan2(Math.sin(simTime*.17)*.8+Math.sin(b.heading),Math.cos(b.heading)+Math.cos(simTime*.11)*.4);
+ const turn=Math.atan2(Math.sin(desired-b.heading),Math.cos(desired-b.heading));
+ const steer=Math.max(-1,Math.min(1,turn));
+ b.heading+=steer*dt*(futureR>safe?2.8:1.0);
+ if(futureR>safe)b.turns++;
+ const drive=1.3,dx=Math.sin(b.heading),dz=Math.cos(b.heading);
+ b.vx+=(dx*drive+(c.vx-b.vx)*1.45)*dt;
+ b.vz+=(dz*drive+(c.vz-b.vz)*1.45)*dt;
+ b.x+=b.vx*dt;b.z+=b.vz*dt;
+ const distance=Math.hypot(b.x,b.z);
+ if(distance>safe){b.x*=safe/distance;b.z*=safe/distance;const radial=(b.vx*b.x+b.vz*b.z)/safe;if(radial>0){b.vx-=radial*b.x/safe;b.vz-=radial*b.z/safe}}
+ const surface=localWaterHeight(b.x,b.z);
+ b.y+=(surface-.1-b.y)*Math.min(1,dt*7);
+ const hF=localWaterHeight(b.x+dx*.6,b.z+dz*.6),hB=localWaterHeight(b.x-dx*.6,b.z-dz*.6);
+ const hL=localWaterHeight(b.x+dz*.35,b.z-dx*.35),hR=localWaterHeight(b.x-dz*.35,b.z+dx*.35);
+ b.pitch+=(Math.atan2(hF-hB,1.2)-b.pitch)*Math.min(1,dt*5);
+ b.roll+=(Math.atan2(hL-hR,.7)-b.roll)*Math.min(1,dt*5);
+ skiff.position.set(b.x,b.y,b.z);skiff.rotation.order='YXZ';skiff.rotation.set(b.pitch,b.heading,b.roll,'YXZ');
+ cargo.visible=b.cargoUnits>0;cargo.scale.y=Math.min(6,.7+b.cargoUnits*.08);
+}
 function simulate(dt){
- const t=Math.min(dt,.022);simSteps++;simTime+=t;stepWater(t);
+ const t=Math.min(dt,.022);simSteps++;simTime+=t;stepWater(t);stepBoat(t);
  if(dripEnabled){emitCarry+=emitRate*t;const n=Math.min(160,Math.floor(emitCarry));let spawned=0;for(;spawned<n;spawned++)if(!spawnOne())break;emitCarry-=spawned;}
  const limit=INNER_R-BEAD_R;
  // Seed the first liquid on contact with the vessel, then merge at the waterline.
@@ -249,6 +288,7 @@ function simulate(dt){
    p.vx*=.79;p.vz*=.79;collisionCount++;
    if(settledCount===0){settle(p);particles[i]=particles[particles.length-1];particles.pop();continue;}
   }
+  if(!p.splash&&Math.hypot(p.x-boatState.x,p.z-boatState.z)<.48&&p.y>=boatState.y-.02&&p.y<=boatState.y+.8&&p.vy<0){boatState.cargoUnits++;boatState.caught++;particles[i]=particles[particles.length-1];particles.pop();continue;}
   const depth=p.y;const downward=-p.vy;
   if(settledCount>0 && depth<=localWaterHeight(p.x,p.z)+BEAD_R && downward>0){
    if(p.splash)settle(p);else splash(p,downward);particles[i]=particles[particles.length-1];particles.pop();
@@ -261,7 +301,7 @@ function renderBeads(){
 
  const fraction=Math.cbrt(sourceUnits/30000);source.scale.setScalar(fraction);sourceCore.scale.setScalar(fraction);
 }
-const BUILD='waterworld-thump-v18';
+const BUILD='waterworld-brass-skiff-v19';
 const buildLabel=document.querySelector('#build');
 buildLabel.textContent=BUILD;
 const hud=document.querySelector('#hud');
@@ -272,7 +312,7 @@ plopButton.onclick=()=>burst(120,2.8);
 const surgeButton=document.createElement('button');surgeButton.textContent='◉ THUMP';hud.append(surgeButton);
 surgeButton.onclick=()=>{thump()};
 const resetButton=document.createElement('button');resetButton.textContent='↺ RESET';hud.append(resetButton);
-resetButton.onclick=()=>{particles.length=0;settledCount=INITIAL_WATER_UNITS;updateCollector();windSurgeStart=-100;windSpeed=3.1;sourceUnits=30000;emitted=0;escaped=0;collisionCount=0;simTime=0;simSteps=0;emitCarry=0;peakActive=0;splashImpacts=0;splashEjected=0;splashReturned=0;windImpulse=0;windAffected=0;transportReady=false;initializeTransport();thumpCount=0;thumpImpulse=0;wavePeak=0;waveEnergy=0;};
+resetButton.onclick=()=>{particles.length=0;settledCount=INITIAL_WATER_UNITS;updateCollector();windSurgeStart=-100;windSpeed=3.1;sourceUnits=30000;emitted=0;escaped=0;collisionCount=0;simTime=0;simSteps=0;emitCarry=0;peakActive=0;splashImpacts=0;splashEjected=0;splashReturned=0;windImpulse=0;windAffected=0;boatState.x=1.3;boatState.z=1.2;boatState.vx=boatState.vz=0;boatState.cargoUnits=boatState.caught=boatState.turns=0;transportReady=false;initializeTransport();thumpCount=0;thumpImpulse=0;wavePeak=0;waveEnergy=0;};
 const status=document.querySelector('#status');status.textContent='PENDULAR GRAVITY · LOW WIND · SOURCE → COLLECTION';
 const envelope=new T.Mesh(new T.SphereGeometry(BAUBLE_R,72,48),new T.MeshPhysicalMaterial({color:0xa0dce2,metalness:0,roughness:.08,transparent:true,opacity:.055,depthWrite:false,side:T.FrontSide}));world.add(envelope);
 const innerGlass=new T.Mesh(new T.SphereGeometry(INNER_R,72,48),new T.MeshPhysicalMaterial({color:0x9dcdd7,metalness:0,roughness:.09,transparent:true,opacity:.035,depthWrite:false,side:T.BackSide}));world.add(innerGlass);
@@ -288,11 +328,11 @@ function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.
 const probeButton=document.querySelector('#probe'),probePanel=document.querySelector('#probePanel'),probeText=document.querySelector('#probeText');
 let probeReport='',probeLast=0,probeFrames=0,probeFrameMs=0;
 const round=(n,d=2)=>Number.isFinite(n)?+n.toFixed(d):null;
-function fluidDiagnostics(){return {model:'discrete 3D ballistic beads',sourceUnits,emitted,active:particles.length,settled:settledCount,unrepresented:escaped,accounted:sourceUnits+particles.length+settledCount+escaped,initialUnits:30000+INITIAL_WATER_UNITS,initialWaterUnits:INITIAL_WATER_UNITS,initialFillFraction:.2,gravity:{type:'pendular point source',position:gravityPosition.toArray().map(round),orbitalRadius:gravityOrbitalRadius,periodSeconds:gravityPeriod,swingAmplitudeRadians:gravitySwingAmplitude,stationary:false,strengthAtCenter:GRAVITY},wind:{direction:[1,0,0],bandCenterAboveSurface:1.1,bandThickness:2.3,baselineSpeed:3.1,currentSpeed:round(windSpeed),gustStrength:round(windGust()),affectedSteps:windAffected,impulse:round(windImpulse)},collisions:collisionCount,splashImpacts,splashEjected,splashReturned,peakActive,steps:simSteps,seconds:round(simTime),beadRadius:BEAD_R,activeCap:MAX_ACTIVE,collectorVolume:round(waterVolume,4),waterline:round(waterY,4),collectorModel:'64x64 conservative finite-volume transport with point gravity and wind',wavePeak:round(wavePeak),waveEnergy:round(waveEnergy),transportVolume:round(transportVolume,4),wetCells,thumpCount,thumpImpulse:round(thumpImpulse)}}
+function fluidDiagnostics(){return {model:'discrete 3D ballistic beads',sourceUnits,emitted,active:particles.length,settled:settledCount,unrepresented:escaped,accounted:sourceUnits+particles.length+settledCount+escaped+boatState.cargoUnits,initialUnits:30000+INITIAL_WATER_UNITS,initialWaterUnits:INITIAL_WATER_UNITS,initialFillFraction:.2,gravity:{type:'pendular point source',position:gravityPosition.toArray().map(round),orbitalRadius:gravityOrbitalRadius,periodSeconds:gravityPeriod,swingAmplitudeRadians:gravitySwingAmplitude,stationary:false,strengthAtCenter:GRAVITY},wind:{direction:[1,0,0],bandCenterAboveSurface:1.1,bandThickness:2.3,baselineSpeed:3.1,currentSpeed:round(windSpeed),gustStrength:round(windGust()),affectedSteps:windAffected,impulse:round(windImpulse)},collisions:collisionCount,splashImpacts,splashEjected,splashReturned,peakActive,steps:simSteps,seconds:round(simTime),beadRadius:BEAD_R,activeCap:MAX_ACTIVE,boat:{position:[round(boatState.x),round(boatState.y),round(boatState.z)],velocity:[round(boatState.vx),round(boatState.vz)],heading:round(boatState.heading),cargoUnits:boatState.cargoUnits,caught:boatState.caught,edgeAvoidanceSteps:boatState.turns},collectorVolume:round(waterVolume,4),waterline:round(waterY,4),collectorModel:'64x64 conservative finite-volume transport with point gravity and wind',wavePeak:round(wavePeak),waveEnergy:round(waveEnergy),transportVolume:round(transportVolume,4),wetCells,thumpCount,thumpImpulse:round(thumpImpulse)}}
 function inspectWorld(){
  camera.updateMatrixWorld();world.updateMatrixWorld(true);
  const center=new T.Vector3(0,0,0).project(camera);
- const report={build:BUILD,time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:1,contentsInstantiated:true,water:{phase:'liquid',model:'shrinking source / point gravity / merged volume',diagnostics:fluidDiagnostics()}},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:round(probeFrames?1000/(probeFrameMs/probeFrames):0)},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:[]};
+ const report={build:BUILD,time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:2,contentsInstantiated:true,water:{phase:'liquid',model:'shrinking source / point gravity / merged volume',diagnostics:fluidDiagnostics()}},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:round(probeFrames?1000/(probeFrameMs/probeFrames):0)},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:[]};
  probeReport=JSON.stringify(report,null,2);probeText.textContent=probeReport;return report;
 }
 probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};

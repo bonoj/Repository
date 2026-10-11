@@ -6,7 +6,7 @@ export class ComposableWater {
   if(typeof heightAt!=='function')throw Error('heightAt(x,z) required');
   const {minX,maxX,minZ,maxZ}=bounds;
   if(!(maxX>minX&&maxZ>minZ))throw Error('Invalid bounds');
-  Object.assign(this,{heightAt,bounds,resolution,gravity,drag,maxSpeed,beadRadius,beadCapacity,onExit});
+  Object.assign(this,{heightAt,bounds,resolution,gravity,drag,maxSpeed,beadRadius,beadCapacity,beadVolume,adhesionTime,onExit});
   this.n=resolution*resolution;this.dx=(maxX-minX)/resolution;this.dz=(maxZ-minZ)/resolution;this.area=this.dx*this.dz;
   this.bed=new Float32Array(this.n);this.wet=new Uint8Array(this.n);
   this.depth=new Float32Array(this.n);this.vx=new Float32Array(this.n);this.vz=new Float32Array(this.n);

@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07101a"><title>Asteroid · JIT Bauble</title><style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:82px;right:10px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:118px 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px} #buildRow{display:flex;align-items:center;justify-content:center;gap:6px;margin:5px auto 0;pointer-events:auto;color:#a6b7b9;font:10px ui-monospace,monospace}#fresh{width:40px;height:40px;padding:0;min-height:40px;border:0;background:transparent;color:#c4b291;font-size:23px;cursor:pointer}#containmentAlarm{display:none;position:fixed;z-index:35;left:10px;right:10px;top:calc(65px + env(safe-area-inset-top));background:#531b19ee;color:#ffe9d7;border:2px solid #ff6955;border-radius:9px;padding:12px;font:700 12px/1.4 ui-monospace,monospace;white-space:pre-wrap;pointer-events:none}#containmentAlarm.on{display:block}</style></head><body><div id="stage"></div><div id="containmentAlarm" role="alert"></div><button id="probe" type="button">◉ INSPECT</button><div id="probePanel"><div id="probeActions"><button id="copyProbe">COPY REPORT</button><button id="closeProbe">CLOSE</button></div><div id="probeText"></div></div><div id="title"><h1>ASTEROID</h1><div id="tag">ASTEROID · EXPERIMENT</div><div id="buildRow"><span id="build"></span><button id="fresh" type="button" aria-label="Fetch latest build" title="Fetch latest build">↻</button></div></div><div id="hud"><div id="status">EMPTY VESSEL · ORBIT / PINCH TO EXPLORE</div></div><div id="error"></div><script>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:82px;right:10px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:118px 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px} #buildRow{display:flex;align-items:center;justify-content:center;gap:6px;margin:5px auto 0;pointer-events:auto;color:#a6b7b9;font:10px ui-monospace,monospace}#fresh{width:40px;height:40px;padding:0;min-height:40px;border:0;background:transparent;color:#c4b291;font-size:23px;cursor:pointer}#containmentAlarm{display:none;position:fixed;z-index:35;left:10px;right:10px;top:calc(65px + env(safe-area-inset-top));background:#531b19ee;color:#ffe9d7;border:2px solid #ff6955;border-radius:9px;padding:12px;font:700 12px/1.4 ui-monospace,monospace;white-space:pre-wrap;pointer-events:none}#containmentAlarm.on{display:block}</style></head><body><div id="stage"></div><div id="containmentAlarm" role="alert"></div><button id="probe" type="button">◉ INSPECT</button><div id="probePanel"><div id="probeActions"><button id="copyProbe">COPY REPORT</button><button id="closeProbe">CLOSE</button></div><div id="probeText"></div></div><div id="title"><h1>ASTEROID</h1><div id="tag">ASTEROID · EXPERIMENT</div><div id="buildRow"><span id="build"></span><button id="fresh" type="button" aria-label="Fetch latest build" title="Fetch latest build">↻</button></div></div><div id="hud"><div id="status">CARBONACEOUS ROCK · ORBIT / PINCH TO INSPECT</div></div><div id="error"></div><script>
 (function(){
  const el=document.getElementById('error');
  function fatal(error){
@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='asteroid-bauble-v1';
+const BUILD='asteroid-bauble-v2';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -111,6 +111,67 @@ function updateAlarm(){
 globalThis.BaubleRegisterInvariant=registerInvariant;
 globalThis.BaubleVerifyInvariants=verifyInvariants;
 
+
+/* Bennu-inspired carbonaceous chondrite specimen, not a literal Bennu replica.
+   Authored deterministic heterogeneity; each sampled cell retains material provenance. */
+const AST_N=43,AST_EXT=6.7,AST_STEP=AST_EXT*2/(AST_N-1),AST_SEED=741;
+const astDensity=new Float32Array(AST_N**3),astMaterial=new Uint8Array(AST_N**3);
+const astIndex=(x,y,z)=>x+AST_N*(y+AST_N*z);
+const astMatNames=['hydrated phyllosilicates','magnetite / Fe-Ni sulfides','carbonates','anhydrous silicate inclusions','organic-rich fines'];
+const astColors=[new T.Color(0x343b3d),new T.Color(0x20272b),new T.Color(0x8c8070),new T.Color(0x625c50),new T.Color(0x292b2b)];
+const hash=(x,y,z)=>{let v=Math.sin(x*127.1+y*311.7+z*74.7+AST_SEED)*43758.5453;return v-Math.floor(v)};
+function rockField(x,y,z){
+ const r=Math.hypot(x/1.05,y/.87,z/1.02);
+ const theta=Math.atan2(z,x),phi=Math.atan2(y,Math.hypot(x,z));
+ const facets=.32*Math.sin(theta*5+1.4*Math.sin(phi*3))+.22*Math.sin(phi*7+theta*2)+.14*Math.cos(theta*11-phi*5);
+ const hummocks=.21*Math.sin(x*1.7+y*.6)*Math.sin(z*1.9-y*.9)+.13*Math.sin(x*3.8+z*2.1)*Math.cos(y*2.9);
+ const craters=.36*Math.exp(-((x-2.3)**2+(y-2.4)**2+(z-2.6)**2)/2.3)+.29*Math.exp(-((x+3.1)**2+(y+1.2)**2+(z-1.7)**2)/1.7);
+ return r-(4.75+facets+hummocks-craters);
+}
+function lithology(x,y,z){
+ const n=Math.sin(x*.91+y*.43+z*.71)*Math.cos(z*.72-y*.36)+.45*Math.sin(x*1.8-z*.67);
+ const vein=Math.abs(Math.sin(x*.8+y*1.3-z*.55+.5*Math.sin(z*.9)));
+ const sulfide=Math.sin(x*1.17-z*.83+y*.61);
+ if(vein<.075)return 2;
+ if(sulfide>.83)return 1;
+ if(n>1.05)return 3;
+ if(n<-.8)return 4;
+ return 0;
+}
+const astCounts=[0,0,0,0,0];
+for(let z=0;z<AST_N;z++)for(let y=0;y<AST_N;y++)for(let x=0;x<AST_N;x++){
+ const px=-AST_EXT+x*AST_STEP,py=-AST_EXT+y*AST_STEP,pz=-AST_EXT+z*AST_STEP,i=astIndex(x,y,z);
+ astDensity[i]=rockField(px,py,pz);astMaterial[i]=lithology(px,py,pz);if(astDensity[i]<0)astCounts[astMaterial[i]]++;
+}
+// Marching tetrahedra: continuous interpolated isosurface, no exposed voxel faces.
+const verts=[],normals=[],colors=[],tetra=[[0,5,1,6],[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6]];
+const cubeCorners=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
+function grad(p){const e=.045;return new T.Vector3(rockField(p.x+e,p.y,p.z)-rockField(p.x-e,p.y,p.z),rockField(p.x,p.y+e,p.z)-rockField(p.x,p.y-e,p.z),rockField(p.x,p.y,p.z+e)-rockField(p.x,p.y,p.z-e)).normalize()}
+function emitTriangle(a,b,c,material){
+ const ab=new T.Vector3().subVectors(b,a),ac=new T.Vector3().subVectors(c,a),face=ab.cross(ac),out=grad(a.clone().add(b).add(c).multiplyScalar(1/3));
+ if(face.dot(out)<0)[b,c]=[c,b];
+ for(const p of [a,b,c]){verts.push(p.x,p.y,p.z);const n=grad(p);normals.push(n.x,n.y,n.z);const col=astColors[material].clone().multiplyScalar(.84+.16*Math.sin(p.x*7+p.y*11+p.z*5));colors.push(col.r,col.g,col.b)}
+}
+function isoPoint(a,b,da,db){const t=da/(da-db);return new T.Vector3().lerpVectors(a,b,t)}
+for(let z=0;z<AST_N-1;z++)for(let y=0;y<AST_N-1;y++)for(let x=0;x<AST_N-1;x++){
+ const p=[],d=[];let negative=0;
+ for(const [dx,dy,dz] of cubeCorners){const xx=x+dx,yy=y+dy,zz=z+dz;p.push(new T.Vector3(-AST_EXT+xx*AST_STEP,-AST_EXT+yy*AST_STEP,-AST_EXT+zz*AST_STEP));const v=astDensity[astIndex(xx,yy,zz)];d.push(v);if(v<0)negative++}
+ if(!negative||negative===8)continue;
+ const mat=astMaterial[astIndex(x,y,z)];
+ for(const ids of tetra){
+  const inside=ids.filter(i=>d[i]<0),outside=ids.filter(i=>d[i]>=0);
+  if(!inside.length||inside.length===4)continue;
+  if(inside.length===1){const a=inside[0];emitTriangle(...outside.map(j=>isoPoint(p[a],p[j],d[a],d[j])),mat)}
+  else if(inside.length===3){const a=outside[0];emitTriangle(...inside.map(j=>isoPoint(p[a],p[j],d[a],d[j])),mat)}
+  else{const [a,b]=inside,[c,e]=outside;const q=isoPoint(p[a],p[c],d[a],d[c]),r=isoPoint(p[a],p[e],d[a],d[e]),t=isoPoint(p[b],p[c],d[b],d[c]),u=isoPoint(p[b],p[e],d[b],d[e]);emitTriangle(q,r,t,mat);emitTriangle(r,u,t,mat)}
+ }
+}
+const asteroidGeo=new T.BufferGeometry();asteroidGeo.setAttribute('position',new T.Float32BufferAttribute(verts,3));asteroidGeo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));asteroidGeo.setAttribute('color',new T.Float32BufferAttribute(colors,3));asteroidGeo.computeBoundingSphere();
+const asteroidMesh=new T.Mesh(asteroidGeo,new T.MeshStandardMaterial({vertexColors:true,roughness:.94,metalness:.07,side:T.DoubleSide,flatShading:false}));asteroidMesh.name='Bennu-inspired heterogeneous carbonaceous asteroid';world.add(asteroidMesh);
+const astInventory=astMatNames.map((name,i)=>({name,occupiedSamples:astCounts[i],fraction:Math.round(1000*astCounts[i]/Math.max(1,astCounts.reduce((a,b)=>a+b,0)))/10}));
+globalThis.AsteroidSpecimen={seed:AST_SEED,grid:AST_N,materialInventory:astInventory,surfaceTriangles:verts.length/9,provenance:'deterministic procedural lithology; Bennu-inspired, not measured Bennu mineral abundances'};
+registerInvariant('asteroid-volume',()=>({ok:verts.length>0&&astCounts.reduce((a,b)=>a+b,0)>0,detail:'No volumetric material or surface'}));
+
 let angle=.6,elev=.27,dist=27,targetY=0,lastX=0,lastY=0;
 const pointers=new Map();let pinch=0;renderer.domElement.addEventListener('pointerdown',e=>{pointers.set(e.pointerId,[e.clientX,e.clientY]);lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
 renderer.domElement.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;const old=pointers.get(e.pointerId);pointers.set(e.pointerId,[e.clientX,e.clientY]);const ps=[...pointers.values()];if(ps.length===1){angle+=(e.clientX-old[0])*.006;elev=T.MathUtils.clamp(elev+(e.clientY-old[1])*.004,-.4,1.2)}else if(ps.length===2){const d=Math.hypot(ps[0][0]-ps[1][0],ps[0][1]-ps[1][1]);if(pinch)dist=T.MathUtils.clamp(dist*pinch/d,2,100);pinch=d}});
@@ -123,7 +184,7 @@ const round=(n,d=2)=>Number.isFinite(n)?+n.toFixed(d):null;
 function inspectWorld(){
  camera.updateMatrixWorld();world.updateMatrixWorld(true);
  const center=new T.Vector3(0,0,0).project(camera);
- const report={build:BUILD,time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:0,contentsInstantiated:false},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:round(probeFrames?1000/(probeFrameMs/probeFrames):0)},containment:verifyContainment(),invariants:verifyInvariants(),simulation:{time:round(clock.time,3),steps:clock.steps,droppedSeconds:round(clock.droppedSeconds,3),fixedStep:STEP},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:[]};
+ const report={build:BUILD,time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:1,contentsInstantiated:true},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:round(probeFrames?1000/(probeFrameMs/probeFrames):0)},containment:verifyContainment(),invariants:verifyInvariants(),asteroid:globalThis.AsteroidSpecimen,simulation:{time:round(clock.time,3),steps:clock.steps,droppedSeconds:round(clock.droppedSeconds,3),fixedStep:STEP},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:[]};
  probeReport=JSON.stringify(report,null,2);probeText.textContent=probeReport;return report;
 }
 probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};

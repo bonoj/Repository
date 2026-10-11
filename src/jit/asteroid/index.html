@@ -207,7 +207,7 @@ for(let z=0;z<AST_N;z++)for(let y=0;y<AST_N;y++)for(let x=0;x<AST_N;x++){
   bbPosition[i+1]=bbOrigin[i+1]=-AST_EXT+y*AST_STEP+jitter(1);
   bbPosition[i+2]=bbOrigin[i+2]=-AST_EXT+z*AST_STEP+jitter(2);
   bbColor[i]=col.r*1.55;bbColor[i+1]=col.g*1.55;bbColor[i+2]=col.b*1.55;
-  bbGroup[j]=Math.floor(hash(x+3,y+5,z+7)*10);
+  let nearest=0,best=Infinity;for(let h=0;h<10;h++){const a=h*2.399963229728653,u=1-2*(h+.5)/10,rr=Math.sqrt(1-u*u),bx=Math.cos(a)*rr*3.4,by=u*3.4,bz=Math.sin(a)*rr*3.4;const d=(bbOrigin[i]-bx)**2+(bbOrigin[i+1]-by)**2+(bbOrigin[i+2]-bz)**2;if(d<best){best=d;nearest=h}}bbGroup[j]=nearest;
  }
 }
 const bbGeo=new T.BufferGeometry();
@@ -228,7 +228,7 @@ for(let i=0;i<verts.length;i+=9){
  const cx=(verts[i]+verts[i+3]+verts[i+6])/3,cy=(verts[i+1]+verts[i+4]+verts[i+7])/3,cz=(verts[i+2]+verts[i+5]+verts[i+8])/3;
  let nearest=0,best=Infinity;
  for(let k=0;k<10;k++){const b=blasts[k],d=(cx-b.x)**2+(cy-b.y)**2+(cz-b.z)**2;if(d<best){best=d;nearest=k}}
- for(let q=0;q<9;q++){shardPos[nearest].push(verts[i+q]);shardCol[nearest].push(cols[i+q])}
+ for(let q=0;q<9;q++){shardPos[nearest].push(verts[i+q]);shardCol[nearest].push(colors[i+q])}
 }
 const shardMeshes=shardPos.map((positions,k)=>{
  const g=new T.BufferGeometry();

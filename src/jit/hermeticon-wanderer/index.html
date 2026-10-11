@@ -116,7 +116,7 @@ witnessScene.add(new T.AmbientLight(0xffffff,3));
 const witnessCamera=new T.OrthographicCamera(-.5,.5,.5,-.5,.1,30);
 const witnessGeometry=new T.PlaneGeometry(1,1);
 const witnessMesh=new T.Mesh(witnessGeometry,terrainMaterial);
-witnessMesh.material.side=T.DoubleSide;
+witnessMesh.material.side=T.DoubleSide;witnessMesh.frustumCulled=false;
 witnessScene.add(witnessMesh);
 const witnessTarget=new T.WebGLRenderTarget(1,1,{depthBuffer:true,stencilBuffer:false});
 const witnessPixel=new Uint8Array(4);
@@ -126,8 +126,10 @@ function measureGpuAperture(){
   renderer.autoClear=true;
   const sample=(x)=>{
    // Use real terrain material and shader, with local coordinates matching the translated terrain.
-   witnessMesh.position.set(x,0,0);
-   witnessCamera.position.set(x,0,5);witnessCamera.lookAt(x,0,0);witnessCamera.updateMatrixWorld();
+   const positions=witnessGeometry.getAttribute('position');
+   for(let i=0;i<positions.count;i++){positions.setXYZ(i,(i===0||i===2?-.5:.5)+x,(i<2?.5:-.5),wanderZ)}
+   positions.needsUpdate=true;
+   witnessCamera.position.set(x,0,wanderZ+5);witnessCamera.lookAt(x,0,wanderZ);witnessCamera.updateMatrixWorld();
    renderer.setRenderTarget(witnessTarget);renderer.clear(true,true,true);
    renderer.render(witnessScene,witnessCamera);
    renderer.readRenderTargetPixels(witnessTarget,0,0,1,1,witnessPixel);

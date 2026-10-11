@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-fps-lifecycle-v19';
+const BUILD='hermeticon-wanderer-scoop-boundary-v20';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -251,7 +251,7 @@ function regenerate(){
   field[id(x,y,z)]=v;fieldMin=Math.min(fieldMin,v);fieldMax=Math.max(fieldMax,v);if(v>0)solidCount++;else voidCount++;
  }
  const pos=[],lerp=(p,q,a,b)=>{const t=Math.max(0,Math.min(1,a/(a-b)));return[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t,p[2]+(q[2]-p[2])*t]};
- const tri=(a,b,c,cut=false)=>{const ab=Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]),bc=Math.hypot(b[0]-c[0],b[1]-c[1],b[2]-c[2]),ca=Math.hypot(c[0]-a[0],c[1]-a[1],c[2]-a[2]);if(Math.min(ab,bc,ca)<.00001){scoopEyes.degenerateTriangles++;return}pos.push(...a,...b,...c);if(cut)scoopEyes.cutTriangles++;else scoopEyes.geologyTriangles++};
+ const tri=(a,b,c,cut=false)=>{for(const q of [a,b,c]){const dx=q[0]-wanderX,dy=q[1],dz=q[2]-wanderZ,d=Math.hypot(dx,dy,dz);if(d>9.72){const k=9.72/d;q[0]=wanderX+dx*k;q[1]=dy*k;q[2]=wanderZ+dz*k}}const ab=Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]),bc=Math.hypot(b[0]-c[0],b[1]-c[1],b[2]-c[2]),ca=Math.hypot(c[0]-a[0],c[1]-a[1],c[2]-a[2]);if(Math.min(ab,bc,ca)<.00001){scoopEyes.degenerateTriangles++;return}pos.push(...a,...b,...c);if(cut)scoopEyes.cutTriangles++;else scoopEyes.geologyTriangles++};
   scoopEyes.cutTriangles=0;scoopEyes.geologyTriangles=0;scoopEyes.degenerateTriangles=0;
  for(let z=0;z<NZ-1;z++)for(let y=0;y<NY-1;y++)for(let x=0;x<NX-1;x++){if(Math.abs(xp(x)-wanderX)>R+EXTRACTION_MARGIN||Math.abs(zp(z)-wanderZ)>R+EXTRACTION_MARGIN)continue;
   const p=corners.map(c=>[xp(x+c[0]),yp(y+c[1]),zp(z+c[2])]);

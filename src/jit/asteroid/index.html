@@ -1,1 +1,152 @@
-<!doctype html><title>Asteroid staging</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07101a"><title>Asteroid · JIT Bauble</title><style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:82px;right:10px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:118px 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px} #buildRow{display:flex;align-items:center;justify-content:center;gap:6px;margin:5px auto 0;pointer-events:auto;color:#a6b7b9;font:10px ui-monospace,monospace}#fresh{width:40px;height:40px;padding:0;min-height:40px;border:0;background:transparent;color:#c4b291;font-size:23px;cursor:pointer}#containmentAlarm{display:none;position:fixed;z-index:35;left:10px;right:10px;top:calc(65px + env(safe-area-inset-top));background:#531b19ee;color:#ffe9d7;border:2px solid #ff6955;border-radius:9px;padding:12px;font:700 12px/1.4 ui-monospace,monospace;white-space:pre-wrap;pointer-events:none}#containmentAlarm.on{display:block}</style></head><body><div id="stage"></div><div id="containmentAlarm" role="alert"></div><button id="probe" type="button">◉ INSPECT</button><div id="probePanel"><div id="probeActions"><button id="copyProbe">COPY REPORT</button><button id="closeProbe">CLOSE</button></div><div id="probeText"></div></div><div id="title"><h1>ASTEROID</h1><div id="tag">ASTEROID · EXPERIMENT</div><div id="buildRow"><span id="build"></span><button id="fresh" type="button" aria-label="Fetch latest build" title="Fetch latest build">↻</button></div></div><div id="hud"><div id="status">EMPTY VESSEL · ORBIT / PINCH TO EXPLORE</div></div><div id="error"></div><script>
+(function(){
+ const el=document.getElementById('error');
+ function fatal(error){
+  const message=String(error&&error.stack||error&&error.message||error||'Unknown error');
+  const report=['BAUBLE FAILED TO WAKE',message,'URL: '+location.href,'Time: '+new Date().toISOString()].join('\n');
+  el.replaceChildren();
+  el.style.cssText='position:fixed;z-index:9999;top:15%;bottom:12%;left:12px;right:12px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#211a20;color:#ffe1d6;padding:16px;border:2px solid #ff9784;border-radius:12px;font:13px/1.5 monospace';
+  const heading=document.createElement('div');heading.textContent=report;el.append(heading);
+  const button=document.createElement('button');button.textContent='COPY ERROR';button.style.cssText='display:block;width:100%;min-height:56px;margin:14px 0;font:700 17px system-ui';el.append(button);
+  const manual=document.createElement('textarea');manual.value=report;manual.readOnly=true;manual.style.cssText='display:block;width:100%;min-height:110px;font:12px monospace';el.append(manual);
+  button.onclick=async()=>{try{await navigator.clipboard.writeText(report);button.textContent='COPIED'}catch(_){manual.focus();manual.select();button.textContent='SELECTED — TAP COPY IN MENU'}};
+ }
+ window.BaubleFatal=fatal;
+ addEventListener('error',e=>fatal(e.error||e.message));
+ addEventListener('unhandledrejection',e=>fatal(e.reason));
+})();
+</script><script type="module">
+import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+// One canonical build identity: UI and inspection report share this constant.
+const BUILD='asteroid-bauble-v1';
+document.querySelector('#build').textContent=BUILD;
+document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
+
+
+try {
+const scene=new T.Scene();scene.background=new T.Color(0x06101b);scene.fog=new T.FogExp2(0x071827,.012);
+const world=new T.Group();scene.add(world);
+const renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.38;document.querySelector('#stage').append(renderer.domElement);
+const camera=new T.PerspectiveCamera(42,1,.1,150);scene.add(new T.HemisphereLight(0x82c6dc,0x17202d,1.5));const sun=new T.DirectionalLight(0xffc77e,2.4);sun.position.set(-7,13,7);scene.add(sun);const blue=new T.PointLight(0x2cbed7,95,36);blue.position.set(2,-2,2);scene.add(blue);
+const M=(color,metalness=.1,roughness=.65,extra={})=>new T.MeshStandardMaterial({color,metalness,roughness,...extra});
+const brass=M(0xb78b4e,.78,.3),bright=M(0xf2cb7e,.45,.3),rock=M(0x242b33,.08,.94),basalt=M(0x3c4449,.04,.9),green=M(0x467b50,.08,.75),leaf=M(0x85a767,.04,.7),cyan=new T.MeshBasicMaterial({color:0x42d7dc}),purple=new T.MeshBasicMaterial({color:0xb06fe6}),glow=new T.MeshBasicMaterial({color:0xffc678}),glass=new T.MeshPhysicalMaterial({color:0x9dcdd7,transparent:true,opacity:.17,metalness:.05,roughness:.12,depthWrite:false,side:T.DoubleSide});
+function put(parent,geo,material,x=0,y=0,z=0){const o=new T.Mesh(geo,material);o.position.set(x,y,z);parent.add(o);return o}
+function ball(p,r,m,x,y,z){return put(p,new T.SphereGeometry(r,12,8),m,x,y,z)}
+function cyl(p,r1,r2,h,m,x,y,z,n=12){return put(p,new T.CylinderGeometry(r1,r2,h,n),m,x,y,z)}
+function ring(p,r,t,m,x,y,z){const o=put(p,new T.TorusGeometry(r,t,7,48),m,x,y,z);o.rotation.x=Math.PI/2;return o}
+function beam(a,b,r,m,p=world){const v=new T.Vector3(...a),w=new T.Vector3(...b),d=w.clone().sub(v),o=put(p,new T.CylinderGeometry(r,r,d.length(),7),m,...v.clone().add(w).multiplyScalar(.5).toArray());o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),d.normalize());return o}
+
+const BAUBLE_R=10.25,INNER_R=BAUBLE_R-.18;
+const envelope=new T.Mesh(new T.SphereGeometry(BAUBLE_R,72,48),new T.MeshPhysicalMaterial({color:0xa0dce2,metalness:0,roughness:.08,transparent:true,opacity:.055,depthWrite:false,side:T.FrontSide}));world.add(envelope);
+const innerGlass=new T.Mesh(new T.SphereGeometry(INNER_R,72,48),new T.MeshPhysicalMaterial({color:0x9dcdd7,metalness:0,roughness:.09,transparent:true,opacity:.035,depthWrite:false,side:T.BackSide}));world.add(innerGlass);
+const equator=put(world,new T.TorusGeometry(BAUBLE_R,.095,10,120),brass);equator.rotation.x=Math.PI/2;
+for(const y of [-.15,.15]){const trim=put(world,new T.TorusGeometry(BAUBLE_R,.021,6,120),bright,0,y,0);trim.rotation.x=Math.PI/2}
+for(let i=0;i<8;i++){const a=i*Math.PI/4;ball(world,.12,bright,Math.cos(a)*BAUBLE_R,0,Math.sin(a)*BAUBLE_R)}
+
+// Containment verifier: geometry in scene coordinates, independent of camera/gravity.
+// Shell hardware is intentionally outside the INNER radius; only explicitly marked
+// objects may exceed the vessel. Mark external designs with userData.allowOutsideBauble=true.
+const shellParts=[envelope,innerGlass,equator];
+world.traverse(o=>{if(o.isMesh&&o!==envelope&&o!==innerGlass&&o!==equator&&
+ (o.geometry?.type==='TorusGeometry'||o.geometry?.type==='SphereGeometry')&&
+ o.material===bright)shellParts.push(o)});
+for(const o of shellParts)o.userData.allowOutsideBauble=true;
+const containment={checks:0,violations:[],maxOverflow:0,checkedObjects:0,lastCheckMs:0};
+const alarm=document.querySelector('#containmentAlarm');
+const scratchPoint=new T.Vector3(),scratchMatrix=new T.Matrix4();
+function verifyContainment(){
+ world.updateMatrixWorld(true);
+ const failures=[];let checked=0,maxOverflow=0;
+ world.traverse(o=>{
+  if(!o.isMesh||!o.visible||o.userData.allowOutsideBauble||!o.geometry)return;
+  const g=o.geometry;if(!g.boundingBox)g.computeBoundingBox();
+  if(!g.boundingBox)return;
+  const count=o.isInstancedMesh?o.count:1;
+  for(let k=0;k<count;k++){
+   if(o.isInstancedMesh){o.getMatrixAt(k,scratchMatrix);scratchMatrix.premultiply(o.matrixWorld)}
+   else scratchMatrix.copy(o.matrixWorld);
+   // Test actual vertices, not bounding boxes (which falsely flag spherical shells).
+   const positions=g.getAttribute('position');if(!positions)continue;
+   let overflow=0;
+   for(let v=0;v<positions.count;v++){
+    scratchPoint.fromBufferAttribute(positions,v).applyMatrix4(scratchMatrix);
+    overflow=Math.max(overflow,scratchPoint.length()-INNER_R);
+   }
+   checked++;
+   if(overflow>.025){maxOverflow=Math.max(maxOverflow,overflow);if(failures.length<12)failures.push({object:o.name||o.uuid.slice(0,8),instance:o.isInstancedMesh?k:null,overflow:round(overflow,3)})}
+  }
+ });
+ containment.checks++;containment.violations=failures;containment.maxOverflow=round(maxOverflow,3);containment.checkedObjects=checked;containment.lastCheckMs=Math.round(performance.now());
+ updateAlarm();
+ return containment;
+}
+globalThis.BaubleVerifyContainment=verifyContainment;
+
+
+// Shared JIT machinery. Register world-specific checks; never silently swallow failures.
+const STEP=.008,MAX_STEPS=7,MAX_FRAME=.05;
+const clock={time:0,steps:0,droppedSeconds:0,accumulator:0};
+const invariantChecks=new Map();
+const invariantState={checks:0,failures:[],lastCheckMs:0};
+function registerInvariant(name,check){if(typeof name!=='string'||!name||typeof check!=='function')throw Error('Invalid invariant registration');invariantChecks.set(name,check);return()=>invariantChecks.delete(name)}
+function verifyInvariants(){
+ const failures=[];
+ for(const [name,check] of invariantChecks){
+  try{const result=check();if(result!==true&&result!==undefined&&result!==null){if(result===false||result?.ok===false)failures.push({name,detail:result?.detail||'Invariant failed'})}}
+  catch(e){failures.push({name,detail:String(e?.message||e)})}
+ }
+ invariantState.checks++;invariantState.failures=failures;invariantState.lastCheckMs=Math.round(performance.now());
+ return invariantState;
+}
+function simulate(dt){/* Empty bauble: replace or extend with world-specific simulation. */}
+function updateAlarm(){
+ const breaches=containment.violations,errors=invariantState.failures;
+ alarm.classList.toggle('on',breaches.length>0||errors.length>0);
+ if(breaches.length||errors.length){
+  alarm.textContent=['⚠ BAUBLE VERIFIER FAILED',...breaches.slice(0,3).map(v=>'CONTAINMENT '+v.object+' +'+v.overflow),...errors.slice(0,4).map(v=>'INVARIANT '+v.name+': '+v.detail),'INSPECT → COPY REPORT'].join('\\n').replaceAll('\\n','\n');
+  if(!updateAlarm.warned){console.error('BAUBLE VERIFIER FAILED',{breaches,errors});updateAlarm.warned=true}
+ }else{alarm.textContent='';updateAlarm.warned=false}
+}
+globalThis.BaubleRegisterInvariant=registerInvariant;
+globalThis.BaubleVerifyInvariants=verifyInvariants;
+
+let angle=.6,elev=.27,dist=27,targetY=0,lastX=0,lastY=0;
+const pointers=new Map();let pinch=0;renderer.domElement.addEventListener('pointerdown',e=>{pointers.set(e.pointerId,[e.clientX,e.clientY]);lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
+renderer.domElement.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;const old=pointers.get(e.pointerId);pointers.set(e.pointerId,[e.clientX,e.clientY]);const ps=[...pointers.values()];if(ps.length===1){angle+=(e.clientX-old[0])*.006;elev=T.MathUtils.clamp(elev+(e.clientY-old[1])*.004,-.4,1.2)}else if(ps.length===2){const d=Math.hypot(ps[0][0]-ps[1][0],ps[0][1]-ps[1][1]);if(pinch)dist=T.MathUtils.clamp(dist*pinch/d,2,100);pinch=d}});
+function end(e){pointers.delete(e.pointerId);pinch=0}renderer.domElement.addEventListener('pointerup',end);renderer.domElement.addEventListener('pointercancel',end);renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();dist=T.MathUtils.clamp(dist+e.deltaY*.022,2,100)},{passive:false});
+function fitBaubleDistance(){const halfV=T.MathUtils.degToRad(camera.fov)/2;const halfH=Math.atan(Math.tan(halfV)*camera.aspect);return BAUBLE_R/Math.sin(Math.min(halfV,halfH))*1.12}let firstFit=true;function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();const fit=fitBaubleDistance();if(firstFit){dist=fit;firstFit=false}else dist=T.MathUtils.clamp(dist,2,100)}addEventListener('resize',resize);resize();
+
+const probeButton=document.querySelector('#probe'),probePanel=document.querySelector('#probePanel'),probeText=document.querySelector('#probeText');
+let probeReport='',probeLast=0,probeFrames=0,probeFrameMs=0;
+const round=(n,d=2)=>Number.isFinite(n)?+n.toFixed(d):null;
+function inspectWorld(){
+ camera.updateMatrixWorld();world.updateMatrixWorld(true);
+ const center=new T.Vector3(0,0,0).project(camera);
+ const report={build:BUILD,time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:0,contentsInstantiated:false},render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:round(probeFrames?1000/(probeFrameMs/probeFrames):0)},containment:verifyContainment(),invariants:verifyInvariants(),simulation:{time:round(clock.time,3),steps:clock.steps,droppedSeconds:round(clock.droppedSeconds,3),fixedStep:STEP},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:[]};
+ probeReport=JSON.stringify(report,null,2);probeText.textContent=probeReport;return report;
+}
+probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};
+document.querySelector('#closeProbe').onclick=()=>probePanel.classList.remove('open');
+document.querySelector('#copyProbe').onclick=async()=>{inspectWorld();try{await navigator.clipboard.writeText(probeReport);document.querySelector('#copyProbe').textContent='COPIED'}catch(e){const t=document.createElement('textarea');t.value=probeReport;document.body.append(t);t.select();document.execCommand('copy');t.remove();document.querySelector('#copyProbe').textContent='COPIED'}};
+globalThis.BaubleInspect=inspectWorld;
+// Bounded, privacy-minimal interaction trace: canvas gestures and instrument controls only.
+const interactionLog=[],interactionLimit=240;let interactionSeq=0,interactionStart=performance.now(),gesture=null;
+function recordInteraction(type,data={}){interactionLog.push({seq:++interactionSeq,ms:Math.round(performance.now()-interactionStart),type,...data});if(interactionLog.length>interactionLimit)interactionLog.shift()}
+function screenPoint(e){const rect=renderer.domElement.getBoundingClientRect();return{x:round((e.clientX-rect.left)/rect.width,3),y:round((e.clientY-rect.top)/rect.height,3)}}
+renderer.domElement.addEventListener('pointerdown',e=>{const p=screenPoint(e);if(!gesture)gesture={start:performance.now(),x:p.x,y:p.y,maxPointers:0,moves:0,travel:0};gesture.maxPointers=Math.max(gesture.maxPointers,renderer.domElement.hasPointerCapture(e.pointerId)?1:1);recordInteraction('pointer-down',{pointerType:e.pointerType,button:e.button,...p,camera:{azimuth:round(angle),elevation:round(elev),distance:round(dist)}})},{capture:true});
+renderer.domElement.addEventListener('pointermove',e=>{if(!gesture)return;const p=screenPoint(e);gesture.moves++;gesture.travel=Math.max(gesture.travel,Math.hypot(p.x-gesture.x,p.y-gesture.y));gesture.maxPointers=Math.max(gesture.maxPointers,pointers.size)},{capture:false});
+function endGesture(e,cancelled=false){const p=screenPoint(e);recordInteraction(cancelled?'pointer-cancel':gesture?.travel<.025?'tap':'gesture-end',{pointerType:e.pointerType,...p,durationMs:gesture?Math.round(performance.now()-gesture.start):null,travel:round(gesture?.travel??0,3),maxPointers:gesture?.maxPointers??1,camera:{azimuth:round(angle),elevation:round(elev),distance:round(dist)}});if(pointers.size<=1)gesture=null}
+renderer.domElement.addEventListener('pointerup',e=>endGesture(e),{capture:false});
+renderer.domElement.addEventListener('pointercancel',e=>endGesture(e,true),{capture:false});
+renderer.domElement.addEventListener('wheel',e=>recordInteraction('wheel',{deltaY:round(e.deltaY),cameraDistance:round(dist)}),{passive:true});
+probeButton.addEventListener('click',()=>recordInteraction('inspect-toggle',{open:probePanel.classList.contains('open')}));
+document.querySelector('#copyProbe').addEventListener('click',()=>recordInteraction('copy-report'));
+document.querySelector('#closeProbe').addEventListener('click',()=>recordInteraction('inspect-close'));
+
+
+let last=performance.now();function frame(now){requestAnimationFrame(frame);probeFrames++;const elapsed=Math.max(0,(now-last)/1000);probeFrameMs+=elapsed*1000;last=now;clock.accumulator+=Math.min(MAX_FRAME,elapsed);clock.droppedSeconds+=Math.max(0,elapsed-MAX_FRAME);let steps=0;while(clock.accumulator>=STEP&&steps<MAX_STEPS){simulate(STEP);clock.time+=STEP;clock.steps++;clock.accumulator-=STEP;steps++}if(clock.accumulator>=STEP){clock.droppedSeconds+=clock.accumulator;clock.accumulator=0}if(now-probeLast>2500){probeLast=now;verifyInvariants();verifyContainment();if(probePanel.classList.contains('open'))inspectWorld();probeFrames=0;probeFrameMs=0}
+camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);renderer.render(scene,camera)}
+requestAnimationFrame(frame);
+}catch(e){window.BaubleFatal(e);console.error(e)}
+</script></body></html>

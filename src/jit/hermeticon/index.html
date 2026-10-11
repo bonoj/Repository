@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-genesis-v8';
+const BUILD='hermeticon-genesis-v9';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -111,7 +111,7 @@ const N=100000,SEED=918273,S=10,R=9.83,GRID=10,CELLS=GRID**3,H=2*R/GRID,SOFT=.8,
 const pos=new Float32Array(N*3),vel=new Float32Array(N*3),col=new Float32Array(N*3),live=new Uint8Array(N);
 const mass=new Float64Array(CELLS),px=new Float64Array(CELLS),py=new Float64Array(CELLS),pz=new Float64Array(CELLS),fx=new Float64Array(CELLS),fy=new Float64Array(CELLS),fz=new Float64Array(CELLS);
 const star={m:0,x:0,y:0,z:0,vx:0,vy:0,vz:0,Lx:0,Ly:0,Lz:0},starRadius=.34;
-let seed=SEED,elapsed=0,steps=0,free=N,escapes=0,outer=0,inner=0,initialL=null,initialP=null,perf=0,contacts=0,collisionPasses=0,discThickness=0;
+let jetsOn=false,jetEmitted=0,jetReaccreted=0,jetCursor=0,jetBudget=0;const jetTagged=new Uint8Array(N);let seed=SEED,elapsed=0,steps=0,free=N,escapes=0,outer=0,inner=0,initialL=null,initialP=null,perf=0,contacts=0,collisionPasses=0,discThickness=0;
 // Spatially local, bounded paired impulses adapted from Asteroid's inexpensive collision pass.
 const CG=32,CC=CG**3,head=new Int32Array(CC),next=new Int32Array(N);
 const ci=(x,y,z)=>Math.min(CG-1,Math.max(0,Math.floor((x+R)*CG/(2*R))))+CG*(Math.min(CG-1,Math.max(0,Math.floor((y+R)*CG/(2*R))))+CG*Math.min(CG-1,Math.max(0,Math.floor((z+R)*CG/(2*R)))));
@@ -151,16 +151,17 @@ const index=(x,y,z)=>Math.min(GRID-1,Math.max(0,Math.floor((x+R)/H)))+GRID*(Math
 const center=(i,axis)=>((Math.floor(i/Math.pow(GRID,axis))%GRID)+.5)*H-R;
 function totals(){let mx=star.vx*star.m,my=star.vy*star.m,mz=star.vz*star.m,Lx=star.Lx+star.m*(star.y*star.vz-star.z*star.vy),Ly=star.Ly+star.m*(star.z*star.vx-star.x*star.vz),Lz=star.Lz+star.m*(star.x*star.vy-star.y*star.vx);
 for(let i=0;i<N;i++){if(live[i])continue;const k=i*3,x=pos[k],y=pos[k+1],z=pos[k+2],vx=vel[k],vy=vel[k+1],vz=vel[k+2];mx+=vx;my+=vy;mz+=vz;Lx+=y*vz-z*vy;Ly+=z*vx-x*vz;Lz+=x*vy-y*vx}return{momentum:[mx,my,mz],angular:[Lx,Ly,Lz]}}
-function reset(){seed=SEED;elapsed=steps=star.m=star.vx=star.vy=star.vz=star.Lx=star.Ly=star.Lz=0;free=N;live.fill(0);
+function reset(){jetsOn=false;jetEmitted=jetReaccreted=jetCursor=jetBudget=0;jetTagged.fill(0);seed=SEED;elapsed=steps=star.m=star.vx=star.vy=star.vz=star.Lx=star.Ly=star.Lz=0;free=N;live.fill(0);
 for(let i=0;i<N;i++){const k=i*3;let x,y,z;do{x=(rand()*2-1)*8.7;y=(rand()*2-1)*8.7;z=(rand()*2-1)*8.7}while(x*x+y*y+z*z>75);pos[k]=x;pos[k+1]=y;pos[k+2]=z;
 const omega=.47;vel[k]=-omega*z+(rand()-.5)*.09;vel[k+1]=(rand()-.5)*.09;vel[k+2]=omega*x+(rand()-.5)*.09;
 const c=new T.Color().setHSL(.48+rand()*.16,.6,.62);col[k]=c.r;col[k+1]=c.g;col[k+2]=c.b;
 }geo.attributes.color.needsUpdate=true;geo.attributes.position.needsUpdate=true;initialL=totals().angular;initialP=totals().momentum}
-function sink(i){const k=i*3,x=pos[k],y=pos[k+1],z=pos[k+2],vx=vel[k],vy=vel[k+1],vz=vel[k+2],m=star.m;
+function sink(i){if(jetTagged[i]){jetTagged[i]=0;jetReaccreted++}const k=i*3,x=pos[k],y=pos[k+1],z=pos[k+2],vx=vel[k],vy=vel[k+1],vz=vel[k+2],m=star.m;
 star.Lx+=y*vz-z*vy;star.Ly+=z*vx-x*vz;star.Lz+=x*vy-y*vx;
 star.vx=(star.vx*m+vx)/(m+1);star.vy=(star.vy*m+vy)/(m+1);star.vz=(star.vz*m+vz)/(m+1);star.m++;free--;live[i]=1;
 pos[k]=pos[k+1]=pos[k+2]=0;col[k]=col[k+1]=col[k+2]=0;geo.attributes.color.needsUpdate=true}
-function solve(dt){
+function ejectJets(dt){if(!jetsOn||star.m<2)return;jetBudget=Math.min(50,jetBudget+dt*240);let emitted=0;while(jetBudget>=1&&star.m>1&&emitted<16){let i=-1;for(let n=0;n<N;n++){const j=(jetCursor+n)%N;if(live[j]){i=j;jetCursor=(j+1)%N;break}}if(i<0)break;const k=i*3,sign=jetEmitted%2? -1:1,spread=.11,theta=rand()*Math.PI*2,r=.42;const x=Math.cos(theta)*r*spread,z=Math.sin(theta)*r*spread;pos[k]=x;pos[k+1]=sign*r;pos[k+2]=z;const vx=x*2+(rand()-.5)*.6,vy=sign*(9.5+rand()*1.5),vz=z*2+(rand()-.5)*.6;vel[k]=vx;vel[k+1]=vy;vel[k+2]=vz;col[k]=.38;col[k+1]=.8;col[k+2]=1;live[i]=0;jetTagged[i]=1;star.m--;free++;star.vx=(star.vx*(star.m+1)-vx)/Math.max(1,star.m);star.vy=(star.vy*(star.m+1)-vy)/Math.max(1,star.m);star.vz=(star.vz*(star.m+1)-vz)/Math.max(1,star.m);jetEmitted++;emitted++;jetBudget--;geo.attributes.color.needsUpdate=true} }
+function solve(dt){ejectJets(dt);
 mass.fill(0);px.fill(0);py.fill(0);pz.fill(0);
 for(let i=0;i<N;i++){if(live[i])continue;const k=i*3,c=index(pos[k],pos[k+1],pos[k+2]);mass[c]++;px[c]+=pos[k];py[c]+=pos[k+1];pz[c]+=pos[k+2]}
 for(let a=0;a<CELLS;a++){const ma=mass[a];if(!ma){fx[a]=fy[a]=fz[a]=0;continue}fx[a]=fy[a]=fz[a]=0;px[a]/=ma;py[a]/=ma;pz[a]/=ma}
@@ -195,7 +196,7 @@ reset();
 registerInvariant('genesis-100k-accounting',()=>free+star.m===N);
 registerInvariant('genesis-finite',()=>Number.isFinite(pos[0])&&Number.isFinite(star.m));
 registerInvariant('genesis-initial-population',()=>pos.length===N*3);
-return{advance,report:()=>{const now=totals();return{seed:SEED,elapsedSeconds:+elapsed.toFixed(2),formationTargetSeconds:30,continuousEvolution:true,population:N,freeBeads:free,starMassBeads:star.m,accounted:free+star.m,innerBeads:inner,outerBeads:outer,contacts,collisionPasses,discThickness,structure:structure(),collisionModel:'spatial-cell paired sloppy inelastic impulses',steps,initialMomentum:initialP,currentMomentum:now.momentum,initialAngularMomentum:initialL,currentAngularMomentum:now.angular,method:'particle-mesh gravity, grid pressure, central sink, spatial-cell paired dissipative contacts',limitations:['grid force approximation','wall impulses affect total momentum','sink angular momentum tracked as spin','no invented planetary aggregates','30 seconds simulated time not verified physical years']}}};
+return{advance,toggleJets:()=>{jetsOn=!jetsOn;return jetsOn},starMesh,report:()=>{const now=totals();return{seed:SEED,elapsedSeconds:+elapsed.toFixed(2),formationTargetSeconds:30,continuousEvolution:true,population:N,freeBeads:free,starMassBeads:star.m,jets:{enabled:jetsOn,emitted:jetEmitted,reaccreted:jetReaccreted,currentlyFlying:jetEmitted-jetReaccreted,rateBeadsPerSecond:240},accounted:free+star.m,innerBeads:inner,outerBeads:outer,contacts,collisionPasses,discThickness,structure:structure(),collisionModel:'spatial-cell paired sloppy inelastic impulses',steps,initialMomentum:initialP,currentMomentum:now.momentum,initialAngularMomentum:initialL,currentAngularMomentum:now.angular,method:'particle-mesh gravity, grid pressure, central sink, spatial-cell paired dissipative contacts',limitations:['grid force approximation','wall impulses affect total momentum','sink angular momentum tracked as spin','no invented planetary aggregates','30 seconds simulated time not verified physical years']}}};
 })();
 function simulate(dt){genesis.advance(dt)}
 function updateAlarm(){
@@ -234,7 +235,7 @@ function recordInteraction(type,data={}){interactionLog.push({seq:++interactionS
 function screenPoint(e){const rect=renderer.domElement.getBoundingClientRect();return{x:round((e.clientX-rect.left)/rect.width,3),y:round((e.clientY-rect.top)/rect.height,3)}}
 renderer.domElement.addEventListener('pointerdown',e=>{const p=screenPoint(e);if(!gesture)gesture={start:performance.now(),x:p.x,y:p.y,maxPointers:0,moves:0,travel:0};gesture.maxPointers=Math.max(gesture.maxPointers,renderer.domElement.hasPointerCapture(e.pointerId)?1:1);recordInteraction('pointer-down',{pointerType:e.pointerType,button:e.button,...p,camera:{azimuth:round(angle),elevation:round(elev),distance:round(dist)}})},{capture:true});
 renderer.domElement.addEventListener('pointermove',e=>{if(!gesture)return;const p=screenPoint(e);gesture.moves++;gesture.travel=Math.max(gesture.travel,Math.hypot(p.x-gesture.x,p.y-gesture.y));gesture.maxPointers=Math.max(gesture.maxPointers,pointers.size)},{capture:false});
-function endGesture(e,cancelled=false){const p=screenPoint(e);recordInteraction(cancelled?'pointer-cancel':gesture?.travel<.025?'tap':'gesture-end',{pointerType:e.pointerType,...p,durationMs:gesture?Math.round(performance.now()-gesture.start):null,travel:round(gesture?.travel??0,3),maxPointers:gesture?.maxPointers??1,camera:{azimuth:round(angle),elevation:round(elev),distance:round(dist)}});if(pointers.size<=1)gesture=null}
+function endGesture(e,cancelled=false){const p=screenPoint(e);if(!cancelled&&gesture&&gesture.travel<.025&&gesture.maxPointers<=1&&performance.now()-gesture.start<650&&genesis.starMesh.visible){const projected=genesis.starMesh.getWorldPosition(new T.Vector3()).project(camera);const rect=renderer.domElement.getBoundingClientRect();const sx=(projected.x*.5+.5)*rect.width,sy=(-projected.y*.5+.5)*rect.height;const radius=Math.max(32,genesis.starMesh.scale.x*rect.height/(2*Math.tan(T.MathUtils.degToRad(camera.fov)/2)*dist));if(Math.hypot(e.clientX-rect.left-sx,e.clientY-rect.top-sy)<radius){const enabled=genesis.toggleJets();recordInteraction('star-jets-toggle',{enabled});}}recordInteraction(cancelled?'pointer-cancel':gesture?.travel<.025?'tap':'gesture-end',{pointerType:e.pointerType,...p,durationMs:gesture?Math.round(performance.now()-gesture.start):null,travel:round(gesture?.travel??0,3),maxPointers:gesture?.maxPointers??1,camera:{azimuth:round(angle),elevation:round(elev),distance:round(dist)}});if(pointers.size<=1)gesture=null}
 renderer.domElement.addEventListener('pointerup',e=>endGesture(e),{capture:false});
 renderer.domElement.addEventListener('pointercancel',e=>endGesture(e,true),{capture:false});
 renderer.domElement.addEventListener('wheel',e=>recordInteraction('wheel',{deltaY:round(e.deltaY),cameraDistance:round(dist)}),{passive:true});

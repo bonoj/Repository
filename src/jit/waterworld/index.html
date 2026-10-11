@@ -180,13 +180,28 @@ function stepWater(dt){
  wavePeak=0;waveEnergy=0;
  for(let i=0;i<NC;i++)if(depthField[i]>.02){wavePeak=Math.max(wavePeak,Math.abs(bed[i]+depthField[i]-waterY));waveEnergy+=depthField[i]*(velX[i]*velX[i]+velZ[i]*velZ[i])*CELL}
 }
+// Render-only bilinear sampling; never modifies the conservative transport field.
+function renderedHeight(x,z){
+ const gx=(x+INNER_R)/DX-.5,gz=(z+INNER_R)/DX-.5;
+ const ix=Math.floor(gx),iz=Math.floor(gz),tx=gx-ix,tz=gz-iz;
+ let sum=0,weight=0;
+ for(let dz=0;dz<2;dz++)for(let dx=0;dx<2;dx++){
+  const cx=ix+dx,cz=iz+dz;
+  if(cx<0||cx>=GRID||cz<0||cz>=GRID)continue;
+  const i=cz*GRID+cx;
+  if(!wet[i])continue;
+  const w=(dx?tx:1-tx)*(dz?tz:1-tz);
+  sum+=w*(bed[i]+depthField[i]);weight+=w;
+ }
+ return weight>1e-6?sum/weight:waterY;
+}
 function updateWindVisual(){
  const a=ripplePositions.array;
  const radius=Math.sqrt(Math.max(0,INNER_R*INNER_R-waterY*waterY));
  for(let i=0;i<a.length;i+=3){
   const x=rippleBase[i]*radius,z=-rippleBase[i+1]*radius;
   a[i]=rippleBase[i];a[i+1]=rippleBase[i+1];
-  a[i+2]=(sampleHeight(x,z)-waterY)/Math.max(radius,.01);
+  a[i+2]=(renderedHeight(x,z)-waterY)/Math.max(radius,.01);
  }
  ripplePositions.needsUpdate=true;rippleGeo.computeVertexNormals();
 }
@@ -328,7 +343,7 @@ function renderBeads(){
 
  const fraction=Math.cbrt(sourceUnits/30000);source.scale.setScalar(fraction);sourceCore.scale.setScalar(fraction);
 }
-const BUILD='waterworld-rendered-surface-seat-v24';
+const BUILD='waterworld-smooth-surface-v25';
 const buildLabel=document.querySelector('#build');
 buildLabel.textContent=BUILD;
 const hud=document.querySelector('#hud');
@@ -400,7 +415,7 @@ function seatBoatOnRenderedSurface(){
  if(r>limit){b.x*=limit/r;b.z*=limit/r}
  const y=renderedSurfaceY(b.x,b.z);
  if(y===null)return;
- b.y=y-.12;
+ b.y=y+.03;
  const fx=Math.sin(b.heading),fz=Math.cos(b.heading);
  const front=renderedSurfaceY(b.x+fx*.45,b.z+fz*.45);
  const back=renderedSurfaceY(b.x-fx*.45,b.z-fz*.45);

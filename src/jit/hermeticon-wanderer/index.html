@@ -312,37 +312,63 @@ else {
  triangles=0;buildMs=0;terrainBuildCount=0;solid.visible=false;
 }
 // One mesh, one set of vertices; map lenses only recolor the existing surface.
+// Author the entire aligned atlas once. Unknown terrain remains quiet, not filled with noise.
+function compileAtlas(){
+ if(!atlas)return;
+ const {fields:f,resolution:[w,h],halfExtent:half}=atlas;
+ const nodes=operations.filter(o=>o.name);
+ for(let z=0;z<h;z++)for(let x=0;x<w;x++){
+  const X=(x/(w-1)*2-1)*half,Z=(z/(h-1)*2-1)*half,i=x+w*z;
+  let nearest=null,dist=Infinity,top=1.15;
+  for(const n of nodes){
+   const d=Math.hypot(X-n.x,Z-n.z);
+   if(d<dist){dist=d;nearest=n}
+   if(n.kind!=='through-hole'&&d<n.r){const t=1-(d/n.r)**2;top+=n.delta*t*t}
+  }
+  const active=nearest&&dist<nearest.r*1.4;
+  const winter=X>5&&Z>7,summer=X< -4&&Z>3;
+  f.jurisdiction[i]=winter?2:summer?1:Z>3?3:active?4:0;
+  f.gradientWeight[i]=Z>3&&X>=-4&&X<=5?Math.round((X+4)/9*255):0;
+  f.elevation[i]=top;
+  f.substrate[i]=active?(winter?3:nearest.kind==='lower'?2:1):0;
+  f.hydrology[i]=active&&nearest.kind==='lower'?1:0;
+  f.provenance[i]=active?1:0;
+  f.strata[i]=active&&nearest.kind==='through-hole'?2:1;
+  f.population[i]=active&&nearest.kind==='raise'?1:0;
+  f.features[i]=active?1:0;
+ }
+ atlas.compiled=true;
+}
+compileAtlas();
 const mapModes=['COMPOSITE','ELEVATION','SUBSTRATE','BIOME','HYDROLOGY','PROVENANCE','STRATA','POPULATION','FEATURES'];
 let mapModeIndex=0;
 function paintMapLens(){
- const attr=geo.getAttribute('position'),color=geo.getAttribute('color');
- if(!attr||!color)return;
+ const position=geo.getAttribute('position'),color=geo.getAttribute('color');
+ if(!position||!color||!atlas)return;
+ const {fields:f,resolution:[w,h],halfExtent:half}=atlas;
  const mode=mapModes[mapModeIndex],v=new T.Color(),base=new T.Color();
- for(let i=0;i<attr.count;i++){
-  const x=attr.getX(i),y=attr.getY(i),z=attr.getZ(i);
-  const near=operations.filter(o=>o.name).map(o=>({o,d:Math.hypot(x-o.x,z-o.z)})).sort((a,b)=>a.d-b.d)[0];
-  const node=near?.o,within=node&&near.d<node.r*1.4;
-  const winter=x>5&&z>7,summer=x< -4&&z>3;
-  const elevation=Math.max(0,Math.min(1,(y+2.8)/5.6));
-  const wet=node?.kind==='lower'&&within;
-  const hole=node?.kind==='through-hole'&&within;
-  if(mode==='ELEVATION')v.setRGB(elevation,elevation,elevation);
-  else if(mode==='SUBSTRATE')v.set(within?(winter?0xabb5b8:wet?0x776e56:0xb28b68):0x766b5b);
-  else if(mode==='BIOME')v.set(winter?0x8dbbc9:summer?0xb1aa63:0x8b897b);
+ for(let i=0;i<position.count;i++){
+  const X=position.getX(i),Y=position.getY(i),Z=position.getZ(i);
+  const ix=Math.max(0,Math.min(w-1,Math.round((X/half+1)*(w-1)/2)));
+  const iz=Math.max(0,Math.min(h-1,Math.round((Z/half+1)*(h-1)/2)));
+  const j=ix+w*iz,biome=f.jurisdiction[j],wet=f.hydrology[j]>0,feature=f.features[j]>0;
+  const ice=biome===2,summer=biome===1;
+  if(mode==='ELEVATION'){const e=Math.max(0,Math.min(1,(f.elevation[j]+1.5)/5));v.setRGB(e,e,e)}
+  else if(mode==='SUBSTRATE')v.set([0x766b5b,0xb28b68,0x776e56,0xabb5b8][f.substrate[j]]);
+  else if(mode==='BIOME')v.set([0x777970,0xb1aa63,0x8dbbc9,0x979385,0x9d8675][biome]);
   else if(mode==='HYDROLOGY')v.set(wet?0x3c94bc:0x333b40);
-  else if(mode==='PROVENANCE')v.set(within?0xb69a60:0x3c4244);
-  else if(mode==='STRATA')v.set(hole?0xc9a16b:y<0?0x5a6573:0xa2a5a0);
-  else if(mode==='POPULATION')v.set(within&&node.kind==='raise'?0x5b9d69:0x343c35);
-  else if(mode==='FEATURES')v.set(within?0xe3b66a:0x33363b);
-  else v.set(winter?0xa6bdc2:summer?0xa29b69:0x927963).lerp(base.set(wet?0x63899a:hole?0x564c62:node?.kind==='raise'?0xb49a72:0x927963),within?.45:0);
+  else if(mode==='PROVENANCE')v.set(f.provenance[j]?0xb69a60:0x3c4244);
+  else if(mode==='STRATA')v.set(f.strata[j]===2?0xc9a16b:Y<0?0x5a6573:0xa2a5a0);
+  else if(mode==='POPULATION')v.set(f.population[j]?0x5b9d69:0x343c35);
+  else if(mode==='FEATURES')v.set(feature?0xe3b66a:0x33363b);
+  else v.set(ice?0xa6bdc2:summer?0xa29b69:0x927963).lerp(base.set(wet?0x63899a:f.strata[j]===2?0x564c62:f.population[j]?0xb49a72:0x927963),feature?.45:0);
   color.setXYZ(i,v.r,v.g,v.b);
  }
  color.needsUpdate=true;
  document.querySelector('#mapLens').textContent='◈ '+mode;
 }
 document.querySelector('#mapLens').onclick=()=>{mapModeIndex=(mapModeIndex+1)%mapModes.length;paintMapLens()};
-
-if(terrainProvider==='authored-v1')paintMapLens();
+if(atlas)paintMapLens();
 else document.querySelector('#mapLens').hidden=true;
 
 let lastMeshX=0,lastMeshZ=0;

@@ -369,7 +369,7 @@ function basinUpdate(){
  basinWet.fill(0);const queue=[basinSeed];basinWet[basinSeed]=1;
  for(let a=0;a<queue.length;a++)basinNeighbors(queue[a],n=>{if(!basinWet[n]&&basinValid[n]&&basinBed[n]<=basinLevel){basinWet[n]=1;queue.push(n)}});
  basinCount=queue.length;basinEdges=[];
- for(const q of queue)basinNeighbors(q,n=>{if(!basinWet[n]&&basinValid[n]&&basinBed[n]<=basinLip+.05)basinEdges.push([q,n])});
+ for(const q of queue)basinNeighbors(q,n=>{if(!basinWet[n]&&basinValid[n]&&basinBed[n]>=basinLip-.12&&basinBed[n]<=basinLip+.12)basinEdges.push([q,n])});
  if(performance.now()-basinLast<90)return;
  const vertices=[];
  // Flat water at the computed level; only triangles supported by connected wet cells.
@@ -469,7 +469,7 @@ function rainStep(dt){
   }
   const [rx,ry,rz]=rainWorld(i);
   rainDummy.position.set(rx,ry,rz);
-  rainDummy.scale.setScalar(rx*rx+ry*ry+rz*rz<INNER_R*INNER_R?1:0);
+  rainDummy.scale.setScalar(rainRest[i]===2?0:(rx*rx+ry*ry+rz*rz<INNER_R*INNER_R?1:0));
   rainDummy.updateMatrix();rainMesh.setMatrixAt(i,rainDummy.matrix);
  }
  rainMesh.count=rainEmitted;rainMesh.instanceMatrix.needsUpdate=true;

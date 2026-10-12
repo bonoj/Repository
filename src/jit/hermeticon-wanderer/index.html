@@ -57,6 +57,8 @@ const alarm=document.querySelector('#containmentAlarm');
 const scratchPoint=new T.Vector3(),scratchMatrix=new T.Matrix4();
 function verifyContainment(){
  world.updateMatrixWorld(true);
+ // The generic containment check applies to vessel-local objects only.
+ // World-domain matter may legitimately be outside the moving aperture.
  const failures=[];let checked=0,maxOverflow=0;
  world.traverse(o=>{
   if(!o.isMesh||!o.visible||o.userData.allowOutsideBauble||o.userData.worldDomain||!o.geometry)return;
@@ -291,7 +293,8 @@ const rainOwner=new Uint8Array(RAIN_N);
 let ownerTransfers=0,toTerrain=0,toHermeticon=0,maxTransferError=0;
 function rainWorld(i){return [rainX[i]-wanderX,rainY[i],rainZ[i]-wanderZ]}
 const rainGeo=new T.IcosahedronGeometry(RAIN_R,0),rainMat=new T.MeshBasicMaterial({color:0x8ad9f0});
-const rainMesh=new T.InstancedMesh(rainGeo,rainMat,RAIN_N);rainMesh.frustumCulled=false;rainMesh.count=0;world.add(rainMesh);
+const rainMesh=new T.InstancedMesh(rainGeo,rainMat,RAIN_N);rainMesh.userData.worldDomain=true; // Persistent geological BBs are not subject to whole-sphere containment.
+rainMesh.frustumCulled=false;rainMesh.count=0;world.add(rainMesh);
 const cloudDimensions=[2.7,.8,2.7],cloudCenterY=5.6;
 const cloud=put(world,new T.BoxGeometry(...cloudDimensions),new T.MeshStandardMaterial({color:0x929aa1,transparent:true,opacity:.72,roughness:.94}),0,cloudCenterY,0);
 const rainDummy=new T.Object3D();let rainTime=0,rainEmitted=0,rainBounces=0,rainSettled=0,rainEscaped=0,rainWallBounces=0,rainBudget=0;

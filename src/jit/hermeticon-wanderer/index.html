@@ -319,7 +319,7 @@ function collectRain(i,x,y,z){
 }
 function wetStep(dt){
  const start=performance.now(),delta=new Map(),area=WET_CELL*WET_CELL;
- for(const [key,c] of rainWet){
+ for(const [key,c] of [...rainWet]){
   if(c.v<=0)continue;
   const head=c.top+c.v/area;
   let candidates=[],sum=0;

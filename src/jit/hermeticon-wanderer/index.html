@@ -20,7 +20,7 @@
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-material-v74';
+const BUILD='hermeticon-wanderer-material-v75';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -525,13 +525,16 @@ const landmarkOrbs=landmarkSpecs.map(([name,x,z,icon,color],i)=>{
  const y=walkSurface(x,z)??1.15;
  const sphere=new T.Mesh(landmarkGeometry,new T.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.24,metalness:.32,roughness:.28}));
  landmarkGroup.add(sphere);
- const canvas=document.createElement('canvas');canvas.width=768;canvas.height=128;
- const ctx=canvas.getContext('2d');ctx.fillStyle='#15202a';ctx.strokeStyle='#9c8556';ctx.lineWidth=4;
- ctx.beginPath();ctx.roundRect(5,5,758,118,22);ctx.fill();ctx.stroke();
+ const canvas=document.createElement('canvas');
+ const measure=canvas.getContext('2d');measure.font='600 40px system-ui';
+ const title=icon+'  '+name.toUpperCase(),textWidth=Math.ceil(measure.measureText(title).width);
+ canvas.width=Math.max(128,textWidth+58);canvas.height=96;
+ const ctx=canvas.getContext('2d');ctx.fillStyle='#15202a';ctx.strokeStyle='#9c8556';ctx.lineWidth=3;
+ ctx.beginPath();ctx.roundRect(3,3,canvas.width-6,canvas.height-6,18);ctx.fill();ctx.stroke();
  ctx.font='600 40px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#f0d5a0';
- ctx.fillText(icon+'  '+name.toUpperCase(),384,65,728);
+ ctx.fillText(title,canvas.width/2,49);
  const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
- const label=new T.Mesh(new T.PlaneGeometry(3.65,.61),new T.MeshBasicMaterial({map:texture,transparent:true,depthTest:true,depthWrite:false,side:T.DoubleSide}));
+ const label=new T.Mesh(new T.PlaneGeometry(canvas.width/160,.6),new T.MeshBasicMaterial({map:texture,transparent:true,depthTest:true,depthWrite:false,side:T.DoubleSide}));
  label.visible=false;landmarkGroup.add(label);
  return {x,z,y,sphere,label,phase:i*1.71};
 });
@@ -542,7 +545,12 @@ function landmarkStep(dt){
   n.sphere.position.set(n.x,n.y+.75+bob,n.z);
   n.label.position.set(n.x,n.y+1.31+bob,n.z);
   n.label.quaternion.copy(camera.quaternion);
-  n.label.visible=Math.hypot(walker.x-n.x,walker.z-n.z)<2.7;
+  // Marker and full tag must fit inside the inner vessel, not merely the center.
+  const inside=(px,py,pz,r)=>Math.hypot(px-wanderX,py,pz-wanderZ)+r<R-.015;
+  n.sphere.visible=inside(n.x,n.y+.75+bob,n.z,.19);
+  const halfWidth=n.label.geometry.parameters.width*.5;
+  const labelRadius=Math.hypot(halfWidth,.3);
+  n.label.visible=n.sphere.visible&&inside(n.x,n.y+1.31+bob,n.z,labelRadius)&&Math.hypot(walker.x-n.x,walker.z-n.z)<2.7;
  }
 }
 // Wanderer lives in geological coordinates; the aperture follows only beyond 25% area.

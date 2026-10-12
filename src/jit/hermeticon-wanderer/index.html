@@ -20,7 +20,7 @@
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-material-v70';
+const BUILD='hermeticon-wanderer-material-v71';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -643,11 +643,8 @@ const quarry=atlas?(()=>{
   if(meshDirty){extractTerrainMesh(dirtyBounds);paintMapLens(terrainPerf.lastChangedChunks);meshDirty=false;dirtyBounds=null}
  },sync(){group.position.set(-wanderX,0,-wanderZ)}};
 })():null;
-if(quarry){
- const trigger=document.createElement('button');trigger.textContent='⚒ TRANSFER';trigger.style.cssText='position:fixed;z-index:24;left:12px;bottom:105px;min-height:50px';
- trigger.onclick=()=>{quarry.start();trigger.disabled=true;trigger.textContent='⚒ RUNNING'};
- document.body.append(trigger);
-}
+// Transfer experiment dormant: retain implementation, hide geometry and controls.
+if(quarry)quarry.group.visible=false;
 function simulate(dt){
  if(quarry){quarry.step(dt);quarry.sync()}
  rainStep(dt);
@@ -792,7 +789,7 @@ probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.class
 document.querySelector('#closeProbe').onclick=()=>probePanel.classList.remove('open');
 const copyButton=document.querySelector('#copyProbe');
 copyButton.textContent='COPY REPORT';
-const recoveryButton=document.createElement('button');recoveryButton.textContent='RE-EXCAVATE B';recoveryButton.onclick=()=>{if(!quarry)return;const result=quarry.recoverDeposits();inspectWorld();recoveryButton.textContent=result.passed?'RECOVERED 96/96':result.ready?'RECOVERY FAILED':'AWAIT 96/96'};document.querySelector('#probeActions').append(recoveryButton);
+// Transfer recovery action dormant with the hidden experiment.
 copyButton.onclick=()=>{
  // Call clipboard API synchronously within the tap gesture, not after async inspection.
  const snapshot=probeReport||probeText.value;

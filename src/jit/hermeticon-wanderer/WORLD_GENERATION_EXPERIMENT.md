@@ -148,3 +148,37 @@ At each stage, the *world* retains the authoritative state. The Hermeticon spend
 A deterministic, inspectable **2D field atlas for this specific drawing**: individually viewable layers, an image-overlay composite, aligned landmark/region labels, explicit unknowns, and a machine-readable field/feature manifest. No 3D scene is needed for the first acceptance test.
 
 Success means we can compare the fields with the original and say **where the world is, what terrain and material may originate there, which features belong there, and which details were invented by generation**—before committing those decisions to an executable landscape.
+
+---
+
+## Progress checkpoint — 2026-10-12 (Hermeticon Wanderer V36)
+
+**Working experiment:** `src/jit/hermeticon-wanderer/index.html?terrain=authored-v1` (source file is the same for all terrain providers). Published test: https://bonoj.github.io/jit/hermeticon-wanderer/?terrain=authored-v1 . Build label `hermeticon-wanderer-curved-biomes-v36`. Preserve the accepted V31 provider (`legacy-v31`) and explicit `empty` provider.
+
+### What has actually been demonstrated
+
+- **New world = flat geology.** The authored provider uses the *same* signed-density field and tetrahedral surface extractor as V31. Its geological operations, not its terrain machinery, determine the shape. No duplicate triangulator or per-frame geological rebuild.
+- **Sparse atlas geology (V32).** A deliberately provisional arrangement of 22 named nodes adds localized raises, depressions and three through-holes to the slab, leaving broad flat navigable corridors. These are experimental node placements, **not pixel-accurate traced positions** or verified map topology. Original names/interpretations above remain the geographic evidence.
+- **One map button (V33/V34).** Default **COMPOSITE** cycles through **ELEVATION, SUBSTRATE, BIOME, HYDROLOGY, PROVENANCE, STRATA, POPULATION, FEATURES** and back. It recolors the existing mesh; no additional map geometry or runtime render pipeline. V34 corrected a parse error introduced when map-lens declarations interrupted an `if/else` pair.
+- **Aligned runtime fields (V35).** Eight actual 85 × 85 arrays (plus jurisdiction and gradient weight) are compiled once from the provisional nodes and broad region rules. The button samples these fields rather than recomputing independent display heuristics. Fields are currently *simplified visualization and jurisdiction values*: provenance is **not** yet material lineage, hydrology is **not** conserved water, population is **not** instantiated inhabitants, and features are **not** detailed geometry. Elevation map is a simplified upper-surface estimate, not a full volumetric material model.
+- **Curved biomes (V36).** Deterministic, smooth geographic boundary functions replace the conspicuous square north/biome division. A finite-width Gradient lies between Summerlands and Winter King's Realm. These curves are **generated placeholders**, not traced boundaries from the original drawing. No noise-heavy terrain was added.
+- **Visual acceptance.** User reports that the sparse relief feels about right, all maps are legible, and V36 feels coherent. The V35 biome square was the sole concern; V36 addressed it. In particular, the **provenance, population and features** views read as sane. This is visual feedback, not a claim of physical or semantic validation.
+
+### World-design constraint learned
+
+**Sparse by design; complexity clusters, navigation flows.** Think of the *Game of Thrones* opening map: recognizable miniature geographic nodes on one continuous sculptural substrate, not a vast walkable simulation of full-size settlements. Aim for a few interesting nodes per viewport, broad quiet intervals and unobstructed paths. Visual richness can concentrate within a node without giving every tree, railing or lamp post collision authority. Empty space makes finding John's Ledger, LinkedIn or a project easy while visiting remains a deliberate choice. Avoid global procedural clutter and noise merely to make the world look populated.
+
+### Next sequence — maps become consequential
+
+1. **Material-aware terrain (next).** Give substrate and strata meaningful, inspectable material identities and vertical exposure rules. Use the *existing* mesh/field and its atlas sampling; no duplicate geometry or geology engine. Differentiate surface treatment from actual material provenance. Verify a top surface and a cut/underside can report their material identities, not merely colors.
+2. **Localized physical hydrology.** Integrate the already explored water/material-bead machinery only where selected authored basins call for it. Preserve water inventory and distinguish wet-map hints from real fluid occupancy. Do not claim water is running until verified. No universal ocean simulation just because a field is blue.
+3. **One living miniature node.** Choose a single recognizable location and build a small composable structure or environmental system with locally concentrated detail. It should inherit substrate, climate/biome and other relevant map fields, while leaving surrounding travel lanes clear.
+4. **Move the node.** Reposition the *same* node into a different geographic jurisdiction and test whether its behavior and appearance adapt from field data without bespoke scene rewrites. This is the composability proof, not just a prettier scene.
+
+**Hold constant while testing:** V31 navigation/camera ownership, aperture clipping, persistent world coordinates, BB/weather behavior, the original signed-volume extraction, sparse 22-node geography, flat corridors and the one-button map inspection loop. Keep build identity current on each executable change; verify source, publication and live delivery independently.
+
+### Open work and honest boundaries
+
+- The original hand-drawn image still needs reproducible registration and faithful tracing. Current node coordinates, relief stamps, biome front, material assignments and most inferred semantics are provisional. In particular, **To Ice Vale is an off-map connection**, and Redwall is a built wall, not a ridge; do not mistake provisional geology stamps for literal feature types.
+- The eight visual layers do not yet implement full authorship/confidence metadata, conserved material lineage, water flow, underground strata physics or a general image-to-world importer. The earlier eight-field conceptual table includes confidence/authorship; the current runtime's eight displayed lenses are not an exact implementation of that full semantic specification.
+- The previous sections document the original research plan and source interpretations; their statements that the *first* milestone is a 2D atlas are historical. **Current next milestone is material-aware terrain**, followed by hydrology, a living node and relocation testing.

@@ -1,5 +1,18 @@
 # Hermeticon Wanderer — semantic surface
-Updated: 2026-10-11 · Canon: V21 continuous traversal + Above / Within / Below
+Updated: 2026-10-12 · Canon: player-accepted V31 (V21 archaeology retained)
+
+## Accepted V31 — 2026-10-12 (supersedes the V21 handoff)
+Player accepted `hermeticon-wanderer-cloud-aperture-v31` at https://bonoj.github.io/jit/hermeticon-wanderer/. Source: `src/jit/hermeticon-wanderer/index.html`; JIT mirror: `bonoj/bonoj.github.io/jit/hermeticon-wanderer/index.html`. Preserve V31 behavior unless an explicit experiment changes it.
+
+- Tap replaces Wanderer's walking target. Drag orbits; pinch zooms; camera remains independent while walking/raining. World follow starts beyond the central 25% **area** of the aperture (half-radius hangout). Player verified the feel. Current cube at y=0 and flat-plane tap targeting are MVP, not terrain seating/pathfinding.
+- Terrain is a persistent geological signed field, generated once and clipped by the moving GPU aperture. World-coordinate BBs remain where spawned even when the aperture travels away; offscreen is not lost. No ownership transfer or teleport on aperture crossing.
+- Upper hemisphere is a **weather manifestation window**, not a physical BB wall. Cloud stays geological; its rendered mesh is fragment-clipped to the upper dome and double-sided. Rain may emit only within cloud ∩ upper dome; cloud inventory decreases on actual emission. Lower hemisphere is a physical bowl with current intentionally lively bounce behavior.
+- The generic containment verifier checks vessel-local geometry, **not geological terrain, cloud or BBs**. Do not mistake offscreen BBs for escape. The current verifier does not prove correct lower-bowl contact or prevent all penetrations.
+- Player INSPECT at 33.752 simulated seconds: 10,000 emitted; 9,815 within aperture, 185 offscreen and retained; 9,152 settled, 848 airborne, 0 recorded escaped, conservation true. 182 BBs beyond lower bowl, 1,588,519 wall-bounce events. No containment/invariant failures; cloud shader hooks compiled; terrain GPU/scene witnesses passed; ~58.94 FPS on sampled mobile run. Cloud inventory was already exhausted, so shader compilation is evidenced but partial-cloud overlap was not measured in this report.
+- INSPECT now exports `weather` (cloud coordinates, aperture overlap sampling, shader status, emission budget, BB persistence/finite positions), gesture traces, conservation, runtime GPU witnesses. `BaubleInspectWeather()` provides an on-demand focused snapshot. On-demand diagnostics are not a live screenshot or independent cloud pixel witness.
+- Known debt: rain emission uses deterministic candidates and can stall at a partial cloud overlap if its next candidate is outside; overlap estimate alone does not prove proportional emission. Lower-bowl collision uses a proximity projection against the moving vessel and can generate repeated bounce counts; behavior is presently accepted as playful, **not** validated trajectory-only collision. `cloud.dimensions=[0,0,0]` and `overlapFraction=1` after exhaustion describe a zero-size/invisible cloud and should not be interpreted as an active-weather test.
+
+The V21 instructions below are historical; do not follow their "next build" direction as if Wanderer were still absent.
 
 ## Identity
 A beautiful, perturbable, composable executable world, not merely a terrain clipping demo. **The glass bauble is a viewing aperture, never the geological world's physical boundary.** A persistent deterministic square geological field exists beyond the visible sphere. The Wanderer moves the aperture through it. The geology is not attenuated, squeezed or remeshed to fit glass. Atmospheric visibility may fade at the aperture edge.

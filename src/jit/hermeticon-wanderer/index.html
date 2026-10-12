@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-mvw-v59';
+const BUILD='hermeticon-wanderer-reexcavation-v49';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -296,72 +296,6 @@ function rainSurfaceNormal(x,y,z){
  const l=Math.hypot(nx,ny,nz);
  return l>.00001?[nx/l,ny/l,nz/l]:[0,1,0];
 }
-
-/* MVW: bounded, irregular integrated sheet. Existing cloud BBs supply volume. */
-const BB_VOLUME=12*4*Math.PI*RAIN_R**3/3,SW=49,SS=.19;
-const bed=new Float32Array(SW*SW),mask=new Float32Array(SW*SW),valid=new Uint8Array(SW*SW);
-const sheetGeo=new T.BufferGeometry(),sheet=new T.Mesh(sheetGeo,new T.MeshPhysicalMaterial({color:0x329ac8,transparent:true,opacity:.57,roughness:.08,metalness:.12,depthWrite:false,side:T.DoubleSide}));
-sheet.userData.worldDomain=true;sheet.frustumCulled=false;world.add(sheet);
-let wetCollected=0,wetStepMs=0,sheetHeight=0,sheetTriangles=0,sheetVolume=0,sheetReady=false,lastSheet=0;
-const si=(i,j)=>j*SW+i,sx=i=>(i-(SW-1)/2)*SS;
-function initSheet(){
- if(sheetReady)return;
- for(let j=0;j<SW;j++)for(let i=0;i<SW;i++){
-  const x=sx(i),z=sx(j),a=Math.atan2(z,x),r=Math.hypot(x,z);
-  const edge=3+.42*Math.sin(3*a+.5)+.24*Math.cos(5*a);
-  const t=Math.max(0,Math.min(1,(edge-r)/.4));mask[si(i,j)]=t*t*(3-2*t);
-  let prev=fieldSample(x,MAXY+1,z),top=null;
-  for(let y=MAXY+.93;y>=MINY;y-=.07){const f=fieldSample(x,y,z);if(f>=0&&prev<0){top=y;break}prev=f}
-  if(top!==null){bed[si(i,j)]=top;valid[si(i,j)]=1;}else{bed[si(i,j)]=MAXY+10;mask[si(i,j)]=0;}
- }
- sheetReady=true;
-}
-function collectRain(i,x,y,z){
- if(rainRest[i])return false;
- sheetVolume+=BB_VOLUME;rainRest[i]=2;rainSettled++;wetCollected++;return true;
-}
-function wetStep(dt){
- const start=performance.now();initSheet();
- let lo=MINY,hi=MAXY+4;
- for(let k=0;k<19;k++){
-  const h=(lo+hi)/2;let v=0;
-  for(let q=0;q<bed.length;q++)if(valid[q])v+=Math.max(0,h-bed[q])*mask[q]*SS*SS;
-  if(v>sheetVolume)hi=h;else lo=h;
- }
- sheetHeight=(lo+hi)/2;
- if(performance.now()-lastSheet>70){
-  const verts=[],push=(x,y,z)=>verts.push(x-wanderX,y+.012,z-wanderZ);
-  // Clip each triangle against positive water depth. No terrain-shaped dry triangles.
-  function clipTriangle(tri){
-   let poly=tri;
-   for(let pass=0;pass<1;pass++){
-    const out=[];
-    for(let k=0;k<poly.length;k++){
-     const a=poly[k],b=poly[(k+1)%poly.length],ina=a[3]>.0005,inb=b[3]>.0005;
-     if(ina)out.push(a);
-     if(ina!==inb){const t=(.0005-a[3])/(b[3]-a[3]);out.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t,.0005]);}
-    }
-    poly=out;
-   }
-   for(let k=1;k+1<poly.length;k++)for(const p of [poly[0],poly[k],poly[k+1]])push(p[0],p[1],p[2]);
-  }
-  for(let j=0;j<SW-1;j++)for(let i=0;i<SW-1;i++){
-   const corners=[[i,j],[i+1,j],[i+1,j+1],[i,j+1]];
-   const p=corners.map(([u,v])=>{
-    const q=si(u,v),d=valid[q]?Math.max(0,sheetHeight-bed[q])*mask[q]:0;
-    return [sx(u),valid[q]?bed[q]+d:sheetHeight,sx(v),d,valid[q]];
-   });
-   if(p[0][4]&&p[1][4]&&p[2][4])clipTriangle([p[0],p[1],p[2]]);if(p[0][4]&&p[2][4]&&p[3][4])clipTriangle([p[0],p[2],p[3]]);
-  }
-  sheetGeo.setAttribute('position',new T.Float32BufferAttribute(verts,3));
-  sheetGeo.computeVertexNormals();sheetGeo.computeBoundingSphere();
-  sheetTriangles=verts.length/9;lastSheet=performance.now();
- }
- wetStepMs=performance.now()-start;
-}
-function rainHydrologyInspect(){
- return {source:'existing cloud BBs',terrain:'signed geological field',model:'bounded integrated sheet MVW',collectedBBs:wetCollected,volume:sheetVolume,expected:wetCollected*BB_VOLUME,error:sheetVolume-wetCollected*BB_VOLUME,stepMs:wetStepMs,sheetHeight,triangles:sheetTriangles};
-}
 function rainStep(dt){
  const gravity=9.8,restitution=.38,tangentDamping=.82;
  rainTime+=dt;
@@ -416,7 +350,7 @@ function rainStep(dt){
     let push=0;
     while(fieldSample(hx+wanderX,hy,hz+wanderZ)>-RAIN_R&&push++<12){hx+=nx*.035;hy+=ny*.035;hz+=nz*.035}
     rainX[i]=hx+wanderX;rainY[i]=hy;rainZ[i]=hz+wanderZ;
-    if(Math.hypot(rainVX[i],rainVY[i],rainVZ[i])<.42&&ny>.55){collectRain(i,hx+wanderX,hy,hz+wanderZ)}
+    if(Math.hypot(rainVX[i],rainVY[i],rainVZ[i])<.42&&ny>.55){rainRest[i]=1;rainSettled++}
    }else{rainX[i]=x+wanderX;rainY[i]=y;rainZ[i]=z+wanderZ}
    // Only the lower hemisphere is a physical bowl; upper aperture is not a wall.
    const [dx,dy,dz]=rainWorld(i),rr=Math.hypot(dx,dy,dz),limit=INNER_R-RAIN_R-.012;
@@ -425,12 +359,12 @@ function rainStep(dt){
     rainX[i]=dx/rr*limit+wanderX;rainY[i]=dy/rr*limit;rainZ[i]=dz/rr*limit+wanderZ;
     const vn=rainVX[i]*nx+rainVY[i]*ny+rainVZ[i]*nz;
     if(vn<0){rainVX[i]-=1.38*vn*nx;rainVY[i]-=1.38*vn*ny;rainVZ[i]-=1.38*vn*nz;rainWallBounces++}
-    if(ny>.95&&Math.hypot(rainVX[i],rainVY[i],rainVZ[i])<.42){collectRain(i,rainX[i],rainY[i],rainZ[i])}
+    if(ny>.95&&Math.hypot(rainVX[i],rainVY[i],rainVZ[i])<.42){rainRest[i]=1;rainSettled++}
    }
   }
   const [rx,ry,rz]=rainWorld(i);
   rainDummy.position.set(rx,ry,rz);
-  rainDummy.scale.setScalar(rainRest[i]===2?0:(rx*rx+ry*ry+rz*rz<INNER_R*INNER_R?1:0));
+  rainDummy.scale.setScalar(rx*rx+ry*ry+rz*rz<INNER_R*INNER_R?1:0);
   rainDummy.updateMatrix();rainMesh.setMatrixAt(i,rainDummy.matrix);
  }
  rainMesh.count=rainEmitted;rainMesh.instanceMatrix.needsUpdate=true;
@@ -572,11 +506,9 @@ if(quarry){
  trigger.onclick=()=>{quarry.start();trigger.disabled=true;trigger.textContent='⚒ RUNNING'};
  document.body.append(trigger);
 }
-
 function simulate(dt){
  if(quarry){quarry.step(dt);quarry.sync()}
  rainStep(dt);
- wetStep(dt);
  if(walker.target){
   const dx=walker.target.x-walker.x,dz=walker.target.z-walker.z,d=Math.hypot(dx,dz);
   if(d<=.07){walker.x=walker.target.x;walker.z=walker.target.z;walker.target=null}
@@ -708,7 +640,7 @@ addEventListener('error',e=>{telemetryErrors.push(String(e.message).slice(0,240)
 addEventListener('unhandledrejection',e=>{telemetryErrors.push(String(e.reason).slice(0,240));if(telemetryErrors.length>4)telemetryErrors.shift()});
 function telemetryEvent(type,detail=''){telemetryEvents.push({t:Math.round(performance.now()),type,detail:String(detail).slice(0,160)});if(telemetryEvents.length>TELEMETRY_LIMIT)telemetryEvents.shift()}
 function inspectWorld(){
- const report={hydrology:rainHydrologyInspect(),build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
+ const report={build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
   terrain:{chunks:terrainPerf.totalChunks,fullRebuilds:terrainPerf.fullRebuilds,localRebuilds:terrainPerf.localRebuilds,lastDirtyChunks:terrainPerf.lastDirtyChunks,lastRebuildMs:terrainPerf.lastRebuildMs},
   transfer:quarry?{started:quarry.started,counts:quarry.units.reduce((a,u)=>(a[u.state]++,a),{source:0,transit:0,receiver:0}),capacity:quarry.units.length,recovery:quarry.recoveryStatus??null}:null,
   errors:telemetryErrors.slice(-4),events:telemetryEvents.slice(-24)};

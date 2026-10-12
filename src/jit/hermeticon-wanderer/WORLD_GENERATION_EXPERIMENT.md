@@ -12,19 +12,19 @@ Cold blue northwestern area marked by a snowflake and a cluster of sharp blue mo
 North-pointing arrow beneath the blue northern peaks. **Off-map directional destination**, not a mapped region or confirmed local basin. Keep it as a navigation connection.
 
 ### The Gradient
-Curved blue directional arrows crossing the left/northwestern transition between the cold blue zone and the yellow Amaranthine Fields. Indicates a transition or direction, but the underlying gradient quantity (elevation, climate, magic, etc.) is **not specified**.
+**Author clarification:** an attenuated border between the Summerlands and the Winter King's Realm, probably a *Terminator*-like liminal band. Treat it as a finite-width transitional field, not a hard boundary or merely a directional arrow. The precise gradient variables and physical or magical mechanism remain open; do not force an elevation change.
 
 ### The Amaranthine Fields
 Broad yellow and pale-purple patch in the left-middle of the map, textured with many short strokes and enclosed by a loose irregular border. Open-field cover is suggested, but exact plants, soil and material are unspecified.
 
 ### The Quills
-Narrow irregular strip of repeated tall purple spike/needle marks between the Amaranthine Fields and the central grey territory. Strong linear relief or a dense spire field is visually indicated; whether spikes are geological, botanical or constructed is unresolved.
+Narrow irregular strip of repeated tall purple spike/needle marks between the Amaranthine Fields and the central grey territory. **Author clarification:** vegetation, probably thick keratinizations. Model this as a dense, tall, keratinized plant/organic growth field rather than stone spires. The exact biology, rigidity, and subsurface roots remain experimental.
 
 ### The Heart of Darkness
 Dark central grey-purple territory west of the Whisperwood, containing a prominent red/pink outlined central feature labeled Heart of Darkness and nearby smaller red/pink shapes. Keep the named heart as a landmark inside the broader dark zone; do not assume the pink shapes are lakes without confirmation.
 
 ### The Bood Lakes
-Several small, separated pink/red enclosed shapes running through the central dark region below the Heart of Darkness. Name suggests lakes; drawn boundaries suggest multiple discrete basins, but liquid type and hydrological connectivity are not shown. Preserve spelling **Bood**.
+Several small, separated pink/red enclosed shapes running through the central dark region below the Heart of Darkness. **Author confirmation:** these are bodies of liquid. Represent separate lake basins with liquid occupancy; composition, depth, connections and flow remain unspecified. Preserve spelling **Bood**.
 
 ### Jade Peak
 Tall green-tipped pointed mountain/rock formation rising from the pale blue Mists cluster in the southwest-middle. Distinct isolated high-relief landmark; green is a visual clue, **not proof of jade mineral deposits**.
@@ -33,7 +33,7 @@ Tall green-tipped pointed mountain/rock formation rising from the pale blue Mist
 Group of isolated jagged green-and-blue peaks or islets in pale blue cloud/mist bands left of Silverpass. Several separated silhouettes with low blue horizontal wisps. Ambiguous whether water, fog or lowland surrounds them; don't assign sea level yet.
 
 ### Downton
-Large blue outlined floating-looking or mist-surrounded structure at lower left, with branching dark internal lines and three tall vertical chimney/tower forms; yellow openings near its base. Treat as a constructed settlement/structure with unusual geometry, **not ordinary ground terrain**. Whether floating is literal is unresolved.
+Large blue outlined structure at lower left, with branching dark internal lines and three tall vertical chimney/tower forms; yellow openings near its base. **Author clarification:** cavernous, potentially hanging below. Model a substantial internal void/cavern system and explore suspended or downward-hanging architecture; do **not** treat it as a confirmed floating island. Its precise supports and depth are undecided.
 
 ### Silverpass and the Gemgates
 Steep pale grey mountain chain at lower center-left, with several small rectangular blue/yellow/green colored gate-like openings embedded on its slope. Pass through rugged relief and built landmark openings; colors do not establish mineral composition.

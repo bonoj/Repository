@@ -7,27 +7,33 @@ The source is a hand-drawn, colored campaign map made by the human DM for a week
 
 **Important geographic correction:** **The Summerlands is only the yellow area on the map**, **not the name of the entire depicted world**. Do not title or generate the whole map as “The Summerlands.” Preserve the distinction between the yellow region and the surrounding locations.
 
-## Visible map labels — provisional transcription
-The photographed paper is rotated in the original upload; spelling and exact placement should be checked against the image before generating canonical geometry.
+## Map titles — author-confirmed transcription (2026-10-12)
+The map's creator supplied these exact spellings. Treat them as authoritative; do not substitute prior image-read guesses.
 
-- **The Summerlands** — yellow region (regional name, not world name).
-- **The Neverlight Fields** — text appears within/near the yellow territory.
-- **The Golden …** — partially legible label near the upper yellow territory; do not invent completion.
-- **The Chill…** — partially legible label nearby; do not invent completion.
-- **Totem Lake** — upper part of the map.
-- **The Rift** — central blue feature.
-- **The Billowing Wood** — forest adjoining the Rift.
-- **The Brambles** — green wooded region.
-- **The Violet Coast** — coastline to the right.
-- **The Ocean of Tears** — water beyond the coast.
-- **The Isle of Fire** — small yellow island and flaming tower, with nearby label **K… Tower** (tower name uncertain).
-- **The Mountains of the Sorrows** — label near lower-right mountains; check exact reading.
-- **The Bell Lakes** — pink lakes, tentative reading.
-- **The … Pass** — central crossing, exact spelling uncertain.
-- **The Mists**, **Dewarton**, **Silverness**, **The Canyons** — western/southern settlements or regions; verify spellings.
-- **The Tower of the Sorrows** — fiery structure at bottom, tentative transcription.
+- The Summerlands
+- The Winter King's Realm
+- To Ice Vale
+- The Gradient
+- The Amaranthine Fields
+- The Quills
+- The Heart of Darkness
+- The Bood Lakes
+- Jade Peak
+- The Mists
+- Downton
+- Silverpass and the Gemgates
+- Cinderglade and the Fell Crater
+- The Whisperwood
+- The Brambles
+- The Rift
+- The Spill
+- Redwall
+- Upton
+- Kindle Tower
+- The Violet Coast
+- The Ocean of Tears
 
-These are **observations of the drawing**, not newly invented lore. Any ambiguous transcription stays explicitly uncertain.
+**Geographic scope:** The Summerlands names only the yellow area, not the whole map. “To Ice Vale” is a directional label. Preserve spellings as given, including “Bood Lakes”; do not silently autocorrect.
 
 ## Use in Wanderer
 This is a **source document only**. No executable terrain, movement, weather, or published Wanderer build should change on the strength of this note alone.

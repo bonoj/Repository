@@ -182,3 +182,46 @@ Success means we can compare the fields with the original and say **where the wo
 - The original hand-drawn image still needs reproducible registration and faithful tracing. Current node coordinates, relief stamps, biome front, material assignments and most inferred semantics are provisional. In particular, **To Ice Vale is an off-map connection**, and Redwall is a built wall, not a ridge; do not mistake provisional geology stamps for literal feature types.
 - The eight visual layers do not yet implement full authorship/confidence metadata, conserved material lineage, water flow, underground strata physics or a general image-to-world importer. The earlier eight-field conceptual table includes confidence/authorship; the current runtime's eight displayed lenses are not an exact implementation of that full semantic specification.
 - The previous sections document the original research plan and source interpretations; their statements that the *first* milestone is a 2D atlas are historical. **Current next milestone is material-aware terrain**, followed by hydrology, a living node and relocation testing.
+
+
+## Author's words — design decisions that shaped the experiment
+
+The following are **verbatim user statements** from the Wanderer/world-map conversation, retained as design evidence. They are not generated slogans or paraphrases. Quotations preserve the user's wording, including informal phrasing.
+
+> “One implementation detail matters: we should reuse the existing signed-field surface extractor rather than maintain a second copy of its triangulation logic. That will keep both terrain providers compatible as we add height, substrate and cavern fields.”
+
+**Engineering boundary:** one geological field and one extractor, not competing triangulation implementations.
+
+> “I want exactly the same machinery we have now, just no holes punched in it or mountains raised. I want the concept of "new world" to be explainable in 2 words. I want no performance hit. Clear?”
+
+**Minimum world initializer:** same machinery, different field operations, no additional runtime cost.
+
+> “Think of locations more like game of thrones intro map.”
+
+**Scale:** miniature geographic landmarks on a legible continuous map, not full-size environments.
+
+> “Remember our purpose is to make a fairy sparse but easily navigable world with a few interesting nodes per viewport. Empty space means finding John's ledger or his linked in is both easy and a choice.”
+
+**Purpose:** sparse discovery, legible links, voluntary interaction.
+
+> “Right now we're just testing continuous cool ass maps. So make a cool ass sparse geography node map, gimme some surface and some depressions and some holes punched all the way through. And gimme some flat ground in between exciting stuff. You have 22 regions/nodes and rough idea of how they are laid out. Engage!”
+
+**First geographic acceptance target:** continuous relief, depressions, through-holes, 22 anchors, flat intervals.
+
+> “Feels just about right. Flat is good because it means noise and clutter can be localized. Localized density is richness without reduction in navigability. That's one issue with Bruno Simon's design. You can get stuck on lamp posts and trees and shit.”
+
+**Density principle:** localized richness must not become navigation friction.
+
+> “Let's do a single button that is composite default and then allows me to tap through all maps?”
+
+**Inspection contract:** one discoverable control, composite first, tap through independent field views.
+
+> “Provenance population and features look excellently sane. Everything else, too. Biome was my only potential fallout. What's next?”
+
+**Visual validation:** most field views accepted; biome geometry singled out for correction.
+
+> “Everything feels coherent. Here comes the juice. What's next?”
+
+**Milestone:** coherent maps are a foundation; next prove material and systemic consequence rather than add visual clutter.
+
+These quotes describe **design intent and observed acceptance**, not proof that every semantic system is already implemented. Retain them when changing the world-generation recipe: they explain why sparseness, shared geology, low runtime overhead, and map inspectability are first-class constraints.

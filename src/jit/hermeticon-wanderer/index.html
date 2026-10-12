@@ -20,7 +20,7 @@
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-material-v71';
+const BUILD='hermeticon-wanderer-material-v72';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -522,6 +522,35 @@ const wanderCube=put(world,new T.BoxGeometry(WANDER_SIZE,WANDER_SIZE,WANDER_SIZE
 wanderCube.renderOrder=100; // Intent marker stays legible even behind irregular geology.
 const walkRay=new T.Raycaster(),walkPointer=new T.Vector2(),walkPlane=new T.Plane(new T.Vector3(0,1,0),0),walkPoint=new T.Vector3();
 let walker={x:0,y:0,z:0,target:null,accepted:0,rejected:0},wanderHistory=[];
+// Signed-field top crossing: highest solid-to-air surface, never a lower cavern floor.
+function walkSurface(x,z){
+ let prior=fieldSample(x,MAXY-.02,z);
+ for(let y=MAXY-.08;y>=MINY+.02;y-=.07){
+  const v=fieldSample(x,y,z);
+  if(prior<=0&&v>0){
+   let lo=y,hi=y+.07;
+   for(let k=0;k<9;k++){const mid=(lo+hi)/2;if(fieldSample(x,mid,z)>0)lo=mid;else hi=mid}
+   return (lo+hi)/2;
+  }
+  prior=v;
+ }
+ return null;
+}
+function walkSupport(x,z){
+ const half=WANDER_SIZE*.5,foot=half*.8;
+ const h=walkSurface(x,z);
+ if(h===null)return null;
+ // Every bottom corner needs support: holes stop the cube at their rim.
+ for(const dx of [-foot,foot])for(const dz of [-foot,foot]){
+  const corner=walkSurface(x+dx,z+dz);
+  if(corner===null||Math.abs(corner-h)>.43)return null;
+ }
+ // Inner sphere must contain all eight cube corners, including the upper corners.
+ for(const dx of [-half,half])for(const dz of [-half,half])
+  for(const dy of [0,WANDER_SIZE])
+   if((x-wanderX+dx)**2+(z-wanderZ+dz)**2+(h+dy)**2>(R-.015)**2)return null;
+ return h;
+}
 // A tap establishes a destination once. Walking never queries geometry.
 function walkTarget(clientX,clientY){
  const rect=renderer.domElement.getBoundingClientRect();
@@ -646,14 +675,23 @@ const quarry=atlas?(()=>{
 // Transfer experiment dormant: retain implementation, hide geometry and controls.
 if(quarry)quarry.group.visible=false;
 function simulate(dt){
+ if(walker.accepted===0&&walker.target===null){const initial=walkSupport(walker.x,walker.z);if(initial!==null)walker.y=initial}
  if(quarry){quarry.step(dt);quarry.sync()}
  rainStep(dt);
  if(walker.target){
   const dx=walker.target.x-walker.x,dz=walker.target.z-walker.z,d=Math.hypot(dx,dz);
-  if(d<=.07){walker.x=walker.target.x;walker.z=walker.target.z;walker.target=null}
+  if(d<=.07)walker.target=null;
   else{
-   const step=Math.min(d,WALK_SPEED*dt);
-   walker.x+=dx/d*step;walker.z+=dz/d*step;
+   const step=Math.min(d,WALK_SPEED*dt),ux=dx/d,uz=dz/d;
+   // Sweep in short increments; no teleporting across narrow bores or the vessel rim.
+   let blocked=false;
+   for(let travelled=0;travelled<step;){
+    const stride=Math.min(.065,step-travelled),nx=walker.x+ux*stride,nz=walker.z+uz*stride;
+    const h=walkSupport(nx,nz);
+    if(h===null){blocked=true;break}
+    walker.x=nx;walker.z=nz;walker.y=h;travelled+=stride;
+   }
+   if(blocked)walker.target=null;
   }
  }
  const screenX=walker.x-wanderX,screenZ=walker.z-wanderZ,rad=Math.hypot(screenX,screenZ);

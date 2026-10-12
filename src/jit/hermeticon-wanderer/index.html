@@ -740,6 +740,41 @@ function quillStep(dt){
   feather.scale.setScalar(.1+.9*q.open);
  }
 }
+// Amaranthine Fields: a violet gardener, tending a ring of sleeping blossoms.
+const gardenCube=put(world,new T.BoxGeometry(.4,.4,.4),new T.MeshStandardMaterial({color:0xb86af0,emissive:0x4c176b,emissiveIntensity:.28,roughness:.65}));
+const gardenGroup=new T.Group();world.add(gardenGroup);
+const gardenFlowers=[];
+for(let i=0;i<7;i++){
+ const flower=new T.Group();
+ const stem=new T.Mesh(new T.CylinderGeometry(.025,.035,.55,6),new T.MeshStandardMaterial({color:0x72ba72,roughness:.8}));
+ stem.position.y=.28;flower.add(stem);
+ for(let p=0;p<5;p++){
+  const petal=new T.Mesh(new T.SphereGeometry(.115,8,6),new T.MeshStandardMaterial({color:i%2?0xf7a2ca:0xffd08c,emissive:i%2?0x6e2243:0x704015,emissiveIntensity:.25}));
+  const a=p*Math.PI*2/5;petal.position.set(Math.cos(a)*.12,.61,Math.sin(a)*.12);petal.scale.set(.85,.38,.85);flower.add(petal);
+ }
+ const center=new T.Mesh(new T.SphereGeometry(.075,8,6),new T.MeshStandardMaterial({color:0xfff1a2,emissive:0xc78a26,emissiveIntensity:.55}));
+ center.position.y=.62;flower.add(center);
+ const a=i*Math.PI*2/7;flower.position.set(Math.cos(a)*.95,0,Math.sin(a)*.95);
+ gardenGroup.add(flower);gardenFlowers.push(flower);
+}
+const gardener={x:-7.15,z:5.15,t:0,bloom:0,attention:0};
+function gardenStep(dt){
+ const g=gardener;g.t+=dt;
+ const dist=Math.hypot(walker.x-g.x,walker.z-g.z);
+ const near=dist<3.2?1:0;
+ g.bloom+=(near-g.bloom)*Math.min(1,dt*(near?1.4:1.9));
+ g.attention+=(near-g.attention)*Math.min(1,dt*3);
+ const ground=walkSurface(g.x,g.z)??1.15;
+ gardenCube.position.set(g.x-wanderX,ground+.23+Math.sin(g.t*2.1)*.055,g.z-wanderZ);
+ gardenCube.rotation.y=Math.sin(g.t*.8)*.22;
+ gardenCube.rotation.z=Math.sin(g.t*1.9)*.09+g.attention*.24;
+ gardenGroup.position.set(g.x-wanderX,ground,g.z-wanderZ);
+ for(let i=0;i<gardenFlowers.length;i++){
+  const f=gardenFlowers[i],wave=Math.max(0,Math.min(1,(g.bloom*1.45-i*.065)));
+  f.scale.set(.12+.88*wave,.025+.975*wave,.12+.88*wave);
+  f.rotation.z=Math.sin(g.t*2+i*1.4)*.06*wave;
+ }
+}
 // V38 bounded material circuit: a visibly depleted stockpile, individual transit
 // bearings and an accumulating receiver. This is a circuit witness, NOT terrain excavation.
 const quarry=atlas?(()=>{
@@ -855,6 +890,7 @@ function simulate(dt){
  landmarkStep(dt);
  fugitiveStep(dt);
  quillStep(dt);
+ gardenStep(dt);
  if(walker.target){
   const dx=walker.target.x-walker.x,dz=walker.target.z-walker.z,d=Math.hypot(dx,dz);
   if(d<=.07)walker.target=walker.route.shift()??null;

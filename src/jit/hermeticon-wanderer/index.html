@@ -348,15 +348,15 @@ function rainStep(dt){
     // Project outside the signed surface; never freeze a BB inside the solid.
     let push=0;
     while(fieldSample(hx+wanderX,hy,hz+wanderZ)>-RAIN_R&&push++<12){hx+=nx*.035;hy+=ny*.035;hz+=nz*.035}
-    rainOwner[i]=0;rainX[i]=hx;rainY[i]=hy;rainZ[i]=hz;transferOwner(i,1);
+    rainX[i]=hx+(rainOwner[i]===1?wanderX:0);rainY[i]=hy;rainZ[i]=hz+(rainOwner[i]===1?wanderZ:0);transferOwner(i,1);
     if(Math.hypot(rainVX[i],rainVY[i],rainVZ[i])<.42&&ny>.55){rainRest[i]=1;rainSettled++}
-   }else{rainOwner[i]=0;rainX[i]=x;rainY[i]=y;rainZ[i]=z}
+   }else{rainX[i]=x+(rainOwner[i]===1?wanderX:0);rainY[i]=y;rainZ[i]=z+(rainOwner[i]===1?wanderZ:0)}
    // The inner sphere is a physical world boundary from every approach direction.
    const [dx,dy,dz]=rainWorld(i);
    const rr=Math.hypot(dx,dy,dz),limit=INNER_R-RAIN_R-.012;
    if(rr>limit){
     const nx=-dx/rr,ny=-dy/rr,nz=-dz/rr;
-    rainOwner[i]=0;rainX[i]=dx/rr*limit;rainY[i]=dy/rr*limit;rainZ[i]=dz/rr*limit;transferOwner(i,2);
+    rainX[i]=dx/rr*limit+(rainOwner[i]===1?wanderX:0);rainY[i]=dy/rr*limit;rainZ[i]=dz/rr*limit+(rainOwner[i]===1?wanderZ:0);transferOwner(i,2);
     const vn=rainVX[i]*nx+rainVY[i]*ny+rainVZ[i]*nz;
     if(vn<0){rainVX[i]-=1.38*vn*nx;rainVY[i]-=1.38*vn*ny;rainVZ[i]-=1.38*vn*nz;rainWallBounces++}
     const normal=rainVX[i]*nx+rainVY[i]*ny+rainVZ[i]*nz;
@@ -368,7 +368,7 @@ function rainStep(dt){
   }
   if(rainRest[i]&&rainOwner[i]===1){
     const [x,y,z]=rainWorld(i),rr=Math.hypot(x,y,z),limit=INNER_R-RAIN_R-.012;
-    if(rr>limit){rainOwner[i]=0;rainX[i]=x/rr*limit;rainY[i]=y/rr*limit;rainZ[i]=z/rr*limit;transferOwner(i,2)}
+    if(rr>limit){rainX[i]=x/rr*limit+wanderX;rainY[i]=y/rr*limit;rainZ[i]=z/rr*limit+wanderZ;transferOwner(i,2)}
    }
    if(rainRest[i]&&rainOwner[i]===2){
     const [x,y,z]=rainWorld(i);

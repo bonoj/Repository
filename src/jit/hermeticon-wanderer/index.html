@@ -20,7 +20,7 @@
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-material-v72';
+const BUILD='hermeticon-wanderer-material-v73';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -518,10 +518,10 @@ function rainStep(dt){
 
 // Wanderer lives in geological coordinates; the aperture follows only beyond 25% area.
 const HANGOUT_R=9.72*.5,WALK_SPEED=1.8,WANDER_SIZE=.38;
-const wanderCube=put(world,new T.BoxGeometry(WANDER_SIZE,WANDER_SIZE,WANDER_SIZE),new T.MeshBasicMaterial({color:0xf0bf68,depthTest:false,depthWrite:false}),0,0,0);
-wanderCube.renderOrder=100; // Intent marker stays legible even behind irregular geology.
+const wanderCube=put(world,new T.BoxGeometry(WANDER_SIZE,WANDER_SIZE,WANDER_SIZE),new T.MeshStandardMaterial({color:0xf0bf68,roughness:.75,depthTest:true,depthWrite:true}),0,0,0);
+wanderCube.renderOrder=0; // Geological terrain is opaque to the Wanderer.
 const walkRay=new T.Raycaster(),walkPointer=new T.Vector2(),walkPlane=new T.Plane(new T.Vector3(0,1,0),0),walkPoint=new T.Vector3();
-let walker={x:0,y:0,z:0,target:null,accepted:0,rejected:0},wanderHistory=[];
+let walker={x:0,y:0,z:0,target:null,route:[],accepted:0,rejected:0},wanderHistory=[];
 // Signed-field top crossing: highest solid-to-air surface, never a lower cavern floor.
 function walkSurface(x,z){
  let prior=fieldSample(x,MAXY-.02,z);
@@ -551,6 +551,53 @@ function walkSupport(x,z){
    if((x-wanderX+dx)**2+(z-wanderZ+dz)**2+(h+dy)**2>(R-.015)**2)return null;
  return h;
 }
+// Bounded A* on the same support predicate used for movement. Diagonal cuts
+// require both orthogonal neighbors; line-of-sight smoothing removes grid zigzags.
+const PATH_GRID=.34,PATH_LIMIT=17000;
+function walkClear(ax,az,bx,bz){
+ const d=Math.hypot(bx-ax,bz-az),n=Math.max(1,Math.ceil(d/.11));
+ for(let i=1;i<=n;i++){const t=i/n;if(walkSupport(ax+(bx-ax)*t,az+(bz-az)*t)===null)return false}
+ return true;
+}
+function walkRoute(tx,tz){
+ const sx=walker.x,sz=walker.z;
+ if(walkClear(sx,sz,tx,tz))return [{x:tx,z:tz}];
+ const radius=Math.min(26,Math.max(8,Math.hypot(tx-sx,tz-sz)+5));
+ const minX=Math.floor((Math.min(sx,tx)-radius*.5)/PATH_GRID)*PATH_GRID;
+ const minZ=Math.floor((Math.min(sz,tz)-radius*.5)/PATH_GRID)*PATH_GRID;
+ const w=Math.ceil((Math.max(sx,tx)+radius*.5-minX)/PATH_GRID)+1;
+ const h=Math.ceil((Math.max(sz,tz)+radius*.5-minZ)/PATH_GRID)+1;
+ const key=(x,z)=>x+w*z,px=x=>minX+x*PATH_GRID,pz=z=>minZ+z*PATH_GRID;
+ const startX=Math.round((sx-minX)/PATH_GRID),startZ=Math.round((sz-minZ)/PATH_GRID);
+ const goalX=Math.round((tx-minX)/PATH_GRID),goalZ=Math.round((tz-minZ)/PATH_GRID);
+ const pass=new Map(),valid=(x,z)=>{if(x<0||z<0||x>=w||z>=h)return false;const k=key(x,z);if(!pass.has(k))pass.set(k,walkSupport(px(x),pz(z))!==null);return pass.get(k)};
+ const start=key(startX,startZ),open=[start],g=new Map([[start,0]]),parents=new Map(),closed=new Set();
+ const heuristic=(x,z)=>Math.hypot(x-goalX,z-goalZ);
+ let best=start,bestDist=heuristic(startX,startZ),iterations=0;
+ while(open.length&&iterations++<PATH_LIMIT){
+  let pick=0,score=Infinity;
+  for(let i=0;i<open.length;i++){const k=open[i],x=k%w,z=Math.floor(k/w),f=g.get(k)+heuristic(x,z);if(f<score){score=f;pick=i}}
+  const current=open.splice(pick,1)[0];if(closed.has(current))continue;closed.add(current);
+  const x=current%w,z=Math.floor(current/w),distance=heuristic(x,z);
+  if(distance<bestDist){best=current;bestDist=distance}
+  if(distance<=1&&walkClear(px(x),pz(z),tx,tz)){best=current;break}
+  for(let dz=-1;dz<=1;dz++)for(let dx=-1;dx<=1;dx++){
+   if(!dx&&!dz)continue;const nx=x+dx,nz=z+dz,nk=key(nx,nz);
+   if(closed.has(nk)||!valid(nx,nz))continue;
+   if(dx&&dz&&(!valid(x+dx,z)||!valid(x,z+dz)))continue;
+   if(!walkClear(px(x),pz(z),px(nx),pz(nz)))continue;
+   const ng=g.get(current)+Math.hypot(dx,dz);
+   if(ng<(g.get(nk)??Infinity)){g.set(nk,ng);parents.set(nk,current);if(!open.includes(nk))open.push(nk)}
+  }
+ }
+ if(best===start)return [];
+ const raw=[];let k=best;
+ while(k!==start&&parents.has(k)){raw.push({x:px(k%w),z:pz(Math.floor(k/w))});k=parents.get(k)}
+ raw.reverse();if(walkClear(raw[raw.length-1].x,raw[raw.length-1].z,tx,tz))raw.push({x:tx,z:tz});
+ const smooth=[],points=[{x:sx,z:sz},...raw];let i=0;
+ while(i<points.length-1){let j=points.length-1;while(j>i+1&&!walkClear(points[i].x,points[i].z,points[j].x,points[j].z))j--;smooth.push(points[j]);i=j}
+ return smooth;
+}
 // A tap establishes a destination once. Walking never queries geometry.
 function walkTarget(clientX,clientY){
  const rect=renderer.domElement.getBoundingClientRect();
@@ -562,8 +609,9 @@ function walkTarget(clientX,clientY){
  if(!walkRay.ray.intersectPlane(walkPlane,walkPoint)){walker.rejected++;return}
  const x=walkPoint.x,z=walkPoint.z;
  if(!Number.isFinite(x)||!Number.isFinite(z)){walker.rejected++;return}
- walker.target={x:x+wanderX,z:z+wanderZ};
- walker.accepted++;
+ walker.route=walkRoute(x+wanderX,z+wanderZ);
+ walker.target=walker.route.shift()??null;
+ if(walker.target)walker.accepted++;else walker.rejected++;
 }
 
 // V38 bounded material circuit: a visibly depleted stockpile, individual transit
@@ -680,7 +728,7 @@ function simulate(dt){
  rainStep(dt);
  if(walker.target){
   const dx=walker.target.x-walker.x,dz=walker.target.z-walker.z,d=Math.hypot(dx,dz);
-  if(d<=.07)walker.target=null;
+  if(d<=.07)walker.target=walker.route.shift()??null;
   else{
    const step=Math.min(d,WALK_SPEED*dt),ux=dx/d,uz=dz/d;
    // Sweep in short increments; no teleporting across narrow bores or the vessel rim.
@@ -691,7 +739,7 @@ function simulate(dt){
     if(h===null){blocked=true;break}
     walker.x=nx;walker.z=nz;walker.y=h;travelled+=stride;
    }
-   if(blocked)walker.target=null;
+   if(blocked){walker.route=walkRoute(walker.route.length?walker.route[walker.route.length-1].x:walker.target.x,walker.route.length?walker.route[walker.route.length-1].z:walker.target.z);walker.target=walker.route.shift()??null;}
   }
  }
  const screenX=walker.x-wanderX,screenZ=walker.z-wanderZ,rad=Math.hypot(screenX,screenZ);

@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-authored-fields-v35';
+const BUILD='hermeticon-wanderer-curved-biomes-v36';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -326,9 +326,14 @@ function compileAtlas(){
    if(n.kind!=='through-hole'&&d<n.r){const t=1-(d/n.r)**2;top+=n.delta*t*t}
   }
   const active=nearest&&dist<nearest.r*1.4;
-  const winter=X>5&&Z>7,summer=X< -4&&Z>3;
-  f.jurisdiction[i]=winter?2:summer?1:Z>3?3:active?4:0;
-  f.gradientWeight[i]=Z>3&&X>=-4&&X<=5?Math.round((X+4)/9*255):0;
+  // Curved cartographic front, continuous and deterministic, not square tiles.
+  // Broad unpainted south remains quiet; the Gradient is an actual band.
+  const northFront=3.2+2.4*Math.sin(X*.17)+1.1*Math.sin(X*.39+1.3);
+  const divide=0.4+3.2*Math.sin(Z*.13+.5)+1.4*Math.sin(Z*.31-1.1);
+  const north=Z>northFront,gradient=north&&Math.abs(X-divide)<4.0;
+  const winter=north&&X>=divide+4,summer=north&&X<=divide-4;
+  f.jurisdiction[i]=winter?2:summer?1:gradient?3:active?4:0;
+  f.gradientWeight[i]=gradient?Math.round(Math.max(0,Math.min(1,(X-divide+4)/8))*255):0;
   f.elevation[i]=top;
   f.substrate[i]=active?(winter?3:nearest.kind==='lower'?2:1):0;
   f.hydrology[i]=active&&nearest.kind==='lower'?1:0;

@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-matter-ownership-v25';
+const BUILD='hermeticon-wanderer-cloud-emission-v26';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -313,12 +313,21 @@ function rainStep(dt){
  const gravity=9.8,restitution=.38,tangentDamping=.82;
  rainTime+=dt;
  const target=Math.min(RAIN_N,Math.floor(RAIN_N*Math.min(1,rainTime/RAIN_DURATION)));
- // Emission schedule is deterministic, but each droplet starts at a different location in the entire cloud volume.
+ // The world places the cloud; the cloud transform places emitted BBs.
+ // Emitted BBs are independent until a collision transfers ownership.
+ const fractionBefore=(RAIN_N-rainEmitted)/RAIN_N;
+ cloud.scale.setScalar(Math.max(.001,Math.cbrt(fractionBefore)));
+ cloud.position.set(-wanderX,cloudCenterY,-wanderZ);
+ cloud.updateMatrixWorld(true);
+ // Emission coordinates are deterministic and cloud-local.
  for(let i=rainEmitted;i<target;i++){
   const inset=.12;
-  rainX[i]=(rainRandom(i,0)-.5)*(cloudDimensions[0]-2*inset);
-  rainY[i]=cloudCenterY+(rainRandom(i,2)-.5)*(cloudDimensions[1]-2*inset);
-  rainZ[i]=(rainRandom(i,1)-.5)*(cloudDimensions[2]-2*inset);
+  const origin=new T.Vector3(
+   (rainRandom(i,0)-.5)*(cloudDimensions[0]-2*inset),
+   (rainRandom(i,2)-.5)*(cloudDimensions[1]-2*inset),
+   (rainRandom(i,1)-.5)*(cloudDimensions[2]-2*inset)
+  ).applyMatrix4(cloud.matrixWorld);
+  rainX[i]=origin.x;rainY[i]=origin.y;rainZ[i]=origin.z;
   rainVX[i]=(rainRandom(i,3)-.5)*.36;rainVY[i]=-(.2+rainRandom(i,4)*.5);rainVZ[i]=(rainRandom(i,5)-.5)*.36;
  }
  rainEmitted=target;

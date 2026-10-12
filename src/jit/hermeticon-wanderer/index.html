@@ -20,7 +20,7 @@
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-material-v77';
+const BUILD='hermeticon-wanderer-material-v78';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -654,7 +654,7 @@ function walkTarget(clientX,clientY){
 // Mists inhabitant: one frightened cube, one irreversible flight and splat.
 const fugitiveSize=.32,fugitiveRadius=.23;
 const fugitiveMesh=put(world,new T.BoxGeometry(fugitiveSize,fugitiveSize,fugitiveSize),new T.MeshStandardMaterial({color:0xff8b29,emissive:0x9d3100,emissiveIntensity:.2,roughness:.68}));
-const fugitive={x:-4.7,z:-1.1,y:1.4,vy:0,time:0,mode:'idle',owner:'geology',particles:[],splat:false};
+const fugitive={x:-4.7,z:-1.1,y:1.4,vy:0,time:0,mode:'idle',owner:'geology',vx:0,vz:0,particles:[],splat:false};
 const splatGeo=new T.IcosahedronGeometry(.046,0);
 const splatMat=new T.MeshStandardMaterial({color:0xc51e30,roughness:.8});
 const splatMesh=new T.InstancedMesh(splatGeo,splatMat,100);splatMesh.count=0;splatMesh.frustumCulled=false;world.add(splatMesh);
@@ -669,10 +669,10 @@ function fugitiveStep(dt){
   const dx=3-f.x,dz=-4-f.z,d=Math.hypot(dx,dz),step=Math.min(d,4.5*dt);
   if(d>.01){f.x+=dx/d*step;f.z+=dz/d*step}
   const surface=walkSurface(f.x,f.z);
-  if(surface===null||d<.25){f.mode='fall';f.vy=5.3;f.y+=.1}
+  if(surface===null||d<.25){f.mode='fall';f.vy=5.3;f.vx=(d>.01?dx/d:1)*4.5;f.vz=(d>.01?dz/d:-1)*4.5;f.y+=.1}
   else f.y=surface+Math.abs(Math.sin(f.time*15))*.12;
  }else if(f.mode==='fall'){
-  f.vy-=9.8*dt;f.y+=f.vy*dt;
+  f.vy-=9.8*dt;f.y+=f.vy*dt;f.x+=f.vx*dt;f.z+=f.vz*dt;
   const lx=f.x-wanderX,lz=f.z-wanderZ;
   const floor=-Math.sqrt(Math.max(0,(R-fugitiveRadius)**2-lx*lx-lz*lz))+fugitiveRadius;
   if(f.y<=floor){f.y=floor;f.mode='splat';f.vy=0;f.x-=wanderX;f.z-=wanderZ;f.owner='hermeticon';

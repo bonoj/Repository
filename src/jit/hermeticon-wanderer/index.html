@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-deposition-v42';
+const BUILD='hermeticon-wanderer-deposition-v43';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -372,8 +372,8 @@ function materialAt(X,Y,Z){
  const iz=Math.max(0,Math.min(h-1,Math.round((Z/half+1)*(h-1)/2)));
  const i=ix+w*iz,depth=f.elevation[i]-Y;
  const surface=f.substrate[i]===3?3:f.substrate[i]===2?2:f.substrate[i]===1?1:0;
- const id=depth<0.28?surface:depth<0.8?4:5;
- return {id,depth,sourceSubstrate:f.substrate[i],material:MATERIALS[id]};
+ const materialId=depth<0.28?surface:depth<0.8?4:5;
+ return {id:materialId,depth,sourceSubstrate:f.substrate[i],material:MATERIALS[materialId]};
 }
 const mapModes=['COMPOSITE','ELEVATION','SUBSTRATE','BIOME','HYDROLOGY','PROVENANCE','STRATA','POPULATION','FEATURES'];
 let mapModeIndex=0;

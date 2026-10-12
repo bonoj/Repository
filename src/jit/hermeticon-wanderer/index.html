@@ -700,6 +700,39 @@ function fugitiveStep(dt){
  fugitiveMesh.position.set(f.owner==='hermeticon'?f.x:f.x-wanderX,f.y+fugitiveSize*.5,f.owner==='hermeticon'?f.z:f.z-wanderZ);
  fugitiveMesh.rotation.set(f.mode==='splat'?.7:Math.sin(f.time*7)*.18,0,f.mode==='splat'?.8:Math.sin(f.time*11)*.13);
 }
+// Quills: a bashful little peacock. Wanderer proximity unfolds its luminous quill fan.
+const quillCube=put(world,new T.BoxGeometry(.43,.43,.43),new T.MeshStandardMaterial({color:0x3abcc1,emissive:0x075b65,emissiveIntensity:.24,roughness:.56}));
+const quillFan=new T.Group();world.add(quillFan);
+const quillFeathers=[];
+for(let i=0;i<9;i++){
+ const shaft=new T.Mesh(new T.ConeGeometry(.105,1.55,5),new T.MeshStandardMaterial({color:i%2?0xf1c56c:0xe9a3ed,emissive:i%2?0x513309:0x452047,emissiveIntensity:.28,roughness:.62}));
+ shaft.position.y=.78;quillFan.add(shaft);
+ const eye=new T.Mesh(new T.SphereGeometry(.115,8,6),new T.MeshStandardMaterial({color:0x4c77ed,emissive:0x243f88,emissiveIntensity:.4}));
+ eye.position.y=1.45;shaft.add(eye);
+ quillFeathers.push(shaft);
+}
+const quillResident={x:5.25,z:7.25,t:0,open:0,heading:0};
+function quillStep(dt){
+ const q=quillResident;q.t+=dt;
+ const d=Math.hypot(walker.x-q.x,walker.z-q.z);
+ const target=d<3.1?1:0;
+ q.open+= (target-q.open)*Math.min(1,dt*2.5);
+ const ground=walkSurface(q.x,q.z)??1.15;
+ const bob=Math.sin(q.t*2.6)*.07;
+ quillCube.position.set(q.x-wanderX,ground+.28+bob,q.z-wanderZ);
+ quillCube.rotation.set(Math.sin(q.t*1.7)*.09,q.heading,Math.sin(q.t*2.1)*.12*(1-q.open));
+ if(d<4){const heading=Math.atan2(walker.x-q.x,walker.z-q.z);q.heading+=Math.atan2(Math.sin(heading-q.heading),Math.cos(heading-q.heading))*Math.min(1,dt*3)}
+ quillFan.position.set(q.x-wanderX,ground+.12+bob,q.z-wanderZ);
+ quillFan.rotation.y=q.heading;
+ quillFan.visible=q.open>.015;
+ for(let i=0;i<quillFeathers.length;i++){
+  const angle=(i-4)*.23*q.open;
+  const feather=quillFeathers[i];
+  feather.rotation.z=angle;
+  feather.position.set(Math.sin(angle)*.23, .35, -.2);
+  feather.scale.setScalar(.1+.9*q.open);
+ }
+}
 // V38 bounded material circuit: a visibly depleted stockpile, individual transit
 // bearings and an accumulating receiver. This is a circuit witness, NOT terrain excavation.
 const quarry=atlas?(()=>{
@@ -814,6 +847,7 @@ function simulate(dt){
  rainStep(dt);
  landmarkStep(dt);
  fugitiveStep(dt);
+ quillStep(dt);
  if(walker.target){
   const dx=walker.target.x-walker.x,dz=walker.target.z-walker.z,d=Math.hypot(dx,dz);
   if(d<=.07)walker.target=walker.route.shift()??null;

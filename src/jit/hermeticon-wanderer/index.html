@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-instrumentation-reset-v47';
+const BUILD='hermeticon-wanderer-observer-pruned-v48';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -47,62 +47,9 @@ for(let i=0;i<8;i++){const a=i*Math.PI/4;ball(world,.12,bright,Math.cos(a)*BAUBL
 // Containment verifier: geometry in scene coordinates, independent of camera/gravity.
 // Shell hardware is intentionally outside the INNER radius; only explicitly marked
 // objects may exceed the vessel. Mark external designs with userData.allowOutsideBauble=true.
-const shellParts=[envelope,innerGlass,equator];
-world.traverse(o=>{if(o.isMesh&&o!==envelope&&o!==innerGlass&&o!==equator&&
- (o.geometry?.type==='TorusGeometry'||o.geometry?.type==='SphereGeometry')&&
- o.material===bright)shellParts.push(o)});
-for(const o of shellParts)o.userData.allowOutsideBauble=true;
-const containment={checks:0,violations:[],maxOverflow:0,checkedObjects:0,lastCheckMs:0};
-const alarm=document.querySelector('#containmentAlarm');
-const scratchPoint=new T.Vector3(),scratchMatrix=new T.Matrix4();
-function verifyContainment(){
- world.updateMatrixWorld(true);
- // The generic containment check applies to vessel-local objects only.
- // World-domain matter may legitimately be outside the moving aperture.
- const failures=[];let checked=0,maxOverflow=0;
- world.traverse(o=>{
-  if(!o.isMesh||!o.visible||!o.geometry)return;
-  // World-domain and exemption ownership propagate through nested scene groups.
-  for(let owner=o;owner;owner=owner.parent){if(owner.userData.allowOutsideBauble||owner.userData.worldDomain)return}
-  const g=o.geometry;if(!g.boundingBox)g.computeBoundingBox();
-  if(!g.boundingBox)return;
-  const count=o.isInstancedMesh?o.count:1;
-  for(let k=0;k<count;k++){
-   if(o.isInstancedMesh){o.getMatrixAt(k,scratchMatrix);scratchMatrix.premultiply(o.matrixWorld)}
-   else scratchMatrix.copy(o.matrixWorld);
-   // Test actual vertices, not bounding boxes (which falsely flag spherical shells).
-   const positions=g.getAttribute('position');if(!positions)continue;
-   let overflow=0;
-   for(let v=0;v<positions.count;v++){
-    scratchPoint.fromBufferAttribute(positions,v).applyMatrix4(scratchMatrix);
-    overflow=Math.max(overflow,scratchPoint.length()-INNER_R);
-   }
-   checked++;
-   if(overflow>.025){maxOverflow=Math.max(maxOverflow,overflow);if(failures.length<12)failures.push({object:o.name||o.uuid.slice(0,8),instance:o.isInstancedMesh?k:null,overflow:round(overflow,3)})}
-  }
- });
- containment.checks++;containment.violations=failures;containment.maxOverflow=round(maxOverflow,3);containment.checkedObjects=checked;containment.lastCheckMs=Math.round(performance.now());
- updateAlarm();
- return containment;
-}
-globalThis.BaubleVerifyContainment=verifyContainment;
-
-
 // Shared JIT machinery. Register world-specific checks; never silently swallow failures.
 const STEP=.008,MAX_STEPS=7,MAX_FRAME=.05;
 const clock={time:0,steps:0,droppedSeconds:0,accumulator:0};
-const invariantChecks=new Map();
-const invariantState={checks:0,failures:[],lastCheckMs:0};
-function registerInvariant(name,check){if(typeof name!=='string'||!name||typeof check!=='function')throw Error('Invalid invariant registration');invariantChecks.set(name,check);return()=>invariantChecks.delete(name)}
-function verifyInvariants(){
- const failures=[];
- for(const [name,check] of invariantChecks){
-  try{const result=check();if(result!==true&&result!==undefined&&result!==null){if(result===false||result?.ok===false)failures.push({name,detail:result?.detail||'Invariant failed'})}}
-  catch(e){failures.push({name,detail:String(e?.message||e)})}
- }
- invariantState.checks++;invariantState.failures=failures;invariantState.lastCheckMs=Math.round(performance.now());
- return invariantState;
-}
 // Authoritative signed volume. Positive=solid, negative=void.
 // The equator y=0 is the fixed datum; both surfaces and tunnels are extracted.
 const R=9.65, EXTRACTION_MARGIN=4.0, NX=85,NY=21,NZ=85, MINY=-3.6,MAXY=3.6; const WORLD_HALF=25.2; let wanderX=0,wanderZ=0; const WANDER_STEP=2;
@@ -116,95 +63,6 @@ const solid=new T.Group();solid.name='terrain:signed-volume';solid.userData.worl
 const CHUNK=10,CX=Math.ceil((NX-1)/CHUNK),CZ=Math.ceil((NZ-1)/CHUNK),terrainChunks=[];
 const terrainPerf={totalChunks:CX*CZ,fullRebuilds:0,localRebuilds:0,lastDirtyChunks:0,lastRebuiltCells:0,lastRebuildMs:0,lastChangedChunks:[]};
 for(let cz=0;cz<CZ;cz++)for(let cx=0;cx<CX;cx++){const geometry=new T.BufferGeometry(),mesh=new T.Mesh(geometry,terrainMaterial);mesh.receiveShadow=true;mesh.frustumCulled=false;mesh.userData.worldDomain=true;solid.add(mesh);terrainChunks.push({cx,cz,geometry,triangles:0})}
-
-let geometryEyes={};
-const gpuEyes={status:'not-tested',samples:null,lastTestMs:null,error:null,tests:0};
-const witnessScene=new T.Scene();witnessScene.background=new T.Color(0x000000);
-witnessScene.add(new T.AmbientLight(0xffffff,3));
-const witnessCamera=new T.OrthographicCamera(-.5,.5,.5,-.5,.1,30);
-const witnessGeometry=new T.PlaneGeometry(1,1);
-const witnessMesh=new T.Mesh(witnessGeometry,terrainMaterial);
-witnessMesh.material.side=T.DoubleSide;witnessMesh.frustumCulled=false;
-witnessScene.add(witnessMesh);
-const witnessTarget=new T.WebGLRenderTarget(1,1,{depthBuffer:true,stencilBuffer:false});
-const witnessPixel=new Uint8Array(4);
-function measureGpuAperture(){
- const previous=renderer.getRenderTarget(),previousAutoClear=renderer.autoClear;
- const originalOffset=apertureUniform?.value.clone();
- try{
-  renderer.autoClear=true;
-  const sample=(radius,axis,ox,oz)=>{
-   // A small plane centered on a chosen LOCAL vertex position; actual terrain mesh translation
-   // is irrelevant to the vertex shader, which reads position-apertureOffset.
-   const x=ox+(axis==='x'?radius:0),z=oz+(axis==='z'?radius:0);
-   const positions=witnessGeometry.getAttribute('position');
-   for(let i=0;i<positions.count;i++){positions.setXYZ(i,x+(i===0||i===2?-.002:.002),i<2?.002:-.002,z)}
-   positions.needsUpdate=true;
-   witnessCamera.position.set(x,0,z+5);witnessCamera.lookAt(x,0,z);witnessCamera.updateMatrixWorld();
-   renderer.setRenderTarget(witnessTarget);renderer.clear(true,true,true);
-   renderer.render(witnessScene,witnessCamera);
-   renderer.readRenderTargetPixels(witnessTarget,0,0,1,1,witnessPixel);
-   return {radius,axis,pixel:[...witnessPixel],visible:(witnessPixel[0]+witnessPixel[1]+witnessPixel[2])>12};
-  };
-  const radii=[0,9.2,9.6,9.70,9.71,9.73,9.74,9.85,10.2,12];
-  const positionsToTest=[[wanderX,wanderZ],[2,0],[4,0],[2,2]];
-  const samples=positionsToTest.flatMap(([ox,oz])=>{if(apertureUniform)apertureUniform.value.set(ox,0,oz);return ['x','z'].flatMap(axis=>radii.map(radius=>({...sample(radius,axis,ox,oz),origin:[ox,oz]})))});
-  const perAxis=Object.fromEntries(['x','z'].map(axis=>{
-   const a=samples.filter(v=>v.axis===axis&&v.origin[0]===wanderX&&v.origin[1]===wanderZ);
-   return [axis,{lastVisible:a.filter(v=>v.visible).at(-1)?.radius??null,firstDiscarded:a.find(v=>!v.visible)?.radius??null,monotonic:a.every((v,i)=>i===0||a[i-1].visible||!v.visible)}];
-  }));
-  const expected=samples.every(v=>v.visible===(v.radius<9.72));
-  gpuEyes.samples={radial:samples,perAxis,offset:[wanderX,0,wanderZ],virtualPositions:positionsToTest};
-  gpuEyes.status=expected?'pass':'fail';gpuEyes.error=null;
- }catch(e){gpuEyes.status='error';gpuEyes.error=String(e?.message||e)}
- finally{if(apertureUniform&&originalOffset)apertureUniform.value.copy(originalOffset);renderer.setRenderTarget(previous);renderer.autoClear=previousAutoClear;gpuEyes.tests++;gpuEyes.lastTestMs=Math.round(performance.now())}
- return gpuEyes;
-}
-
-const sceneEyes={status:'not-tested',tests:0};
-const sceneTarget=new T.WebGLRenderTarget(32,32,{depthBuffer:true});
-const scenePixels=new Uint8Array(32*32*4);
-const terrainOnlyScene=new T.Scene();terrainOnlyScene.background=new T.Color(0);terrainOnlyScene.add(new T.AmbientLight(0xffffff,3));
-const terrainOnlyMesh=new T.Group();terrainOnlyScene.add(terrainOnlyMesh);
-for(const c of terrainChunks){const m=new T.Mesh(c.geometry,terrainMaterial);m.frustumCulled=false;terrainOnlyMesh.add(m)}
-const sceneRay=new T.Ray(),sceneDirection=new T.Vector3(),sceneOrigin=new T.Vector3(),sceneNear=new T.Vector3(),sceneFar=new T.Vector3();
-function measureSceneEyes(){
- const previous=renderer.getRenderTarget(),previousAutoClear=renderer.autoClear;
- try{
-  camera.updateMatrixWorld(true);
-  terrainOnlyMesh.position.copy(solid.position);terrainOnlyMesh.updateMatrixWorld(true);
-  renderer.autoClear=true;renderer.setRenderTarget(sceneTarget);renderer.clear(true,true,true);
-  renderer.render(terrainOnlyScene,camera);renderer.readRenderTargetPixels(sceneTarget,0,0,32,32,scenePixels);
-  const cameraOrigin=camera.getWorldPosition(sceneOrigin);
-  let maxBrightness=0,nonBlack=0;for(let p=0;p<scenePixels.length;p+=4){const b=scenePixels[p]+scenePixels[p+1]+scenePixels[p+2];maxBrightness=Math.max(maxBrightness,b);if(b>0)nonBlack++}
-  let occupied=0,outsideSphereProjection=0,insideSphereProjection=0;
-  const rows=[];
-  for(let y=31;y>=0;y--){
-   let line='';
-   for(let x=0;x<32;x++){
-    const index=4*(y*32+x);
-    const lit=scenePixels[index]+scenePixels[index+1]+scenePixels[index+2]>18;
-    const ndcX=(x+.5)/16-1,ndcY=(y+.5)/16-1;
-    sceneNear.set(ndcX,ndcY,-1).unproject(camera);
-    sceneFar.set(ndcX,ndcY,1).unproject(camera);
-    sceneDirection.copy(sceneFar).sub(sceneNear).normalize();
-    sceneRay.set(cameraOrigin,sceneDirection);
-    const intersects=sceneRay.distanceSqToPoint(new T.Vector3(0,0,0))<=9.72*9.72;
-    if(lit){occupied++;if(intersects)insideSphereProjection++;else outsideSphereProjection++}
-    line+=lit?(intersects?'#':'!'):(intersects?'.':' ');
-   }
-   rows.push(line);
-  }
-  sceneEyes.status=occupied===0?'blind':outsideSphereProjection?'fail':'pass';
-  sceneEyes.maxBrightness=maxBrightness;sceneEyes.nonBlack=nonBlack;
-  sceneEyes.materialOffset=[sharedApertureOffset.x,sharedApertureOffset.y,sharedApertureOffset.z];
-  sceneEyes.occupied=occupied;sceneEyes.insideProjection=insideSphereProjection;
-  sceneEyes.outsideProjection=outsideSphereProjection;
-  sceneEyes.map=rows;sceneEyes.resolution=[32,32];sceneEyes.error=null;
- }catch(e){sceneEyes.status='error';sceneEyes.error=String(e?.message||e)}
- finally{renderer.setRenderTarget(previous);renderer.autoClear=previousAutoClear;sceneEyes.tests++}
- return sceneEyes;
-}
 
 const skinGeo=new T.BufferGeometry();
 const skin=new T.Mesh(skinGeo,new T.MeshStandardMaterial({color:0xc9a67e,roughness:.88,side:T.DoubleSide,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1}));
@@ -304,11 +162,7 @@ function extractTerrainMesh(bounds=null){
  triangles=terrainChunks.reduce((n,c)=>n+c.triangles,0);buildMs=performance.now()-start;
  terrainPerf.lastDirtyChunks=selected.length;terrainPerf.lastRebuiltCells=rebuiltCells;terrainPerf.lastRebuildMs=+buildMs.toFixed(3);terrainPerf.lastChangedChunks=selected;if(bounds)terrainPerf.localRebuilds++;else terrainPerf.fullRebuilds++;
  solid.position.set(-wanderX,0,-wanderZ);sharedApertureOffset.set(wanderX,0,wanderZ);
- let outside=0,inside=0,nearBoundary=0,minDistance=Infinity,maxDistance=0;
- const apertureR=9.72,cellX=2*WORLD_HALF/(NX-1),cellZ=2*WORLD_HALF/(NZ-1);
- for(const c of terrainChunks){const p=c.geometry.getAttribute('position');if(!p)continue;for(let i=0;i<p.count;i++){const d=Math.hypot(p.getX(i)-wanderX,p.getY(i),p.getZ(i)-wanderZ);minDistance=Math.min(minDistance,d);maxDistance=Math.max(maxDistance,d);if(d>apertureR)outside++;else inside++;if(Math.abs(d-apertureR)<Math.max(cellX,cellZ))nearBoundary++}}
- const effectiveMargin=R+EXTRACTION_MARGIN-Math.max(cellX,cellZ),nearestFieldEdge=Math.min(WORLD_HALF-Math.abs(wanderX),WORLD_HALF-Math.abs(wanderZ)),offset=apertureUniform?.value,offsetError=offset?Math.hypot(offset.x-wanderX,offset.y,offset.z-wanderZ):null;
- geometryEyes={terrainBuildCount,residentWorld:true,insideVertices:inside,outsideVertices:outside,nearApertureVertices:nearBoundary,minVertexRadius:round(minDistance,3),maxVertexRadius:round(maxDistance,3),cellSize:[round(cellX,3),round(cellZ,3)],effectiveExtractionMargin:round(effectiveMargin,3),nearestFieldEdge:round(nearestFieldEdge,3),fieldEdgeClearance:round(nearestFieldEdge-apertureR,3),shaderOffsetError:offsetError===null?null:round(offsetError,5),worldTranslation:[-wanderX,0,-wanderZ],expectedUniformOffset:[wanderX,0,wanderZ],apertureRadius:apertureR,locality:{...terrainPerf,lastChangedChunks:terrainPerf.lastChangedChunks.length}};
+
 }
 
 if(terrainProvider!=='empty')regenerate();
@@ -646,17 +500,6 @@ function simulate(dt){
  }
  wanderCube.position.set(walker.x-wanderX,walker.y+WANDER_SIZE*.5,walker.z-wanderZ);
 }
-function updateAlarm(){
- const breaches=containment.violations,errors=invariantState.failures;
- alarm.classList.toggle('on',breaches.length>0||errors.length>0);
- if(breaches.length||errors.length){
-  alarm.textContent=['⚠ BAUBLE VERIFIER FAILED',...breaches.slice(0,3).map(v=>'CONTAINMENT '+v.object+' +'+v.overflow),...errors.slice(0,4).map(v=>'INVARIANT '+v.name+': '+v.detail),'INSPECT → COPY REPORT'].join('\\n').replaceAll('\\n','\n');
-  if(!updateAlarm.warned){console.error('BAUBLE VERIFIER FAILED',{breaches,errors});updateAlarm.warned=true}
- }else{alarm.textContent='';updateAlarm.warned=false}
-}
-globalThis.BaubleRegisterInvariant=registerInvariant;
-globalThis.BaubleVerifyInvariants=verifyInvariants;
-
 let angle=.6,elev=.27,dist=27,targetY=0,lastX=0,lastY=0;
 const pointers=new Map(),pointerStarts=new Map();let pinch=0,multiGesture=false;
 const TAP_SLOP=12;
@@ -776,7 +619,6 @@ function inspectWorld(){
   errors:telemetryErrors.slice(-4),events:telemetryEvents.slice(-24)};
  probeReport=JSON.stringify(report,null,2);probeText.value=probeReport;return report;
 }
-const safeInspect=inspectWorld;
 probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};
 document.querySelector('#closeProbe').onclick=()=>probePanel.classList.remove('open');
 const copyButton=document.querySelector('#copyProbe');
@@ -830,7 +672,6 @@ function frame(now){requestAnimationFrame(frame);
  if(clock.accumulator>=STEP){clock.droppedSeconds+=clock.accumulator;clock.accumulator=0}
  if(validFrame&&now-probeLast>2500){probeLast=now;
   if(probeFrames>=20&&probeFrameMs>0){displayFps=1000*probeFrames/probeFrameMs;fpsMeasuring=false;fpsLabel.textContent=displayFps.toFixed(1)+' fps'}
-  if(probePanel.classList.contains('open'))inspectWorld();
   probeFrames=0;probeFrameMs=0}
 
 camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);renderer.render(scene,camera);mainRenderStats.calls=renderer.info.render.calls;mainRenderStats.triangles=renderer.info.render.triangles}

@@ -2,6 +2,19 @@
 
 Status: current design contract, 2026-10-12. This governs **new Hermeticons**, beginning with Hermeticon Wanderer. It does not retroactively modify legacy baubles or assert that all rules are implemented.
 
+## V31 earned boundary and interaction evidence (2026-10-12)
+Wanderer V31 was player-accepted. Tap-to-redirect, orbit, pinch, and central 25%-**area** hangout/world-follow work together without forcing the camera to follow the character. Flat y=0 targeting and the visible cube are deliberately minimal, not final grounding or navigation.
+
+**The Hermeticon is an aperture and a physical bowl, not a leash.** Geological world coordinates own persistent BB positions and cloud location. Walking moves the observation aperture; it does not move, transfer, delete, or re-own material. Above the equator the dome is a local weather visibility/emission domain; it is not a collision wall. Below the equator the bowl is physical and may bounce BBs. Contact should ultimately depend on actual material trajectory; V31 still has a proximity-based bowl correction and the resulting lively repeated bounces are player-accepted behavior, not proof of trajectory-correct contact.
+
+The cloud uses double-sided mesh geometry clipped by the upper spherical aperture; like terrain clipping, this does not manufacture new cross-section faces. Only cloud volume intersecting the weather dome may emit. Existing cloud inventory remains until a BB actually spawns. Emission under partial overlap remains a testable implementation limitation.
+
+V31 INSPECT provides on-demand `weather` diagnostics and `BaubleInspectWeather()`; it reports geological/local cloud coordinates, clipping shader hooks, overlap estimate, BB counts inside/outside the aperture, conservation and simulation state. Player report: 10,000 BBs accounted for, 185 outside the aperture retained, zero generic containment violations, shader compiled, ~58.94 FPS. The report was captured after cloud exhaustion, so partial-cloud clipping is accepted visually by the player rather than measured by that snapshot.
+
+**Verifier jurisdiction:** whole-sphere containment applies to vessel-local meshes, not persistent world-domain cloud/terrain/BBs. Keep reporting real geometric conditions; do not reintroduce a rule that all geological matter must remain inside the moving sphere. The generic verifier does not establish the absence of physical bowl penetrations.
+
+The earlier V28 caveat above is historical: V31 has persistent geological BBs and world-positioned cloud. Aggregated distant weather, dynamic resolution transitions, absorption and generalized material phases remain design direction, not implemented Wanderer features.
+
 ## Unit of composition
 
 **The Hermeticon is our atomic unit**, not a particular physical size, genre, or kind of exhibit. It may contain a galaxy marble held by an alien, all of Middle-earth, an explorable character asset, or a chemistry molecule exhibit. Scale and subject do not determine the interaction contract. Hermeticons can eventually be composed, but we are not building a universal framework in advance.

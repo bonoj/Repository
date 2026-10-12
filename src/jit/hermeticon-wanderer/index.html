@@ -18,9 +18,9 @@
 })();
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
-import {createWater} from './snowglobe-liquid.js';
+
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-snowglobe-v62';
+const BUILD='hermeticon-wanderer-gel-v63';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -298,47 +298,68 @@ function rainSurfaceNormal(x,y,z){
  return l>.00001?[nx/l,ny/l,nz/l]:[0,1,0];
 }
 
-/* Wanderer ↔ actual Betwixt Snowglobe Fundamentals liquid. No replacement solver. */
-const liquidOwner=new T.Group();liquidOwner.name='wanderer:snowglobe-water';liquidOwner.userData.worldDomain=true;world.add(liquidOwner);
-const liquidBedCache=new Map();
-function liquidBed(x,z){
- const key=x.toFixed(5)+','+z.toFixed(5);
- if(liquidBedCache.has(key))return liquidBedCache.get(key);
- let previous=fieldSample(x,MAXY-.001,z),height=NaN;
- for(let y=MAXY-.05;y>=MINY+.05;y-=.05){
-  const f=fieldSample(x,y,z);
-  if(previous<=0&&f>0){height=y;break}
-  previous=f;
- }
- liquidBedCache.set(key,height);return height;
+/* Independent BB → growing proximity gel experiment. No fluid solver or triangles. */
+const gelSpacing=.28,gelYield=4*Math.PI*RAIN_R**3/3*12;
+const gelNodes=[],gelCells=new Map();let gelAbsorbed=0,gelVolume=0,gelEdges=0,gelRejected=0;
+const gelGroup=new T.Group();gelGroup.userData.worldDomain=true;world.add(gelGroup);
+const gelNodeGeo=new T.IcosahedronGeometry(.055,0);
+const gelNodeMesh=new T.InstancedMesh(gelNodeGeo,new T.MeshBasicMaterial({color:0x68e6c8}),4096);
+gelNodeMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);gelNodeMesh.frustumCulled=false;gelGroup.add(gelNodeMesh);
+const gelLineGeo=new T.BufferGeometry(),gelLineMat=new T.LineBasicMaterial({color:0x75b9eb,transparent:true,opacity:.7,depthWrite:false});
+const gelLines=new T.LineSegments(gelLineGeo,gelLineMat);gelLines.frustumCulled=false;gelGroup.add(gelLines);
+const gelDummy=new T.Object3D();
+function gelKey(x,y,z){return x+','+y+','+z}
+function gelAddNode(x,y,z){
+ if(gelNodes.length>=4096)return false;
+ const ix=Math.round(x/gelSpacing),iy=Math.round(y/gelSpacing),iz=Math.round(z/gelSpacing),key=gelKey(ix,iy,iz);
+ if(gelCells.has(key))return false;
+ const node={x:ix*gelSpacing,y:iy*gelSpacing,z:iz*gelSpacing,ix,iy,iz};
+ gelCells.set(key,gelNodes.length);gelNodes.push(node);return true;
 }
-const liquidTerrain={
- groundHeight:liquidBed,
- groundHeightExact:liquidBed,
- materialBoundary(x,z){
-  const h=liquidBed(x,z),inside=Number.isFinite(h);
-  return {inside,distance:inside?1:0,nx:0,nz:0};
+function gelRebuild(){
+ const lines=[];
+ for(let i=0;i<gelNodes.length;i++){
+  const n=gelNodes[i];
+  gelDummy.position.set(n.x-wanderX,n.y,n.z-wanderZ);gelDummy.scale.setScalar(1);gelDummy.updateMatrix();gelNodeMesh.setMatrixAt(i,gelDummy.matrix);
+  for(const [dx,dy,dz] of [[1,0,0],[0,1,0],[0,0,1],[1,1,0],[1,0,1],[0,1,1]]){
+   const j=gelCells.get(gelKey(n.ix+dx,n.iy+dy,n.iz+dz));if(j===undefined)continue;
+   const m=gelNodes[j];lines.push(n.x-wanderX,n.y,n.z-wanderZ,m.x-wanderX,m.y,m.z-wanderZ);
+  }
  }
-};
-const snowglobeWater=createWater({THREE:T,owner:liquidOwner,terrain:liquidTerrain});
-snowglobeWater.setEnabled(true);
-const liquidBBVolume=4*Math.PI*RAIN_R**3/3*12; // BB-to-liquid material yield; solver unchanged.
-let liquidCollected=0,liquidRejected=0,liquidLastUpdate=0;
-function collectIntoSnowglobe(i,x,y,z){
+ gelNodeMesh.count=gelNodes.length;gelNodeMesh.instanceMatrix.needsUpdate=true;
+ gelLineGeo.setAttribute('position',new T.Float32BufferAttribute(lines,3));gelEdges=lines.length/6;
+}
+let gelDirty=true,gelLastDraw=0;
+function gelCollect(i,x,y,z){
  if(rainRest[i])return false;
- const bed=liquidBed(x,z);
- if(!Number.isFinite(bed)||Math.abs(y-bed)>.5){liquidRejected++;return false}
- const injected=snowglobeWater.inject(liquidBBVolume,x,z);
- if(!(injected>0)){liquidRejected++;return false}
- rainRest[i]=2;rainSettled++;liquidCollected++;return true;
+ // Each resting BB transfers its volume; lattice nodes are geometric degrees of freedom.
+ rainRest[i]=2;rainSettled++;gelAbsorbed++;gelVolume+=gelYield;
+ const ix=Math.round(x/gelSpacing),iz=Math.round(z/gelSpacing);
+ const bx=ix*gelSpacing,bz=iz*gelSpacing;
+ const bed=gelBed(bx,bz);
+ if(!Number.isFinite(bed)){gelRejected++;return true}
+ // Height of each column is set by accumulated BB volume and neighboring connectivity.
+ const key=gelKey(ix,0,iz);
+ let col=gelColumns.get(key);if(!col){col={volume:0,bed};gelColumns.set(key,col)}
+ col.volume+=gelYield;
+ const height=col.volume/(gelSpacing*gelSpacing);
+ for(let layer=0;layer<=Math.min(32,Math.floor(height/gelSpacing));layer++)gelAddNode(bx,bed+layer*gelSpacing,bz);
+ gelDirty=true;return true;
 }
-function updateSnowglobeWater(){
- liquidOwner.position.set(-wanderX,0,-wanderZ);
- snowglobeWater.update(performance.now());
- liquidLastUpdate=performance.now();
+const gelColumns=new Map(),gelBedCache=new Map();
+function gelBed(x,z){
+ const key=x.toFixed(3)+','+z.toFixed(3);
+ if(gelBedCache.has(key))return gelBedCache.get(key);
+ let prior=fieldSample(x,MAXY-.001,z),hit=NaN;
+ for(let y=MAXY-.05;y>=MINY+.05;y-=.05){const v=fieldSample(x,y,z);if(prior<=0&&v>0){hit=y;break}prior=v}
+ gelBedCache.set(key,hit);return hit;
+}
+function updateGel(){
+ if(gelDirty&&performance.now()-gelLastDraw>150){gelRebuild();gelDirty=false;gelLastDraw=performance.now()}
+ else if(gelNodes.length){gelGroup.position.set(0,0,0)}
 }
 function rainStep(dt){
- updateSnowglobeWater();
+ updateGel();
  const gravity=9.8,restitution=.38,tangentDamping=.82;
  rainTime+=dt;
  const fractionBefore=(RAIN_N-rainEmitted)/RAIN_N;
@@ -392,7 +413,7 @@ function rainStep(dt){
     let push=0;
     while(fieldSample(hx+wanderX,hy,hz+wanderZ)>-RAIN_R&&push++<12){hx+=nx*.035;hy+=ny*.035;hz+=nz*.035}
     rainX[i]=hx+wanderX;rainY[i]=hy;rainZ[i]=hz+wanderZ;
-    if(Math.hypot(rainVX[i],rainVY[i],rainVZ[i])<.42&&ny>.55){if(!collectIntoSnowglobe(i,hx+wanderX,hy,hz+wanderZ)){rainRest[i]=1;rainSettled++}}
+    if(Math.hypot(rainVX[i],rainVY[i],rainVZ[i])<.42&&ny>.55){if(!gelCollect(i,hx+wanderX,hy,hz+wanderZ)){rainRest[i]=1;rainSettled++}}
    }else{rainX[i]=x+wanderX;rainY[i]=y;rainZ[i]=z+wanderZ}
    // Only the lower hemisphere is a physical bowl; upper aperture is not a wall.
    const [dx,dy,dz]=rainWorld(i),rr=Math.hypot(dx,dy,dz),limit=INNER_R-RAIN_R-.012;
@@ -682,7 +703,7 @@ addEventListener('error',e=>{telemetryErrors.push(String(e.message).slice(0,240)
 addEventListener('unhandledrejection',e=>{telemetryErrors.push(String(e.reason).slice(0,240));if(telemetryErrors.length>4)telemetryErrors.shift()});
 function telemetryEvent(type,detail=''){telemetryEvents.push({t:Math.round(performance.now()),type,detail:String(detail).slice(0,160)});if(telemetryEvents.length>TELEMETRY_LIMIT)telemetryEvents.shift()}
 function inspectWorld(){
- const report={liquid:{donor:'Betwixt Snowglobe Fundamentals',bbVolume:liquidBBVolume,collected:liquidCollected,rejected:liquidRejected,solver:snowglobeWater.inspect()},build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
+ const report={gel:{model:'proximity lattice v1',absorbedBBs:gelAbsorbed,materialVolume:gelVolume,nodes:gelNodes.length,edges:gelEdges,columns:gelColumns.size,rejected:gelRejected,triangles:0},build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
   terrain:{chunks:terrainPerf.totalChunks,fullRebuilds:terrainPerf.fullRebuilds,localRebuilds:terrainPerf.localRebuilds,lastDirtyChunks:terrainPerf.lastDirtyChunks,lastRebuildMs:terrainPerf.lastRebuildMs},
   transfer:quarry?{started:quarry.started,counts:quarry.units.reduce((a,u)=>(a[u.state]++,a),{source:0,transit:0,receiver:0}),capacity:quarry.units.length,recovery:quarry.recoveryStatus??null}:null,
   errors:telemetryErrors.slice(-4),events:telemetryEvents.slice(-24)};

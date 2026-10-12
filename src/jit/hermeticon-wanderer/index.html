@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-map-lenses-v34';
+const BUILD='hermeticon-wanderer-authored-fields-v35';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -243,13 +243,9 @@ const terrainProvider=terrainRequested==='empty'?'empty':terrainRequested==='aut
 // World-coordinate 2D authoring fields are independent of geology and rendering.
 // No inferred map pixels: an unpainted cell has jurisdiction 0 (unassigned).
 const atlas=terrainProvider==='authored-v1'?(()=>{
- const width=85,height=85,halfExtent=25.2;
- const jurisdiction=new Uint8Array(width*height);
- const regions={0:'unassigned',1:'summerlands',2:'winter-kings-realm'};
- // A future authored transition will use explicit per-cell weights; no fabricated border.
- const gradientWeight=null;
- return {version:1,origin:[0,0],halfExtent,resolution:[width,height],seed:741,
-  fields:{jurisdiction,gradientWeight,elevation:null,substrate:null,hydrology:null,provenance:null,strata:null,population:null,features:null},regions};
+ const width=85,height=85,halfExtent=25.2,size=width*height;
+ const fields={jurisdiction:new Uint8Array(size),gradientWeight:new Uint8Array(size),elevation:new Float32Array(size),substrate:new Uint8Array(size),hydrology:new Uint8Array(size),provenance:new Uint8Array(size),strata:new Uint8Array(size),population:new Uint8Array(size),features:new Uint8Array(size)};
+ return {version:2,origin:[0,0],halfExtent,resolution:[width,height],seed:741,fields,regions:{0:'unassigned',1:'summerlands',2:'winter-kings-realm',3:'gradient',4:'other'},compiled:false};
 })():null;
 let legacyTerrainInstantiations=0,emptyTerrainInstantiations=0,authoredTerrainInstantiations=0;
 function regenerate(){

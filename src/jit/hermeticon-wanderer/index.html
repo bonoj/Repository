@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-local-deformation-v44';
+const BUILD='hermeticon-wanderer-local-deformation-v45';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -787,19 +787,25 @@ function safeInspect(){try{return inspectWorld()}catch(error){const diagnostic={
 probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))safeInspect()};
 document.querySelector('#closeProbe').onclick=()=>probePanel.classList.remove('open');
 document.querySelector('#copyProbe').onclick=async()=>{
- // Copy the last completed snapshot. Never run inspection or GPU witnesses here.
+ // V43 clipboard behavior restored, with accurate success/failure reporting.
+ // Copy the existing report; never rerun inspection as part of copy.
  const button=document.querySelector('#copyProbe'),snapshot=probeReport;
  if(!snapshot){button.textContent='NO REPORT';return}
- try{
-  if(!navigator.clipboard?.writeText)throw Error('Clipboard API unavailable');
-  await navigator.clipboard.writeText(snapshot);button.textContent='COPIED';
- }catch(error){
-  // Mobile-safe manual path: persistent selectable text, no execCommand.
-  let t=document.querySelector('#probeCopyFallback');
-  if(!t){t=document.createElement('textarea');t.id='probeCopyFallback';t.readOnly=true;t.setAttribute('aria-label','Select and copy inspection report');t.style.cssText='display:block;width:100%;min-height:180px;max-height:45vh;box-sizing:border-box;resize:vertical;white-space:pre;font:12px/1.4 monospace';probePanel.append(t)}
-  t.value=snapshot;probePanel.classList.add('open');t.focus();t.select();
-  button.textContent='SELECT TEXT';
+ let copied=false;
+ try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(snapshot);copied=true}}catch(error){button.title=String(error)}
+ if(!copied){
+  // V43's proven fallback: temporary selectable textarea + legacy copy command.
+  const t=document.createElement('textarea');t.value=snapshot;t.setAttribute('aria-label','Inspection report');
+  t.style.cssText='position:fixed;top:0;left:0;width:1px;height:1px;opacity:.01;z-index:9999';
+  document.body.append(t);t.focus();t.select();t.setSelectionRange(0,t.value.length);
+  try{copied=document.execCommand('copy')}catch(error){button.title=String(error)}
+  t.remove();
  }
+ if(copied){button.textContent='COPIED';return}
+ // Neither automatic mechanism worked: keep a selectable, visible copy source.
+ let t=document.querySelector('#probeCopyFallback');
+ if(!t){t=document.createElement('textarea');t.id='probeCopyFallback';t.readOnly=true;t.style.cssText='display:block;width:100%;min-height:200px;max-height:50vh;box-sizing:border-box;font:12px/1.4 monospace';probePanel.append(t)}
+ t.value=snapshot;probePanel.classList.add('open');t.focus();t.select();button.textContent='SELECT + COPY';
 };
 globalThis.BaubleInspect=safeInspect;
 // Bounded, privacy-minimal interaction trace: canvas gestures and instrument controls only.

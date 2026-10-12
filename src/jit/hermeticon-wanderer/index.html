@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-material-circuit-v38';
+const BUILD='hermeticon-wanderer-geological-source-v39';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -553,9 +553,28 @@ const quarry=atlas?(()=>{
  const floor=new T.Mesh(new T.CylinderGeometry(1,.96,.09,40),basalt);floor.position.set(2.1,1.25,0);group.add(floor);
  const receiverGlass=new T.Mesh(new T.CylinderGeometry(1,1,1.65,40,1,true),new T.MeshPhysicalMaterial({color:0x9dcdd7,transparent:true,opacity:.14,depthWrite:false,side:T.DoubleSide}));
  receiverGlass.position.set(2.1,2.15,0);group.add(receiverGlass);
- let started=false,elapsed=0,emitted=0,delivered=0;
- const audit=()=>{const counts={source:0,transit:0,receiver:0};for(const u of units)counts[u.state]++;return {capacity,counts,emitted,delivered,balanced:counts.source+counts.transit+counts.receiver===capacity&&counts.transit===emitted-delivered&&counts.receiver===delivered,events:log.slice(-120),limits:'Stockpile transfer witness; signed terrain field unchanged. Material source and receiver are discrete meshes, not sampled terrain volume.'}};
- return {group,origin,units,log,audit,get started(){return started},start(){started=true;log.push({type:'start',time:round(clock.time,2)})},step(dt){
+ source.visible=false;
+ let started=false,elapsed=0,emitted=0,delivered=0,removed=0,initialSolid=solidCount,postSolid=solidCount;
+ function excavate(){
+  // Fixed geological grid witness: remove exactly one positive field sample per unit.
+  // Sample-count units are NOT continuous volume; meshing interpolates their boundaries.
+  const candidates=[];
+  for(let z=1;z<NZ-1;z++)for(let y=1;y<NY-1;y++)for(let x=1;x<NX-1;x++){
+   const X=xp(x),Y=yp(y),Z=zp(z),d=Math.hypot(X+2.2,Z);
+   if(d<2.3&&Y>-.3&&Y<1.6&&field[id(x,y,z)]>0)
+    candidates.push({index:id(x,y,z),score:d*d+(Y-1.1)*(Y-1.1)*.35});
+  }
+  candidates.sort((a,b)=>a.score-b.score);
+  if(candidates.length<capacity)throw new Error('Excavation source lacks 96 solid field samples: '+candidates.length);
+  initialSolid=field.reduce((n,v)=>n+(v>0),0);
+  for(const item of candidates.slice(0,capacity)){field[item.index]=-.3;removed++}
+  postSolid=field.reduce((n,v)=>n+(v>0),0);
+  solidCount=postSolid;voidCount=field.length-solidCount;
+  extractTerrainMesh();paintMapLens();source.visible=true;
+  log.push({type:'excavate',removedSamples:removed,initialSolid,postSolid});
+ }
+ const audit=()=>{const counts={source:0,transit:0,receiver:0};for(const u of units)counts[u.state]++;return {capacity,counts,emitted,delivered,removedSamples:removed,initialSolidSamples:initialSolid,postSolidSamples:postSolid,terrainDeltaSamples:initialSolid-postSolid,geologyBalanced:!started||removed===capacity&&initialSolid-postSolid===removed,balanced:counts.source+counts.transit+counts.receiver===capacity&&counts.transit===emitted-delivered&&counts.receiver===delivered,events:log.slice(-120),limits:'Discrete positive signed-field sample removal, not continuous volume conservation. Removed 96 samples in one excavation and transferred 96 material units; sample volume and rendered mesh volume are not yet reconciled.'}};
+ return {group,origin,units,log,audit,get started(){return started},start(){if(started)return;excavate();started=true;log.push({type:'start',time:round(clock.time,2)})},step(dt){
   if(!started)return;elapsed+=dt;
   if(elapsed>.11&&emitted<capacity){elapsed=0;const u=units[emitted++];u.state='transit';source.remove(u.source);const b=new T.Mesh(beadGeo,mat);b.position.copy(u.source.position);transit.add(b);u.bead=b;u.t=0;log.push({type:'emit',id:u.id,material:1})}
   for(const u of units){if(u.state!=='transit')continue;u.t+=dt;const t=Math.min(1,u.t/1.3),sx=u.source.position;

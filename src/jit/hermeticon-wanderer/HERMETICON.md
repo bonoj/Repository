@@ -49,3 +49,8 @@ The detailed conservation/contact contract remains in [matter/MATTER.md](matter/
 ## Implementation discipline
 
 Prove the smallest behavior in Wanderer. Preserve working orbit/pinch, camera framing, inspection, and the existing JIT delivery route. Do not expand this into an OOP/ECS architecture or migrate legacy baubles. Separate proposed behavior, executable behavior, and user-verified behavior. New Hermeticons inherit this **contract**, not necessarily Wanderer's scene or source code.
+
+
+## Instrumentation boundary clarified by Wanderer V47 (2026-10-12)
+
+The observer must not become the dominant workload. A normal INSPECT action reads bounded, already-maintained evidence; it does not run GPU witnesses, traverse all scene geometry, or recompute the world. Heavy verification is a separate deliberate experiment, not an automatic consequence of opening a diagnostic panel. Reports should be transportable into the conversation by one ordinary COPY REPORT action. This is a design/interaction constraint, not a claim that the lightweight counters prove all physical invariants. Wanderer V47 has one player-confirmed successful report paste and mid-transfer observation; full completion remains to be witnessed.

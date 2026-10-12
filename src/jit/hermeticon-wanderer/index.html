@@ -583,7 +583,7 @@ const quarry=atlas?(()=>{
   postSolid=field.reduce((n,v)=>n+(v>0),0);
   solidCount=postSolid;voidCount=field.length-solidCount;
   const xs=removedWitness.map(p=>p.grid[0]),zs=removedWitness.map(p=>p.grid[2]);extractTerrainMesh({x0:Math.min(...xs),x1:Math.max(...xs),z0:Math.min(...zs),z1:Math.max(...zs)});paintMapLens(terrainPerf.lastChangedChunks);source.visible=true;
-  log.push({type:'excavate',removedSamples:removed,initialSolid,postSolid});
+  log.push({type:'excavate',removedSamples:removed,initialSolid,postSolid});telemetryEvent('excavate',removed+' samples');
  }
  const depositCandidates=[];
  for(let z=1;z<NZ-1;z++)for(let y=1;y<NY-1;y++)for(let x=1;x<NX-1;x++){
@@ -599,7 +599,7 @@ const quarry=atlas?(()=>{
   field[target.index]=Math.max(.18,removedWitness[u.id].prior);
   depositedMaterial.set(target.index,{materialId:matter.materialId,lineage:matter.lineage});
   deposits.push({index:target.index,unit:u.id,materialId:matter.materialId,originIndex:matter.originIndex});
-  solidCount++;voidCount--;meshDirty=true;const i=target.index,x=i%NX,z=Math.floor(i/(NX*NY));if(!dirtyBounds)dirtyBounds={x0:x,x1:x,z0:z,z1:z};else{dirtyBounds.x0=Math.min(dirtyBounds.x0,x);dirtyBounds.x1=Math.max(dirtyBounds.x1,x);dirtyBounds.z0=Math.min(dirtyBounds.z0,z);dirtyBounds.z1=Math.max(dirtyBounds.z1,z)}return true;
+  solidCount++;voidCount--;if(deposits.length===1||deposits.length%24===0)telemetryEvent('deposit',deposits.length+'/96');meshDirty=true;const i=target.index,x=i%NX,z=Math.floor(i/(NX*NY));if(!dirtyBounds)dirtyBounds={x0:x,x1:x,z0:z,z1:z};else{dirtyBounds.x0=Math.min(dirtyBounds.x0,x);dirtyBounds.x1=Math.max(dirtyBounds.x1,x);dirtyBounds.z0=Math.min(dirtyBounds.z0,z);dirtyBounds.z1=Math.max(dirtyBounds.z1,z)}return true;
  };
  const removalAudit=()=>{
   const byMaterial={},axes=[0,1,2].map(axis=>{const v=removedWitness.map(p=>p.world[axis]);return v.length?[Math.min(...v),Math.max(...v)]:null});
@@ -610,12 +610,12 @@ const quarry=atlas?(()=>{
  };
  const audit=()=>{const counts={source:0,transit:0,receiver:0};for(const u of units)counts[u.state]++;const depositedByMaterial={};for(const d of deposits){const name=MATERIALS[d.materialId].name;depositedByMaterial[name]=(depositedByMaterial[name]||0)+1}
  return {capacity,counts,emitted,delivered,deposition:{count:deposits.length,byMaterial:depositedByMaterial,fieldSolidSamples:solidCount,expectedSolidSamples:initialSolid-removed+deposits.length,balanced:solidCount===initialSolid-removed+deposits.length,records:deposits,limits:'Positive field samples deposited with material overrides. No continuous mesh volume measurement.'},removalWitness:removalAudit(),removedSamples:removed,initialSolidSamples:initialSolid,postSolidSamples:postSolid,terrainDeltaSamples:initialSolid-postSolid,geologyBalanced:!started||removed===capacity&&initialSolid-postSolid===removed,balanced:counts.source+counts.transit+counts.receiver===capacity&&counts.transit===emitted-delivered&&counts.receiver===delivered,events:log.slice(-120),limits:'Discrete positive signed-field sample removal, not continuous volume conservation. Removed 96 samples in one excavation and transferred 96 material units; sample volume and rendered mesh volume are not yet reconciled.'}};
- return {group,origin,units,log,audit,get started(){return started},start(){if(started)return;excavate();started=true;log.push({type:'start',time:round(clock.time,2)})},step(dt){
+ return {group,origin,units,log,audit,get started(){return started},start(){if(started)return;excavate();started=true;telemetryEvent('transfer-start','96 units');log.push({type:'start',time:round(clock.time,2)})},step(dt){
   if(!started)return;elapsed+=dt;
   if(elapsed>.11&&emitted<capacity){elapsed=0;const u=units[emitted++];u.state='transit';source.remove(u.source);const b=new T.Mesh(beadGeo,mat);b.position.copy(u.source.position);transit.add(b);u.bead=b;u.t=0;log.push({type:'emit',id:u.id,material:u.matter.materialId})}
   for(const u of units){if(u.state!=='transit')continue;u.t+=dt;const t=Math.min(1,u.t/1.3),sx=u.source.position;
    u.bead.position.set(sx.x+(2.1-sx.x)*t,1.5+2*Math.sin(Math.PI*t),sx.z*(1-t));
-   if(t>=1){if(!deposit(u)){u.t=1.3;continue}transit.remove(u.bead);receiver.add(u.bead);u.bead.position.set(1.4+(u.id%6)*.25,1.5+Math.floor(u.id/36)*.25,-.65+Math.floor(u.id%36/6)*.25);u.state='receiver';delivered++;log.push({type:'deposit',id:u.id,material:u.matter.materialId,fieldIndex:deposits[deposits.length-1].index})}
+   if(t>=1){if(!deposit(u)){u.t=1.3;continue}transit.remove(u.bead);receiver.add(u.bead);u.bead.position.set(1.4+(u.id%6)*.25,1.5+Math.floor(u.id/36)*.25,-.65+Math.floor(u.id%36/6)*.25);u.state='receiver';delivered++;if(delivered===capacity)telemetryEvent('transfer-complete',delivered+'/96');log.push({type:'deposit',id:u.id,material:u.matter.materialId,fieldIndex:deposits[deposits.length-1].index})}
   }
   if(meshDirty){extractTerrainMesh(dirtyBounds);paintMapLens(terrainPerf.lastChangedChunks);meshDirty=false;dirtyBounds=null}
  },sync(){group.position.set(-wanderX,0,-wanderZ)}};
@@ -765,12 +765,15 @@ function inspectVisualWitness(){
  return result;
 }
 // V46: cheap bounded telemetry. Inspection never traverses the scene or touches GPU.
-const telemetryEvents=[],TELEMETRY_LIMIT=48;
+const telemetryEvents=[],telemetryErrors=[],TELEMETRY_LIMIT=48;
+addEventListener('error',e=>{telemetryErrors.push(String(e.message).slice(0,240));if(telemetryErrors.length>4)telemetryErrors.shift()});
+addEventListener('unhandledrejection',e=>{telemetryErrors.push(String(e.reason).slice(0,240));if(telemetryErrors.length>4)telemetryErrors.shift()});
 function telemetryEvent(type,detail=''){telemetryEvents.push({t:Math.round(performance.now()),type,detail:String(detail).slice(0,160)});if(telemetryEvents.length>TELEMETRY_LIMIT)telemetryEvents.shift()}
 function inspectWorld(){
  const report={build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
   terrain:{chunks:terrainPerf.totalChunks,fullRebuilds:terrainPerf.fullRebuilds,localRebuilds:terrainPerf.localRebuilds,lastDirtyChunks:terrainPerf.lastDirtyChunks,lastRebuildMs:terrainPerf.lastRebuildMs},
-  transfer:{active:!!quarry?.active},events:telemetryEvents.slice(-24)};
+  transfer:quarry?{started:quarry.started,counts:quarry.units.reduce((a,u)=>(a[u.state]++,a),{source:0,transit:0,receiver:0}),capacity:quarry.units.length}:null,
+  errors:telemetryErrors.slice(-4),events:telemetryEvents.slice(-24)};
  probeReport=JSON.stringify(report,null,2);probeText.value=probeReport;return report;
 }
 const safeInspect=inspectWorld;

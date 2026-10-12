@@ -61,7 +61,9 @@ function verifyContainment(){
  // World-domain matter may legitimately be outside the moving aperture.
  const failures=[];let checked=0,maxOverflow=0;
  world.traverse(o=>{
-  if(!o.isMesh||!o.visible||o.userData.allowOutsideBauble||o.userData.worldDomain||!o.geometry)return;
+  if(!o.isMesh||!o.visible||!o.geometry)return;
+  // World-domain and exemption ownership propagate through nested scene groups.
+  for(let owner=o;owner;owner=owner.parent){if(owner.userData.allowOutsideBauble||owner.userData.worldDomain)return}
   const g=o.geometry;if(!g.boundingBox)g.computeBoundingBox();
   if(!g.boundingBox)return;
   const count=o.isInstancedMesh?o.count:1;
@@ -113,7 +115,7 @@ const apertureEyes={compileCount:0,vertexHook:false,fragmentHook:false,shaderRad
 const solid=new T.Group();solid.name='terrain:signed-volume';solid.userData.worldDomain=true;world.add(solid);
 const CHUNK=10,CX=Math.ceil((NX-1)/CHUNK),CZ=Math.ceil((NZ-1)/CHUNK),terrainChunks=[];
 const terrainPerf={totalChunks:CX*CZ,fullRebuilds:0,localRebuilds:0,lastDirtyChunks:0,lastRebuiltCells:0,lastRebuildMs:0,lastChangedChunks:[]};
-for(let cz=0;cz<CZ;cz++)for(let cx=0;cx<CX;cx++){const geometry=new T.BufferGeometry(),mesh=new T.Mesh(geometry,terrainMaterial);mesh.receiveShadow=true;mesh.frustumCulled=false;solid.add(mesh);terrainChunks.push({cx,cz,geometry,triangles:0})}
+for(let cz=0;cz<CZ;cz++)for(let cx=0;cx<CX;cx++){const geometry=new T.BufferGeometry(),mesh=new T.Mesh(geometry,terrainMaterial);mesh.receiveShadow=true;mesh.frustumCulled=false;mesh.userData.worldDomain=true;solid.add(mesh);terrainChunks.push({cx,cz,geometry,triangles:0})}
 
 let geometryEyes={};
 const gpuEyes={status:'not-tested',samples:null,lastTestMs:null,error:null,tests:0};
@@ -781,10 +783,11 @@ function inspectWorld(){
  const report={build:BUILD,visualWitness:inspectVisualWitness(),materialCircuit:quarry?quarry.audit():null,weather:inspectWeather(),rain:{ownership:{terrain:0,hermeticon:0,unowned:rainEmitted,transfers:ownerTransfers,toTerrain,toHermeticon,maxPositionError:round(maxTransferError,9)},total:RAIN_N,cloudRemaining:RAIN_N-rainEmitted,emitted:rainEmitted,airborne:rainEmitted-rainSettled-rainEscaped,settled:rainSettled,escaped:rainEscaped,bounces:rainBounces,wallBounces:rainWallBounces,conserved:RAIN_N===(RAIN_N-rainEmitted)+(rainEmitted-rainSettled-rainEscaped)+rainSettled+rainEscaped,restitution:.38,gravity:9.8,emissionSeconds:RAIN_DURATION},runtimeEyes:{aperture:{...apertureEyes,compiled:apertureEyes.compileCount>0},gpu:gpuEyes,scene:sceneEyes,skin:skinEyes,scoop:scoopEyes,geometry:geometryEyes,warnings:eyesWarnings,limits:'Shared live aperture uniform; 4-position radial witness; lit 32x32 real terrain pixel occupancy. Blind scene is a failure. Projection cannot alone diagnose valid terrain silhouettes or glass composition.'},wanderer:{x:wanderX,z:wanderZ,position:{x:round(walker.x),y:round(walker.y),z:round(walker.z)},target:walker.target,accepted:walker.accepted,rejected:walker.rejected,centralAreaFraction:.25,centralRadius:HANGOUT_R,apertureRadius:9.72,mode:'vertex-initialized-fragment-sphere-scoop',extractionMargin:EXTRACTION_MARGIN,worldFieldStable:true},terrain:{provider:terrainProvider,requested:terrainRequested,legacyInstantiations:legacyTerrainInstantiations,emptyInstantiations:emptyTerrainInstantiations,authoredInstantiations:authoredTerrainInstantiations,inactiveProviderInstantiations:terrainProvider==='legacy-v31'?emptyTerrainInstantiations+authoredTerrainInstantiations:terrainProvider==='empty'?legacyTerrainInstantiations+authoredTerrainInstantiations:legacyTerrainInstantiations+emptyTerrainInstantiations,atlas:atlas?{version:atlas.version,origin:atlas.origin,halfExtent:atlas.halfExtent,resolution:atlas.resolution,seed:atlas.seed,regionLegend:atlas.regions,assignedCells:atlas.fields.jurisdiction.reduce((n,v)=>n+(v!==0),0),fields:Object.fromEntries(Object.entries(atlas.fields).map(([name,value])=>[name,value===null?'absent':'allocated'])),compiled:true,geology:'flat-signed-volume'}:null,kind:'3d-signed-field',dimensions:[NX,NY,NZ],samples:field.length,fieldRange:[fieldMin,fieldMax],solidSamples:solidCount,voidSamples:voidCount,mesh:{triangles,vertices:triangles*3,doubleSided:true,locality:{...terrainPerf}},cycle,seed,buildMs,operationCount:operations.length,events:events.map(e=>({cycle:e.cycle,seed:e.seed,triangles:e.triangles,buildMs:e.buildMs,operationCount:e.operations?.length||0}))},time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:1,contentsInstantiated:true},render:{calls:mainRenderStats.calls,triangles:mainRenderStats.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:fpsMeasuring?null:round(displayFps),fpsMeasuring},containment:verifyContainment(),invariants:verifyInvariants(),simulation:{time:round(clock.time,3),steps:clock.steps,droppedSeconds:round(clock.droppedSeconds,3),fixedStep:STEP},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:eyesWarnings};
  probeReport=JSON.stringify(report,null,2);probeText.textContent=probeReport;return report;
 }
-probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};
+function safeInspect(){try{return inspectWorld()}catch(error){const diagnostic={build:BUILD,inspectionError:String(error?.stack||error),containment:containment.violations,invariants:invariantState.failures,locality:{...terrainPerf,lastChangedChunks:terrainPerf.lastChangedChunks.length},materialCircuit:quarry?quarry.audit():null};probeReport=JSON.stringify(diagnostic,null,2);probeText.textContent=probeReport;return diagnostic}}
+probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))safeInspect()};
 document.querySelector('#closeProbe').onclick=()=>probePanel.classList.remove('open');
-document.querySelector('#copyProbe').onclick=async()=>{inspectWorld();try{await navigator.clipboard.writeText(probeReport);document.querySelector('#copyProbe').textContent='COPIED'}catch(e){const t=document.createElement('textarea');t.value=probeReport;document.body.append(t);t.select();document.execCommand('copy');t.remove();document.querySelector('#copyProbe').textContent='COPIED'}};
-globalThis.BaubleInspect=inspectWorld;
+document.querySelector('#copyProbe').onclick=async()=>{safeInspect();const button=document.querySelector('#copyProbe');try{await navigator.clipboard.writeText(probeReport);button.textContent='COPIED'}catch(e){const t=document.createElement('textarea');t.value=probeReport;document.body.append(t);t.focus();t.select();const copied=document.execCommand('copy');t.remove();button.textContent=copied?'COPIED':'SELECT REPORT';if(!copied){probeText.textContent=probeReport;probePanel.classList.add('open')}}};
+globalThis.BaubleInspect=safeInspect;
 // Bounded, privacy-minimal interaction trace: canvas gestures and instrument controls only.
 const interactionLog=[],interactionLimit=240;let interactionSeq=0,interactionStart=performance.now(),gesture=null;
 function recordInteraction(type,data={}){interactionLog.push({seq:++interactionSeq,ms:Math.round(performance.now()-interactionStart),type,...data});if(interactionLog.length>interactionLimit)interactionLog.shift()}
@@ -816,7 +819,7 @@ function frame(now){requestAnimationFrame(frame);
  if(clock.accumulator>=STEP){clock.droppedSeconds+=clock.accumulator;clock.accumulator=0}
  if(validFrame&&now-probeLast>2500){probeLast=now;
   if(probeFrames>=20&&probeFrameMs>0){displayFps=1000*probeFrames/probeFrameMs;fpsMeasuring=false;fpsLabel.textContent=displayFps.toFixed(1)+' fps'}
-  verifyInvariants();verifyContainment();if(probePanel.classList.contains('open'))inspectWorld();
+  verifyInvariants();verifyContainment();if(probePanel.classList.contains('open'))safeInspect();
   probeFrames=0;probeFrameMs=0}
 
 camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);renderer.render(scene,camera);mainRenderStats.calls=renderer.info.render.calls;mainRenderStats.triangles=renderer.info.render.triangles}

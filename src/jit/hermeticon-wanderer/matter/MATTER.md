@@ -2,6 +2,19 @@
 
 Status: **design contract / evolving hypothesis**, 2026-10-12. This document records our current understanding, not a claim that these mechanisms have been implemented or validated.
 
+## V31 executable matter evidence — 2026-10-12
+This section supersedes the older claim that no Wanderer collision behavior is implemented. V31 has a concrete, **not yet generalized** hydrology slice in `src/jit/hermeticon-wanderer/index.html`: one cloud inventory of 10,000 units emits discrete BBs under gravity (9.8), terrain restitution (0.38), tangential damping (0.82), and a physical lower bowl. Resting BBs are retained; there is no absorption, liquid solver, gas conversion, or whole-to-water collection yet. The matter folder remains the intended future development home, not an already extracted runtime module.
+
+**Persistence:** each emitted BB is stored in geological coordinates; Hermeticon movement changes the rendered relative position, not the stored material position. BBs beyond the visible aperture are retained. The upper dome is an emission/visibility region, not a BB containment wall. The lower hemisphere is a physical bowl. The current bowl collision proximity correction can produce repeated wall bounces when the bowl moves; player accepted this lively behavior for now, but it does not yet satisfy strict trajectory-crossing semantics.
+
+**Cloud:** world-positioned inventory volume; upper-dome fragment clipping affects appearance only. The amount remaining is `10,000 - emitted`, and only successful in-dome emission consumes inventory. Current overlap estimate samples the volume; deterministic spawn candidate selection can stall on an outside candidate at partial overlap, so proportional rain under partial intersection is **not verified**.
+
+**Evidence:** player-accepted V31 INSPECT at 33.752 s: 10,000 emitted, 0 remaining, 9,152 resting, 848 airborne, 185 beyond the aperture but retained, 0 `escaped`, finite positions, `conserved=true`. 182 were beyond the lower bowl; 1,588,519 wall bounces recorded. Generic containment and invariants passed, but those are not a physical-bowl penetration witness. Cloud was exhausted when measured. `weather` and `BaubleInspectWeather()` expose conservation, cloud position/overlap/shader status, BB locality and emission budget.
+
+For the present rain-only experiment the tested invariant is `N_cloud_remaining + N_BB_emitted = 10,000`. Resting BBs are a subset of emitted BBs, not a new material reservoir; never double-count them. The earlier gas/whole equation is the proposed general model, **not** evidence those representations exist in V31.
+
+Keep future restitution→absorption ordering as a contract; absorption is not yet implemented. Preserve current accepted movement, camera, cloud rendering, and BB dynamics while investigating material transitions.
+
 ## Purpose and location
 
 Matter means **conserved substance**, not a rendering material. This folder is the single development home for matter behavior while Hermeticon Wanderer is our proving ground. Keep its code independent of Hermeticon's camera, UI, scene-specific geometry and presentation. Hermeticon supplies geometry and environmental conditions. After the behavior earns reuse, lift this folder into Repository Fundamentals; do not preemptively build a framework or duplicate implementations elsewhere.

@@ -2,28 +2,71 @@
 
 ## Source map labels
 
-- The Summerlands
-- The Winter King's Realm
-- To Ice Vale
-- The Gradient
-- The Amaranthine Fields
-- The Quills
-- The Heart of Darkness
-- The Bood Lakes
-- Jade Peak
-- The Mists
-- Downton
-- Silverpass and the Gemgates
-- Cinderglade and the Fell Crater
-- The Whisperwood
-- The Brambles
-- The Rift
-- The Spill
-- Redwall
-- Upton
-- Kindle Tower
-- The Violet Coast
-- The Ocean of Tears
+### The Summerlands
+Yellow-washed area across the upper middle of the drawing, behind and around Upton and the approach to Redwall. **Region only**, not the whole mapped world. Yellow indicates a distinct surface treatment; its material composition is unknown.
+
+### The Winter King's Realm
+Cold blue northwestern area marked by a snowflake and a cluster of sharp blue mountain peaks. Its exact boundary is not drawn. Snow/ice and steep relief are visually supported; underground ice or rock types are not.
+
+### To Ice Vale
+North-pointing arrow beneath the blue northern peaks. **Off-map directional destination**, not a mapped region or confirmed local basin. Keep it as a navigation connection.
+
+### The Gradient
+Curved blue directional arrows crossing the left/northwestern transition between the cold blue zone and the yellow Amaranthine Fields. Indicates a transition or direction, but the underlying gradient quantity (elevation, climate, magic, etc.) is **not specified**.
+
+### The Amaranthine Fields
+Broad yellow and pale-purple patch in the left-middle of the map, textured with many short strokes and enclosed by a loose irregular border. Open-field cover is suggested, but exact plants, soil and material are unspecified.
+
+### The Quills
+Narrow irregular strip of repeated tall purple spike/needle marks between the Amaranthine Fields and the central grey territory. Strong linear relief or a dense spire field is visually indicated; whether spikes are geological, botanical or constructed is unresolved.
+
+### The Heart of Darkness
+Dark central grey-purple territory west of the Whisperwood, containing a prominent red/pink outlined central feature labeled Heart of Darkness and nearby smaller red/pink shapes. Keep the named heart as a landmark inside the broader dark zone; do not assume the pink shapes are lakes without confirmation.
+
+### The Bood Lakes
+Several small, separated pink/red enclosed shapes running through the central dark region below the Heart of Darkness. Name suggests lakes; drawn boundaries suggest multiple discrete basins, but liquid type and hydrological connectivity are not shown. Preserve spelling **Bood**.
+
+### Jade Peak
+Tall green-tipped pointed mountain/rock formation rising from the pale blue Mists cluster in the southwest-middle. Distinct isolated high-relief landmark; green is a visual clue, **not proof of jade mineral deposits**.
+
+### The Mists
+Group of isolated jagged green-and-blue peaks or islets in pale blue cloud/mist bands left of Silverpass. Several separated silhouettes with low blue horizontal wisps. Ambiguous whether water, fog or lowland surrounds them; don't assign sea level yet.
+
+### Downton
+Large blue outlined floating-looking or mist-surrounded structure at lower left, with branching dark internal lines and three tall vertical chimney/tower forms; yellow openings near its base. Treat as a constructed settlement/structure with unusual geometry, **not ordinary ground terrain**. Whether floating is literal is unresolved.
+
+### Silverpass and the Gemgates
+Steep pale grey mountain chain at lower center-left, with several small rectangular blue/yellow/green colored gate-like openings embedded on its slope. Pass through rugged relief and built landmark openings; colors do not establish mineral composition.
+
+### Cinderglade and the Fell Crater
+Lower center-right green coniferous forest surrounding a dark charcoal crater or volcano with bright red/orange/yellow interior and rim, plus a nearby smaller fiery patch. Forest and exposed volcanic/combustion-like feature are directly depicted; lava, ash and thermal materials are **candidate generated interpretations**, not measured geology.
+
+### The Whisperwood
+Twisting, leafless dark branching tree silhouettes in the middle-right transition between the central dark area and green Brambles, under/near the Rift. Sparse gnarled woodland distinct from the dense green Brambles.
+
+### The Brambles
+Large dense green vegetation belt across the middle-right, below the Rift and above Cinderglade, with tangled bush/tree marks and irregular outline. Supports dense vegetation jurisdiction; species, soil and belowground structure unknown.
+
+### The Rift
+Grey-blue rugged enclosed zone just below Redwall, near the coast, with broken/angular interior marks and colored green/red spots. A distinct fractured/rocky region is shown; do not yet assume a deep subterranean fissure or exact vertical profile.
+
+### The Spill
+Blue outlined water-like outflow or inlet immediately east of the Rift, adjacent to the Ocean of Tears. Visible coastal water geometry with curved lobes; source, direction of flow and connection to subsurface water are not proven.
+
+### Redwall
+Long segmented magenta/red fortification crossing the upper central edge of the Rift and separating it from Upton/Summerlands. A built linear boundary with bends and repeated wall segments; should be a feature footprint, not a biome or ridge.
+
+### Upton
+Compact red/pink built settlement within a pale blue rounded enclosure at upper center, north of Redwall. Multiple towers/buildings and a central tall structure; precise building counts and enclosure meaning remain open.
+
+### Kindle Tower
+Tall grey tower with red/orange flame at its top, on a small yellow island in the upper-right blue water. Discrete built landmark; the nearby red label 'The Isle of Fire' names the island but is **not one of the 22 confirmed atlas titles**.
+
+### The Violet Coast
+Blue coastal edge along the right/lower-right of the landmass, beside the Brambles and the Cinderglade approach, bordering the Ocean of Tears. Jagged shoreline and violet/blue shading; not evidence of a specific sediment or mineral.
+
+### The Ocean of Tears
+Expansive pale blue water filling the right side of the map, with blue wave strokes and a coastline running diagonally down toward the Violet Coast. Open-water domain; depth, salinity, currents and seafloor composition unknown.
 
 ## Scope
 

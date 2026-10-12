@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-terrain-rain-v53';
+const BUILD='hermeticon-wanderer-bb-liquid-v54';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -297,114 +297,63 @@ function rainSurfaceNormal(x,y,z){
  return l>.00001?[nx/l,ny/l,nz/l]:[0,1,0];
 }
 
-/* Actual cloud BBs feed conserved surface water on the signed geological field.
-   No demonstration geometry; one water state for the terrain already present. */
-const rainWet=new Map(),rainWetMesh=new T.InstancedMesh(new T.CylinderGeometry(1,1,1,10),new T.MeshPhysicalMaterial({color:0x4eafdb,transparent:true,opacity:.63,roughness:.19,depthWrite:false}),RAIN_N);
-rainWetMesh.userData.worldDomain=true;rainWetMesh.frustumCulled=false;rainWetMesh.count=0;world.add(rainWetMesh);
-const wetDummy=new T.Object3D(),WET_CELL=.24,BB_VOLUME=4*Math.PI*RAIN_R*RAIN_R*RAIN_R/3;
-let wetCollected=0,wetSpilled=0,wetStepMs=0,wetLast=0;
-function wetKey(x,z){return Math.floor(x/WET_CELL)+','+Math.floor(z/WET_CELL)}
-function wetTop(x,z,near){
- // Locate a supporting solid-to-air crossing immediately below the BB.
- let top=null,prev=fieldSample(x,near+.12,z);
- for(let y=near;y>=MINY;y-=.055){const f=fieldSample(x,y,z);if(f>=0&&prev<0){top=y;break}prev=f}
- return top;
-}
+/* BB liquid experiment: existing cloud, existing collision field, no 2D water authority.
+   Settled BBs remain visible and interact locally; total material is unchanged. */
+const BB_VOLUME=4*Math.PI*RAIN_R*RAIN_R*RAIN_R/3;
+let wetCollected=0,wetStepMs=0,wetInteractions=0,wetMoving=0,wetFrame=0;
+const liquidGrid=new Map(),LIQUID_CELL=RAIN_R*3.5;
+const liquidKey=(x,y,z)=>Math.floor(x/LIQUID_CELL)+','+Math.floor(y/LIQUID_CELL)+','+Math.floor(z/LIQUID_CELL);
 function collectRain(i,x,y,z){
- const top=wetTop(x,z,y+.13);if(top===null||Math.abs(top-y)>.28)return false;
- const key=wetKey(x,z),old=rainWet.get(key);
- if(old){old.v+=BB_VOLUME;old.top=Math.max(old.top,top)}
- else rainWet.set(key,{x:(Math.floor(x/WET_CELL)+.5)*WET_CELL,z:(Math.floor(z/WET_CELL)+.5)*WET_CELL,top,v:BB_VOLUME});
- rainRest[i]=2;rainSettled++;wetCollected++;return true;
+ if(rainRest[i])return false;
+ rainRest[i]=1;rainSettled++;wetCollected++;
+ rainX[i]=x;rainY[i]=y;rainZ[i]=z;
+ return true;
 }
-const wetSurfaceGeo=new T.BufferGeometry();
-const wetSurface=new T.Mesh(wetSurfaceGeo,new T.MeshPhysicalMaterial({color:0x3199c6,transparent:true,opacity:.74,roughness:.12,metalness:.08,side:T.DoubleSide,depthWrite:false}));
-wetSurface.userData.worldDomain=true;wetSurface.frustumCulled=false;world.add(wetSurface);
-let wetTriangles=0,wetMaxDepth=0,wetFlowTransfers=0;
 function wetStep(dt){
- const start=performance.now(),area=WET_CELL*WET_CELL;
- // Pairwise donor-limited transfers; each edge visited exactly once.
- // A flat support has no privileged flow direction.
- const transfers=[],outgoing=new Map();
- for(const [key,c] of rainWet){
-  if(c.v<=0)continue;
-  const head=c.top+c.v/area;
-  for(const [dx,dz] of [[1,0],[0,1],[-1,0],[0,-1]]){
-   const x=c.x+dx*WET_CELL,z=c.z+dz*WET_CELL,k=wetKey(x,z),n=rainWet.get(k);
-   const support=n?n.top:wetTop(x,z,c.top+.5);
-   if(support===null||Math.abs(support-c.top)>.85)continue;
-   const other=support+(n?n.v/area:0);
-   const threshold=n&&n.v>0?.001:.008;
-   const diff=head-other-threshold;
-   if(diff<=0)continue;
-   const amount=diff*area*dt*3.2;
-   transfers.push({from:key,to:k,x,z,top:support,amount});
-   outgoing.set(key,(outgoing.get(key)||0)+amount);
-  }
+ const start=performance.now();
+ wetFrame++;liquidGrid.clear();wetMoving=0;
+ for(let i=0;i<rainEmitted;i++){
+  if(rainRest[i]!==1)continue;
+  const key=liquidKey(rainX[i],rainY[i],rainZ[i]);
+  let list=liquidGrid.get(key);if(!list){list=[];liquidGrid.set(key,list)}list.push(i);
  }
- const delta=new Map();
- for(const t of transfers){
-  const donor=rainWet.get(t.from),sum=outgoing.get(t.from);
-  const amount=t.amount*Math.min(1,donor.v/sum);
-  if(amount<=0)continue;
-  delta.set(t.from,(delta.get(t.from)||0)-amount);
-  delta.set(t.to,(delta.get(t.to)||0)+amount);
-  if(!rainWet.has(t.to))rainWet.set(t.to,{x:t.x,z:t.z,top:t.top,v:0});
-  wetFlowTransfers++;
- }
- for(const [k,v] of delta){
-  const c=rainWet.get(k);c.v+=v;
-  if(c.v<0&&c.v>-1e-10)c.v=0;
- }
- // Draw one stitched triangular surface, not individual columns.
- // Surface height is a smoothed free-surface estimate; conserved volume
- // remains authoritative in the cells, never in the rendering geometry.
- if(performance.now()-wetLast>45){
-  const vertices=[],normals=[];
-  wetMaxDepth=0;
-  const depth=c=>Math.max(0,c.v/area);
-  const surface=c=>c.top+depth(c);
-  const smooth=c=>{
-   let h=surface(c),w=1;
-   for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){
-    const n=rainWet.get(wetKey(c.x+dx*WET_CELL,c.z+dz*WET_CELL));
-    if(n&&n.v>0&&Math.abs(n.top-c.top)<.4){h+=surface(n);w++}
+ // Rotating bounded update budget: all settled BBs are material, not cells.
+ // Local cohesion/repulsion and gravity are applied against signed geology.
+ const cap=Math.min(1800,rainEmitted),offset=(wetFrame*cap)%Math.max(1,rainEmitted);
+ for(let k=0;k<cap;k++){
+  const i=(offset+k)%rainEmitted;if(rainRest[i]!==1)continue;
+  const x=rainX[i],y=rainY[i],z=rainZ[i];
+  const ix=Math.floor(x/LIQUID_CELL),iy=Math.floor(y/LIQUID_CELL),iz=Math.floor(z/LIQUID_CELL);
+  let fx=0,fy=0,fz=0,neighbors=0;
+  for(let dz=-1;dz<=1;dz++)for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+   const list=liquidGrid.get((ix+dx)+','+(iy+dy)+','+(iz+dz));if(!list)continue;
+   for(let n=0;n<list.length;n++){
+    const j=list[n];if(j===i)continue;
+    const vx=x-rainX[j],vy=y-rainY[j],vz=z-rainZ[j],d2=vx*vx+vy*vy+vz*vz;
+    if(d2<1e-8||d2>LIQUID_CELL*LIQUID_CELL*2)continue;
+    const d=Math.sqrt(d2),desired=RAIN_R*2.1;
+    const force=d<desired?(desired-d)*24:-(d-desired)*.8;
+    fx+=vx/d*force;fy+=vy/d*force;fz+=vz/d*force;neighbors++;wetInteractions++;
+    if(neighbors>=20)break;
    }
-   return h/w;
-  };
-  const push=(x,y,z)=>{vertices.push(x-wanderX,y+.018,z-wanderZ)};
-  for(const c of rainWet.values()){
-   if(c.v<BB_VOLUME*.12)continue;
-   const h=smooth(c),d=depth(c);
-   wetMaxDepth=Math.max(wetMaxDepth,d);
-   const half=WET_CELL*.5,x=c.x,z=c.z;
-   const corners=[[x-half,z-half],[x+half,z-half],[x+half,z+half],[x-half,z+half]];
-   const hs=corners.map(([px,pz])=>{
-    let sum=h,w=1;
-    for(const ox of [-half,half])for(const oz of [-half,half]){
-     const n=rainWet.get(wetKey(px+ox*.98,pz+oz*.98));
-     if(n&&n.v>0&&Math.abs(n.top-c.top)<.4){sum+=smooth(n);w++}
-    }
-    return sum/w;
-   });
-   for(const [i,j,k] of [[0,1,2],[0,2,3]]){
-    push(corners[i][0],hs[i],corners[i][1]);
-    push(corners[j][0],hs[j],corners[j][1]);
-    push(corners[k][0],hs[k],corners[k][1]);
-   }
+   if(neighbors>=20)break;
   }
-  wetSurfaceGeo.setAttribute('position',new T.Float32BufferAttribute(vertices,3));
-  wetSurfaceGeo.computeVertexNormals();
-  wetSurfaceGeo.computeBoundingSphere();
-  wetTriangles=vertices.length/9;
-  rainWetMesh.count=0;
-  wetLast=performance.now();
+  const h=dt*3.5;
+  rainVX[i]=(rainVX[i]+fx*h)*.88;
+  rainVY[i]=(rainVY[i]+(fy-9.8)*h)*.88;
+  rainVZ[i]=(rainVZ[i]+fz*h)*.88;
+  const nx=x+rainVX[i]*h,ny=y+rainVY[i]*h,nz=z+rainVZ[i]*h;
+  if(fieldSample(nx,ny,nz)>=-RAIN_R){
+   const [ax,ay,az]=rainSurfaceNormal(nx,ny,nz);
+   const vn=rainVX[i]*ax+rainVY[i]*ay+rainVZ[i]*az;
+   if(vn<0){rainVX[i]-=1.15*vn*ax;rainVY[i]-=1.15*vn*ay;rainVZ[i]-=1.15*vn*az}
+  }else{rainX[i]=nx;rainY[i]=ny;rainZ[i]=nz}
+  if(Math.hypot(rainVX[i],rainVY[i],rainVZ[i])>.025)wetMoving++;
  }
  wetStepMs=performance.now()-start;
 }
 function rainHydrologyInspect(){
- let volume=0,wetCells=0;for(const c of rainWet.values())if(c.v>0){volume+=c.v;wetCells++}
- return {source:'existing cloud BBs',terrain:'signed geological field',collectedBBs:wetCollected,wetCells,volume,expected:wetCollected*BB_VOLUME,error:volume-wetCollected*BB_VOLUME,stepMs:wetStepMs,triangles:wetTriangles,maxDepth:wetMaxDepth,flowTransfers:wetFlowTransfers,spillBBs:wetSpilled};
+ return {source:'existing cloud BBs',terrain:'signed geological field',model:'discrete local BB interactions',collectedBBs:wetCollected,volume:wetCollected*BB_VOLUME,expected:wetCollected*BB_VOLUME,error:0,stepMs:wetStepMs,interactions:wetInteractions,movingBBs:wetMoving,materialBBs:rainEmitted,gridAuthority:false};
 }
 function rainStep(dt){
  const gravity=9.8,restitution=.38,tangentDamping=.82;
@@ -474,7 +423,7 @@ function rainStep(dt){
   }
   const [rx,ry,rz]=rainWorld(i);
   rainDummy.position.set(rx,ry,rz);
-  rainDummy.scale.setScalar(rainRest[i]===2?0:(rx*rx+ry*ry+rz*rz<INNER_R*INNER_R?1:0));
+  rainDummy.scale.setScalar(rx*rx+ry*ry+rz*rz<INNER_R*INNER_R?1:0);
   rainDummy.updateMatrix();rainMesh.setMatrixAt(i,rainDummy.matrix);
  }
  rainMesh.count=rainEmitted;rainMesh.instanceMatrix.needsUpdate=true;

@@ -667,10 +667,17 @@ function fugitiveStep(dt){
   if(Math.hypot(walker.x-f.x,walker.z-f.z)<2.5){f.mode='flight';f.time=0}
  }else if(f.mode==='flight'){
   const dx=3-f.x,dz=-4-f.z,d=Math.hypot(dx,dz),step=Math.min(d,4.5*dt);
-  if(d>.01){f.x+=dx/d*step;f.z+=dz/d*step}
-  const surface=walkSurface(f.x,f.z);
-  if(surface===null||d<.25){f.mode='fall';f.vy=5.3;f.vx=(d>.01?dx/d:1)*4.5;f.vz=(d>.01?dz/d:-1)*4.5;f.y+=.1}
-  else f.y=surface+Math.abs(Math.sin(f.time*15))*.12;
+  // Launch from the supported rim, before running into unsupported air.
+  const ux=d>.01?dx/d:1,uz=d>.01?dz/d:-1;
+  const nx=f.x+ux*step,nz=f.z+uz*step;
+  const nextSupport=walkSurface(nx,nz);
+  if(nextSupport===null||d<.28){
+   f.mode='fall';f.vy=2.9;f.vx=ux*1.65;f.vz=uz*1.65;
+   f.y=(walkSurface(f.x,f.z)??f.y)+.12;
+  }else{
+   f.x=nx;f.z=nz;
+   f.y=nextSupport+Math.abs(Math.sin(f.time*15))*.12;
+  }
  }else if(f.mode==='fall'){
   f.vy-=9.8*dt;f.y+=f.vy*dt;f.x+=f.vx*dt;f.z+=f.vz*dt;
   const lx=f.x-wanderX,lz=f.z-wanderZ;

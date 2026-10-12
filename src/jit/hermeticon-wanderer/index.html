@@ -20,7 +20,7 @@
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-oil-v65';
+const BUILD='hermeticon-wanderer-oil-v66';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -298,16 +298,16 @@ function rainSurfaceNormal(x,y,z){
  return l>.00001?[nx/l,ny/l,nz/l]:[0,1,0];
 }
 
-/* V65: sparse boundary lattice, signed-field free spillage and BB remobilization. */
-const gelSpacing=.28,gelYield=4*Math.PI*RAIN_R**3/3*12,gelCellVolume=gelSpacing**3;
-const gelCells=new Map(),gelNodes=[];let gelAbsorbed=0,gelVolume=0,gelEdges=0,gelRejected=0,gelMoves=0,gelLastDraw=0,gelLastFlow=0,gelDetached=0,gelBeads=0,gelReleasedVolume=0;
+/* V66: BB-fed top sheet. Volume is carried by connected surface control nodes, not voxel occupancy. */
+const gelSpacing=.42,gelYield=4*Math.PI*RAIN_R**3/3*12,gelArea=gelSpacing*gelSpacing;
+const gelColumns=new Map(),gelNodes=[];let gelAbsorbed=0,gelVolume=0,gelEdges=0,gelRejected=0,gelMoves=0,gelLastDraw=0,gelLastFlow=0,gelRimNodes=0,gelBeadVolume=0,gelStretch=0;
 const gelGroup=new T.Group();gelGroup.userData.worldDomain=true;world.add(gelGroup);
-const gelNodeMesh=new T.InstancedMesh(new T.IcosahedronGeometry(.055,0),new T.MeshBasicMaterial({color:0x423326}),4096);
+const gelNodeMesh=new T.InstancedMesh(new T.IcosahedronGeometry(.052,0),new T.MeshBasicMaterial({color:0xcaa66b}),2048);
 gelNodeMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);gelNodeMesh.frustumCulled=false;gelGroup.add(gelNodeMesh);
-const gelLineGeo=new T.BufferGeometry(),gelLines=new T.LineSegments(gelLineGeo,new T.LineBasicMaterial({color:0xa67a42,transparent:true,opacity:.78,depthWrite:false}));
+const gelLineGeo=new T.BufferGeometry(),gelLines=new T.LineSegments(gelLineGeo,new T.LineBasicMaterial({color:0xcfae77,transparent:true,opacity:.83,depthWrite:false}));
 gelLines.frustumCulled=false;gelGroup.add(gelLines);
 const gelDummy=new T.Object3D(),gelBedCache=new Map();
-function gelKey(x,y,z){return x+','+y+','+z}
+function gelKey(ix,iz){return ix+','+iz}
 function gelBed(x,z){
  const key=x.toFixed(3)+','+z.toFixed(3);
  if(gelBedCache.has(key))return gelBedCache.get(key);
@@ -315,104 +315,79 @@ function gelBed(x,z){
  for(let y=MAXY-.05;y>=MINY+.05;y-=.05){const v=fieldSample(x,y,z);if(prior<=0&&v>0){hit=y;break}prior=v}
  gelBedCache.set(key,hit);return hit;
 }
-function gelAllowed(ix,iy,iz){
- const x=ix*gelSpacing,y=iy*gelSpacing,z=iz*gelSpacing;
- return fieldSample(x,y,z)<-.035&&x*x+y*y+z*z<(INNER_R-.25)**2;
+function gelCell(ix,iz){
+ const key=gelKey(ix,iz);let c=gelColumns.get(key);
+ if(c)return c;
+ const x=ix*gelSpacing,z=iz*gelSpacing,bed=gelBed(x,z);
+ if(!Number.isFinite(bed)||x*x+bed*bed+z*z>(INNER_R-.5)**2)return null;
+ c={ix,iz,bed,volume:0,bead:0};gelColumns.set(key,c);return c;
 }
-function gelPut(ix,iy,iz,amount){
- if(amount<=0||!gelAllowed(ix,iy,iz))return 0;
- const k=gelKey(ix,iy,iz),v=gelCells.get(k)||0;
- const taken=Math.min(amount,gelCellVolume-v);
- if(taken>1e-10)gelCells.set(k,v+taken);
- return taken;
-}
+function gelHeight(c){return c.bed+c.volume/gelArea}
 function gelCollect(i,x,y,z){
  if(rainRest[i])return false;
- rainRest[i]=2;rainSettled++;gelAbsorbed++;gelVolume+=gelYield;
- const ix=Math.round(x/gelSpacing),iz=Math.round(z/gelSpacing);
- let iy=Math.ceil((gelBed(ix*gelSpacing,iz*gelSpacing)+.06)/gelSpacing);
- if(!Number.isFinite(iy)){gelRejected++;return true}
- let remaining=gelYield;
- for(let j=0;j<96&&remaining>1e-9;j++){
-  // Nearby vacancies before upward stacking. Each cell has a fixed material capacity.
-  const ring=Math.floor(Math.sqrt(j)),angle=j*2.399963229728653;
-  const xx=ix+Math.round(ring*Math.cos(angle)),zz=iz+Math.round(ring*Math.sin(angle));
-  const base=gelBed(xx*gelSpacing,zz*gelSpacing);
-  if(!Number.isFinite(base))continue;
-  const yy=Math.ceil((base+.06)/gelSpacing);
-  for(let h=0;h<5&&remaining>1e-9;h++)remaining-=gelPut(xx,yy+h,zz,remaining);
- }
- if(remaining>1e-9){gelRejected++;gelVolume-=remaining}
+ const ix=Math.round(x/gelSpacing),iz=Math.round(z/gelSpacing),c=gelCell(ix,iz);
+ if(!c){gelRejected++;return false}
+ rainRest[i]=2;rainSettled++;gelAbsorbed++;gelVolume+=gelYield;c.volume+=gelYield;
  return true;
 }
+const gelDirs=[[1,0],[-1,0],[0,1],[0,-1]];
 function gelRelax(){
- // Sequential, capacity-safe transfer; signed field permits movement into open cavities.
- const keys=Array.from(gelCells.keys());
- const dirs=[[0,-1,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]];
- for(const key of keys){
-  let v=gelCells.get(key)||0;if(v<1e-9)continue;
-  const [ix,iy,iz]=key.split(',').map(Number);
-  const options=[];
-  for(const [dx,dy,dz] of dirs){
-   const xx=ix+dx,yy=iy+dy,zz=iz+dz,k=gelKey(xx,yy,zz);
-   if(!gelAllowed(xx,yy,zz))continue;
-   const neighbor=gelCells.get(k)||0;
-   const capacity=Math.max(0,gelCellVolume-neighbor);
-   const drive=dy<0?1.0:Math.max(0,(v-neighbor)/gelCellVolume)*.22;
-   if(capacity>1e-9&&drive>0)options.push({k,capacity,drive});
+ // A sheet equalizes its gravitational head; rim extensions are bounded by connection stretch.
+ const cells=Array.from(gelColumns.values()).filter(c=>c.volume>1e-8);
+ for(const c of cells){
+  let budget=c.volume*.24;
+  const h=gelHeight(c),candidates=[];
+  for(const [dx,dz] of gelDirs){
+   const nx=c.ix+dx,nz=c.iz+dz,x=nx*gelSpacing,z=nz*gelSpacing;
+   const bed=gelBed(x,z);
+   if(!Number.isFinite(bed))continue;
+   const neighbor=gelColumns.get(gelKey(nx,nz));
+   const targetHeight=neighbor?gelHeight(neighbor):bed;
+   const distance=Math.hypot(gelSpacing,h-targetHeight);
+   // New links cannot span arbitrary cliffs: excess accumulates as a bead at the rim.
+   if(!neighbor&&distance>gelSpacing*1.9){c.bead+=Math.min(budget*.12,gelYield);continue}
+   const slope=h-targetHeight;
+   if(slope>.015)candidates.push({nx,nz,slope});
   }
-  options.sort((a,b)=>b.drive-a.drive);
-  let budget=v*.26;
-  for(const o of options){
-   const moved=Math.min(budget,o.capacity,gelCellVolume*o.drive*.22);
-   if(moved<1e-9)continue;
-   v-=moved;budget-=moved;gelCells.set(o.k,(gelCells.get(o.k)||0)+moved);gelMoves++;
-   if(budget<1e-9)break;
+  candidates.sort((a,b)=>b.slope-a.slope);
+  for(const n of candidates){
+   if(budget<1e-8)break;
+   const to=gelCell(n.nx,n.nz);if(!to)continue;
+   const move=Math.min(budget,Math.max(0,n.slope)*gelArea*.16,gelArea*.07);
+   if(move<1e-9)continue;
+   c.volume-=move;to.volume+=move;budget-=move;gelMoves++;
   }
-  if(v<1e-9)gelCells.delete(key);else gelCells.set(key,v);
  }
- // Unsupported, sufficiently heavy edge beads become free-falling BB material.
- let releases=0;
- for(const [key,v] of gelCells){
-  if(releases>=16||v<gelYield*.9)continue;
-  const [ix,iy,iz]=key.split(',').map(Number);
-  const x=ix*gelSpacing,y=iy*gelSpacing,z=iz*gelSpacing;
-  if(fieldSample(x,y-gelSpacing*.85,z)>=-.035)continue;
-  const below=gelCells.get(gelKey(ix,iy-1,iz))||0;
-  if(below>gelCellVolume*.15)continue;
-  // Keep small beads attached; a larger unsupported accumulation pinches off.
-  if(v<gelCellVolume*.38){gelBeads++;continue}
-  let slot=-1;
-  for(let i=0;i<rainEmitted;i++)if(rainRest[i]===2){slot=i;break}
-  if(slot<0)break;
-  const amount=Math.min(v,gelYield);
-  gelCells.set(key,v-amount);
-  rainRest[slot]=0;rainX[slot]=x;rainY[slot]=y;rainZ[slot]=z;
-  rainVX[slot]=0;rainVY[slot]=-.35;rainVZ[slot]=0;
-  gelDetached++;gelReleasedVolume+=amount;gelVolume-=amount;releases++;
- }
+ // Prune empty control points. The mass ledger remains independent.
+ for(const [key,c] of gelColumns)if(c.volume<1e-9)gelColumns.delete(key);
 }
 function gelRebuild(){
- gelNodes.length=0;
+ gelNodes.length=0;gelRimNodes=0;gelBeadVolume=0;gelStretch=0;
  const index=new Map(),lines=[];
- // Only the exposed boundary is eligible; subsample flat regions aggressively.
- for(const [key,v] of gelCells){
-  if(v<gelCellVolume*.14)continue;
-  const [ix,iy,iz]=key.split(',').map(Number);
-  const neighbors=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
-  const exposed=neighbors.filter(([dx,dy,dz])=>(gelCells.get(gelKey(ix+dx,iy+dy,iz+dz))||0)<gelCellVolume*.1).length;
-  if(!exposed)continue;
-  // Thin regular interiors, but retain changes in boundary direction.
-  if(exposed<=2&&(Math.abs(ix*13+iy*7+iz*19)%3!==0))continue;
-  if(gelNodes.length>=4096)break;
-  index.set(key,gelNodes.length);gelNodes.push({ix,iy,iz});
+ const active=Array.from(gelColumns.values()).filter(c=>c.volume>gelYield*.15);
+ for(const c of active){
+  const h=gelHeight(c);
+  let rim=false,curvature=0;
+  for(const [dx,dz] of gelDirs){
+   const n=gelColumns.get(gelKey(c.ix+dx,c.iz+dz));
+   if(!n||n.volume<gelYield*.15){rim=true;continue}
+   curvature=Math.max(curvature,Math.abs(h-gelHeight(n)));
+  }
+  if(rim)gelRimNodes++;
+  gelBeadVolume+=c.bead;
+  // Boundary, curvature, or sparse interior anchor: no dense honeycomb.
+  if(!rim&&curvature<.14&&(Math.abs(c.ix*11+c.iz*17)%5!==0))continue;
+  if(gelNodes.length>=2048)break;
+  index.set(gelKey(c.ix,c.iz),gelNodes.length);gelNodes.push(c);
  }
  for(let i=0;i<gelNodes.length;i++){
-  const n=gelNodes[i],x=n.ix*gelSpacing-wanderX,y=n.iy*gelSpacing,z=n.iz*gelSpacing-wanderZ;
+  const c=gelNodes[i],x=c.ix*gelSpacing-wanderX,y=gelHeight(c),z=c.iz*gelSpacing-wanderZ;
   gelDummy.position.set(x,y,z);gelDummy.updateMatrix();gelNodeMesh.setMatrixAt(i,gelDummy.matrix);
-  for(const [dx,dy,dz] of [[1,0,0],[0,1,0],[0,0,1],[1,1,0],[1,0,1],[0,1,1],[1,-1,0],[0,-1,1]]){
-   const j=index.get(gelKey(n.ix+dx,n.iy+dy,n.iz+dz));if(j===undefined)continue;
-   const m=gelNodes[j];lines.push(x,y,z,m.ix*gelSpacing-wanderX,m.iy*gelSpacing,m.iz*gelSpacing-wanderZ);
+  for(const [dx,dz] of [[1,0],[0,1],[1,1],[-1,1]]){
+   const j=index.get(gelKey(c.ix+dx,c.iz+dz));if(j===undefined)continue;
+   const n=gelNodes[j],ny=gelHeight(n),d=Math.hypot(dx*gelSpacing,dz*gelSpacing,ny-y);
+   if(d>gelSpacing*2){gelStretch++;continue}
+   lines.push(x,y,z,n.ix*gelSpacing-wanderX,ny,n.iz*gelSpacing-wanderZ);
   }
  }
  gelNodeMesh.count=gelNodes.length;gelNodeMesh.instanceMatrix.needsUpdate=true;
@@ -420,7 +395,7 @@ function gelRebuild(){
 }
 function updateGel(){
  const now=performance.now();
- if(now-gelLastFlow>80){gelRelax();gelLastFlow=now}
+ if(now-gelLastFlow>85){gelRelax();gelLastFlow=now}
  if(now-gelLastDraw>160){gelRebuild();gelLastDraw=now}
 }
 function rainStep(dt){
@@ -768,7 +743,7 @@ addEventListener('error',e=>{telemetryErrors.push(String(e.message).slice(0,240)
 addEventListener('unhandledrejection',e=>{telemetryErrors.push(String(e.reason).slice(0,240));if(telemetryErrors.length>4)telemetryErrors.shift()});
 function telemetryEvent(type,detail=''){telemetryEvents.push({t:Math.round(performance.now()),type,detail:String(detail).slice(0,160)});if(telemetryEvents.length>TELEMETRY_LIMIT)telemetryEvents.shift()}
 function inspectWorld(){
- const report={gel:{model:'sparse signed-field oil lattice v65',absorbedBBs:gelAbsorbed,materialVolume:gelVolume,representedVolume:Array.from(gelCells.values()).reduce((a,b)=>a+b,0),nodes:gelNodes.length,edges:gelEdges,cells:gelCells.size,fluxMoves:gelMoves,detachedBBs:gelDetached,edgeBeads:gelBeads,releasedVolume:gelReleasedVolume,rejected:gelRejected,triangles:0},build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
+ const report={gel:{model:'BB-fed sparse top sheet v66',absorbedBBs:gelAbsorbed,materialVolume:gelVolume,representedVolume:Array.from(gelColumns.values()).reduce((a,c)=>a+c.volume,0),nodes:gelNodes.length,edges:gelEdges,columns:gelColumns.size,fluxMoves:gelMoves,rimNodes:gelRimNodes,beadVolume:gelBeadVolume,stretchRejected:gelStretch,rejected:gelRejected,triangles:0},build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
   terrain:{chunks:terrainPerf.totalChunks,fullRebuilds:terrainPerf.fullRebuilds,localRebuilds:terrainPerf.localRebuilds,lastDirtyChunks:terrainPerf.lastDirtyChunks,lastRebuildMs:terrainPerf.lastRebuildMs},
   transfer:quarry?{started:quarry.started,counts:quarry.units.reduce((a,u)=>(a[u.state]++,a),{source:0,transit:0,receiver:0}),capacity:quarry.units.length,recovery:quarry.recoveryStatus??null}:null,
   errors:telemetryErrors.slice(-4),events:telemetryEvents.slice(-24)};

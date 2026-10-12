@@ -184,44 +184,53 @@ Success means we can compare the fields with the original and say **where the wo
 - The previous sections document the original research plan and source interpretations; their statements that the *first* milestone is a 2D atlas are historical. **Current next milestone is material-aware terrain**, followed by hydrology, a living node and relocation testing.
 
 
-## Author's words — design decisions that shaped the experiment
+## Why this world exists — authorial through-lines
 
-The following are **verbatim user statements** from the Wanderer/world-map conversation, retained as design evidence. They are not generated slogans or paraphrases. Quotations preserve the user's wording, including informal phrasing.
+This is a **wider reading of the author's direction**, informed by the Ledger's *Functional Terrain*, *When the Machinery Becomes the World*, and *Hermeticon: The World Beyond the Glass*. The few quotations below are verbatim user instructions from the world-map conversation; the thematic connections are interpretations, **not additional attributed quotations**.
 
-> “One implementation detail matters: we should reuse the existing signed-field surface extractor rather than maintain a second copy of its triangulation logic. That will keep both terrain providers compatible as we add height, substrate and cavern fields.”
+### 1. Worlds, not demonstrations
 
-**Engineering boundary:** one geological field and one extractor, not competing triangulation implementations.
-
-> “I want exactly the same machinery we have now, just no holes punched in it or mountains raised. I want the concept of "new world" to be explainable in 2 words. I want no performance hit. Clear?”
-
-**Minimum world initializer:** same machinery, different field operations, no additional runtime cost.
+The longer trajectory is from individual baubles that demonstrate terrain, transport, weather or matter toward **a world where those systems have consequences for one another**. The Ledger's *When the Machinery Becomes the World* describes terrain → population → material consequence → transport → infrastructure response → observation → persistent history. The current atlas is a geographic substrate for that loop, not a portfolio of isolated scenery.
 
 > “Think of locations more like game of thrones intro map.”
 
-**Scale:** miniature geographic landmarks on a legible continuous map, not full-size environments.
+This is a choice of **representation and scale**, not a rejection of internal complexity. Each place may be a small, expressive, composable world, immediately recognizable without demanding a full-size city.
+
+### 2. Abundance through restraint
 
 > “Remember our purpose is to make a fairy sparse but easily navigable world with a few interesting nodes per viewport. Empty space means finding John's ledger or his linked in is both easy and a choice.”
 
-**Purpose:** sparse discovery, legible links, voluntary interaction.
+> “Flat is good because it means noise and clutter can be localized. Localized density is richness without reduction in navigability.”
 
-> “Right now we're just testing continuous cool ass maps. So make a cool ass sparse geography node map, gimme some surface and some depressions and some holes punched all the way through. And gimme some flat ground in between exciting stuff. You have 22 regions/nodes and rough idea of how they are laid out. Engage!”
+This is a design philosophy, not merely a terrain tuning preference. The world should be **discoverable without becoming compulsory**. Quiet ground grants orientation, readable choices, room for surprise and freedom of movement. A rich node can be dense visually and causally without making every decorative object a collision obstacle. Sparseness protects attention.
 
-**First geographic acceptance target:** continuous relief, depressions, through-holes, 22 anchors, flat intervals.
+### 3. Geography as a cheap description; history as matter
 
-> “Feels just about right. Flat is good because it means noise and clutter can be localized. Localized density is richness without reduction in navigability. That's one issue with Bruno Simon's design. You can get stuck on lamp posts and trees and shit.”
+The Ledger's *Functional Terrain* distinguishes cheap, jurisdictional functions from mutable material state: **functions describe places without histories; fields describe places that have acquired histories**. Independent maps can determine elevation, permission for local expression, biome, hydrology and population without one universal noise function dictating everything. Local functions meet on quiet boundaries, then yield to the persistent world once material consequences begin.
 
-**Density principle:** localized richness must not become navigation friction.
+> “I want exactly the same machinery we have now, just no holes punched in it or mountains raised. I want the concept of "new world" to be explainable in 2 words. I want no performance hit. Clear?”
 
-> “Let's do a single button that is composite default and then allows me to tap through all maps?”
+The instruction is architectural restraint: **new world = flat geology**. Reuse the signed field, the extractor and the accepted interaction system; change initial conditions, not the engine. That simplicity is what makes later worlds cheap to compose.
 
-**Inspection contract:** one discoverable control, composite first, tap through independent field views.
+### 4. The aperture is not the world
 
-> “Provenance population and features look excellently sane. Everything else, too. Biome was my only potential fallout. What's next?”
+The Ledger's *Hermeticon: The World Beyond the Glass* traces the shift from a sphere containing reality to a sphere revealing part of **persistent geology larger than itself**. The instrument can be one thing from outside and a world from within. Its moving boundary governs observation, local manifestation and physical contact—not whether distant terrain or material exists.
 
-**Visual validation:** most field views accepted; biome geometry singled out for correction.
+This explains why continuous maps matter. The user explores **one geographically coherent world** through a bounded, phone-first view. Nodes remain addressable when outside the aperture; the world does not regenerate just because the observer moves.
 
-> “Everything feels coherent. Here comes the juice. What's next?”
+### 5. Composability must eventually survive consequence
 
-**Milestone:** coherent maps are a foundation; next prove material and systemic consequence rather than add visual clutter.
+> “Right now we're just testing continuous cool ass maps.”
 
-These quotes describe **design intent and observed acceptance**, not proof that every semantic system is already implemented. Retain them when changing the world-generation recipe: they explain why sparseness, shared geology, low runtime overhead, and map inspectability are first-class constraints.
+That qualifier matters. Coherent relief and inspectable layers are a **test**, not the destination. The next test is whether map fields govern material identity, water, population and one movable miniature node. A node should inherit the conditions of its location; material should retain provenance after being moved; terrain should keep the history of perturbation. Only then has the cartography become executable.
+
+The larger ambition is **a legible, perturbable, composable world that remembers what happens**, while spending detail only where it matters. Neither exhaustive simulation nor decorative density is the objective.
+
+### Source lineage
+
+- [Ledger: Functional Terrain](https://github.com/bonoj/Ledger/blob/main/notes/functional-terrain.md) — independent jurisdictional functions, quiet boundaries, materialization and history.
+- [Ledger: When the Machinery Becomes the World](https://github.com/bonoj/Ledger/blob/main/notes/2026-10-07-when-the-machinery-becomes-the-world.md) — interdependent systems and persistent consequence.
+- [Ledger: Hermeticon: The World Beyond the Glass](https://github.com/bonoj/Ledger/blob/main/notes/2026-10-12-hermeticon-journey.md) — aperture versus persistent world, observation, material identity and nested scale.
+- [Ledger: A Model's Account of Working With Its Human](https://github.com/bonoj/Ledger/blob/main/notes/2026-10-12-a-models-account-of-working-with-its-human.md) — fidelity to settled decisions, evidence and the role of human visual judgment.
+
+These are interpretive anchors, not a replacement for the original drawing or the user's exact instructions. Preserve the distinction between **quoted authorial intent**, **Ledger synthesis**, and **demonstrated executable behavior**.

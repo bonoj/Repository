@@ -274,6 +274,11 @@ function regenerate(){
   for(const op of operations){if(op.kind!=='through-hole')continue;const d=Math.hypot(X-op.x,Z-op.z);v=Math.min(v,d-op.r)}
   field[id(x,y,z)]=v;fieldMin=Math.min(fieldMin,v);fieldMax=Math.max(fieldMax,v);if(v>0)solidCount++;else voidCount++;
  }
+ extractTerrainMesh();
+ events.push({cycle,seed,triangles,buildMs:+buildMs.toFixed(1),operations:operations.map(o=>({...o}))});if(events.length>5)events.shift();
+}
+function extractTerrainMesh(){
+ const start=performance.now();
  const pos=[],lerp=(p,q,a,b)=>{const t=Math.max(0,Math.min(1,a/(a-b)));return[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t,p[2]+(q[2]-p[2])*t]};
  const tri=(a,b,c,cut=false)=>{const ab=Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]),bc=Math.hypot(b[0]-c[0],b[1]-c[1],b[2]-c[2]),ca=Math.hypot(c[0]-a[0],c[1]-a[1],c[2]-a[2]);if(Math.min(ab,bc,ca)<.00001){scoopEyes.degenerateTriangles++;return}pos.push(...a,...b,...c);if(cut)scoopEyes.cutTriangles++;else scoopEyes.geologyTriangles++};
   scoopEyes.cutTriangles=0;scoopEyes.geologyTriangles=0;scoopEyes.degenerateTriangles=0;
@@ -301,7 +306,7 @@ function regenerate(){
  const offsetError=uniformOffset?Math.hypot(uniformOffset.x-wanderX,uniformOffset.y,uniformOffset.z-wanderZ):null;
  geometryEyes={terrainBuildCount,residentWorld:true,insideVertices:inside,outsideVertices:outside,nearApertureVertices:nearBoundary,minVertexRadius:round(minDistance,3),maxVertexRadius:round(maxDistance,3),cellSize:[round(cellX,3),round(cellZ,3)],effectiveExtractionMargin:round(effectiveMargin,3),nearestFieldEdge:round(nearestFieldEdge,3),fieldEdgeClearance:round(nearestFieldEdge-apertureR,3),shaderOffsetError:offsetError===null?null:round(offsetError,5),worldTranslation:[-wanderX,0,-wanderZ],expectedUniformOffset:[wanderX,0,wanderZ],apertureRadius:apertureR};
 
- events.push({cycle,seed,triangles,buildMs:+buildMs.toFixed(1),operations:operations.map(o=>({...o}))});if(events.length>5)events.shift();
+
 }
 if(terrainProvider!=='empty')regenerate();
 else {

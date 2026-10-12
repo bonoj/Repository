@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-curved-biomes-v36';
+const BUILD='hermeticon-wanderer-material-columns-v37';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -345,6 +345,27 @@ function compileAtlas(){
  atlas.compiled=true;
 }
 compileAtlas();
+// V37: provisional material columns. Material identity is independent of display color.
+// The atlas supplies surface parent material; depth selects cover, subsoil or bedrock.
+// These are generated assignments, not minerals inferred from the source drawing.
+const MATERIALS=[
+ {id:0,name:'neutral bedrock',color:0x747b7d},
+ {id:1,name:'warm soil',color:0xb29b75},
+ {id:2,name:'basin sediment',color:0x8b7869},
+ {id:3,name:'cold regolith',color:0xa9bdc2},
+ {id:4,name:'weathered subsoil',color:0x766958},
+ {id:5,name:'deep bedrock',color:0x505965}
+];
+function materialAt(X,Y,Z){
+ if(!atlas)return null;
+ const {fields:f,resolution:[w,h],halfExtent:half}=atlas;
+ const ix=Math.max(0,Math.min(w-1,Math.round((X/half+1)*(w-1)/2)));
+ const iz=Math.max(0,Math.min(h-1,Math.round((Z/half+1)*(h-1)/2)));
+ const i=ix+w*iz,depth=f.elevation[i]-Y;
+ const surface=f.substrate[i]===3?3:f.substrate[i]===2?2:f.substrate[i]===1?1:0;
+ const id=depth<0.28?surface:depth<0.8?4:5;
+ return {id,depth,sourceSubstrate:f.substrate[i],material:MATERIALS[id]};
+}
 const mapModes=['COMPOSITE','ELEVATION','SUBSTRATE','BIOME','HYDROLOGY','PROVENANCE','STRATA','POPULATION','FEATURES'];
 let mapModeIndex=0;
 function paintMapLens(){
@@ -359,11 +380,11 @@ function paintMapLens(){
   const j=ix+w*iz,biome=f.jurisdiction[j],wet=f.hydrology[j]>0,feature=f.features[j]>0;
   const ice=biome===2,summer=biome===1;
   if(mode==='ELEVATION'){const e=Math.max(0,Math.min(1,(f.elevation[j]+1.5)/5));v.setRGB(e,e,e)}
-  else if(mode==='SUBSTRATE')v.set([0x766b5b,0xb28b68,0x776e56,0xabb5b8][f.substrate[j]]);
+  else if(mode==='SUBSTRATE')v.set(materialAt(X,Y,Z).material.color);
   else if(mode==='BIOME')v.set([0x777970,0xb1aa63,0x8dbbc9,0x979385,0x9d8675][biome]);
   else if(mode==='HYDROLOGY')v.set(wet?0x3c94bc:0x333b40);
   else if(mode==='PROVENANCE')v.set(f.provenance[j]?0xb69a60:0x3c4244);
-  else if(mode==='STRATA')v.set(f.strata[j]===2?0xc9a16b:Y<0?0x5a6573:0xa2a5a0);
+  else if(mode==='STRATA')v.set(materialAt(X,Y,Z).material.color);
   else if(mode==='POPULATION')v.set(f.population[j]?0x5b9d69:0x343c35);
   else if(mode==='FEATURES')v.set(feature?0xe3b66a:0x33363b);
   else v.set(ice?0xa6bdc2:summer?0xa29b69:0x927963).lerp(base.set(wet?0x63899a:f.strata[j]===2?0x564c62:f.population[j]?0xb49a72:0x927963),feature?.45:0);

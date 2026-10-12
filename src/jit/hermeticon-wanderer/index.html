@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-bb-liquid-v54';
+const BUILD='hermeticon-wanderer-bb-liquid-v55';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -300,7 +300,7 @@ function rainSurfaceNormal(x,y,z){
 /* BB liquid experiment: existing cloud, existing collision field, no 2D water authority.
    Settled BBs remain visible and interact locally; total material is unchanged. */
 const BB_VOLUME=4*Math.PI*RAIN_R*RAIN_R*RAIN_R/3;
-let wetCollected=0,wetStepMs=0,wetInteractions=0,wetMoving=0,wetFrame=0;
+let wetCollected=0,wetStepMs=0,wetInteractions=0,wetMoving=0,wetFrame=0,wetDisplacement=0,wetRejected=0,wetAccepted=0;
 const liquidGrid=new Map(),LIQUID_CELL=RAIN_R*3.5;
 const liquidKey=(x,y,z)=>Math.floor(x/LIQUID_CELL)+','+Math.floor(y/LIQUID_CELL)+','+Math.floor(z/LIQUID_CELL);
 function collectRain(i,x,y,z){
@@ -311,7 +311,7 @@ function collectRain(i,x,y,z){
 }
 function wetStep(dt){
  const start=performance.now();
- wetFrame++;liquidGrid.clear();wetMoving=0;
+ wetFrame++;liquidGrid.clear();wetMoving=0;wetDisplacement=0;wetRejected=0;wetAccepted=0;
  for(let i=0;i<rainEmitted;i++){
   if(rainRest[i]!==1)continue;
   const key=liquidKey(rainX[i],rainY[i],rainZ[i]);
@@ -338,7 +338,7 @@ function wetStep(dt){
    }
    if(neighbors>=20)break;
   }
-  const h=dt*3.5;
+  const h=dt;
   rainVX[i]=(rainVX[i]+fx*h)*.88;
   rainVY[i]=(rainVY[i]+(fy-9.8)*h)*.88;
   rainVZ[i]=(rainVZ[i]+fz*h)*.88;
@@ -347,13 +347,16 @@ function wetStep(dt){
    const [ax,ay,az]=rainSurfaceNormal(nx,ny,nz);
    const vn=rainVX[i]*ax+rainVY[i]*ay+rainVZ[i]*az;
    if(vn<0){rainVX[i]-=1.15*vn*ax;rainVY[i]-=1.15*vn*ay;rainVZ[i]-=1.15*vn*az}
-  }else{rainX[i]=nx;rainY[i]=ny;rainZ[i]=nz}
+   let px=nx,py=ny,pz=nz;
+   for(let push=0;push<10&&fieldSample(px,py,pz)>=-RAIN_R;push++){px+=ax*.025;py+=ay*.025;pz+=az*.025}
+   if(fieldSample(px,py,pz)<-RAIN_R){rainX[i]=px;rainY[i]=py;rainZ[i]=pz;wetAccepted++;wetDisplacement+=Math.hypot(px-x,py-y,pz-z)}else wetRejected++;
+  }else{rainX[i]=nx;rainY[i]=ny;rainZ[i]=nz;wetAccepted++;wetDisplacement+=Math.hypot(nx-x,ny-y,nz-z)}
   if(Math.hypot(rainVX[i],rainVY[i],rainVZ[i])>.025)wetMoving++;
  }
  wetStepMs=performance.now()-start;
 }
 function rainHydrologyInspect(){
- return {source:'existing cloud BBs',terrain:'signed geological field',model:'discrete local BB interactions',collectedBBs:wetCollected,volume:wetCollected*BB_VOLUME,expected:wetCollected*BB_VOLUME,error:0,stepMs:wetStepMs,interactions:wetInteractions,movingBBs:wetMoving,materialBBs:rainEmitted,gridAuthority:false};
+ return {source:'existing cloud BBs',terrain:'signed geological field',model:'discrete local BB interactions',collectedBBs:wetCollected,volume:wetCollected*BB_VOLUME,expected:wetCollected*BB_VOLUME,error:0,stepMs:wetStepMs,interactions:wetInteractions,movingBBs:wetMoving,displacement:wetDisplacement,acceptedMoves:wetAccepted,rejectedMoves:wetRejected,materialBBs:rainEmitted,gridAuthority:false};
 }
 function rainStep(dt){
  const gravity=9.8,restitution=.38,tangentDamping=.82;
@@ -568,8 +571,8 @@ if(quarry){
 
 function simulate(dt){
  if(quarry){quarry.step(dt);quarry.sync()}
- rainStep(dt);
  wetStep(dt);
+ rainStep(dt);
  if(walker.target){
   const dx=walker.target.x-walker.x,dz=walker.target.z-walker.z,d=Math.hypot(dx,dz);
   if(d<=.07){walker.x=walker.target.x;walker.z=walker.target.z;walker.target=null}

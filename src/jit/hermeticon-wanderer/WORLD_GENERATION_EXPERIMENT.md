@@ -151,34 +151,46 @@ Success means we can compare the fields with the original and say **where the wo
 
 ---
 
-## Progress checkpoint — 2026-10-12 (Hermeticon Wanderer V36)
+## Current state — 2026-10-12 (Hermeticon Wanderer V39)
 
-**Working experiment:** `src/jit/hermeticon-wanderer/index.html?terrain=authored-v1` (source file is the same for all terrain providers). Published test: https://bonoj.github.io/jit/hermeticon-wanderer/?terrain=authored-v1 . Build label `hermeticon-wanderer-curved-biomes-v36`. Preserve the accepted V31 provider (`legacy-v31`) and explicit `empty` provider.
+**Executable:** `src/jit/hermeticon-wanderer/index.html`, authored provider `?terrain=authored-v1`. Reported runtime build: `hermeticon-wanderer-geological-source-v39`. The report below is a user-supplied runtime INSPECT snapshot, not an independent source, deployment or browser verification. `legacy-v31` and `empty` remain separate terrain providers; do not change accepted V31 behavior to advance the authored experiment.
 
-### What has actually been demonstrated
+### Established progression
 
-- **New world = flat geology.** The authored provider uses the *same* signed-density field and tetrahedral surface extractor as V31. Its geological operations, not its terrain machinery, determine the shape. No duplicate triangulator or per-frame geological rebuild.
-- **Sparse atlas geology (V32).** A deliberately provisional arrangement of 22 named nodes adds localized raises, depressions and three through-holes to the slab, leaving broad flat navigable corridors. These are experimental node placements, **not pixel-accurate traced positions** or verified map topology. Original names/interpretations above remain the geographic evidence.
-- **One map button (V33/V34).** Default **COMPOSITE** cycles through **ELEVATION, SUBSTRATE, BIOME, HYDROLOGY, PROVENANCE, STRATA, POPULATION, FEATURES** and back. It recolors the existing mesh; no additional map geometry or runtime render pipeline. V34 corrected a parse error introduced when map-lens declarations interrupted an `if/else` pair.
-- **Aligned runtime fields (V35).** Eight actual 85 × 85 arrays (plus jurisdiction and gradient weight) are compiled once from the provisional nodes and broad region rules. The button samples these fields rather than recomputing independent display heuristics. Fields are currently *simplified visualization and jurisdiction values*: provenance is **not** yet material lineage, hydrology is **not** conserved water, population is **not** instantiated inhabitants, and features are **not** detailed geometry. Elevation map is a simplified upper-surface estimate, not a full volumetric material model.
-- **Curved biomes (V36).** Deterministic, smooth geographic boundary functions replace the conspicuous square north/biome division. A finite-width Gradient lies between Summerlands and Winter King's Realm. These curves are **generated placeholders**, not traced boundaries from the original drawing. No noise-heavy terrain was added.
-- **Visual acceptance.** User reports that the sparse relief feels about right, all maps are legible, and V36 feels coherent. The V35 biome square was the sole concern; V36 addressed it. In particular, the **provenance, population and features** views read as sane. This is visual feedback, not a claim of physical or semantic validation.
+- **V32–V36 — geographic substrate.** A sparse provisional 22-node atlas compiles into the same persistent 3D signed-density geology and tetrahedral extractor used by Wanderer. Nine map lenses inspect the aligned fields. Curved Summerlands/Gradient/Winter King's Realm boundaries replaced square partitions. The user confirmed the geography and strata read coherently. The nodes and boundaries are generated approximations, **not** traced positions from the hand drawing.
+- **V37 — material columns.** Generated surface/subsoil/bedrock identities distinguish actual material lookup from map-lens colors; exposed cuts reveal layered geology. These assignments are provisional and do not establish real-world ore composition or full provenance.
+- **V38 — bounded material circuit.** Excavation, source/transit/receiver accounting and discrete transported units became a testable circuit. Material identity is carried rather than inferred from its destination's color.
+- **V39 — geology as source.** Excavation now removes positive samples from the authoritative signed field and supplies the material circuit. The user-provided runtime report records 49,584 initial solid samples, 49,488 after excavation, 96 removed samples, 96 emitted and 96 delivered to the receiver; source and transit are zero. `terrainDeltaSamples=96`, `geologyBalanced=true`, `balanced=true`. The terrain mesh changed from 119,612 to 120,072 triangles after excavation. The reported run is ~58.14 FPS on a 384 × 694 mobile viewport. This is **sample-count conservation**, not proof of continuous-volume conservation or volume-equivalent mesh change.
+- **Visual inspection of V39.** The user supplied a screenshot showing readable horizontal strata and excavated faces. The transfer apparatus is visually distinct from geology; the visible material volume and the source/receiver relationship are not yet spatially self-evident. Do not equate a passing ledger with a visually convincing excavation or deposition.
+- **Existing Wanderer systems preserved in the V39 report.** The moving GPU aperture, resident world geology, weather and 10,000 rain BBs remain operational. Weather and rain conservation pass; no containment or simulation invariant failures were reported. This does not prove material ownership for rain: the report lists all 10,000 as unowned.
 
-### World-design constraint learned
+### Known instrumentation issue
 
-**Sparse by design; complexity clusters, navigation flows.** Think of the *Game of Thrones* opening map: recognizable miniature geographic nodes on one continuous sculptural substrate, not a vast walkable simulation of full-size settlements. Aim for a few interesting nodes per viewport, broad quiet intervals and unobstructed paths. Visual richness can concentrate within a node without giving every tree, railing or lamp post collision authority. Empty space makes finding John's Ledger, LinkedIn or a project easy while visiting remains a deliberate choice. Avoid global procedural clutter and noise merely to make the world look populated.
+The V39 INSPECT snapshot reports `GPU_APERTURE_WITNESS_FAIL`, while the independent scene projection witness passes and the sampled radial edge transitions from visible at radius 9.71 to discarded at 9.73 around the intended 9.72 aperture. The radial witness marks radius 0 as the first discarded sample because that pixel is black; its monotonicity assumption is therefore unsound for a scene with empty or unlit center pixels. **Repair the witness's visibility criterion; do not alter a working aperture shader merely to satisfy a defective test.** The exact failure mechanism still needs code inspection and verification.
 
-### Next sequence — maps become consequential
+### Immediate next experiment — V40: deposition and recovery
 
-1. **Material-aware terrain (next).** Give substrate and strata meaningful, inspectable material identities and vertical exposure rules. Use the *existing* mesh/field and its atlas sampling; no duplicate geometry or geology engine. Differentiate surface treatment from actual material provenance. Verify a top surface and a cut/underside can report their material identities, not merely colors.
-2. **Localized physical hydrology.** Integrate the already explored water/material-bead machinery only where selected authored basins call for it. Preserve water inventory and distinguish wet-map hints from real fluid occupancy. Do not claim water is running until verified. No universal ocean simulation just because a field is blue.
-3. **One living miniature node.** Choose a single recognizable location and build a small composable structure or environmental system with locally concentrated detail. It should inherit substrate, climate/biome and other relevant map fields, while leaving surrounding travel lanes clear.
-4. **Move the node.** Reposition the *same* node into a different geographic jurisdiction and test whether its behavior and appearance adapt from field data without bespoke scene rewrites. This is the composability proof, not just a prettier scene.
+**Close the loop inside the same authoritative geology.**
 
-**Hold constant while testing:** V31 navigation/camera ownership, aperture clipping, persistent world coordinates, BB/weather behavior, the original signed-volume extraction, sparse 22-node geography, flat corridors and the one-button map inspection loop. Keep build identity current on each executable change; verify source, publication and live delivery independently.
+1. Excavate a bounded sample set at geological location A, preserving material identity and source lineage.
+2. Move those units through the existing source → transit → receiver circuit.
+3. Deposit the delivered units at location B as **persistent solid samples in the existing signed field**, not decorative particles or a second terrain system.
+4. Re-excavate that deposited matter. Confirm that it yields the material that arrived, rather than freshly generated native geology.
+5. Verify the round-trip ledger: material counts and identities across geology A, circuit, geology B and the return circuit; no silent creation, loss or conversion. Inspect terrain geometry before/after each mutation and confirm edits survive moving the Hermeticon aperture away and back.
 
-### Open work and honest boundaries
+**Keep V40 bounded.** Reuse the existing signed-field mutation, material identities, circuit and extraction. Do not build a new particle solver, ore-node entity framework, fabricator, hydrology engine, or elaborate mining machinery. Fix the aperture witness independently. Continue to label the accounting unit **discrete signed-field samples**, not physical cubic meters; continuous volume reconciliation is subsequent work.
 
-- The original hand-drawn image still needs reproducible registration and faithful tracing. Current node coordinates, relief stamps, biome front, material assignments and most inferred semantics are provisional. In particular, **To Ice Vale is an off-map connection**, and Redwall is a built wall, not a ridge; do not mistake provisional geology stamps for literal feature types.
-- The eight visual layers do not yet implement full authorship/confidence metadata, conserved material lineage, water flow, underground strata physics or a general image-to-world importer. The earlier eight-field conceptual table includes confidence/authorship; the current runtime's eight displayed lenses are not an exact implementation of that full semantic specification.
-- The previous sections document the original research plan and source interpretations; their statements that the *first* milestone is a 2D atlas are historical. **Current next milestone is material-aware terrain**, followed by hydrology, a living node and relocation testing.
+### Direction after V40
+
+- **Material volume and shape.** Establish a consistent physical measure relating field samples, cell dimensions, transported quantity and resulting terrain volume. Test excavation/deposition against that measure; avoid promising visual conservation based solely on sample counts.
+- **Geologically situated deposits.** Put veins or other material domains *inside* the common geological field, with explicit generated origin and lineage. Mining should expose and follow deposits through the terrain rather than destroy isolated resource props. The original drawing does **not** certify any specific ore deposit.
+- **Localized hydrology.** Water occupies actual basins and excavated/deposited terrain, responds to changed boundaries, and preserves its own material accounting. Use existing water and bead work as references; do not claim water is already physically coupled to authored geology.
+- **A consequential miniature node.** Concentrate detail in one place that inherits local substrate, water and climate/biome jurisdiction. Later move the same node to another jurisdiction and test adaptation without bespoke scene rewrites.
+
+The design target is **Astroneer-like sculptability with consequences carried by a shared world**, including the material/resource stakes of Valheim-style excavation, without requiring either game's machinery or nuisance combat. A trench redirecting water, a deposit exposing new material, or a berm changing access should arise from shared state, not hand-authored reactions.
+
+### Boundaries still open
+
+The hand-drawn source image has not been registered as a reproducible pixel-to-world asset here; source labels and author clarifications above remain authoritative. The current 22 nodes, relief, biome fronts and material assignments are provisional. The atlas's visual `PROVENANCE`, `HYDROLOGY` and `POPULATION` lenses do not by themselves implement complete lineage, physical water or inhabitants. Source geography and generated interpretations must remain distinguishable.
+
+**Continuity rule:** The world owns its geology and material history; the Hermeticon is a mobile local witness, not a container for all world matter. Preserve accepted navigation, aperture, weather, sparse corridors and one-button atlas inspection while increasing physical consequence. Do not confuse source commit, published mirror, Pages deployment and actual live browser evidence.

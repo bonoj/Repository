@@ -35,6 +35,21 @@ A surface/mesh owns **restitution** and **absorption** properties. Resolve conta
 
 The environment governs what happens after the impact response; it is not a secret second water engine. Material properties (including cohesion) may participate, but should not replace the mesh's contact contract. Exact absorption criteria and interactions remain to be worked out.
 
+## Gravity, impact, and restitution — working vocabulary
+
+For the first hydrology increment, Wanderer's existing terrain is treated as one stationary contact material (rock/dirt/sand distinctions are not yet modeled). A cube cloud rains discrete water BBs into Wanderer's actual geological world. No separate experiment world or hydrology machinery is required.
+
+- **Gravity** is environmental acceleration; it changes a BB's velocity over time.
+- **Velocity** is the BB's motion, with direction and speed. Its component relative to the contact surface normal governs normal impact.
+- **Impact** is a contact event with incoming relative velocity. Physical contact force/impulse exists, but a simple rigid bounce need not explicitly solve force over contact time.
+- **Restitution** is a property of the contacted surface (later potentially combined with material properties). It determines how much normal relative speed is recovered in the rebound.
+- **Bounce** is the resulting outgoing velocity; gravity continues accelerating the BB afterward.
+- **Absorption** is a separate mesh-owned contact consequence, evaluated **after** restitution, never before.
+
+For a stationary surface with unit outward normal **n**, incoming velocity **v**, and coefficient of restitution `e`, the normal velocity component obeys `v_out,n = -e * v_in,n` for an approaching BB (`v_in · n < 0`). Equivalently, with tangential velocity initially preserved: `v_out = v_in - (1 + e) * (v_in · n) * n`. `e = 0` means no normal rebound, `e = 1` an ideal elastic normal rebound, and `e = 0.5` half the incoming normal speed. Slopes redirect bounce through their surface normals. Friction/tangential dissipation, resting contacts, numerical collision stability, and absorption rules remain separate questions.
+
+**Resolution order:** gravity updates motion → contact detects incoming impact → restitution resolves rebound → absorption is considered → remaining discrete matter continues under environmental forces. This is our shared working vocabulary, not a claim that Wanderer already implements the collision response.
+
 ## Flat surfaces and cohesion
 
 A single bearing on sufficiently flat terrain can settle without a downhill direction. For water, a pile of static bearings is not yet a satisfactory account of pooling and flow.

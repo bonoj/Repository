@@ -20,7 +20,7 @@
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 import {createWater} from './snowglobe-liquid.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-snowglobe-v61';
+const BUILD='hermeticon-wanderer-snowglobe-v62';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -322,7 +322,7 @@ const liquidTerrain={
 };
 const snowglobeWater=createWater({THREE:T,owner:liquidOwner,terrain:liquidTerrain});
 snowglobeWater.setEnabled(true);
-const liquidBBVolume=4*Math.PI*RAIN_R**3/3;
+const liquidBBVolume=4*Math.PI*RAIN_R**3/3*12; // BB-to-liquid material yield; solver unchanged.
 let liquidCollected=0,liquidRejected=0,liquidLastUpdate=0;
 function collectIntoSnowglobe(i,x,y,z){
  if(rainRest[i])return false;

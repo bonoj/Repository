@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-mvw-v58';
+const BUILD='hermeticon-wanderer-mvw-v59';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -299,7 +299,7 @@ function rainSurfaceNormal(x,y,z){
 
 /* MVW: bounded, irregular integrated sheet. Existing cloud BBs supply volume. */
 const BB_VOLUME=12*4*Math.PI*RAIN_R**3/3,SW=49,SS=.19;
-const bed=new Float32Array(SW*SW),mask=new Float32Array(SW*SW);
+const bed=new Float32Array(SW*SW),mask=new Float32Array(SW*SW),valid=new Uint8Array(SW*SW);
 const sheetGeo=new T.BufferGeometry(),sheet=new T.Mesh(sheetGeo,new T.MeshPhysicalMaterial({color:0x329ac8,transparent:true,opacity:.57,roughness:.08,metalness:.12,depthWrite:false,side:T.DoubleSide}));
 sheet.userData.worldDomain=true;sheet.frustumCulled=false;world.add(sheet);
 let wetCollected=0,wetStepMs=0,sheetHeight=0,sheetTriangles=0,sheetVolume=0,sheetReady=false,lastSheet=0;
@@ -310,9 +310,9 @@ function initSheet(){
   const x=sx(i),z=sx(j),a=Math.atan2(z,x),r=Math.hypot(x,z);
   const edge=3+.42*Math.sin(3*a+.5)+.24*Math.cos(5*a);
   const t=Math.max(0,Math.min(1,(edge-r)/.4));mask[si(i,j)]=t*t*(3-2*t);
-  let prev=fieldSample(x,2.4,z),top=MINY;
-  for(let y=2.33;y>=MINY;y-=.07){const f=fieldSample(x,y,z);if(f>=0&&prev<0){top=y;break}prev=f}
-  bed[si(i,j)]=top;
+  let prev=fieldSample(x,MAXY+1,z),top=null;
+  for(let y=MAXY+.93;y>=MINY;y-=.07){const f=fieldSample(x,y,z);if(f>=0&&prev<0){top=y;break}prev=f}
+  if(top!==null){bed[si(i,j)]=top;valid[si(i,j)]=1;}else{bed[si(i,j)]=MAXY+10;mask[si(i,j)]=0;}
  }
  sheetReady=true;
 }
@@ -325,7 +325,7 @@ function wetStep(dt){
  let lo=MINY,hi=MAXY+4;
  for(let k=0;k<19;k++){
   const h=(lo+hi)/2;let v=0;
-  for(let q=0;q<bed.length;q++)v+=Math.max(0,h-bed[q])*mask[q]*SS*SS;
+  for(let q=0;q<bed.length;q++)if(valid[q])v+=Math.max(0,h-bed[q])*mask[q]*SS*SS;
   if(v>sheetVolume)hi=h;else lo=h;
  }
  sheetHeight=(lo+hi)/2;
@@ -348,10 +348,10 @@ function wetStep(dt){
   for(let j=0;j<SW-1;j++)for(let i=0;i<SW-1;i++){
    const corners=[[i,j],[i+1,j],[i+1,j+1],[i,j+1]];
    const p=corners.map(([u,v])=>{
-    const q=si(u,v),d=Math.max(0,sheetHeight-bed[q])*mask[q];
-    return [sx(u),bed[q]+d,sx(v),d];
+    const q=si(u,v),d=valid[q]?Math.max(0,sheetHeight-bed[q])*mask[q]:0;
+    return [sx(u),valid[q]?bed[q]+d:sheetHeight,sx(v),d,valid[q]];
    });
-   clipTriangle([p[0],p[1],p[2]]);clipTriangle([p[0],p[2],p[3]]);
+   if(p[0][4]&&p[1][4]&&p[2][4])clipTriangle([p[0],p[1],p[2]]);if(p[0][4]&&p[2][4]&&p[3][4])clipTriangle([p[0],p[2],p[3]]);
   }
   sheetGeo.setAttribute('position',new T.Float32BufferAttribute(verts,3));
   sheetGeo.computeVertexNormals();sheetGeo.computeBoundingSphere();

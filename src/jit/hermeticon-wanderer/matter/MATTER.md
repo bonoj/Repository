@@ -9,7 +9,7 @@ This section supersedes the older claim that no Wanderer collision behavior is i
 
 **Cloud:** world-positioned inventory volume; upper-dome fragment clipping affects appearance only. The amount remaining is `10,000 - emitted`, and only successful in-dome emission consumes inventory. Current overlap estimate samples the volume; deterministic spawn candidate selection can stall on an outside candidate at partial overlap, so proportional rain under partial intersection is **not verified**.
 
-**Evidence:** player-accepted V31 INSPECT at 33.752 s: 10,000 emitted, 0 remaining, 9,152 resting, 848 airborne, 185 beyond the aperture but retained, 0 `escaped`, finite positions, `conserved=true`. 182 were beyond the lower bowl; 1,588,519 wall bounces recorded. Generic containment and invariants passed, but those are not a physical-bowl penetration witness. Cloud was exhausted when measured. `weather` and `BaubleInspectWeather()` expose conservation, cloud position/overlap/shader status, BB locality and emission budget.
+**Historical evidence (V31; not current INSPECT schema):** player-accepted V31 INSPECT at 33.752 s: 10,000 emitted, 0 remaining, 9,152 resting, 848 airborne, 185 beyond the aperture but retained, 0 `escaped`, finite positions, `conserved=true`. 182 were beyond the lower bowl; 1,588,519 wall bounces recorded. Generic containment and invariants passed, but those are not a physical-bowl penetration witness. Cloud was exhausted when measured. At V31, `weather` and `BaubleInspectWeather()` exposed conservation, cloud position/overlap/shader status, BB locality and emission budget. Those interfaces are not the V48 inspection contract.
 
 For the present rain-only experiment the tested invariant is `N_cloud_remaining + N_BB_emitted = 10,000`. Resting BBs are a subset of emitted BBs, not a new material reservoir; never double-count them. The earlier gas/whole equation is the proposed general model, **not** evidence those representations exist in V31.
 
@@ -106,3 +106,8 @@ Water is the first test material. Other liquids should eventually share transpor
 - What are the simplest diagnostics for material totals, transfers, and per-representation inventory?
 
 The first success is **legible, conserved material movement**, not attractive water.
+
+
+## V48 observer boundary and material evidence (2026-10-12)
+
+The normal V48 observer reports bounded counters, events, and errors; it does not run the former containment/invariant verifiers, GPU/scene witnesses, or per-rebuild terrain-vertex diagnostic scan. Player-observed V48 report at 24.367 s: 96/96 transfer units received, zero remaining source/transit, 97 local terrain rebuilds, last rebuild 3.4 ms, no reported errors. This establishes reported BB unit delivery, **not** an independent signed-field conservation proof, material identity/lineage proof, or successful re-excavation. Preserve material conservation as a world contract and validate the geology A → BB → geology B → BB re-excavation round trip in an explicit experiment, never by adding expensive automatic runtime observers.

@@ -20,7 +20,7 @@
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-material-v68';
+const BUILD='hermeticon-wanderer-material-v69';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -354,25 +354,26 @@ function gelRelax(){
    // Only boundary nodes can spill; look outward and then down through actual 3D air.
    if((!neighbor||neighbor.volume<gelYield*.15)&&gelAirPath(c,dx,dz)){
     gelAirEdges++;
-    if(c.volume>=gelYield*1.6&&releasesThisStep<24){
+    // Discharge several BBs per valid segment per relaxation, subject to actual supply.
+    const available=Math.max(0,Math.floor((c.volume-gelYield*.6)/gelYield));
+    const burst=Math.min(8,available,Math.max(0,96-releasesThisStep));
+    for(let k=0;k<burst;k++){
      let slot=-1;
      for(let j=0;j<rainEmitted;j++)if(rainRest[j]===2){slot=j;break}
-     if(slot>=0){
-      c.volume-=gelYield;gelVolume-=gelYield;gelReleasedVolume+=gelYield;
-      // Each exposed grid face is a boundary segment. Sample its tangent erratically,
-      // retaining the same BB mass and only modestly varying outward momentum.
-      const seed=gelReleased+1+c.ix*7919+c.iz*104729+dx*313+dz*619;
-      const along=(gelNoise(seed)-.5)*gelSpacing*.94;
-      const outward=.17+.17*gelNoise(seed+17);
-      const tangent=(gelNoise(seed+31)-.5)*.13;
-      const px=x-dx*gelSpacing*.40-dz*along;
-      const pz=z-dz*gelSpacing*.40+dx*along;
-      rainRest[slot]=0;rainX[slot]=px;rainY[slot]=h-.12;rainZ[slot]=pz;
-      rainVX[slot]=dx*outward-dz*tangent;rainVY[slot]=-.38-.26*gelNoise(seed+43);rainVZ[slot]=dz*outward+dx*tangent;
-      gelSegmentEmissions++;gelEmissionSpan+=Math.abs(along);
-      gelReleased++;releasesThisStep++;
-     }else gelPending++;
-    }else gelPending++;
+     if(slot<0){gelPending++;break}
+     c.volume-=gelYield;gelVolume-=gelYield;gelReleasedVolume+=gelYield;
+     const seed=gelReleased+1+c.ix*7919+c.iz*104729+dx*313+dz*619;
+     const along=(gelNoise(seed)-.5)*gelSpacing*.94;
+     const outward=.17+.17*gelNoise(seed+17);
+     const tangent=(gelNoise(seed+31)-.5)*.13;
+     const px=x-dx*gelSpacing*.40-dz*along;
+     const pz=z-dz*gelSpacing*.40+dx*along;
+     rainRest[slot]=0;rainX[slot]=px;rainY[slot]=h-.12;rainZ[slot]=pz;
+     rainVX[slot]=dx*outward-dz*tangent;rainVY[slot]=-.38-.26*gelNoise(seed+43);rainVZ[slot]=dz*outward+dx*tangent;
+     gelSegmentEmissions++;gelEmissionSpan+=Math.abs(along);
+     gelReleased++;releasesThisStep++;
+    }
+    if(burst===0)gelPending++;
     continue;
    }
    const bed=gelBed(x,z);
@@ -778,7 +779,7 @@ addEventListener('error',e=>{telemetryErrors.push(String(e.message).slice(0,240)
 addEventListener('unhandledrejection',e=>{telemetryErrors.push(String(e.reason).slice(0,240));if(telemetryErrors.length>4)telemetryErrors.shift()});
 function telemetryEvent(type,detail=''){telemetryEvents.push({t:Math.round(performance.now()),type,detail:String(detail).slice(0,160)});if(telemetryEvents.length>TELEMETRY_LIMIT)telemetryEvents.shift()}
 function inspectWorld(){
- const report={gel:{model:'segmented irregular curtain v68',absorbedBBs:gelAbsorbed,materialVolume:gelVolume,representedVolume:Array.from(gelColumns.values()).reduce((a,c)=>a+c.volume,0),nodes:gelNodes.length,edges:gelEdges,columns:gelColumns.size,fluxMoves:gelMoves,rimNodes:gelRimNodes,beadVolume:gelBeadVolume,stretchRejected:gelStretch,airEdges:gelAirEdges,releasedBBs:gelReleased,releasedVolume:gelReleasedVolume,pendingEdges:gelPending,segmentEmissions:gelSegmentEmissions,meanTangentOffset:gelSegmentEmissions?gelEmissionSpan/gelSegmentEmissions:0,rejected:gelRejected,triangles:0},build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
+ const report={gel:{model:'denser segmented curtain v69',absorbedBBs:gelAbsorbed,materialVolume:gelVolume,representedVolume:Array.from(gelColumns.values()).reduce((a,c)=>a+c.volume,0),nodes:gelNodes.length,edges:gelEdges,columns:gelColumns.size,fluxMoves:gelMoves,rimNodes:gelRimNodes,beadVolume:gelBeadVolume,stretchRejected:gelStretch,airEdges:gelAirEdges,releasedBBs:gelReleased,releasedVolume:gelReleasedVolume,pendingEdges:gelPending,segmentEmissions:gelSegmentEmissions,meanTangentOffset:gelSegmentEmissions?gelEmissionSpan/gelSegmentEmissions:0,rejected:gelRejected,triangles:0},build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
   terrain:{chunks:terrainPerf.totalChunks,fullRebuilds:terrainPerf.fullRebuilds,localRebuilds:terrainPerf.localRebuilds,lastDirtyChunks:terrainPerf.lastDirtyChunks,lastRebuildMs:terrainPerf.lastRebuildMs},
   transfer:quarry?{started:quarry.started,counts:quarry.units.reduce((a,u)=>(a[u.state]++,a),{source:0,transit:0,receiver:0}),capacity:quarry.units.length,recovery:quarry.recoveryStatus??null}:null,
   errors:telemetryErrors.slice(-4),events:telemetryEvents.slice(-24)};

@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-geological-source-v39';
+const BUILD='hermeticon-wanderer-visual-witness-v40';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -689,6 +689,44 @@ function inspectWeather(){
   movement:{wanderX:round(wanderX),wanderZ:round(wanderZ)},warnings:[...(!cloud.material.userData.shaderCompiled?['CLOUD_SHADER_NOT_COMPILED']:[]),...(nonfinite?['NONFINITE_BBS']:[])]};
 }
 globalThis.BaubleInspectWeather=inspectWeather;
+// Read-only visual witnesses: screen projections and geology, never simulation authority.
+function inspectVisualWitness(){
+ camera.updateMatrixWorld(true);world.updateMatrixWorld(true);
+ const W=renderer.domElement.width,H=renderer.domElement.height;
+ const project=(x,y,z)=>{
+  const p=new T.Vector3(x-wanderX,y,z-wanderZ).project(camera);
+  return {x:round((p.x+1)*.5,4),y:round((1-p.y)*.5,4),depth:round(p.z,4),inFrustum:Math.abs(p.x)<=1&&Math.abs(p.y)<=1&&p.z>=-1&&p.z<=1,insideAperture:Math.hypot(x-wanderX,y,z-wanderZ)<9.72};
+ };
+ const bounds=points=>{
+  const visible=points.filter(p=>p.inFrustum&&p.insideAperture);
+  if(!visible.length)return {visiblePoints:0,totalPoints:points.length};
+  const xs=visible.map(p=>p.x),ys=visible.map(p=>p.y);
+  return {visiblePoints:visible.length,totalPoints:points.length,rect:[round(Math.min(...xs),3),round(Math.min(...ys),3),round(Math.max(...xs),3),round(Math.max(...ys),3)],screenFraction:round((Math.max(...xs)-Math.min(...xs))*(Math.max(...ys)-Math.min(...ys)),4)};
+ };
+ const result={coordinateSystem:'normalized canvas top-left origin; camera projections are not occlusion tests',resolution:[W,H],geology:null,material:null,screen:null,limits:'Projected bounds are sparse geometric witnesses, not segmentation or proof of pixel visibility. No new GPU readback; sceneEyes provides 32x32 terrain occupancy.'};
+ if(quarry){
+  const units=quarry.units,states={source:[],transit:[],receiver:[]};
+  for(const u of units){
+   const p=u.state==='transit'&&u.bead?u.bead.position:u.state==='receiver'&&u.bead?u.bead.position:u.source.position;
+   states[u.state].push(project(p.x,p.y,p.z));
+  }
+  const excavation=project(-2.2,1.1,0),destination=project(2.1,1.5,0);
+  result.screen={excavation,destination,source:bounds(states.source),transit:bounds(states.transit),receiver:bounds(states.receiver),centerDistance:round(Math.hypot(excavation.x-destination.x,excavation.y-destination.y),4)};
+  result.material={states:Object.fromEntries(Object.entries(states).map(([k,v])=>[k,{count:v.length,projected:bounds(v)}])),destinationGeologyMutated:false,accountingUnit:'one positive field sample per transported unit; rendered volume not reconciled'};
+  // A compact signed-field cross-section, centered on the actual excavation.
+  const grid=[],materialBands={};let positives=0,voids=0;
+  for(let yi=0;yi<13;yi++){
+   const y=round(2-yi*.25,3);let row='';
+   for(let xi=0;xi<17;xi++){
+    const x=-4.2+xi*.25,solidHere=fieldSample(x,y,0)>0;
+    row+=solidHere?'#':'.';if(solidHere){positives++;const m=materialAt(x,y,0);const key=m?.material?.name||'unknown';materialBands[key]=(materialBands[key]||0)+1}else voids++;
+   }grid.push(row);
+  }
+  const audit=quarry.audit();
+  result.geology={crossSection:{plane:'z=0',xRange:[-4.2,-.2],yRange:[-1,2],step:.25,rowsTopToBottom:grid,solidProbeCells:positives,voidProbeCells:voids,solidMaterialSamples:materialBands},removedSamples:audit.removedSamples,solidSampleDelta:audit.terrainDeltaSamples,fieldCellDimensions:[round(2*WORLD_HALF/(NX-1),4),round((MAXY-MINY)/(NY-1),4),round(2*WORLD_HALF/(NZ-1),4)],sampleCellVolumeEstimate:round(4*WORLD_HALF*WORLD_HALF*(MAXY-MINY)/((NX-1)*(NY-1)*(NZ-1)),6),limits:'Cross-section probes interpolated field; cell-volume estimate is not meshed excavation volume.'};
+ }
+ return result;
+}
 function inspectWorld(){
  measureGpuAperture();
  measureSceneEyes();
@@ -705,7 +743,7 @@ function inspectWorld(){
  if(geometryEyes.fieldEdgeClearance<0)eyesWarnings.push('WORLD_FIELD_EDGE_INSIDE_APERTURE');
  if(geometryEyes.shaderOffsetError!==null&&geometryEyes.shaderOffsetError>.001)eyesWarnings.push('APERTURE_UNIFORM_OFFSET_MISMATCH');
  
- const report={build:BUILD,materialCircuit:quarry?quarry.audit():null,weather:inspectWeather(),rain:{ownership:{terrain:0,hermeticon:0,unowned:rainEmitted,transfers:ownerTransfers,toTerrain,toHermeticon,maxPositionError:round(maxTransferError,9)},total:RAIN_N,cloudRemaining:RAIN_N-rainEmitted,emitted:rainEmitted,airborne:rainEmitted-rainSettled-rainEscaped,settled:rainSettled,escaped:rainEscaped,bounces:rainBounces,wallBounces:rainWallBounces,conserved:RAIN_N===(RAIN_N-rainEmitted)+(rainEmitted-rainSettled-rainEscaped)+rainSettled+rainEscaped,restitution:.38,gravity:9.8,emissionSeconds:RAIN_DURATION},runtimeEyes:{aperture:{...apertureEyes,compiled:apertureEyes.compileCount>0},gpu:gpuEyes,scene:sceneEyes,skin:skinEyes,scoop:scoopEyes,geometry:geometryEyes,warnings:eyesWarnings,limits:'Shared live aperture uniform; 4-position radial witness; lit 32x32 real terrain pixel occupancy. Blind scene is a failure. Projection cannot alone diagnose valid terrain silhouettes or glass composition.'},wanderer:{x:wanderX,z:wanderZ,position:{x:round(walker.x),y:round(walker.y),z:round(walker.z)},target:walker.target,accepted:walker.accepted,rejected:walker.rejected,centralAreaFraction:.25,centralRadius:HANGOUT_R,apertureRadius:9.72,mode:'vertex-initialized-fragment-sphere-scoop',extractionMargin:EXTRACTION_MARGIN,worldFieldStable:true},terrain:{provider:terrainProvider,requested:terrainRequested,legacyInstantiations:legacyTerrainInstantiations,emptyInstantiations:emptyTerrainInstantiations,authoredInstantiations:authoredTerrainInstantiations,inactiveProviderInstantiations:terrainProvider==='legacy-v31'?emptyTerrainInstantiations+authoredTerrainInstantiations:terrainProvider==='empty'?legacyTerrainInstantiations+authoredTerrainInstantiations:legacyTerrainInstantiations+emptyTerrainInstantiations,atlas:atlas?{version:atlas.version,origin:atlas.origin,halfExtent:atlas.halfExtent,resolution:atlas.resolution,seed:atlas.seed,regionLegend:atlas.regions,assignedCells:atlas.fields.jurisdiction.reduce((n,v)=>n+(v!==0),0),fields:Object.fromEntries(Object.entries(atlas.fields).map(([name,value])=>[name,value===null?'absent':'allocated'])),compiled:true,geology:'flat-signed-volume'}:null,kind:'3d-signed-field',dimensions:[NX,NY,NZ],samples:field.length,fieldRange:[fieldMin,fieldMax],solidSamples:solidCount,voidSamples:voidCount,mesh:{triangles,vertices:geo.attributes.position.count,doubleSided:true},cycle,seed,buildMs,operationCount:operations.length,events:events.map(e=>({cycle:e.cycle,seed:e.seed,triangles:e.triangles,buildMs:e.buildMs,operationCount:e.operations?.length||0}))},time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:1,contentsInstantiated:true},render:{calls:mainRenderStats.calls,triangles:mainRenderStats.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:fpsMeasuring?null:round(displayFps),fpsMeasuring},containment:verifyContainment(),invariants:verifyInvariants(),simulation:{time:round(clock.time,3),steps:clock.steps,droppedSeconds:round(clock.droppedSeconds,3),fixedStep:STEP},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:eyesWarnings};
+ const report={build:BUILD,visualWitness:inspectVisualWitness(),materialCircuit:quarry?quarry.audit():null,weather:inspectWeather(),rain:{ownership:{terrain:0,hermeticon:0,unowned:rainEmitted,transfers:ownerTransfers,toTerrain,toHermeticon,maxPositionError:round(maxTransferError,9)},total:RAIN_N,cloudRemaining:RAIN_N-rainEmitted,emitted:rainEmitted,airborne:rainEmitted-rainSettled-rainEscaped,settled:rainSettled,escaped:rainEscaped,bounces:rainBounces,wallBounces:rainWallBounces,conserved:RAIN_N===(RAIN_N-rainEmitted)+(rainEmitted-rainSettled-rainEscaped)+rainSettled+rainEscaped,restitution:.38,gravity:9.8,emissionSeconds:RAIN_DURATION},runtimeEyes:{aperture:{...apertureEyes,compiled:apertureEyes.compileCount>0},gpu:gpuEyes,scene:sceneEyes,skin:skinEyes,scoop:scoopEyes,geometry:geometryEyes,warnings:eyesWarnings,limits:'Shared live aperture uniform; 4-position radial witness; lit 32x32 real terrain pixel occupancy. Blind scene is a failure. Projection cannot alone diagnose valid terrain silhouettes or glass composition.'},wanderer:{x:wanderX,z:wanderZ,position:{x:round(walker.x),y:round(walker.y),z:round(walker.z)},target:walker.target,accepted:walker.accepted,rejected:walker.rejected,centralAreaFraction:.25,centralRadius:HANGOUT_R,apertureRadius:9.72,mode:'vertex-initialized-fragment-sphere-scoop',extractionMargin:EXTRACTION_MARGIN,worldFieldStable:true},terrain:{provider:terrainProvider,requested:terrainRequested,legacyInstantiations:legacyTerrainInstantiations,emptyInstantiations:emptyTerrainInstantiations,authoredInstantiations:authoredTerrainInstantiations,inactiveProviderInstantiations:terrainProvider==='legacy-v31'?emptyTerrainInstantiations+authoredTerrainInstantiations:terrainProvider==='empty'?legacyTerrainInstantiations+authoredTerrainInstantiations:legacyTerrainInstantiations+emptyTerrainInstantiations,atlas:atlas?{version:atlas.version,origin:atlas.origin,halfExtent:atlas.halfExtent,resolution:atlas.resolution,seed:atlas.seed,regionLegend:atlas.regions,assignedCells:atlas.fields.jurisdiction.reduce((n,v)=>n+(v!==0),0),fields:Object.fromEntries(Object.entries(atlas.fields).map(([name,value])=>[name,value===null?'absent':'allocated'])),compiled:true,geology:'flat-signed-volume'}:null,kind:'3d-signed-field',dimensions:[NX,NY,NZ],samples:field.length,fieldRange:[fieldMin,fieldMax],solidSamples:solidCount,voidSamples:voidCount,mesh:{triangles,vertices:geo.attributes.position.count,doubleSided:true},cycle,seed,buildMs,operationCount:operations.length,events:events.map(e=>({cycle:e.cycle,seed:e.seed,triangles:e.triangles,buildMs:e.buildMs,operationCount:e.operations?.length||0}))},time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:1,contentsInstantiated:true},render:{calls:mainRenderStats.calls,triangles:mainRenderStats.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:fpsMeasuring?null:round(displayFps),fpsMeasuring},containment:verifyContainment(),invariants:verifyInvariants(),simulation:{time:round(clock.time,3),steps:clock.steps,droppedSeconds:round(clock.droppedSeconds,3),fixedStep:STEP},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:eyesWarnings};
  probeReport=JSON.stringify(report,null,2);probeText.textContent=probeReport;return report;
 }
 probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};

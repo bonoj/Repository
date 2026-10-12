@@ -526,7 +526,7 @@ const hydro=(()=>{
  const idx=(x,z)=>x+N*z;
  for(const c of cases){
   c.vol=new Float64Array(COUNT);c.bed=new Float64Array(COUNT);c.valid=new Uint8Array(COUNT);
-  c.next=new Float64Array(COUNT);c.flux=new Float64Array(COUNT);c.emitted=0;c.collected=0;c.spilled=0;c.recollected=0;c.bead=0;c.drops=[];c.time=0;
+  c.next=new Float64Array(COUNT);c.flux=new Float64Array(COUNT);c.emitted=0;c.collected=0;c.spilled=0;c.recollected=0;c.bead=0;c.drops=[];c.rainDrops=[];c.time=0;
   const group=new T.Group();group.position.set(c.x,c.base,c.z);root.add(group);c.group=group;
   const platform=new T.Mesh(new T.BoxGeometry(3.12,.13,3.12),stoneMat);platform.position.y=-.1;group.add(platform);
   const water=new T.InstancedMesh(cubeGeo,wetMat,COUNT);water.frustumCulled=false;water.count=COUNT;group.add(water);c.water=water;
@@ -561,9 +561,10 @@ const hydro=(()=>{
   while(count--){
    const serial=c.emitted++,x=3+Math.floor((Math.sin(serial*12.9898+2)*43758.5453%1+1)%1*9),z=3+Math.floor((Math.sin(serial*78.233+4)*43758.5453%1+1)%1*9);
    const i=idx(x,z);
-   // Rain falls from a shared cloud design; the unit remains a conserved BB.
-   add(c,i,UNIT);
+   // Spawn a free material BB under the local cloud; collect only on impact.
+   c.rainDrops.push({x:(x-(N-1)/2)*STEP_SIZE,y:2.12,z:(z-(N-1)/2)*STEP_SIZE,vy:-.2,v:UNIT,i});
   }
+  for(let i=c.rainDrops.length-1;i>=0;i--){const d=c.rainDrops[i];d.vy-=gravity*dt;d.y+=d.vy*dt;if(d.y<=c.bed[d.i]+.04){add(c,d.i,d.v);c.rainDrops.splice(i,1)}}
   c.next.set(c.vol);
   // Donor-limited, head-driven flux. All directions symmetric on flat ground.
   const k=dt*5.5;
@@ -618,7 +619,8 @@ const hydro=(()=>{
    dummy.updateMatrix();c.water.setMatrixAt(i,dummy.matrix);
   }
   c.water.instanceMatrix.needsUpdate=true;
-  let n=0;for(const d of c.drops){dropDummy.position.set(d.x,d.y,d.z);dropDummy.scale.setScalar(Math.cbrt(d.v/UNIT));dropDummy.updateMatrix();c.dropMesh.setMatrixAt(n++,dropDummy.matrix)}
+  let n=0;for(const d of c.rainDrops){dropDummy.position.set(d.x,d.y,d.z);dropDummy.scale.setScalar(1);dropDummy.updateMatrix();if(n<1200)c.dropMesh.setMatrixAt(n++,dropDummy.matrix)}
+  for(const d of c.drops){dropDummy.position.set(d.x,d.y,d.z);dropDummy.scale.setScalar(Math.cbrt(d.v/UNIT));dropDummy.updateMatrix();if(n<1200)c.dropMesh.setMatrixAt(n++,dropDummy.matrix)}
   c.dropMesh.count=n;c.dropMesh.instanceMatrix.needsUpdate=true;
  }
  let renderAccumulator=0,stepMs=0;
@@ -631,10 +633,10 @@ const hydro=(()=>{
  }
  function inspect(){
   const entries=cases.map(c=>{
-   const stored=c.vol.reduce((a,b)=>a+b,0),free=c.drops.reduce((a,d)=>a+d.v,0);
+   const stored=c.vol.reduce((a,b)=>a+b,0),free=c.drops.reduce((a,d)=>a+d.v,0)+c.rainDrops.reduce((a,d)=>a+d.v,0);
    const accounted=stored+free+c.bead+c.recollected;
    const emitted=c.emitted*UNIT;
-   return {name:c.name,emitted:Math.round(emitted*10000)/10000,stored:Math.round(stored*10000)/10000,bead:Math.round(c.bead*10000)/10000,free:Math.round(free*10000)/10000,recollected:Math.round(c.recollected*10000)/10000,spilled:Math.round(c.spilled*10000)/10000,droplets:c.drops.length,wetCells:c.vol.reduce((n,v)=>n+(v>.00001),0),error:Math.round((emitted-accounted)*1e7)/1e7};
+   return {name:c.name,emitted:Math.round(emitted*10000)/10000,stored:Math.round(stored*10000)/10000,bead:Math.round(c.bead*10000)/10000,free:Math.round(free*10000)/10000,recollected:Math.round(c.recollected*10000)/10000,spilled:Math.round(c.spilled*10000)/10000,droplets:c.drops.length,rainborne:c.rainDrops.length,wetCells:c.vol.reduce((n,v)=>n+(v>.00001),0),error:Math.round((emitted-accounted)*1e7)/1e7};
   });
   return {model:'conserved volume cells + lip reservoir + ballistic BBs',unit:UNIT,grid:[N,N],stepMs:+stepMs.toFixed(3),cases:entries};
  }

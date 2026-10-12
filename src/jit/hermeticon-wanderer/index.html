@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-map-lenses-v33';
+const BUILD='hermeticon-wanderer-map-lenses-v34';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -308,6 +308,13 @@ function regenerate(){
  events.push({cycle,seed,triangles,buildMs:+buildMs.toFixed(1),operations:operations.map(o=>({...o}))});if(events.length>5)events.shift();
 }
 if(terrainProvider!=='empty')regenerate();
+else {
+ // Explicit empty world: no legacy field construction or resident terrain triangles.
+ emptyTerrainInstantiations++;
+ field.fill(-1);fieldMin=-1;fieldMax=-1;solidCount=0;voidCount=field.length;
+ geo.setAttribute('position',new T.Float32BufferAttribute([],3));
+ triangles=0;buildMs=0;terrainBuildCount=0;solid.visible=false;
+}
 // One mesh, one set of vertices; map lenses only recolor the existing surface.
 const mapModes=['COMPOSITE','ELEVATION','SUBSTRATE','BIOME','HYDROLOGY','PROVENANCE','STRATA','POPULATION','FEATURES'];
 let mapModeIndex=0;
@@ -341,13 +348,7 @@ document.querySelector('#mapLens').onclick=()=>{mapModeIndex=(mapModeIndex+1)%ma
 
 if(terrainProvider==='authored-v1')paintMapLens();
 else document.querySelector('#mapLens').hidden=true;
-else {
- // Explicit empty world: no legacy field construction or resident terrain triangles.
- emptyTerrainInstantiations++;
- field.fill(-1);fieldMin=-1;fieldMax=-1;solidCount=0;voidCount=field.length;
- geo.setAttribute('position',new T.Float32BufferAttribute([],3));
- triangles=0;buildMs=0;terrainBuildCount=0;solid.visible=false;
-}
+
 let lastMeshX=0,lastMeshZ=0;
 /* Matter v2: one conserved 10k-unit cloud inventory and terrain contact. */
 const RAIN_N=10000,RAIN_DURATION=18,RAIN_R=.037;

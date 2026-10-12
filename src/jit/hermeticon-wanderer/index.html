@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-reexcavation-v49';
+const BUILD='hermeticon-wanderer-hydrology-v51';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -506,7 +506,143 @@ if(quarry){
  trigger.onclick=()=>{quarry.start();trigger.disabled=true;trigger.textContent='⚒ RUNNING'};
  document.body.append(trigger);
 }
+
+/* Hydrology v1: three boundary conditions, one volume/transport implementation.
+   All quantities use BB-volume units; visual thickness is deliberately amplified. */
+const hydro=(()=>{
+ const root=new T.Group();root.userData.worldDomain=true;world.add(root);
+ const N=17,COUNT=N*N,STEP_SIZE=.18,UNIT=.012,gravity=9.8;
+ const wetMat=new T.MeshPhysicalMaterial({color:0x329fd0,transparent:true,opacity:.68,roughness:.16,metalness:.05,depthWrite:false});
+ const stoneMat=new T.MeshStandardMaterial({color:0x8b8173,roughness:.84});
+ const rimMat=new T.MeshStandardMaterial({color:0xd5b574,metalness:.65,roughness:.3});
+ const dropMat=new T.MeshBasicMaterial({color:0x75d7fc});
+ const cubeGeo=new T.BoxGeometry(1,1,1),sphereGeo=new T.IcosahedronGeometry(.06,1);
+ const cases=[
+  {name:'basin',x:-3.65,z:0,base:3.8},
+  {name:'flat',x:0,z:0,base:3.8},
+  {name:'edge',x:3.65,z:0,base:3.8}
+ ];
+ const total={emitted:0,free:0,stored:0,bead:0,recollected:0,escaped:0,transfers:0,maxError:0};
+ const idx=(x,z)=>x+N*z;
+ for(const c of cases){
+  c.vol=new Float64Array(COUNT);c.bed=new Float64Array(COUNT);c.valid=new Uint8Array(COUNT);
+  c.next=new Float64Array(COUNT);c.flux=new Float64Array(COUNT);c.emitted=0;c.collected=0;c.spilled=0;c.recollected=0;c.bead=0;c.drops=[];c.time=0;
+  const group=new T.Group();group.position.set(c.x,c.base,c.z);root.add(group);c.group=group;
+  const platform=new T.Mesh(new T.BoxGeometry(3.12,.13,3.12),stoneMat);platform.position.y=-.1;group.add(platform);
+  const water=new T.InstancedMesh(cubeGeo,wetMat,COUNT);water.frustumCulled=false;water.count=COUNT;group.add(water);c.water=water;
+  const drops=new T.InstancedMesh(sphereGeo,dropMat,1200);drops.frustumCulled=false;drops.count=0;group.add(drops);c.dropMesh=drops;
+  const cloudShape=new T.Mesh(new T.BoxGeometry(1.2,.24,1.2),new T.MeshStandardMaterial({color:0xaab3bd,transparent:true,opacity:.55,roughness:1}));cloudShape.position.y=2.25;group.add(cloudShape);
+  if(c.name==='basin'){
+   for(let z=0;z<N;z++)for(let x=0;x<N;x++){
+    const d=Math.hypot(x-(N-1)/2,z-(N-1)/2)/(N*.5);
+    c.bed[idx(x,z)]=Math.min(.42,.38*d*d);
+   }
+  }
+  if(c.name==='edge'){
+   // A real supported lip: water is not supported beyond the right edge.
+   platform.scale.x=.67;platform.position.x=-.51;
+   for(let z=0;z<N;z++)for(let x=0;x<N;x++)if(x>=12)c.valid[idx(x,z)]=2;
+   const catchment=new T.Mesh(new T.BoxGeometry(1.5,.12,3.12),stoneMat);catchment.position.set(1.32,-1.55,0);group.add(catchment);
+   const lower=new T.Mesh(new T.CylinderGeometry(.55,.55,.035,32),wetMat);lower.rotation.x=0;lower.position.set(1.3,-1.46,0);group.add(lower);c.lower=lower;
+  }
+  for(let z=0;z<N;z++)for(let x=0;x<N;x++){
+   const i=idx(x,z);if(!c.valid[i])c.valid[i]=1;
+   if(c.valid[i]===2)c.valid[i]=0;
+  }
+  const border=new T.Mesh(new T.TorusGeometry(1.56,.018,6,64),rimMat);border.rotation.x=Math.PI/2;border.position.y=-.025;if(c.name!=='edge')group.add(border);
+ }
+ const dummy=new T.Object3D(),dropDummy=new T.Object3D();
+ function add(c,i,amount){c.vol[i]+=amount;c.collected+=amount;total.transfers++}
+ function advance(c,dt){
+  c.time+=dt;
+  // Identical rain-source contract for all three benches; fixed unit per BB.
+  c.rainBudget=(c.rainBudget||0)+dt*110;
+  let count=Math.min(24,Math.floor(c.rainBudget));c.rainBudget-=count;
+  while(count--){
+   const serial=c.emitted++,x=3+Math.floor((Math.sin(serial*12.9898+2)*43758.5453%1+1)%1*9),z=3+Math.floor((Math.sin(serial*78.233+4)*43758.5453%1+1)%1*9);
+   const i=idx(x,z);
+   // Rain falls from a shared cloud design; the unit remains a conserved BB.
+   add(c,i,UNIT);
+  }
+  c.next.set(c.vol);
+  // Donor-limited, head-driven flux. All directions symmetric on flat ground.
+  const k=dt*5.5;
+  for(let z=0;z<N;z++)for(let x=0;x<N;x++){
+   const i=idx(x,z);if(!c.valid[i]||c.vol[i]<=0)continue;
+   const area=STEP_SIZE*STEP_SIZE;
+   const head=c.bed[i]+c.vol[i]/area;
+   let flows=[],sum=0;
+   for(const [dx,dz] of [[-1,0],[1,0],[0,-1],[0,1]]){
+    const xx=x+dx,zz=z+dz;
+    if(xx<0||zz<0||xx>=N||zz>=N){continue}
+    const j=idx(xx,zz);
+    if(!c.valid[j]){
+     if(c.name==='edge'&&dx===1){const q=Math.max(0,head)*k*.12;flows.push([j,q,true]);sum+=q}
+     continue;
+    }
+    const difference=head-(c.bed[j]+c.vol[j]/area);
+    // Small puddles retain a finite contact front rather than spreading to one molecule.
+    const threshold=c.vol[j]>0?.003:.055;
+    const q=Math.max(0,difference-threshold)*k*area*.38;
+    if(q>0){flows.push([j,q,false]);sum+=q}
+   }
+   const factor=sum>0?Math.min(1,c.vol[i]*.46/sum):0;
+   for(const [j,q,edge] of flows){
+    const v=q*factor;c.next[i]-=v;
+    if(edge){c.bead+=v;c.spilled+=v}else c.next[j]+=v;
+   }
+  }
+  c.vol.set(c.next);
+  if(c.name==='edge'){
+   // Cohesive lip reservoir: drip only when the bead has enough mass.
+   while(c.bead>=UNIT*1.8&&c.drops.length<1000){
+    const v=UNIT*1.8;c.bead-=v;
+    c.drops.push({x:1.02,y:.02,z:(Math.sin(c.spilled*193)*.75),vx:.3,vy:-.05,vz:0,v});
+   }
+   for(let i=c.drops.length-1;i>=0;i--){
+    const d=c.drops[i];d.vy-=gravity*dt;d.x+=d.vx*dt;d.y+=d.vy*dt;d.z+=d.vz*dt;
+    if(d.y<=-1.47&&d.x>.55&&d.x<2.05&&Math.abs(d.z)<1.5){c.recollected+=d.v;c.drops.splice(i,1)}
+    else if(d.y< -3.5){total.escaped+=d.v;c.drops.splice(i,1)}
+   }
+   const depth=Math.min(.13,c.recollected/(1.5*3.12));
+   c.lower.position.y=-1.46+depth;c.lower.scale.set(1,Math.max(.3,depth*40),1);
+  }
+ }
+ function draw(c){
+  for(let z=0;z<N;z++)for(let x=0;x<N;x++){
+   const i=idx(x,z),v=c.vol[i],depth=v/(STEP_SIZE*STEP_SIZE);
+   const h=Math.min(.48,depth);
+   dummy.position.set((x-(N-1)/2)*STEP_SIZE,c.bed[i]+h*.5+.018,(z-(N-1)/2)*STEP_SIZE);
+   dummy.scale.set(STEP_SIZE*.98,Math.max(.00001,h),STEP_SIZE*.98);
+   if(!c.valid[i]||v<.00001)dummy.scale.setScalar(0);
+   dummy.updateMatrix();c.water.setMatrixAt(i,dummy.matrix);
+  }
+  c.water.instanceMatrix.needsUpdate=true;
+  let n=0;for(const d of c.drops){dropDummy.position.set(d.x,d.y,d.z);dropDummy.scale.setScalar(Math.cbrt(d.v/UNIT));dropDummy.updateMatrix();c.dropMesh.setMatrixAt(n++,dropDummy.matrix)}
+  c.dropMesh.count=n;c.dropMesh.instanceMatrix.needsUpdate=true;
+ }
+ let renderAccumulator=0,stepMs=0;
+ function step(dt){
+  const begin=performance.now();
+  root.position.set(-wanderX,0,-wanderZ);
+  for(const c of cases)advance(c,dt);
+  renderAccumulator+=dt;if(renderAccumulator>=1/30){renderAccumulator=0;for(const c of cases)draw(c)}
+  stepMs=performance.now()-begin;
+ }
+ function inspect(){
+  const entries=cases.map(c=>{
+   const stored=c.vol.reduce((a,b)=>a+b,0),free=c.drops.reduce((a,d)=>a+d.v,0);
+   const accounted=stored+free+c.bead+c.recollected;
+   const emitted=c.emitted*UNIT;
+   return {name:c.name,emitted:Math.round(emitted*10000)/10000,stored:Math.round(stored*10000)/10000,bead:Math.round(c.bead*10000)/10000,free:Math.round(free*10000)/10000,recollected:Math.round(c.recollected*10000)/10000,spilled:Math.round(c.spilled*10000)/10000,droplets:c.drops.length,wetCells:c.vol.reduce((n,v)=>n+(v>.00001),0),error:Math.round((emitted-accounted)*1e7)/1e7};
+  });
+  return {model:'conserved volume cells + lip reservoir + ballistic BBs',unit:UNIT,grid:[N,N],stepMs:+stepMs.toFixed(3),cases:entries};
+ }
+ return {step,inspect};
+})();
+
 function simulate(dt){
+ hydro.step(dt);
  if(quarry){quarry.step(dt);quarry.sync()}
  rainStep(dt);
  if(walker.target){
@@ -640,7 +776,7 @@ addEventListener('error',e=>{telemetryErrors.push(String(e.message).slice(0,240)
 addEventListener('unhandledrejection',e=>{telemetryErrors.push(String(e.reason).slice(0,240));if(telemetryErrors.length>4)telemetryErrors.shift()});
 function telemetryEvent(type,detail=''){telemetryEvents.push({t:Math.round(performance.now()),type,detail:String(detail).slice(0,160)});if(telemetryEvents.length>TELEMETRY_LIMIT)telemetryEvents.shift()}
 function inspectWorld(){
- const report={build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
+ const report={hydrology:hydro.inspect(),build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
   terrain:{chunks:terrainPerf.totalChunks,fullRebuilds:terrainPerf.fullRebuilds,localRebuilds:terrainPerf.localRebuilds,lastDirtyChunks:terrainPerf.lastDirtyChunks,lastRebuildMs:terrainPerf.lastRebuildMs},
   transfer:quarry?{started:quarry.started,counts:quarry.units.reduce((a,u)=>(a[u.state]++,a),{source:0,transit:0,receiver:0}),capacity:quarry.units.length,recovery:quarry.recoveryStatus??null}:null,
   errors:telemetryErrors.slice(-4),events:telemetryEvents.slice(-24)};

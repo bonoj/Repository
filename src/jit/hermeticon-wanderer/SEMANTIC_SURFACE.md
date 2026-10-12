@@ -79,3 +79,16 @@ Publication authority: `bonoj/Gate/README.md` + `bonoj/Repository/src/jit/README
 
 ## Handoff
 The immediate next build should be a **small Wanderer + uncluttered navigation hypothesis test**, not a sprawling game or new chunk architecture. After validating movement, test **one real material path through a hole to a receiving machine below**. Preserve V21 as the continuous-terrain baseline. 🐉
+
+
+## Current operational state — V47 (2026-10-12)
+
+**This section supersedes V31 inspection instructions and earlier V42–V46 tooling status.** Current executable is `index.html`, build `hermeticon-wanderer-instrumentation-reset-v47`; public JIT mirror is `bonoj/bonoj.github.io/jit/hermeticon-wanderer/index.html`. Preserve the player-accepted movement/weather boundary from V31, but do not treat its old full INSPECT schema or GPU witness claims as current runtime instrumentation.
+
+- Terrain authority: one 85×21×85 signed field; 81 horizontal extraction regions, 10-cell width with dependency halo. Excavation removes 96 positive samples; 96 material BBs transfer to the receiver and deposit as signed-field geology. Region rebuilds are localized; material lineage is recorded in the simulation.
+- V46 replaced crash-prone inspection with a bounded CPU-only snapshot. INSPECT reads existing counters, BB states, terrain rebuild metrics, a small event ring, and runtime errors. It does **not** run GPU readbacks, scene traversal, full-field conservation scans, or the legacy containment/invariant verifier. Those older witnesses remain in source as historical/optional machinery, not evidence that the current inspector runs them.
+- V47 restored **COPY REPORT**, using direct clipboard write on tap and a legacy selection/copy fallback. Player successfully pasted the V47 JSON into conversation. No JSON download/upload is required.
+- **Player-observed V47 mid-transfer witness:** at 6,642 ms, 56.7 FPS; 81 chunks, 1 full rebuild, 19 local rebuilds, last dirty chunks 1, last rebuild 6.6 ms; BB states 66 source + 12 transit + 18 receiver = 96; zero reported runtime errors. Event log records 96 excavated samples and transfer start. This establishes working report transport and one healthy mid-transfer sample, **not** complete transfer, end-state conservation, repeated mobile stability, or all-frame performance.
+- Next verification: after all 96 reach receiver, capture V47 INSPECT; check source 0, transit 0, receiver 96, no runtime errors, plausible FPS and bounded rebuilds. The lightweight report does not independently prove geological conservation or re-excavation. Next geological experiment remains A → BB → geology B → BB re-excavation, after confirming this baseline.
+
+**Document ownership:** this surface owns current observed state; `HANDOFF.md` is a short entry point, `WORLD_GENERATION_EXPERIMENT.md` preserves chronological experiments, `HERMETICON.md` owns the durable boundary/interaction contract, `LEGACY_TERRAIN_V31.md` is historical. Do not duplicate this state in new documents.

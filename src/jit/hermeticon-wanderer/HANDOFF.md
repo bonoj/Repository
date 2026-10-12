@@ -37,3 +37,10 @@ Cloud was exhausted when measured: zero dimensions and overlap=1 do **not** veri
 Human intent → world interpretation → simulation. Find the actual owner, reuse existing machinery, change the smallest authorized seam, verify, and sling when authorized through Gate's established JIT route. Compare source/published bytes; distinguish committed, Pages-deployed, browser-observed and player-accepted. Never update the canonical empty bauble or legacy baubles incidentally. No speculative ECS, universal Hermeticon framework, new water engine or alternate publishing route.
 
 **The instrument evolves; this handoff follows it. The handoff never becomes the instrument.** 🐉
+
+
+## Current-state override — V47 (2026-10-12)
+
+**Read this before the older V31 evidence below.** The running source is now `hermeticon-wanderer-instrumentation-reset-v47`, not V31. V31 remains the accepted movement/weather boundary, but its full INSPECT report, GPU witnesses, and verifier are **not** the current inspection workflow. V46 replaced heavy inspection with bounded CPU-only counters/events; V47 restored direct **INSPECT → COPY REPORT**. Player successfully pasted a V47 report. At 6.642 s: 56.7 FPS; 66 source, 12 transit, 18 receiver (96 accounted for), 19 local terrain rebuilds, last dirty chunk count 1, last rebuild 6.6 ms, no reported errors. **Full 96/96 delivery and geological re-excavation are not yet verified with V47.**
+
+For exact current evidence and next experiment, consult `SEMANTIC_SURFACE.md`; for history consult `WORLD_GENERATION_EXPERIMENT.md`. Do not resurrect the old INSPECT path, introduce another clipboard transport, or invent a test/staging publication route. One JIT build, Gate's established source → Pages mirror route, verify visible build. This handoff is intentionally subordinate to executable source and semantic surface.

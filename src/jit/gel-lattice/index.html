@@ -1,1 +1,771 @@
-<!doctype html><title>Gel Lattice — staging</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07101a"><title>Hermeticon · Wanderer</title><style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:calc(12px + env(safe-area-inset-top));right:12px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:calc(70px + env(safe-area-inset-top)) 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px} #buildRow{display:flex;align-items:center;justify-content:center;gap:6px;margin:5px auto 0;pointer-events:auto;color:#a6b7b9;font:10px ui-monospace,monospace}#fresh{width:40px;height:40px;padding:0;min-height:40px;border:0;background:transparent;color:#c4b291;font-size:23px;cursor:pointer}#containmentAlarm{display:none;position:fixed;z-index:35;left:10px;right:10px;top:calc(65px + env(safe-area-inset-top));background:#531b19ee;color:#ffe9d7;border:2px solid #ff6955;border-radius:9px;padding:12px;font:700 12px/1.4 ui-monospace,monospace;white-space:pre-wrap;pointer-events:none}#containmentAlarm.on{display:block}#fps{font:12px ui-monospace,monospace;color:#e7dbb7;margin-left:8px}#mapLens{position:fixed;z-index:24;left:12px;top:calc(12px + env(safe-area-inset-top));min-width:118px;padding:9px 12px;background:#15202ae8;color:#f0d5a0;border:1px solid #9c8556aa}#wanderControls{position:fixed;z-index:20;bottom:77px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:5px}#wanderControls button{min-width:47px;padding:10px 12px;background:#15202ae8}#wanderCoords{font:11px monospace;color:#e5d0a8;min-width:70px;text-align:center}</style></head><body><div id="stage"></div><div id="containmentAlarm" role="alert"></div><button id="mapLens" type="button" aria-label="Cycle map layers">◈ COMPOSITE</button><button id="probe" type="button">◉ INSPECT</button><div id="probePanel"><div id="probeActions"><button id="copyProbe">COPY REPORT</button><button id="closeProbe">CLOSE</button></div><textarea id="probeText" readonly aria-label="Selectable inspection report" style="display:block;width:100%;height:65vh;resize:vertical;background:#07121d;color:#d9e6e5;font:12px/1.4 monospace"></textarea></div><div id="title"><h1>BAUBLE</h1><div id="tag">MINIMUM VIABLE BAUBLE</div><div id="buildRow"><span id="build"></span><span id="fps">◌ fps</span><button id="fresh" type="button" aria-label="Fetch latest build" title="Fetch latest build">↻</button></div></div><div id="hud"><div id="status">TAP TERRAIN TO WALK · DRAG TO ORBIT · PINCH TO ZOOM</div></div><div id="error"></div><script>
+(function(){
+ const el=document.getElementById('error');
+ function fatal(error){
+  const message=String(error&&error.stack||error&&error.message||error||'Unknown error');
+  const report=['BAUBLE FAILED TO WAKE',message,'URL: '+location.href,'Time: '+new Date().toISOString()].join('\n');
+  el.replaceChildren();
+  el.style.cssText='position:fixed;z-index:9999;top:15%;bottom:12%;left:12px;right:12px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#211a20;color:#ffe1d6;padding:16px;border:2px solid #ff9784;border-radius:12px;font:13px/1.5 monospace';
+  const heading=document.createElement('div');heading.textContent=report;el.append(heading);
+  const button=document.createElement('button');button.textContent='COPY ERROR';button.style.cssText='display:block;width:100%;min-height:56px;margin:14px 0;font:700 17px system-ui';el.append(button);
+  const manual=document.createElement('textarea');manual.value=report;manual.readOnly=true;manual.style.cssText='display:block;width:100%;min-height:110px;font:12px monospace';el.append(manual);
+  button.onclick=async()=>{try{await navigator.clipboard.writeText(report);button.textContent='COPIED'}catch(_){manual.focus();manual.select();button.textContent='SELECTED — TAP COPY IN MENU'}};
+ }
+ window.BaubleFatal=fatal;
+ addEventListener('error',e=>fatal(e.error||e.message));
+ addEventListener('unhandledrejection',e=>fatal(e.reason));
+})();
+</script><script type="module">
+import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+
+// One canonical build identity: UI and inspection report share this constant.
+const BUILD='gel-lattice-v1';
+document.querySelector('#build').textContent=BUILD;
+document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
+
+
+try {
+const scene=new T.Scene();scene.background=new T.Color(0x06101b);scene.fog=new T.FogExp2(0x071827,.012);
+const world=new T.Group();scene.add(world);
+const renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.38;document.querySelector('#stage').append(renderer.domElement);
+const camera=new T.PerspectiveCamera(42,1,.1,150);scene.add(new T.HemisphereLight(0x82c6dc,0x17202d,1.5));const sun=new T.DirectionalLight(0xffc77e,2.4);sun.position.set(-7,13,7);scene.add(sun);const blue=new T.PointLight(0x2cbed7,95,36);blue.position.set(2,-2,2);scene.add(blue);
+const M=(color,metalness=.1,roughness=.65,extra={})=>new T.MeshStandardMaterial({color,metalness,roughness,...extra});
+const brass=M(0xb78b4e,.78,.3),bright=M(0xf2cb7e,.45,.3),rock=M(0x242b33,.08,.94),basalt=M(0x3c4449,.04,.9),green=M(0x467b50,.08,.75),leaf=M(0x85a767,.04,.7),cyan=new T.MeshBasicMaterial({color:0x42d7dc}),purple=new T.MeshBasicMaterial({color:0xb06fe6}),glow=new T.MeshBasicMaterial({color:0xffc678}),glass=new T.MeshPhysicalMaterial({color:0x9dcdd7,transparent:true,opacity:.17,metalness:.05,roughness:.12,depthWrite:false,side:T.DoubleSide});
+function put(parent,geo,material,x=0,y=0,z=0){const o=new T.Mesh(geo,material);o.position.set(x,y,z);parent.add(o);return o}
+function ball(p,r,m,x,y,z){return put(p,new T.SphereGeometry(r,12,8),m,x,y,z)}
+function cyl(p,r1,r2,h,m,x,y,z,n=12){return put(p,new T.CylinderGeometry(r1,r2,h,n),m,x,y,z)}
+function ring(p,r,t,m,x,y,z){const o=put(p,new T.TorusGeometry(r,t,7,48),m,x,y,z);o.rotation.x=Math.PI/2;return o}
+function beam(a,b,r,m,p=world){const v=new T.Vector3(...a),w=new T.Vector3(...b),d=w.clone().sub(v),o=put(p,new T.CylinderGeometry(r,r,d.length(),7),m,...v.clone().add(w).multiplyScalar(.5).toArray());o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),d.normalize());return o}
+
+const BAUBLE_R=10.25,INNER_R=BAUBLE_R-.18;
+const envelope=new T.Mesh(new T.SphereGeometry(BAUBLE_R,72,48),new T.MeshPhysicalMaterial({color:0xa0dce2,metalness:0,roughness:.08,transparent:true,opacity:.055,depthWrite:false,side:T.FrontSide}));world.add(envelope);
+const innerGlass=new T.Mesh(new T.SphereGeometry(INNER_R,72,48),new T.MeshPhysicalMaterial({color:0x9dcdd7,metalness:0,roughness:.09,transparent:true,opacity:.035,depthWrite:false,side:T.BackSide}));world.add(innerGlass);
+const equator=put(world,new T.TorusGeometry(BAUBLE_R,.095,10,120),brass);equator.rotation.x=Math.PI/2;
+for(const y of [-.15,.15]){const trim=put(world,new T.TorusGeometry(BAUBLE_R,.021,6,120),bright,0,y,0);trim.rotation.x=Math.PI/2}
+for(let i=0;i<8;i++){const a=i*Math.PI/4;ball(world,.12,bright,Math.cos(a)*BAUBLE_R,0,Math.sin(a)*BAUBLE_R)}
+
+// Containment verifier: geometry in scene coordinates, independent of camera/gravity.
+// Shell hardware is intentionally outside the INNER radius; only explicitly marked
+// objects may exceed the vessel. Mark external designs with userData.allowOutsideBauble=true.
+// Shared JIT machinery. Register world-specific checks; never silently swallow failures.
+const STEP=.008,MAX_STEPS=7,MAX_FRAME=.05;
+const clock={time:0,steps:0,droppedSeconds:0,accumulator:0};
+// Authoritative signed volume. Positive=solid, negative=void.
+// The equator y=0 is the fixed datum; both surfaces and tunnels are extracted.
+const R=9.65, EXTRACTION_MARGIN=4.0, NX=85,NY=21,NZ=85, MINY=-3.6,MAXY=3.6; const WORLD_HALF=25.2; let wanderX=0,wanderZ=0; const WANDER_STEP=2;
+const depositedMaterial=new Map();
+const field=new Float32Array(NX*NY*NZ),id=(x,y,z)=>x+NX*(y+NY*z);
+const xp=x=>(x/(NX-1)*2-1)*WORLD_HALF,yp=y=>MINY+y/(NY-1)*(MAXY-MINY),zp=z=>(z/(NZ-1)*2-1)*WORLD_HALF;
+const corners=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
+const tets=[[0,5,1,6],[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6]];
+const apertureEyes={compileCount:0,vertexHook:false,fragmentHook:false,shaderRadius:9.72,compileFailures:[],lastCompiledAt:null};const sharedApertureOffset=new T.Vector3();let apertureUniform={value:sharedApertureOffset};const terrainMaterial=new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.92,metalness:.02,side:T.DoubleSide,flatShading:true,onBeforeCompile:shader=>{shader.uniforms.apertureRadius={value:9.72};shader.uniforms.apertureOffset={value:sharedApertureOffset};apertureEyes.compileCount++;apertureEyes.lastCompiledAt=performance.now();apertureEyes.vertexHook=shader.vertexShader.includes('#include <begin_vertex>');apertureEyes.fragmentHook=shader.fragmentShader.includes('#include <clipping_planes_fragment>');if(!apertureEyes.vertexHook||!apertureEyes.fragmentHook)apertureEyes.compileFailures.push('Missing shader injection anchor');shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vAperturePosition;\nuniform vec3 apertureOffset;');shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvAperturePosition=position-apertureOffset;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vAperturePosition;\nuniform float apertureRadius;\nuniform vec3 apertureOffset;');shader.fragmentShader=shader.fragmentShader.replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\nif(dot(vAperturePosition,vAperturePosition)>apertureRadius*apertureRadius) discard;');shader.fragmentShader=shader.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\nfloat apertureFog=smoothstep(7.1,9.70,length(vAperturePosition));\ngl_FragColor.rgb=mix(gl_FragColor.rgb,vec3(0.045,0.115,0.16),apertureFog);')}});
+const solid=new T.Group();solid.name='terrain:signed-volume';solid.userData.worldDomain=true;world.add(solid);
+const CHUNK=10,CX=Math.ceil((NX-1)/CHUNK),CZ=Math.ceil((NZ-1)/CHUNK),terrainChunks=[];
+const terrainPerf={totalChunks:CX*CZ,fullRebuilds:0,localRebuilds:0,lastDirtyChunks:0,lastRebuiltCells:0,lastRebuildMs:0,lastChangedChunks:[]};
+for(let cz=0;cz<CZ;cz++)for(let cx=0;cx<CX;cx++){const geometry=new T.BufferGeometry(),mesh=new T.Mesh(geometry,terrainMaterial);mesh.receiveShadow=true;mesh.frustumCulled=false;mesh.userData.worldDomain=true;solid.add(mesh);terrainChunks.push({cx,cz,geometry,triangles:0})}
+
+const skinGeo=new T.BufferGeometry();
+const skin=new T.Mesh(skinGeo,new T.MeshStandardMaterial({color:0xc9a67e,roughness:.88,side:T.DoubleSide,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1}));
+skin.name='aperture:skin';skin.frustumCulled=false;skin.visible=false;world.add(skin);
+const skinEyes={mode:'retired',segments:0,quads:0,intervals:0,inset:0};
+const scoopEyes={mode:'resident-world-gpu-aperture',radius:9.72,cutTriangles:0,geologyTriangles:0,degenerateTriangles:0};
+function fieldSample(X,Y,Z){
+ const gx=(X/WORLD_HALF+1)*(NX-1)/2,gy=(Y-MINY)/(MAXY-MINY)*(NY-1),gz=(Z/WORLD_HALF+1)*(NZ-1)/2;
+ if(gx<0||gy<0||gz<0||gx>=NX-1||gy>=NY-1||gz>=NZ-1)return -1;
+ const x=Math.floor(gx),y=Math.floor(gy),z=Math.floor(gz),a=gx-x,b=gy-y,c=gz-z;
+ const lerp=(p,q,t)=>p+(q-p)*t;
+ const layer=k=>lerp(lerp(field[id(x,y,k)],field[id(x+1,y,k)],a),lerp(field[id(x,y+1,k)],field[id(x+1,y+1,k)],a),b);
+ return lerp(layer(z),layer(z+1),c);
+}
+function rebuildSkin(){
+ const out=[],count=144,steps=40,lo=-3.5,hi=3.5;
+ const point=(angle,y)=>{const r=Math.sqrt(9.72*9.72-y*y)-skinEyes.inset;return [Math.cos(angle)*r,y,Math.sin(angle)*r]};
+ let quads=0,intervals=0;
+ for(let i=0;i<count;i++){
+  const a=i*2*Math.PI/count,b=(i+1)*2*Math.PI/count;
+  let prior=false;
+  for(let j=0;j<steps;j++){
+   const y=lo+(hi-lo)*j/steps,z=lo+(hi-lo)*(j+1)/steps,m=(y+z)/2,p=point((a+b)/2,m);
+   const solidHere=fieldSample(wanderX+p[0],m,wanderZ+p[2])>0;
+   if(solidHere&&!prior)intervals++;prior=solidHere;
+   if(!solidHere)continue;
+   const p0=point(a,y),p1=point(b,y),p2=point(a,z),p3=point(b,z);
+   out.push(...p0,...p1,...p2,...p1,...p3,...p2);quads++;
+  }
+ }
+ skinGeo.setAttribute('position',new T.Float32BufferAttribute(out,3));skinGeo.computeVertexNormals();
+ skinEyes.quads=quads;skinEyes.intervals=intervals;
+}
+let cycle=0,seed=741,triangles=0,fieldMin=0,fieldMax=0,solidCount=0,voidCount=0,buildMs=0;
+let operations=[],events=[];
+const round=(n,d=2)=>Number.isFinite(n)?+n.toFixed(d):null;
+const rand=(n)=>{let v=Math.sin(n*127.1+seed*311.7)*43758.5453;return v-Math.floor(v)};
+let terrainBuildCount=0;
+// Boot-selected terrain provider. 'empty' tests non-instantiation without authored data.
+const terrainRequested=new URLSearchParams(location.search).get('terrain');
+const terrainProvider=terrainRequested==='empty'?'empty':terrainRequested==='authored-v1'?'authored-v1':'legacy-v31';
+// World-coordinate 2D authoring fields are independent of geology and rendering.
+// No inferred map pixels: an unpainted cell has jurisdiction 0 (unassigned).
+const atlas=terrainProvider==='authored-v1'?(()=>{
+ const width=85,height=85,halfExtent=25.2,size=width*height;
+ const fields={jurisdiction:new Uint8Array(size),gradientWeight:new Uint8Array(size),elevation:new Float32Array(size),substrate:new Uint8Array(size),hydrology:new Uint8Array(size),provenance:new Uint8Array(size),strata:new Uint8Array(size),population:new Uint8Array(size),features:new Uint8Array(size)};
+ return {version:2,origin:[0,0],halfExtent,resolution:[width,height],seed:741,fields,regions:{0:'unassigned',1:'summerlands',2:'winter-kings-realm',3:'gradient',4:'other'},compiled:false};
+})():null;
+let legacyTerrainInstantiations=0,emptyTerrainInstantiations=0,authoredTerrainInstantiations=0;
+function regenerate(){
+ if(terrainProvider==='empty')throw new Error('Empty provider must not instantiate geology');
+ if(terrainProvider==='legacy-v31')legacyTerrainInstantiations++;
+ else authoredTerrainInstantiations++;
+ terrainBuildCount++;
+ const start=performance.now();
+ operations=[];
+ // Vertical bores pierce the complete slab; raised and lowered regions act
+ // independently on upper and lower surfaces.
+ for(let k=0;k<(terrainProvider==='legacy-v31'?14:0);k++)operations.push({kind:'through-hole',x:(rand(k+2)-.5)*42,z:(rand(k+11)-.5)*42,r:1+rand(k+29)*.7});
+ for(let k=0;k<(terrainProvider==='legacy-v31'?28:0);k++)operations.push({kind:k%2?'lower':'raise',face:k%3?'top':'bottom',x:(rand(k+49)-.5)*42,z:(rand(k+61)-.5)*42,r:1.7+rand(k+73)*1.4,delta:(k%2?-1:1)*(0.65+rand(k+91)*1.25)});
+ if(terrainProvider==='authored-v1'){
+  // Sparse cartographic landmarks; no continuous noise, flat corridors between nodes.
+  const nodes=[["Summerlands",-13,12,"raise",3.2,1.5],["Winter King's Realm",12,14,"raise",3.8,2],["Ice Vale",17,20,"lower",2.7,1],["Gradient",0,12,"lower",3,0.6],["Amaranthine Fields",-7,5,"raise",2.6,0.8],["Quills",5,7,"raise",2.4,1.7],["Heart of Darkness",12,2,"through-hole",2.1,0],["Bood Lakes",-14,1,"lower",3.2,1.2],["Jade Peak",19,5,"raise",3.2,2.1],["Mists",-2,-1,"lower",3,0.7],["Downton",3,-4,"through-hole",2.5,0],["Silverpass and Gemgates",16,-5,"lower",2.5,1.2],["Cinderglade and Fell Crater",-17,-7,"lower",3.3,1.8],["Whisperwood",-9,-9,"raise",3,0.8],["Brambles",-1,-12,"raise",2.8,0.9],["Rift",8,-11,"through-hole",1.9,0],["Spill",19,-13,"lower",2.5,1],["Redwall",-16,-16,"raise",2.5,1.3],["Upton",-7,-18,"raise",2.4,0.9],["Kindle Tower",1,-19,"raise",2.3,1.8],["Violet Coast",10,-20,"lower",3.4,0.8],["Ocean of Tears",19,-20,"lower",3.2,1.1]];
+  for(const [name,x,z,kind,r,depth] of nodes)operations.push({name,kind,x,z,r,delta:kind==='raise'?depth:-depth,face:'top'});
+ }
+
+ fieldMin=Infinity;fieldMax=-Infinity;solidCount=0;voidCount=0;
+ for(let z=0;z<NZ;z++)for(let y=0;y<NY;y++)for(let x=0;x<NX;x++){
+  const X=xp(x),Y=yp(y),Z=zp(z);
+  let top=1.15,bottom=-1.15;
+  for(const op of operations){if(op.kind==='through-hole')continue;const d=Math.hypot(X-op.x,Z-op.z)/op.r;if(d<1){const w=(1-d*d)**2;if(op.face==='top')top+=op.delta*w;else bottom-=op.delta*w}}
+  let v=Math.min(top-Y,Y-bottom);
+  for(const op of operations){if(op.kind!=='through-hole')continue;const d=Math.hypot(X-op.x,Z-op.z);v=Math.min(v,d-op.r)}
+  field[id(x,y,z)]=v;fieldMin=Math.min(fieldMin,v);fieldMax=Math.max(fieldMax,v);if(v>0)solidCount++;else voidCount++;
+ }
+ extractTerrainMesh();
+ events.push({cycle,seed,triangles,buildMs:+buildMs.toFixed(1),operations:operations.map(o=>({...o}))});if(events.length>5)events.shift();
+}
+function extractTerrainMesh(bounds=null){
+ const start=performance.now(),selected=[];
+ if(!bounds)selected.push(...terrainChunks);
+ else{const x0=Math.max(0,Math.floor(Math.max(0,bounds.x0-1)/CHUNK)),x1=Math.min(CX-1,Math.floor(Math.min(NX-2,bounds.x1)/CHUNK)),z0=Math.max(0,Math.floor(Math.max(0,bounds.z0-1)/CHUNK)),z1=Math.min(CZ-1,Math.floor(Math.min(NZ-2,bounds.z1)/CHUNK));for(let z=z0;z<=z1;z++)for(let x=x0;x<=x1;x++)selected.push(terrainChunks[x+CX*z])}
+ const lerp=(p,q,a,b)=>{const t=Math.max(0,Math.min(1,a/(a-b)));return[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t,p[2]+(q[2]-p[2])*t]};
+ let rebuiltCells=0;
+ for(const c of selected){
+  const pos=[],tri=(a,b,c)=>{if(Math.min(Math.hypot(...a.map((v,i)=>v-b[i])),Math.hypot(...b.map((v,i)=>v-c[i])),Math.hypot(...c.map((v,i)=>v-a[i])))<.00001)return;pos.push(...a,...b,...c)};
+  const x0=c.cx*CHUNK,x1=Math.min(NX-1,x0+CHUNK),z0=c.cz*CHUNK,z1=Math.min(NZ-1,z0+CHUNK);rebuiltCells+=(x1-x0)*(z1-z0)*(NY-1);
+  for(let z=z0;z<z1;z++)for(let y=0;y<NY-1;y++)for(let x=x0;x<x1;x++){
+   const p=corners.map(q=>[xp(x+q[0]),yp(y+q[1]),zp(z+q[2])]),v=corners.map(q=>field[id(x+q[0],y+q[1],z+q[2])]);
+   for(const tet of tets){const inside=tet.filter(i=>v[i]>0),outside=tet.filter(i=>v[i]<=0);if(!inside.length||!outside.length)continue;
+    if(inside.length===1||outside.length===1){const inv=outside.length===1,A=(inv?outside:inside)[0],others=inv?inside:outside,q=others.map(i=>lerp(p[A],p[i],v[A],v[i]));if(inv)tri(q[0],q[2],q[1]);else tri(q[0],q[1],q[2])}
+    else{const [a,b]=inside,[c,d]=outside,q0=lerp(p[a],p[c],v[a],v[c]),q1=lerp(p[a],p[d],v[a],v[d]),q2=lerp(p[b],p[c],v[b],v[c]),q3=lerp(p[b],p[d],v[b],v[d]);tri(q0,q1,q2);tri(q2,q1,q3)}
+   }
+  }
+  c.geometry.setAttribute('position',new T.Float32BufferAttribute(pos,3));c.geometry.setAttribute('color',new T.Float32BufferAttribute(new Float32Array(pos.length).fill(.52),3));c.geometry.computeVertexNormals();c.geometry.computeBoundingSphere();c.triangles=pos.length/9;
+ }
+ triangles=terrainChunks.reduce((n,c)=>n+c.triangles,0);buildMs=performance.now()-start;
+ terrainPerf.lastDirtyChunks=selected.length;terrainPerf.lastRebuiltCells=rebuiltCells;terrainPerf.lastRebuildMs=+buildMs.toFixed(3);terrainPerf.lastChangedChunks=selected;if(bounds)terrainPerf.localRebuilds++;else terrainPerf.fullRebuilds++;
+ solid.position.set(-wanderX,0,-wanderZ);sharedApertureOffset.set(wanderX,0,wanderZ);
+
+}
+
+if(terrainProvider!=='empty')regenerate();
+else {
+ // Explicit empty world: no legacy field construction or resident terrain triangles.
+ emptyTerrainInstantiations++;
+ field.fill(-1);fieldMin=-1;fieldMax=-1;solidCount=0;voidCount=field.length;
+ triangles=0;buildMs=0;terrainBuildCount=0;solid.visible=false;
+}
+// One mesh, one set of vertices; map lenses only recolor the existing surface.
+// Author the entire aligned atlas once. Unknown terrain remains quiet, not filled with noise.
+function compileAtlas(){
+ if(!atlas)return;
+ const {fields:f,resolution:[w,h],halfExtent:half}=atlas;
+ const nodes=operations.filter(o=>o.name);
+ for(let z=0;z<h;z++)for(let x=0;x<w;x++){
+  const X=(x/(w-1)*2-1)*half,Z=(z/(h-1)*2-1)*half,i=x+w*z;
+  let nearest=null,dist=Infinity,top=1.15;
+  for(const n of nodes){
+   const d=Math.hypot(X-n.x,Z-n.z);
+   if(d<dist){dist=d;nearest=n}
+   if(n.kind!=='through-hole'&&d<n.r){const t=1-(d/n.r)**2;top+=n.delta*t*t}
+  }
+  const active=nearest&&dist<nearest.r*1.4;
+  // Curved cartographic front, continuous and deterministic, not square tiles.
+  // Broad unpainted south remains quiet; the Gradient is an actual band.
+  const northFront=3.2+2.4*Math.sin(X*.17)+1.1*Math.sin(X*.39+1.3);
+  const divide=0.4+3.2*Math.sin(Z*.13+.5)+1.4*Math.sin(Z*.31-1.1);
+  const north=Z>northFront,gradient=north&&Math.abs(X-divide)<4.0;
+  const winter=north&&X>=divide+4,summer=north&&X<=divide-4;
+  f.jurisdiction[i]=winter?2:summer?1:gradient?3:active?4:0;
+  f.gradientWeight[i]=gradient?Math.round(Math.max(0,Math.min(1,(X-divide+4)/8))*255):0;
+  f.elevation[i]=top;
+  f.substrate[i]=active?(winter?3:nearest.kind==='lower'?2:1):0;
+  f.hydrology[i]=active&&nearest.kind==='lower'?1:0;
+  f.provenance[i]=active?1:0;
+  f.strata[i]=active&&nearest.kind==='through-hole'?2:1;
+  f.population[i]=active&&nearest.kind==='raise'?1:0;
+  f.features[i]=active?1:0;
+ }
+ atlas.compiled=true;
+}
+compileAtlas();
+// V37: provisional material columns. Material identity is independent of display color.
+// The atlas supplies surface parent material; depth selects cover, subsoil or bedrock.
+// These are generated assignments, not minerals inferred from the source drawing.
+const MATERIALS=[
+ {id:0,name:'neutral bedrock',color:0x747b7d},
+ {id:1,name:'warm soil',color:0xb29b75},
+ {id:2,name:'basin sediment',color:0x8b7869},
+ {id:3,name:'cold regolith',color:0xa9bdc2},
+ {id:4,name:'weathered subsoil',color:0x766958},
+ {id:5,name:'deep bedrock',color:0x505965}
+];
+function materialAt(X,Y,Z){
+ if(!atlas)return null;
+ const gx=Math.round((X/WORLD_HALF+1)*(NX-1)/2),gy=Math.round((Y-MINY)/(MAXY-MINY)*(NY-1)),gz=Math.round((Z/WORLD_HALF+1)*(NZ-1)/2);
+ const deposited=depositedMaterial.get(id(gx,gy,gz));
+ if(deposited&&field[id(gx,gy,gz)]>0)return {id:deposited.materialId,depth:0,sourceSubstrate:null,material:MATERIALS[deposited.materialId],lineage:deposited.lineage};
+ const {fields:f,resolution:[w,h],halfExtent:half}=atlas;
+ const ix=Math.max(0,Math.min(w-1,Math.round((X/half+1)*(w-1)/2)));
+ const iz=Math.max(0,Math.min(h-1,Math.round((Z/half+1)*(h-1)/2)));
+ const i=ix+w*iz,depth=f.elevation[i]-Y;
+ const surface=f.substrate[i]===3?3:f.substrate[i]===2?2:f.substrate[i]===1?1:0;
+ const materialId=depth<0.28?surface:depth<0.8?4:5;
+ return {id:materialId,depth,sourceSubstrate:f.substrate[i],material:MATERIALS[materialId]};
+}
+const mapModes=['COMPOSITE','ELEVATION','SUBSTRATE','BIOME','HYDROLOGY','PROVENANCE','STRATA','POPULATION','FEATURES'];
+let mapModeIndex=0;
+function paintMapLens(chunks=terrainChunks){
+ if(!atlas)return;
+ const {fields:f,resolution:[w,h],halfExtent:half}=atlas;
+ const mode=mapModes[mapModeIndex],v=new T.Color(),base=new T.Color();
+ for(const chunk of chunks){const position=chunk.geometry.getAttribute('position'),color=chunk.geometry.getAttribute('color');if(!position||!color)continue;
+ for(let i=0;i<position.count;i++){
+  const X=position.getX(i),Y=position.getY(i),Z=position.getZ(i);
+  const ix=Math.max(0,Math.min(w-1,Math.round((X/half+1)*(w-1)/2)));
+  const iz=Math.max(0,Math.min(h-1,Math.round((Z/half+1)*(h-1)/2)));
+  const j=ix+w*iz,biome=f.jurisdiction[j],wet=f.hydrology[j]>0,feature=f.features[j]>0;
+  const ice=biome===2,summer=biome===1;
+  if(mode==='ELEVATION'){const e=Math.max(0,Math.min(1,(f.elevation[j]+1.5)/5));v.setRGB(e,e,e)}
+  else if(mode==='SUBSTRATE')v.set(materialAt(X,Y,Z).material.color);
+  else if(mode==='BIOME')v.set([0x777970,0xb1aa63,0x8dbbc9,0x979385,0x9d8675][biome]);
+  else if(mode==='HYDROLOGY')v.set(wet?0x3c94bc:0x333b40);
+  else if(mode==='PROVENANCE')v.set(f.provenance[j]?0xb69a60:0x3c4244);
+  else if(mode==='STRATA')v.set(materialAt(X,Y,Z).material.color);
+  else if(mode==='POPULATION')v.set(f.population[j]?0x5b9d69:0x343c35);
+  else if(mode==='FEATURES')v.set(feature?0xe3b66a:0x33363b);
+  else v.set(ice?0xa6bdc2:summer?0xa29b69:0x927963).lerp(base.set(wet?0x63899a:f.strata[j]===2?0x564c62:f.population[j]?0xb49a72:0x927963),feature?.45:0);
+  color.setXYZ(i,v.r,v.g,v.b);
+ }
+ color.needsUpdate=true;
+ }
+ document.querySelector('#mapLens').textContent='◈ '+mode;
+}
+document.querySelector('#mapLens').onclick=()=>{mapModeIndex=(mapModeIndex+1)%mapModes.length;paintMapLens()};
+if(atlas)paintMapLens();
+else document.querySelector('#mapLens').hidden=true;
+
+let lastMeshX=0,lastMeshZ=0;
+/* Matter v2: one conserved 10k-unit cloud inventory and terrain contact. */
+const RAIN_N=10000,RAIN_DURATION=18,RAIN_R=.037;
+const rainX=new Float32Array(RAIN_N),rainY=new Float32Array(RAIN_N),rainZ=new Float32Array(RAIN_N),rainVX=new Float32Array(RAIN_N),rainVY=new Float32Array(RAIN_N),rainVZ=new Float32Array(RAIN_N),rainRest=new Uint8Array(RAIN_N);
+// Geological coordinates persist independently of the moving aperture.
+const rainOwner=new Uint8Array(RAIN_N);
+let ownerTransfers=0,toTerrain=0,toHermeticon=0,maxTransferError=0;
+function rainWorld(i){return [rainX[i]-wanderX,rainY[i],rainZ[i]-wanderZ]}
+const rainGeo=new T.IcosahedronGeometry(RAIN_R,0),rainMat=new T.MeshBasicMaterial({color:0x8ad9f0});
+const rainMesh=new T.InstancedMesh(rainGeo,rainMat,RAIN_N);rainMesh.userData.worldDomain=true; // Persistent geological BBs are not subject to whole-sphere containment.
+rainMesh.frustumCulled=false;rainMesh.count=0;world.add(rainMesh);
+const cloudDimensions=[2.7,.8,2.7],cloudCenterY=5.6;
+// Clip cloud fragments in Hermeticon-local space, as with the terrain aperture.
+const cloudMaterial=new T.MeshStandardMaterial({color:0x929aa1,transparent:true,opacity:.72,roughness:.94,side:T.DoubleSide});
+cloudMaterial.onBeforeCompile=shader=>{
+ cloudMaterial.userData.shaderCompiled=true;
+ cloudMaterial.userData.shaderHooks={vertex:shader.vertexShader.includes('#include <worldpos_vertex>'),fragment:shader.fragmentShader.includes('#include <clipping_planes_fragment>')};
+ shader.uniforms.cloudApertureRadius={value:INNER_R};
+ shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\n varying vec3 vCloudAperturePosition;');
+ shader.vertexShader=shader.vertexShader.replace('#include <worldpos_vertex>','#include <worldpos_vertex>\n vCloudAperturePosition=(modelMatrix*vec4(transformed,1.0)).xyz;');
+ shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\n varying vec3 vCloudAperturePosition; uniform float cloudApertureRadius;');
+ shader.fragmentShader=shader.fragmentShader.replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\n if(dot(vCloudAperturePosition,vCloudAperturePosition)>cloudApertureRadius*cloudApertureRadius || vCloudAperturePosition.y<0.0) discard;');
+};
+const cloud=put(world,new T.BoxGeometry(...cloudDimensions),cloudMaterial,0,cloudCenterY,0);
+cloud.userData.worldDomain=true;
+const rainDummy=new T.Object3D();let rainTime=0,rainEmitted=0,rainBounces=0,rainSettled=0,rainEscaped=0,rainWallBounces=0,rainBudget=0;
+function rainRandom(i,s){const v=Math.sin((i+1)*127.1+(s+1)*311.7)*43758.5453;return v-Math.floor(v)}
+function rainSurfaceNormal(x,y,z){
+ const h=.09;
+ // Positive signed-field values are INSIDE rock: outward normal is NEGATIVE gradient.
+ let nx=fieldSample(x-h,y,z)-fieldSample(x+h,y,z),ny=fieldSample(x,y-h,z)-fieldSample(x,y+h,z),nz=fieldSample(x,y,z-h)-fieldSample(x,y,z+h);
+ const l=Math.hypot(nx,ny,nz);
+ return l>.00001?[nx/l,ny/l,nz/l]:[0,1,0];
+}
+
+/* Independent BB → growing proximity gel experiment. No fluid solver or triangles. */
+const gelSpacing=.28,gelYield=4*Math.PI*RAIN_R**3/3*12;
+const gelNodes=[],gelCells=new Map();let gelAbsorbed=0,gelVolume=0,gelEdges=0,gelRejected=0;
+const gelGroup=new T.Group();gelGroup.userData.worldDomain=true;world.add(gelGroup);
+const gelNodeGeo=new T.IcosahedronGeometry(.055,0);
+const gelNodeMesh=new T.InstancedMesh(gelNodeGeo,new T.MeshBasicMaterial({color:0x68e6c8}),4096);
+gelNodeMesh.instanceMatrix.setUsage(T.DynamicDrawUsage);gelNodeMesh.frustumCulled=false;gelGroup.add(gelNodeMesh);
+const gelLineGeo=new T.BufferGeometry(),gelLineMat=new T.LineBasicMaterial({color:0x75b9eb,transparent:true,opacity:.7,depthWrite:false});
+const gelLines=new T.LineSegments(gelLineGeo,gelLineMat);gelLines.frustumCulled=false;gelGroup.add(gelLines);
+const gelDummy=new T.Object3D();
+function gelKey(x,y,z){return x+','+y+','+z}
+function gelAddNode(x,y,z){
+ if(gelNodes.length>=4096)return false;
+ const ix=Math.round(x/gelSpacing),iy=Math.round(y/gelSpacing),iz=Math.round(z/gelSpacing),key=gelKey(ix,iy,iz);
+ if(gelCells.has(key))return false;
+ const node={x:ix*gelSpacing,y:iy*gelSpacing,z:iz*gelSpacing,ix,iy,iz};
+ gelCells.set(key,gelNodes.length);gelNodes.push(node);return true;
+}
+function gelRebuild(){
+ const lines=[];
+ for(let i=0;i<gelNodes.length;i++){
+  const n=gelNodes[i];
+  gelDummy.position.set(n.x-wanderX,n.y,n.z-wanderZ);gelDummy.scale.setScalar(1);gelDummy.updateMatrix();gelNodeMesh.setMatrixAt(i,gelDummy.matrix);
+  for(const [dx,dy,dz] of [[1,0,0],[0,1,0],[0,0,1],[1,1,0],[1,0,1],[0,1,1]]){
+   const j=gelCells.get(gelKey(n.ix+dx,n.iy+dy,n.iz+dz));if(j===undefined)continue;
+   const m=gelNodes[j];lines.push(n.x-wanderX,n.y,n.z-wanderZ,m.x-wanderX,m.y,m.z-wanderZ);
+  }
+ }
+ gelNodeMesh.count=gelNodes.length;gelNodeMesh.instanceMatrix.needsUpdate=true;
+ gelLineGeo.setAttribute('position',new T.Float32BufferAttribute(lines,3));gelEdges=lines.length/6;
+}
+let gelDirty=true,gelLastDraw=0;
+function gelCollect(i,x,y,z){
+ if(rainRest[i])return false;
+ // Each resting BB transfers its volume; lattice nodes are geometric degrees of freedom.
+ rainRest[i]=2;rainSettled++;gelAbsorbed++;gelVolume+=gelYield;
+ const ix=Math.round(x/gelSpacing),iz=Math.round(z/gelSpacing);
+ const bx=ix*gelSpacing,bz=iz*gelSpacing;
+ const bed=gelBed(bx,bz);
+ if(!Number.isFinite(bed)){gelRejected++;return true}
+ // Height of each column is set by accumulated BB volume and neighboring connectivity.
+ const key=gelKey(ix,0,iz);
+ let col=gelColumns.get(key);if(!col){col={volume:0,bed};gelColumns.set(key,col)}
+ col.volume+=gelYield;
+ const height=col.volume/(gelSpacing*gelSpacing);
+ for(let layer=0;layer<=Math.min(32,Math.floor(height/gelSpacing));layer++)gelAddNode(bx,bed+layer*gelSpacing,bz);
+ gelDirty=true;return true;
+}
+const gelColumns=new Map(),gelBedCache=new Map();
+function gelBed(x,z){
+ const key=x.toFixed(3)+','+z.toFixed(3);
+ if(gelBedCache.has(key))return gelBedCache.get(key);
+ let prior=fieldSample(x,MAXY-.001,z),hit=NaN;
+ for(let y=MAXY-.05;y>=MINY+.05;y-=.05){const v=fieldSample(x,y,z);if(prior<=0&&v>0){hit=y;break}prior=v}
+ gelBedCache.set(key,hit);return hit;
+}
+function updateGel(){
+ if(gelDirty&&performance.now()-gelLastDraw>150){gelRebuild();gelDirty=false;gelLastDraw=performance.now()}
+ else if(gelNodes.length){gelGroup.position.set(0,0,0)}
+}
+function rainStep(dt){
+ updateGel();
+ const gravity=9.8,restitution=.38,tangentDamping=.82;
+ rainTime+=dt;
+ const fractionBefore=(RAIN_N-rainEmitted)/RAIN_N;
+ const size=Math.cbrt(Math.max(.001,fractionBefore));
+ cloud.scale.setScalar(size);
+ cloud.position.set(-wanderX,cloudCenterY,-wanderZ);
+ cloud.updateMatrixWorld(true);
+ // Deterministic volumetric overlap estimate. Camera orientation is irrelevant.
+ let overlap=0;
+ for(let k=0;k<64;k++){
+  const x=(rainRandom(k,20)-.5)*cloudDimensions[0]*size-wanderX;
+  const y=(rainRandom(k,21)-.5)*cloudDimensions[1]*size+cloudCenterY;
+  const z=(rainRandom(k,22)-.5)*cloudDimensions[2]*size-wanderZ;
+  if(y>=0&&x*x+y*y+z*z<INNER_R*INNER_R)overlap++;
+ }
+ rainBudget+=dt*RAIN_N/RAIN_DURATION*overlap/64;
+ // Failed emission candidates are retried, never silently deducted.
+ let attempts=Math.min(RAIN_N-rainEmitted,Math.floor(rainBudget));
+ for(let j=0;j<attempts;j++){
+  const i=rainEmitted,inset=.12;
+  const origin=new T.Vector3(
+   (rainRandom(i,0)-.5)*(cloudDimensions[0]-2*inset),
+   (rainRandom(i,2)-.5)*(cloudDimensions[1]-2*inset),
+   (rainRandom(i,1)-.5)*(cloudDimensions[2]-2*inset)
+  ).applyMatrix4(cloud.matrixWorld);
+  if(origin.y<0||origin.lengthSq()>INNER_R*INNER_R)break;
+  rainX[i]=origin.x+wanderX;rainY[i]=origin.y;rainZ[i]=origin.z+wanderZ;
+  rainVX[i]=(rainRandom(i,3)-.5)*.36;rainVY[i]=-(.2+rainRandom(i,4)*.5);rainVZ[i]=(rainRandom(i,5)-.5)*.36;
+  rainEmitted++;rainBudget--;
+ }
+ rainBudget=Math.min(rainBudget,4);
+ for(let i=0;i<rainEmitted;i++){
+  if(!rainRest[i]){
+   const [ox,oy,oz]=rainWorld(i);
+   rainVY[i]-=gravity*dt;
+   const x=ox+rainVX[i]*dt,y=oy+rainVY[i]*dt,z=oz+rainVZ[i]*dt;
+   const distance=Math.hypot(x-ox,y-oy,z-oz),steps=Math.max(1,Math.ceil(distance/.065));
+   let hit=false,hx=x,hy=y,hz=z;
+   for(let j=1;j<=steps;j++){
+    const t=j/steps,px=ox+(x-ox)*t,py=oy+(y-oy)*t,pz=oz+(z-oz)*t;
+    if(fieldSample(px+wanderX,py,pz+wanderZ)>=-RAIN_R){hit=true;hx=px;hy=py;hz=pz;break}
+   }
+   if(hit){
+    const [nx,ny,nz]=rainSurfaceNormal(hx+wanderX,hy,hz+wanderZ);
+    const vn=rainVX[i]*nx+rainVY[i]*ny+rainVZ[i]*nz;
+    if(vn<0){rainVX[i]-=(1+restitution)*vn*nx;rainVY[i]-=(1+restitution)*vn*ny;rainVZ[i]-=(1+restitution)*vn*nz;rainBounces++}
+    const normalSpeed=rainVX[i]*nx+rainVY[i]*ny+rainVZ[i]*nz;
+    rainVX[i]=(rainVX[i]-normalSpeed*nx)*tangentDamping+normalSpeed*nx;
+    rainVY[i]=(rainVY[i]-normalSpeed*ny)*tangentDamping+normalSpeed*ny;
+    rainVZ[i]=(rainVZ[i]-normalSpeed*nz)*tangentDamping+normalSpeed*nz;
+    let push=0;
+    while(fieldSample(hx+wanderX,hy,hz+wanderZ)>-RAIN_R&&push++<12){hx+=nx*.035;hy+=ny*.035;hz+=nz*.035}
+    rainX[i]=hx+wanderX;rainY[i]=hy;rainZ[i]=hz+wanderZ;
+    if(Math.hypot(rainVX[i],rainVY[i],rainVZ[i])<.42&&ny>.55){if(!gelCollect(i,hx+wanderX,hy,hz+wanderZ)){rainRest[i]=1;rainSettled++}}
+   }else{rainX[i]=x+wanderX;rainY[i]=y;rainZ[i]=z+wanderZ}
+   // Only the lower hemisphere is a physical bowl; upper aperture is not a wall.
+   const [dx,dy,dz]=rainWorld(i),rr=Math.hypot(dx,dy,dz),limit=INNER_R-RAIN_R-.012;
+   if(dy<0&&rr>limit&&rr<limit+.45){
+    const nx=-dx/rr,ny=-dy/rr,nz=-dz/rr;
+    rainX[i]=dx/rr*limit+wanderX;rainY[i]=dy/rr*limit;rainZ[i]=dz/rr*limit+wanderZ;
+    const vn=rainVX[i]*nx+rainVY[i]*ny+rainVZ[i]*nz;
+    if(vn<0){rainVX[i]-=1.38*vn*nx;rainVY[i]-=1.38*vn*ny;rainVZ[i]-=1.38*vn*nz;rainWallBounces++}
+    if(ny>.95&&Math.hypot(rainVX[i],rainVY[i],rainVZ[i])<.42){rainRest[i]=1;rainSettled++}
+   }
+  }
+  const [rx,ry,rz]=rainWorld(i);
+  rainDummy.position.set(rx,ry,rz);
+  rainDummy.scale.setScalar(rainRest[i]===2?0:(rx*rx+ry*ry+rz*rz<INNER_R*INNER_R?1:0));
+  rainDummy.updateMatrix();rainMesh.setMatrixAt(i,rainDummy.matrix);
+ }
+ rainMesh.count=rainEmitted;rainMesh.instanceMatrix.needsUpdate=true;
+ const fraction=(RAIN_N-rainEmitted)/RAIN_N;
+ cloud.visible=fraction>0;
+ cloud.scale.setScalar(Math.max(.001,Math.cbrt(fraction)));
+ cloud.position.set(-wanderX,cloudCenterY,-wanderZ);
+}
+
+// Wanderer lives in geological coordinates; the aperture follows only beyond 25% area.
+const HANGOUT_R=9.72*.5,WALK_SPEED=1.8,WANDER_SIZE=.38;
+const wanderCube=put(world,new T.BoxGeometry(WANDER_SIZE,WANDER_SIZE,WANDER_SIZE),new T.MeshBasicMaterial({color:0xf0bf68,depthTest:false,depthWrite:false}),0,0,0);
+wanderCube.renderOrder=100; // Intent marker stays legible even behind irregular geology.
+const walkRay=new T.Raycaster(),walkPointer=new T.Vector2(),walkPlane=new T.Plane(new T.Vector3(0,1,0),0),walkPoint=new T.Vector3();
+let walker={x:0,y:0,z:0,target:null,accepted:0,rejected:0},wanderHistory=[];
+// A tap establishes a destination once. Walking never queries geometry.
+function walkTarget(clientX,clientY){
+ const rect=renderer.domElement.getBoundingClientRect();
+ walkPointer.set((clientX-rect.left)/rect.width*2-1,-(clientY-rect.top)/rect.height*2+1);
+ camera.updateMatrixWorld();walkRay.setFromCamera(walkPointer,camera);
+ // Pick a stable walking plane, not a costly full-mesh raycast. The player's
+ // intentional tap is preserved even if no visible terrain triangle is hit.
+ walkPlane.constant=-walker.y;
+ if(!walkRay.ray.intersectPlane(walkPlane,walkPoint)){walker.rejected++;return}
+ const x=walkPoint.x,z=walkPoint.z;
+ if(!Number.isFinite(x)||!Number.isFinite(z)){walker.rejected++;return}
+ walker.target={x:x+wanderX,z:z+wanderZ};
+ walker.accepted++;
+}
+
+// V38 bounded material circuit: a visibly depleted stockpile, individual transit
+// bearings and an accumulating receiver. This is a circuit witness, NOT terrain excavation.
+const quarry=atlas?(()=>{
+ const group=new T.Group();group.userData.worldDomain=true;world.add(group);
+ const origin={x:0,z:0},capacity=96,units=[],log=[],removedWitness=[],deposits=[];
+ const source=new T.Group(),receiver=new T.Group(),transit=new T.Group();
+ group.add(source,receiver,transit);
+ const stockGeo=new T.BoxGeometry(.24,.24,.24),beadGeo=new T.IcosahedronGeometry(.13,0);
+ const mat=new T.MeshStandardMaterial({color:0xb29b75,roughness:.85});
+ for(let i=0;i<capacity;i++){
+  const m=new T.Mesh(stockGeo,mat);
+  m.position.set(-2.2+(i%6)*.28,1.5+Math.floor(i/36)*.28,-.9+Math.floor(i%36/6)*.28);
+  source.add(m);units.push({state:'source',source:m,bead:null,id:i});
+ }
+ const rim=new T.Mesh(new T.TorusGeometry(1.05,.055,8,48),brass);rim.rotation.x=Math.PI/2;rim.position.set(2.1,1.36,0);group.add(rim);
+ const floor=new T.Mesh(new T.CylinderGeometry(1,.96,.09,40),basalt);floor.position.set(2.1,1.25,0);group.add(floor);
+ const receiverGlass=new T.Mesh(new T.CylinderGeometry(1,1,1.65,40,1,true),new T.MeshPhysicalMaterial({color:0x9dcdd7,transparent:true,opacity:.14,depthWrite:false,side:T.DoubleSide}));
+ receiverGlass.position.set(2.1,2.15,0);group.add(receiverGlass);
+ source.visible=false;
+ let started=false,elapsed=0,emitted=0,delivered=0,removed=0,initialSolid=solidCount,postSolid=solidCount,meshDirty=false,dirtyBounds=null;
+ function excavate(){
+  // Fixed geological grid witness: remove exactly one positive field sample per unit.
+  // Sample-count units are NOT continuous volume; meshing interpolates their boundaries.
+  const candidates=[];
+  for(let z=1;z<NZ-1;z++)for(let y=1;y<NY-1;y++)for(let x=1;x<NX-1;x++){
+   const X=xp(x),Y=yp(y),Z=zp(z),d=Math.hypot(X+2.2,Z);
+   if(d<2.3&&Y>-.3&&Y<1.6&&field[id(x,y,z)]>0)
+    candidates.push({index:id(x,y,z),score:d*d+(Y-1.1)*(Y-1.1)*.35});
+  }
+  candidates.sort((a,b)=>a.score-b.score);
+  if(candidates.length<capacity)throw new Error('Excavation source lacks 96 solid field samples: '+candidates.length);
+  initialSolid=field.reduce((n,v)=>n+(v>0),0);
+  for(const item of candidates.slice(0,capacity)){
+   const index=item.index,x=index%NX,y=Math.floor(index/NX)%NY,z=Math.floor(index/(NX*NY));
+   const X=xp(x),Y=yp(y),Z=zp(z),prior=field[index],material=materialAt(X,Y,Z);
+   removedWitness.push({index,grid:[x,y,z],world:[round(X,3),round(Y,3),round(Z,3)],prior:round(prior,5),materialId:material?.id??null,materialName:material?.material?.name??'unknown'});
+   units[removed].matter={materialId:material.id,originIndex:index,lineage:{excavation:1,source:[X,Y,Z]}};
+   field[index]=-.3;removed++;
+  }
+  postSolid=field.reduce((n,v)=>n+(v>0),0);
+  solidCount=postSolid;voidCount=field.length-solidCount;
+  const xs=removedWitness.map(p=>p.grid[0]),zs=removedWitness.map(p=>p.grid[2]);extractTerrainMesh({x0:Math.min(...xs),x1:Math.max(...xs),z0:Math.min(...zs),z1:Math.max(...zs)});paintMapLens(terrainPerf.lastChangedChunks);source.visible=true;
+  log.push({type:'excavate',removedSamples:removed,initialSolid,postSolid});telemetryEvent('excavate',removed+' samples');
+ }
+ const depositCandidates=[];
+ for(let z=1;z<NZ-1;z++)for(let y=1;y<NY-1;y++)for(let x=1;x<NX-1;x++){
+  const X=xp(x),Y=yp(y),Z=zp(z),d=Math.hypot(X-2.1,Z);
+  if(d<1.9&&Y>=.36&&Y<=2.52&&field[id(x,y,z)]<=0)
+   depositCandidates.push({index:id(x,y,z),score:d*d*2+(Y-.72)*(Y-.72)});
+ }
+ depositCandidates.sort((a,b)=>a.score-b.score);
+ const deposit=(u)=>{
+  const target=depositCandidates.find(p=>field[p.index]<=0);
+  if(!target)return false;
+  const matter=u.matter;
+  field[target.index]=Math.max(.18,removedWitness[u.id].prior);
+  depositedMaterial.set(target.index,{materialId:matter.materialId,lineage:matter.lineage});
+  deposits.push({index:target.index,unit:u.id,materialId:matter.materialId,originIndex:matter.originIndex});
+  solidCount++;voidCount--;if(deposits.length===1||deposits.length%24===0)telemetryEvent('deposit',deposits.length+'/96');meshDirty=true;const i=target.index,x=i%NX,z=Math.floor(i/(NX*NY));if(!dirtyBounds)dirtyBounds={x0:x,x1:x,z0:z,z1:z};else{dirtyBounds.x0=Math.min(dirtyBounds.x0,x);dirtyBounds.x1=Math.max(dirtyBounds.x1,x);dirtyBounds.z0=Math.min(dirtyBounds.z0,z);dirtyBounds.z1=Math.max(dirtyBounds.z1,z)}return true;
+ };
+ let recovery=null;
+ function recoverDeposits(){
+  if(recovery)return recovery;
+  if(delivered!==capacity||deposits.length!==capacity)return {ready:false,delivered,deposited:deposits.length};
+  const recovered=[],errors=[],seen=new Set();
+  for(const d of deposits){
+   if(seen.has(d.index)){errors.push('duplicate index '+d.index);continue}seen.add(d.index);
+   const index=d.index,x=index%NX,y=Math.floor(index/NX)%NY,z=Math.floor(index/(NX*NY));
+   const override=depositedMaterial.get(index);
+   const material=materialAt(xp(x),yp(y),zp(z));
+   const original=units[d.unit].matter;
+   if(field[index]<=0||!override||!material){errors.push('missing solid/override '+index);continue}
+   if(material.id!==original.materialId||JSON.stringify(material.lineage)!==JSON.stringify(original.lineage))errors.push('identity mismatch '+index);
+   recovered.push({index,unit:d.unit,materialId:material.id,lineage:material.lineage,originIndex:original.originIndex});
+  }
+  if(errors.length){recovery={ready:true,passed:false,count:recovered.length,errors};telemetryEvent('recovery-failed',errors.length+' mismatches');return recovery}
+  for(const d of recovered){field[d.index]=-.3;depositedMaterial.delete(d.index)}
+  solidCount-=recovered.length;voidCount+=recovered.length;
+  const xs=recovered.map(d=>d.index%NX),zs=recovered.map(d=>Math.floor(d.index/(NX*NY)));
+  extractTerrainMesh({x0:Math.min(...xs),x1:Math.max(...xs),z0:Math.min(...zs),z1:Math.max(...zs)});
+  paintMapLens(terrainPerf.lastChangedChunks);
+  const residual=recovered.filter(d=>field[d.index]>0||depositedMaterial.has(d.index)).length;
+  recovery={ready:true,passed:residual===0,count:recovered.length,materialMismatches:0,lineageMismatches:0,residual,fieldSolidSamples:solidCount,records:recovered};
+  telemetryEvent('recovery',recovery.count+'/96 '+(recovery.passed?'passed':'failed'));
+  log.push({type:'recovery',count:recovery.count,passed:recovery.passed});
+  return recovery;
+ }
+ const removalAudit=()=>{
+  const byMaterial={},axes=[0,1,2].map(axis=>{const v=removedWitness.map(p=>p.world[axis]);return v.length?[Math.min(...v),Math.max(...v)]:null});
+  for(const p of removedWitness){const k=p.materialName;byMaterial[k]=(byMaterial[k]||0)+1}
+  const cell=[2*WORLD_HALF/(NX-1),(MAXY-MINY)/(NY-1),2*WORLD_HALF/(NZ-1)],cellVolume=cell[0]*cell[1]*cell[2];
+  const observedDelta=initialSolid-postSolid;
+  return {count:removedWitness.length,byMaterial,worldBounds:axes,gridBounds:[0,1,2].map(a=>{const v=removedWitness.map(p=>p.grid[a]);return v.length?[Math.min(...v),Math.max(...v)]:null}),cellDimensions:cell.map(v=>round(v,5)),nominalRemovedVolume:round(removedWitness.length*cellVolume,5),positiveSampleDelta:observedDelta,match:removedWitness.length===removed&&removed===observedDelta,records:removedWitness,limits:'Original material classified before field mutation. Nominal cell volume is not a measurement of meshed cavity volume.'};
+ };
+ const audit=()=>{const counts={source:0,transit:0,receiver:0};for(const u of units)counts[u.state]++;const depositedByMaterial={};for(const d of deposits){const name=MATERIALS[d.materialId].name;depositedByMaterial[name]=(depositedByMaterial[name]||0)+1}
+ return {capacity,counts,emitted,delivered,deposition:{count:deposits.length,byMaterial:depositedByMaterial,fieldSolidSamples:solidCount,expectedSolidSamples:initialSolid-removed+deposits.length,balanced:solidCount===initialSolid-removed+deposits.length,records:deposits,limits:'Positive field samples deposited with material overrides. No continuous mesh volume measurement.'},removalWitness:removalAudit(),removedSamples:removed,initialSolidSamples:initialSolid,postSolidSamples:postSolid,terrainDeltaSamples:initialSolid-postSolid,geologyBalanced:!started||removed===capacity&&initialSolid-postSolid===removed,balanced:counts.source+counts.transit+counts.receiver===capacity&&counts.transit===emitted-delivered&&counts.receiver===delivered,events:log.slice(-120),limits:'Discrete positive signed-field sample removal, not continuous volume conservation. Removed 96 samples in one excavation and transferred 96 material units; sample volume and rendered mesh volume are not yet reconciled.'}};
+ return {group,origin,units,log,audit,recoverDeposits,get recoveryStatus(){return recovery},get started(){return started},start(){if(started)return;excavate();started=true;telemetryEvent('transfer-start','96 units');log.push({type:'start',time:round(clock.time,2)})},step(dt){
+  if(!started)return;elapsed+=dt;
+  if(elapsed>.11&&emitted<capacity){elapsed=0;const u=units[emitted++];u.state='transit';source.remove(u.source);const b=new T.Mesh(beadGeo,mat);b.position.copy(u.source.position);transit.add(b);u.bead=b;u.t=0;log.push({type:'emit',id:u.id,material:u.matter.materialId})}
+  for(const u of units){if(u.state!=='transit')continue;u.t+=dt;const t=Math.min(1,u.t/1.3),sx=u.source.position;
+   u.bead.position.set(sx.x+(2.1-sx.x)*t,1.5+2*Math.sin(Math.PI*t),sx.z*(1-t));
+   if(t>=1){if(!deposit(u)){u.t=1.3;continue}transit.remove(u.bead);receiver.add(u.bead);u.bead.position.set(1.4+(u.id%6)*.25,1.5+Math.floor(u.id/36)*.25,-.65+Math.floor(u.id%36/6)*.25);u.state='receiver';delivered++;if(delivered===capacity)telemetryEvent('transfer-complete',delivered+'/96');log.push({type:'deposit',id:u.id,material:u.matter.materialId,fieldIndex:deposits[deposits.length-1].index})}
+  }
+  if(meshDirty){extractTerrainMesh(dirtyBounds);paintMapLens(terrainPerf.lastChangedChunks);meshDirty=false;dirtyBounds=null}
+ },sync(){group.position.set(-wanderX,0,-wanderZ)}};
+})():null;
+if(quarry){
+ const trigger=document.createElement('button');trigger.textContent='⚒ TRANSFER';trigger.style.cssText='position:fixed;z-index:24;left:12px;bottom:105px;min-height:50px';
+ trigger.onclick=()=>{quarry.start();trigger.disabled=true;trigger.textContent='⚒ RUNNING'};
+ document.body.append(trigger);
+}
+function simulate(dt){
+ if(quarry){quarry.step(dt);quarry.sync()}
+ rainStep(dt);
+ if(walker.target){
+  const dx=walker.target.x-walker.x,dz=walker.target.z-walker.z,d=Math.hypot(dx,dz);
+  if(d<=.07){walker.x=walker.target.x;walker.z=walker.target.z;walker.target=null}
+  else{
+   const step=Math.min(d,WALK_SPEED*dt);
+   walker.x+=dx/d*step;walker.z+=dz/d*step;
+  }
+ }
+ const screenX=walker.x-wanderX,screenZ=walker.z-wanderZ,rad=Math.hypot(screenX,screenZ);
+ if(rad>HANGOUT_R){
+  const factor=(rad-HANGOUT_R)/rad;
+  wanderX=T.MathUtils.clamp(wanderX+screenX*factor,-14,14);
+  wanderZ=T.MathUtils.clamp(wanderZ+screenZ*factor,-14,14);
+  solid.position.set(-wanderX,0,-wanderZ);
+  sharedApertureOffset.set(wanderX,0,wanderZ);
+ }
+ wanderCube.position.set(walker.x-wanderX,walker.y+WANDER_SIZE*.5,walker.z-wanderZ);
+}
+let angle=.6,elev=.27,dist=27,targetY=0,lastX=0,lastY=0;
+const pointers=new Map(),pointerStarts=new Map();let pinch=0,multiGesture=false;
+const TAP_SLOP=12;
+renderer.domElement.addEventListener('pointerdown',e=>{
+ if(pointers.size)multiGesture=true;
+ pointerStarts.set(e.pointerId,[e.clientX,e.clientY]);
+ pointers.set(e.pointerId,[e.clientX,e.clientY]);
+ lastX=e.clientX;lastY=e.clientY;
+ renderer.domElement.setPointerCapture(e.pointerId);
+});
+renderer.domElement.addEventListener('pointermove',e=>{
+ if(!pointers.has(e.pointerId))return;
+ const old=pointers.get(e.pointerId),start=pointerStarts.get(e.pointerId);
+ pointers.set(e.pointerId,[e.clientX,e.clientY]);
+ const ps=[...pointers.values()];
+ if(ps.length===1&&!multiGesture){
+  // Do not orbit during a tap; orbit starts only after intentional drag.
+  if(Math.hypot(e.clientX-start[0],e.clientY-start[1])>=TAP_SLOP){
+   angle+=(e.clientX-old[0])*.006;
+   elev=T.MathUtils.clamp(elev+(e.clientY-old[1])*.004,-.4,1.2);
+  }
+ }else if(ps.length===2){
+  const d=Math.hypot(ps[0][0]-ps[1][0],ps[0][1]-ps[1][1]);
+  if(pinch)dist=T.MathUtils.clamp(dist*pinch/d,2,100);
+  pinch=d;
+ }
+});
+function end(e,canceled=false){
+ const start=pointerStarts.get(e.pointerId);
+ if(!canceled&&!multiGesture&&start&&pointers.size===1&&Math.hypot(e.clientX-start[0],e.clientY-start[1])<TAP_SLOP)
+  walkTarget(e.clientX,e.clientY);
+ pointerStarts.delete(e.pointerId);pointers.delete(e.pointerId);
+ if(!pointers.size){pinch=0;multiGesture=false}
+}
+renderer.domElement.addEventListener('pointerup',e=>end(e));
+renderer.domElement.addEventListener('pointercancel',e=>end(e,true));
+renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();dist=T.MathUtils.clamp(dist+e.deltaY*.022,2,100)},{passive:false});
+function fitBaubleDistance(){const halfV=T.MathUtils.degToRad(camera.fov)/2;const halfH=Math.atan(Math.tan(halfV)*camera.aspect);return BAUBLE_R/Math.sin(Math.min(halfV,halfH))*1.12}let firstFit=true;function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();const fit=fitBaubleDistance();if(firstFit){dist=fit;firstFit=false}else dist=T.MathUtils.clamp(dist,2,100)}addEventListener('resize',resize);resize();
+
+const probeButton=document.querySelector('#probe'),probePanel=document.querySelector('#probePanel'),probeText=document.querySelector('#probeText');
+let probeReport='',probeLast=0,probeFrames=0,probeFrameMs=0,displayFps=null,fpsMeasuring=true;
+// On-demand diagnostic snapshot: no per-frame readbacks or additional rendering.
+function inspectWeather(){
+ const size=cloud.scale.x,half=cloudDimensions.map(d=>d*size/2);
+ let inside=0,above=0;const samples=512;
+ for(let i=0;i<samples;i++){
+  const x=(rainRandom(i,30)-.5)*half[0]*2+cloud.position.x;
+  const y=(rainRandom(i,31)-.5)*half[1]*2+cloud.position.y;
+  const z=(rainRandom(i,32)-.5)*half[2]*2+cloud.position.z;
+  if(y>=0){above++;if(x*x+y*y+z*z<=INNER_R*INNER_R)inside++}
+ }
+ let visible=0,outside=0,resting=0,nonfinite=0,belowBowl=0;
+ let minDistance=Infinity,maxDistance=0;
+ for(let i=0;i<rainEmitted;i++){
+  const x=rainX[i]-wanderX,y=rainY[i],z=rainZ[i]-wanderZ;
+  if(!Number.isFinite(x+y+z)){nonfinite++;continue}
+  const r=Math.hypot(x,y,z);minDistance=Math.min(minDistance,r);maxDistance=Math.max(maxDistance,r);
+  if(r<INNER_R)visible++;else outside++;
+  if(rainRest[i])resting++;
+  if(y<0&&r>INNER_R+RAIN_R)belowBowl++;
+ }
+ const c=cloud.position;
+ return {coordinateSystem:'Hermeticon-local render; cloud and BB positions persist in geological world',
+  cloud:{worldCenter:{x:round(c.x+wanderX),y:round(c.y),z:round(c.z+wanderZ)},localCenter:{x:round(c.x),y:round(c.y),z:round(c.z)},dimensions:cloudDimensions.map(d=>round(d*size)),remaining:RAIN_N-rainEmitted,visible:cloud.visible,materialDoubleSided:cloud.material.side===T.DoubleSide,shaderCompiled:!!cloud.material.userData.shaderCompiled,shaderHooks:cloud.material.userData.shaderHooks||null,clipRadius:INNER_R,clipHemisphere:'upper',sampleCount:samples,insideWeatherDome:inside,aboveEquator:above,overlapFraction:round(inside/samples,4),boundsOutsideDome:Math.hypot(c.x,c.y,c.z)+Math.hypot(...half)>INNER_R},
+  bbs:{emitted:rainEmitted,visible,offscreenPersisting:outside,resting,nonfinite,belowBowl,nearest:round(minDistance===Infinity?0:minDistance),farthest:round(maxDistance),conserved:rainEmitted+(RAIN_N-rainEmitted)===RAIN_N},
+  emission:{time:round(rainTime,3),budget:round(rainBudget,4),nominalRate:round(RAIN_N/RAIN_DURATION,3),currentOverlapEstimate:round(inside/samples,4),actualEmitted:rainEmitted},
+  movement:{wanderX:round(wanderX),wanderZ:round(wanderZ)},warnings:[...(!cloud.material.userData.shaderCompiled?['CLOUD_SHADER_NOT_COMPILED']:[]),...(nonfinite?['NONFINITE_BBS']:[])]};
+}
+globalThis.BaubleInspectWeather=inspectWeather;
+// Read-only visual witnesses: screen projections and geology, never simulation authority.
+function inspectVisualWitness(){
+ camera.updateMatrixWorld(true);world.updateMatrixWorld(true);
+ const W=renderer.domElement.width,H=renderer.domElement.height;
+ const project=(x,y,z)=>{
+  const p=new T.Vector3(x-wanderX,y,z-wanderZ).project(camera);
+  return {x:round((p.x+1)*.5,4),y:round((1-p.y)*.5,4),depth:round(p.z,4),inFrustum:Math.abs(p.x)<=1&&Math.abs(p.y)<=1&&p.z>=-1&&p.z<=1,insideAperture:Math.hypot(x-wanderX,y,z-wanderZ)<9.72};
+ };
+ const bounds=points=>{
+  const visible=points.filter(p=>p.inFrustum&&p.insideAperture);
+  if(!visible.length)return {visiblePoints:0,totalPoints:points.length};
+  const xs=visible.map(p=>p.x),ys=visible.map(p=>p.y);
+  return {visiblePoints:visible.length,totalPoints:points.length,rect:[round(Math.min(...xs),3),round(Math.min(...ys),3),round(Math.max(...xs),3),round(Math.max(...ys),3)],screenFraction:round((Math.max(...xs)-Math.min(...xs))*(Math.max(...ys)-Math.min(...ys)),4)};
+ };
+ const result={coordinateSystem:'normalized canvas top-left origin; camera projections are not occlusion tests',resolution:[W,H],geology:null,material:null,screen:null,limits:'Projected bounds are sparse geometric witnesses, not segmentation or proof of pixel visibility. No new GPU readback; sceneEyes provides 32x32 terrain occupancy.'};
+ if(quarry){
+  const units=quarry.units,states={source:[],transit:[],receiver:[]};
+  for(const u of units){
+   const p=u.state==='transit'&&u.bead?u.bead.position:u.state==='receiver'&&u.bead?u.bead.position:u.source.position;
+   states[u.state].push(project(p.x,p.y,p.z));
+  }
+  const excavation=project(-2.2,1.1,0),destination=project(2.1,1.5,0);
+  result.screen={excavation,destination,source:bounds(states.source),transit:bounds(states.transit),receiver:bounds(states.receiver),centerDistance:round(Math.hypot(excavation.x-destination.x,excavation.y-destination.y),4)};
+  result.material={states:Object.fromEntries(Object.entries(states).map(([k,v])=>[k,{count:v.length,projected:bounds(v)}])),destinationGeologyMutated:quarry.audit().deposition.count>0,accountingUnit:'one positive field sample per transported unit; rendered volume not reconciled'};
+  // A compact signed-field cross-section, centered on the actual excavation.
+  const grid=[],materialBands={};let positives=0,voids=0;
+  for(let yi=0;yi<13;yi++){
+   const y=round(2-yi*.25,3);let row='';
+   for(let xi=0;xi<17;xi++){
+    const x=-4.2+xi*.25,solidHere=fieldSample(x,y,0)>0;
+    row+=solidHere?'#':'.';if(solidHere){positives++;const m=materialAt(x,y,0);const key=m?.material?.name||'unknown';materialBands[key]=(materialBands[key]||0)+1}else voids++;
+   }grid.push(row);
+  }
+  const audit=quarry.audit();
+  result.geology={crossSection:{plane:'z=0',xRange:[-4.2,-.2],yRange:[-1,2],step:.25,rowsTopToBottom:grid,solidProbeCells:positives,voidProbeCells:voids,solidMaterialSamples:materialBands},removedSamples:audit.removedSamples,solidSampleDelta:audit.terrainDeltaSamples,fieldCellDimensions:[round(2*WORLD_HALF/(NX-1),4),round((MAXY-MINY)/(NY-1),4),round(2*WORLD_HALF/(NZ-1),4)],sampleCellVolumeEstimate:round(4*WORLD_HALF*WORLD_HALF*(MAXY-MINY)/((NX-1)*(NY-1)*(NZ-1)),6),limits:'Cross-section probes interpolated field; cell-volume estimate is not meshed excavation volume.'};
+ }
+ return result;
+}
+// V46: cheap bounded telemetry. Inspection never traverses the scene or touches GPU.
+const telemetryEvents=[],telemetryErrors=[],TELEMETRY_LIMIT=48;
+addEventListener('error',e=>{telemetryErrors.push(String(e.message).slice(0,240));if(telemetryErrors.length>4)telemetryErrors.shift()});
+addEventListener('unhandledrejection',e=>{telemetryErrors.push(String(e.reason).slice(0,240));if(telemetryErrors.length>4)telemetryErrors.shift()});
+function telemetryEvent(type,detail=''){telemetryEvents.push({t:Math.round(performance.now()),type,detail:String(detail).slice(0,160)});if(telemetryEvents.length>TELEMETRY_LIMIT)telemetryEvents.shift()}
+function inspectWorld(){
+ const report={gel:{model:'proximity lattice v1',absorbedBBs:gelAbsorbed,materialVolume:gelVolume,nodes:gelNodes.length,edges:gelEdges,columns:gelColumns.size,rejected:gelRejected,triangles:0},build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
+  terrain:{chunks:terrainPerf.totalChunks,fullRebuilds:terrainPerf.fullRebuilds,localRebuilds:terrainPerf.localRebuilds,lastDirtyChunks:terrainPerf.lastDirtyChunks,lastRebuildMs:terrainPerf.lastRebuildMs},
+  transfer:quarry?{started:quarry.started,counts:quarry.units.reduce((a,u)=>(a[u.state]++,a),{source:0,transit:0,receiver:0}),capacity:quarry.units.length,recovery:quarry.recoveryStatus??null}:null,
+  errors:telemetryErrors.slice(-4),events:telemetryEvents.slice(-24)};
+ probeReport=JSON.stringify(report,null,2);probeText.value=probeReport;return report;
+}
+probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};
+document.querySelector('#closeProbe').onclick=()=>probePanel.classList.remove('open');
+const copyButton=document.querySelector('#copyProbe');
+copyButton.textContent='COPY REPORT';
+const recoveryButton=document.createElement('button');recoveryButton.textContent='RE-EXCAVATE B';recoveryButton.onclick=()=>{if(!quarry)return;const result=quarry.recoverDeposits();inspectWorld();recoveryButton.textContent=result.passed?'RECOVERED 96/96':result.ready?'RECOVERY FAILED':'AWAIT 96/96'};document.querySelector('#probeActions').append(recoveryButton);
+copyButton.onclick=()=>{
+ // Call clipboard API synchronously within the tap gesture, not after async inspection.
+ const snapshot=probeReport||probeText.value;
+ if(!snapshot){copyButton.textContent='NO REPORT';return}
+ const fallback=()=>{
+  // V43's legacy copy mechanism, retained for Android WebViews.
+  probeText.value=snapshot;probeText.focus();probeText.select();probeText.setSelectionRange(0,snapshot.length);
+  let ok=false;try{ok=document.execCommand('copy')===true}catch(error){telemetryEvent('copy-error',error)}
+  copyButton.textContent=ok?'COPIED (LEGACY)':'SELECTED — COPY';
+ };
+ if(!navigator.clipboard?.writeText){fallback();return}
+ try{
+  const attempt=navigator.clipboard.writeText(snapshot);
+  attempt.then(()=>{copyButton.textContent='COPIED'},error=>{telemetryEvent('clipboard-error',error);fallback()});
+ }catch(error){telemetryEvent('clipboard-error',error);fallback()}
+};
+
+globalThis.BaubleInspect=inspectWorld;
+// Bounded, privacy-minimal interaction trace: canvas gestures and instrument controls only.
+const interactionLog=[],interactionLimit=240;let interactionSeq=0,interactionStart=performance.now(),gesture=null;
+function recordInteraction(type,data={}){interactionLog.push({seq:++interactionSeq,ms:Math.round(performance.now()-interactionStart),type,...data});if(interactionLog.length>interactionLimit)interactionLog.shift()}
+function screenPoint(e){const rect=renderer.domElement.getBoundingClientRect();return{x:round((e.clientX-rect.left)/rect.width,3),y:round((e.clientY-rect.top)/rect.height,3)}}
+renderer.domElement.addEventListener('pointerdown',e=>{const p=screenPoint(e);if(!gesture)gesture={start:performance.now(),x:p.x,y:p.y,maxPointers:0,moves:0,travel:0};gesture.maxPointers=Math.max(gesture.maxPointers,renderer.domElement.hasPointerCapture(e.pointerId)?1:1);recordInteraction('pointer-down',{pointerType:e.pointerType,button:e.button,...p,camera:{azimuth:round(angle),elevation:round(elev),distance:round(dist)}})},{capture:true});
+renderer.domElement.addEventListener('pointermove',e=>{if(!gesture)return;const p=screenPoint(e);gesture.moves++;gesture.travel=Math.max(gesture.travel,Math.hypot(p.x-gesture.x,p.y-gesture.y));gesture.maxPointers=Math.max(gesture.maxPointers,pointers.size)},{capture:false});
+function endGesture(e,cancelled=false){const p=screenPoint(e);recordInteraction(cancelled?'pointer-cancel':gesture?.travel<.025?'tap':'gesture-end',{pointerType:e.pointerType,...p,durationMs:gesture?Math.round(performance.now()-gesture.start):null,travel:round(gesture?.travel??0,3),maxPointers:gesture?.maxPointers??1,camera:{azimuth:round(angle),elevation:round(elev),distance:round(dist)}});if(pointers.size<=1)gesture=null}
+renderer.domElement.addEventListener('pointerup',e=>endGesture(e),{capture:false});
+renderer.domElement.addEventListener('pointercancel',e=>endGesture(e,true),{capture:false});
+renderer.domElement.addEventListener('wheel',e=>recordInteraction('wheel',{deltaY:round(e.deltaY),cameraDistance:round(dist)}),{passive:true});
+probeButton.addEventListener('click',()=>recordInteraction('inspect-toggle',{open:probePanel.classList.contains('open')}));
+document.querySelector('#copyProbe').addEventListener('click',()=>recordInteraction('copy-report'));
+document.querySelector('#closeProbe').addEventListener('click',()=>recordInteraction('inspect-close'));
+
+
+const mainRenderStats={calls:0,triangles:0};let last=performance.now();
+const fpsLabel=document.querySelector('#fps');
+function resetFpsWindow(now){probeFrames=0;probeFrameMs=0;probeLast=now;displayFps=null;fpsMeasuring=true;fpsLabel.textContent='◌ fps'}
+document.addEventListener('visibilitychange',()=>{last=performance.now();resetFpsWindow(last)});
+window.addEventListener('pageshow',()=>{last=performance.now();resetFpsWindow(last)});
+function frame(now){requestAnimationFrame(frame);
+ const elapsed=Math.max(0,(now-last)/1000);last=now;
+ const validFrame=!document.hidden&&elapsed>0&&elapsed<0.25;
+ if(!validFrame){resetFpsWindow(now)}
+ else{probeFrames++;probeFrameMs+=elapsed*1000}
+ clock.accumulator+=Math.min(MAX_FRAME,validFrame?elapsed:0);
+ if(validFrame)clock.droppedSeconds+=Math.max(0,elapsed-MAX_FRAME);
+ let steps=0;while(clock.accumulator>=STEP&&steps<MAX_STEPS){simulate(STEP);clock.time+=STEP;clock.steps++;clock.accumulator-=STEP;steps++}
+ if(clock.accumulator>=STEP){clock.droppedSeconds+=clock.accumulator;clock.accumulator=0}
+ if(validFrame&&now-probeLast>2500){probeLast=now;
+  if(probeFrames>=20&&probeFrameMs>0){displayFps=1000*probeFrames/probeFrameMs;fpsMeasuring=false;fpsLabel.textContent=displayFps.toFixed(1)+' fps'}
+  probeFrames=0;probeFrameMs=0}
+
+camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);renderer.render(scene,camera);mainRenderStats.calls=renderer.info.render.calls;mainRenderStats.triangles=renderer.info.render.triangles}
+requestAnimationFrame(frame);
+}catch(e){window.BaubleFatal(e);console.error(e)}
+</script></body></html>

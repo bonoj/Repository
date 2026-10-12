@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-mvw-v57';
+const BUILD='hermeticon-wanderer-mvw-v58';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -298,9 +298,9 @@ function rainSurfaceNormal(x,y,z){
 }
 
 /* MVW: bounded, irregular integrated sheet. Existing cloud BBs supply volume. */
-const BB_VOLUME=4*Math.PI*RAIN_R**3/3,SW=49,SS=.19;
+const BB_VOLUME=12*4*Math.PI*RAIN_R**3/3,SW=49,SS=.19;
 const bed=new Float32Array(SW*SW),mask=new Float32Array(SW*SW);
-const sheetGeo=new T.BufferGeometry(),sheet=new T.Mesh(sheetGeo,new T.MeshPhysicalMaterial({color:0x329ac8,transparent:true,opacity:.72,roughness:.13,depthWrite:false,side:T.DoubleSide}));
+const sheetGeo=new T.BufferGeometry(),sheet=new T.Mesh(sheetGeo,new T.MeshPhysicalMaterial({color:0x329ac8,transparent:true,opacity:.57,roughness:.08,metalness:.12,depthWrite:false,side:T.DoubleSide}));
 sheet.userData.worldDomain=true;sheet.frustumCulled=false;world.add(sheet);
 let wetCollected=0,wetStepMs=0,sheetHeight=0,sheetTriangles=0,sheetVolume=0,sheetReady=false,lastSheet=0;
 const si=(i,j)=>j*SW+i,sx=i=>(i-(SW-1)/2)*SS;
@@ -331,11 +331,27 @@ function wetStep(dt){
  sheetHeight=(lo+hi)/2;
  if(performance.now()-lastSheet>70){
   const verts=[],push=(x,y,z)=>verts.push(x-wanderX,y+.012,z-wanderZ);
+  // Clip each triangle against positive water depth. No terrain-shaped dry triangles.
+  function clipTriangle(tri){
+   let poly=tri;
+   for(let pass=0;pass<1;pass++){
+    const out=[];
+    for(let k=0;k<poly.length;k++){
+     const a=poly[k],b=poly[(k+1)%poly.length],ina=a[3]>.0005,inb=b[3]>.0005;
+     if(ina)out.push(a);
+     if(ina!==inb){const t=(.0005-a[3])/(b[3]-a[3]);out.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t,.0005]);}
+    }
+    poly=out;
+   }
+   for(let k=1;k+1<poly.length;k++)for(const p of [poly[0],poly[k],poly[k+1]])push(p[0],p[1],p[2]);
+  }
   for(let j=0;j<SW-1;j++)for(let i=0;i<SW-1;i++){
    const corners=[[i,j],[i+1,j],[i+1,j+1],[i,j+1]];
-   const p=corners.map(([u,v])=>{const q=si(u,v),d=Math.max(0,sheetHeight-bed[q])*mask[q];return [sx(u),bed[q]+d,sx(v),d]});
-   if(p.every(v=>v[3]<.002))continue;
-   for(const [a,b,c] of [[0,1,2],[0,2,3]])for(const k of [a,b,c])push(p[k][0],p[k][1],p[k][2]);
+   const p=corners.map(([u,v])=>{
+    const q=si(u,v),d=Math.max(0,sheetHeight-bed[q])*mask[q];
+    return [sx(u),bed[q]+d,sx(v),d];
+   });
+   clipTriangle([p[0],p[1],p[2]]);clipTriangle([p[0],p[2],p[3]]);
   }
   sheetGeo.setAttribute('position',new T.Float32BufferAttribute(verts,3));
   sheetGeo.computeVertexNormals();sheetGeo.computeBoundingSphere();

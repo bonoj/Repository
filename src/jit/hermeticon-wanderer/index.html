@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-continuous-walk-v28';
+const BUILD='hermeticon-wanderer-intent-first-v29';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -396,41 +396,32 @@ function rainStep(dt){
 
 // Wanderer lives in geological coordinates; the aperture follows only beyond 25% area.
 const HANGOUT_R=9.72*.5,WALK_SPEED=1.8,WANDER_SIZE=.38;
-const wanderCube=put(world,new T.BoxGeometry(WANDER_SIZE,WANDER_SIZE,WANDER_SIZE),M(0xf0bf68,.18,.46),0,0,0);
-const walkRay=new T.Raycaster(),walkPointer=new T.Vector2(),walkDown=new T.Vector3(),walkDir=new T.Vector3(0,-1,0);
+const wanderCube=put(world,new T.BoxGeometry(WANDER_SIZE,WANDER_SIZE,WANDER_SIZE),new T.MeshBasicMaterial({color:0xf0bf68,depthTest:false,depthWrite:false}),0,0,0);
+wanderCube.renderOrder=100; // Intent marker stays legible even behind irregular geology.
+const walkRay=new T.Raycaster(),walkPointer=new T.Vector2(),walkPlane=new T.Plane(new T.Vector3(0,1,0),0),walkPoint=new T.Vector3();
 let walker={x:0,y:0,z:0,target:null,accepted:0,rejected:0},wanderHistory=[];
-function groundAt(x,z){
- // Geological surface: downward ray against resident terrain, independent of aperture shader.
- solid.updateMatrixWorld(true);
- walkRay.set(walkDown.set(x-wanderX,MAXY+2,z-wanderZ),walkDir);
- const hits=walkRay.intersectObject(solid,false);
- for(const hit of hits){
-  if(hit.face&&hit.face.normal.clone().transformDirection(solid.matrixWorld).y>.15)return hit.point.y;
- }
- return null;
-}
-walker.y=groundAt(0,0)??0;
+// A tap establishes a destination once. Walking never queries geometry.
 function walkTarget(clientX,clientY){
  const rect=renderer.domElement.getBoundingClientRect();
  walkPointer.set((clientX-rect.left)/rect.width*2-1,-(clientY-rect.top)/rect.height*2+1);
  camera.updateMatrixWorld();walkRay.setFromCamera(walkPointer,camera);
- solid.updateMatrixWorld(true);
- const hit=walkRay.intersectObject(solid,false).find(h=>h.face&&h.face.normal.clone().transformDirection(solid.matrixWorld).y>.15&&Math.hypot(h.point.x,h.point.y,h.point.z)<9.72);
- if(!hit){walker.rejected++;return}
- walker.target={x:hit.point.x+wanderX,z:hit.point.z+wanderZ};
+ // Pick a stable walking plane, not a costly full-mesh raycast. The player's
+ // intentional tap is preserved even if no visible terrain triangle is hit.
+ walkPlane.constant=-walker.y;
+ if(!walkRay.ray.intersectPlane(walkPlane,walkPoint)){walker.rejected++;return}
+ const x=walkPoint.x,z=walkPoint.z;
+ if(!Number.isFinite(x)||!Number.isFinite(z)){walker.rejected++;return}
+ walker.target={x:x+wanderX,z:z+wanderZ};
  walker.accepted++;
 }
 function simulate(dt){
  rainStep(dt);
  if(walker.target){
   const dx=walker.target.x-walker.x,dz=walker.target.z-walker.z,d=Math.hypot(dx,dz);
-  if(d<.07)walker.target=null;
+  if(d<=.07){walker.x=walker.target.x;walker.z=walker.target.z;walker.target=null}
   else{
-   const step=Math.min(d,WALK_SPEED*dt),nx=walker.x+dx/d*step,nz=walker.z+dz/d*step,ny=groundAt(nx,nz);
-   // Keep walking toward the tapped geological node. A missing/steep sample
-   // must not silently cancel navigation; resolve height again next step.
-   walker.x=nx;walker.z=nz;
-   if(ny!==null)walker.y=ny;
+   const step=Math.min(d,WALK_SPEED*dt);
+   walker.x+=dx/d*step;walker.z+=dz/d*step;
   }
  }
  const screenX=walker.x-wanderX,screenZ=walker.z-wanderZ,rad=Math.hypot(screenX,screenZ);
@@ -455,9 +446,42 @@ globalThis.BaubleRegisterInvariant=registerInvariant;
 globalThis.BaubleVerifyInvariants=verifyInvariants;
 
 let angle=.6,elev=.27,dist=27,targetY=0,lastX=0,lastY=0;
-const pointers=new Map(),pointerStarts=new Map();let pinch=0;renderer.domElement.addEventListener('pointerdown',e=>{pointerStarts.set(e.pointerId,[e.clientX,e.clientY]);pointers.set(e.pointerId,[e.clientX,e.clientY]);lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
-renderer.domElement.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;const old=pointers.get(e.pointerId);pointers.set(e.pointerId,[e.clientX,e.clientY]);const ps=[...pointers.values()];if(ps.length===1){angle+=(e.clientX-old[0])*.006;elev=T.MathUtils.clamp(elev+(e.clientY-old[1])*.004,-.4,1.2)}else if(ps.length===2){const d=Math.hypot(ps[0][0]-ps[1][0],ps[0][1]-ps[1][1]);if(pinch)dist=T.MathUtils.clamp(dist*pinch/d,2,100);pinch=d}});
-function end(e){const old=pointerStarts.get(e.pointerId);if(old&&pointers.size===1&&Math.hypot(e.clientX-old[0],e.clientY-old[1])<9)walkTarget(e.clientX,e.clientY);pointerStarts.delete(e.pointerId);pointers.delete(e.pointerId);pinch=0}renderer.domElement.addEventListener('pointerup',end);renderer.domElement.addEventListener('pointercancel',end);renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();dist=T.MathUtils.clamp(dist+e.deltaY*.022,2,100)},{passive:false});
+const pointers=new Map(),pointerStarts=new Map();let pinch=0,multiGesture=false;
+const TAP_SLOP=12;
+renderer.domElement.addEventListener('pointerdown',e=>{
+ if(pointers.size)multiGesture=true;
+ pointerStarts.set(e.pointerId,[e.clientX,e.clientY]);
+ pointers.set(e.pointerId,[e.clientX,e.clientY]);
+ lastX=e.clientX;lastY=e.clientY;
+ renderer.domElement.setPointerCapture(e.pointerId);
+});
+renderer.domElement.addEventListener('pointermove',e=>{
+ if(!pointers.has(e.pointerId))return;
+ const old=pointers.get(e.pointerId),start=pointerStarts.get(e.pointerId);
+ pointers.set(e.pointerId,[e.clientX,e.clientY]);
+ const ps=[...pointers.values()];
+ if(ps.length===1&&!multiGesture){
+  // Do not orbit during a tap; orbit starts only after intentional drag.
+  if(Math.hypot(e.clientX-start[0],e.clientY-start[1])>=TAP_SLOP){
+   angle+=(e.clientX-old[0])*.006;
+   elev=T.MathUtils.clamp(elev+(e.clientY-old[1])*.004,-.4,1.2);
+  }
+ }else if(ps.length===2){
+  const d=Math.hypot(ps[0][0]-ps[1][0],ps[0][1]-ps[1][1]);
+  if(pinch)dist=T.MathUtils.clamp(dist*pinch/d,2,100);
+  pinch=d;
+ }
+});
+function end(e,canceled=false){
+ const start=pointerStarts.get(e.pointerId);
+ if(!canceled&&!multiGesture&&start&&pointers.size===1&&Math.hypot(e.clientX-start[0],e.clientY-start[1])<TAP_SLOP)
+  walkTarget(e.clientX,e.clientY);
+ pointerStarts.delete(e.pointerId);pointers.delete(e.pointerId);
+ if(!pointers.size){pinch=0;multiGesture=false}
+}
+renderer.domElement.addEventListener('pointerup',e=>end(e));
+renderer.domElement.addEventListener('pointercancel',e=>end(e,true));
+renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();dist=T.MathUtils.clamp(dist+e.deltaY*.022,2,100)},{passive:false});
 function fitBaubleDistance(){const halfV=T.MathUtils.degToRad(camera.fov)/2;const halfH=Math.atan(Math.tan(halfV)*camera.aspect);return BAUBLE_R/Math.sin(Math.min(halfV,halfH))*1.12}let firstFit=true;function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();const fit=fitBaubleDistance();if(firstFit){dist=fit;firstFit=false}else dist=T.MathUtils.clamp(dist,2,100)}addEventListener('resize',resize);resize();
 
 const probeButton=document.querySelector('#probe'),probePanel=document.querySelector('#probePanel'),probeText=document.querySelector('#probeText');

@@ -112,7 +112,7 @@ const tets=[[0,5,1,6],[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6]];
 const apertureEyes={compileCount:0,vertexHook:false,fragmentHook:false,shaderRadius:9.72,compileFailures:[],lastCompiledAt:null};const sharedApertureOffset=new T.Vector3();let apertureUniform={value:sharedApertureOffset};const terrainMaterial=new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.92,metalness:.02,side:T.DoubleSide,flatShading:true,onBeforeCompile:shader=>{shader.uniforms.apertureRadius={value:9.72};shader.uniforms.apertureOffset={value:sharedApertureOffset};apertureEyes.compileCount++;apertureEyes.lastCompiledAt=performance.now();apertureEyes.vertexHook=shader.vertexShader.includes('#include <begin_vertex>');apertureEyes.fragmentHook=shader.fragmentShader.includes('#include <clipping_planes_fragment>');if(!apertureEyes.vertexHook||!apertureEyes.fragmentHook)apertureEyes.compileFailures.push('Missing shader injection anchor');shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vAperturePosition;\nuniform vec3 apertureOffset;');shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvAperturePosition=position-apertureOffset;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vAperturePosition;\nuniform float apertureRadius;\nuniform vec3 apertureOffset;');shader.fragmentShader=shader.fragmentShader.replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\nif(dot(vAperturePosition,vAperturePosition)>apertureRadius*apertureRadius) discard;');shader.fragmentShader=shader.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\nfloat apertureFog=smoothstep(7.1,9.70,length(vAperturePosition));\ngl_FragColor.rgb=mix(gl_FragColor.rgb,vec3(0.045,0.115,0.16),apertureFog);')}});
 const solid=new T.Group();solid.name='terrain:signed-volume';solid.userData.worldDomain=true;world.add(solid);
 const CHUNK=10,CX=Math.ceil((NX-1)/CHUNK),CZ=Math.ceil((NZ-1)/CHUNK),terrainChunks=[];
-const terrainPerf={totalChunks:CX*CZ,fullRebuilds:0,localRebuilds:0,lastDirtyChunks:0,lastRebuiltCells:0,lastRebuildMs:0};
+const terrainPerf={totalChunks:CX*CZ,fullRebuilds:0,localRebuilds:0,lastDirtyChunks:0,lastRebuiltCells:0,lastRebuildMs:0,lastChangedChunks:[]};
 for(let cz=0;cz<CZ;cz++)for(let cx=0;cx<CX;cx++){const geometry=new T.BufferGeometry(),mesh=new T.Mesh(geometry,terrainMaterial);mesh.receiveShadow=true;mesh.frustumCulled=false;solid.add(mesh);terrainChunks.push({cx,cz,geometry,triangles:0})}
 
 let geometryEyes={};
@@ -300,13 +300,13 @@ function extractTerrainMesh(bounds=null){
   c.geometry.setAttribute('position',new T.Float32BufferAttribute(pos,3));c.geometry.setAttribute('color',new T.Float32BufferAttribute(new Float32Array(pos.length).fill(.52),3));c.geometry.computeVertexNormals();c.geometry.computeBoundingSphere();c.triangles=pos.length/9;
  }
  triangles=terrainChunks.reduce((n,c)=>n+c.triangles,0);buildMs=performance.now()-start;
- terrainPerf.lastDirtyChunks=selected.length;terrainPerf.lastRebuiltCells=rebuiltCells;terrainPerf.lastRebuildMs=+buildMs.toFixed(3);if(bounds)terrainPerf.localRebuilds++;else terrainPerf.fullRebuilds++;
+ terrainPerf.lastDirtyChunks=selected.length;terrainPerf.lastRebuiltCells=rebuiltCells;terrainPerf.lastRebuildMs=+buildMs.toFixed(3);terrainPerf.lastChangedChunks=selected;if(bounds)terrainPerf.localRebuilds++;else terrainPerf.fullRebuilds++;
  solid.position.set(-wanderX,0,-wanderZ);sharedApertureOffset.set(wanderX,0,wanderZ);
  let outside=0,inside=0,nearBoundary=0,minDistance=Infinity,maxDistance=0;
  const apertureR=9.72,cellX=2*WORLD_HALF/(NX-1),cellZ=2*WORLD_HALF/(NZ-1);
  for(const c of terrainChunks){const p=c.geometry.getAttribute('position');if(!p)continue;for(let i=0;i<p.count;i++){const d=Math.hypot(p.getX(i)-wanderX,p.getY(i),p.getZ(i)-wanderZ);minDistance=Math.min(minDistance,d);maxDistance=Math.max(maxDistance,d);if(d>apertureR)outside++;else inside++;if(Math.abs(d-apertureR)<Math.max(cellX,cellZ))nearBoundary++}}
  const effectiveMargin=R+EXTRACTION_MARGIN-Math.max(cellX,cellZ),nearestFieldEdge=Math.min(WORLD_HALF-Math.abs(wanderX),WORLD_HALF-Math.abs(wanderZ)),offset=apertureUniform?.value,offsetError=offset?Math.hypot(offset.x-wanderX,offset.y,offset.z-wanderZ):null;
- geometryEyes={terrainBuildCount,residentWorld:true,insideVertices:inside,outsideVertices:outside,nearApertureVertices:nearBoundary,minVertexRadius:round(minDistance,3),maxVertexRadius:round(maxDistance,3),cellSize:[round(cellX,3),round(cellZ,3)],effectiveExtractionMargin:round(effectiveMargin,3),nearestFieldEdge:round(nearestFieldEdge,3),fieldEdgeClearance:round(nearestFieldEdge-apertureR,3),shaderOffsetError:offsetError===null?null:round(offsetError,5),worldTranslation:[-wanderX,0,-wanderZ],expectedUniformOffset:[wanderX,0,wanderZ],apertureRadius:apertureR,locality:{...terrainPerf}};
+ geometryEyes={terrainBuildCount,residentWorld:true,insideVertices:inside,outsideVertices:outside,nearApertureVertices:nearBoundary,minVertexRadius:round(minDistance,3),maxVertexRadius:round(maxDistance,3),cellSize:[round(cellX,3),round(cellZ,3)],effectiveExtractionMargin:round(effectiveMargin,3),nearestFieldEdge:round(nearestFieldEdge,3),fieldEdgeClearance:round(nearestFieldEdge-apertureR,3),shaderOffsetError:offsetError===null?null:round(offsetError,5),worldTranslation:[-wanderX,0,-wanderZ],expectedUniformOffset:[wanderX,0,wanderZ],apertureRadius:apertureR,locality:{...terrainPerf,lastChangedChunks:terrainPerf.lastChangedChunks.length}};
 }
 
 if(terrainProvider!=='empty')regenerate();
@@ -376,11 +376,11 @@ function materialAt(X,Y,Z){
 }
 const mapModes=['COMPOSITE','ELEVATION','SUBSTRATE','BIOME','HYDROLOGY','PROVENANCE','STRATA','POPULATION','FEATURES'];
 let mapModeIndex=0;
-function paintMapLens(){
+function paintMapLens(chunks=terrainChunks){
  if(!atlas)return;
  const {fields:f,resolution:[w,h],halfExtent:half}=atlas;
  const mode=mapModes[mapModeIndex],v=new T.Color(),base=new T.Color();
- for(const chunk of terrainChunks){const position=chunk.geometry.getAttribute('position'),color=chunk.geometry.getAttribute('color');if(!position||!color)continue;
+ for(const chunk of chunks){const position=chunk.geometry.getAttribute('position'),color=chunk.geometry.getAttribute('color');if(!position||!color)continue;
  for(let i=0;i<position.count;i++){
   const X=position.getX(i),Y=position.getY(i),Z=position.getZ(i);
   const ix=Math.max(0,Math.min(w-1,Math.round((X/half+1)*(w-1)/2)));
@@ -580,7 +580,7 @@ const quarry=atlas?(()=>{
   }
   postSolid=field.reduce((n,v)=>n+(v>0),0);
   solidCount=postSolid;voidCount=field.length-solidCount;
-  const xs=removedWitness.map(p=>p.grid[0]),zs=removedWitness.map(p=>p.grid[2]);extractTerrainMesh({x0:Math.min(...xs),x1:Math.max(...xs),z0:Math.min(...zs),z1:Math.max(...zs)});paintMapLens();source.visible=true;
+  const xs=removedWitness.map(p=>p.grid[0]),zs=removedWitness.map(p=>p.grid[2]);extractTerrainMesh({x0:Math.min(...xs),x1:Math.max(...xs),z0:Math.min(...zs),z1:Math.max(...zs)});paintMapLens(terrainPerf.lastChangedChunks);source.visible=true;
   log.push({type:'excavate',removedSamples:removed,initialSolid,postSolid});
  }
  const depositCandidates=[];
@@ -615,7 +615,7 @@ const quarry=atlas?(()=>{
    u.bead.position.set(sx.x+(2.1-sx.x)*t,1.5+2*Math.sin(Math.PI*t),sx.z*(1-t));
    if(t>=1){if(!deposit(u)){u.t=1.3;continue}transit.remove(u.bead);receiver.add(u.bead);u.bead.position.set(1.4+(u.id%6)*.25,1.5+Math.floor(u.id/36)*.25,-.65+Math.floor(u.id%36/6)*.25);u.state='receiver';delivered++;log.push({type:'deposit',id:u.id,material:u.matter.materialId,fieldIndex:deposits[deposits.length-1].index})}
   }
-  if(meshDirty){extractTerrainMesh(dirtyBounds);paintMapLens();meshDirty=false;dirtyBounds=null}
+  if(meshDirty){extractTerrainMesh(dirtyBounds);paintMapLens(terrainPerf.lastChangedChunks);meshDirty=false;dirtyBounds=null}
  },sync(){group.position.set(-wanderX,0,-wanderZ)}};
 })():null;
 if(quarry){

@@ -71,6 +71,35 @@ The layers need not all be separate textures in the runtime. They are independen
 
 These are **reference implementations**, not evidence that a hand-drawn-map importer or provenance-preserving geological compiler already exists.
 
+## Connection to Hermeticon Wanderer — incremental realization
+
+**The map authors the persistent world; Wanderer is the moving local aperture into it.** The atlas does not author the Hermeticon vessel, camera, gesture controls, or bowl physics. It describes geography and material conditions in geological world coordinates. The Hermeticon samples, reveals, and eventually instantiates local detail as it travels. Material and weather outside the aperture must not be deleted, relocated, or re-owned by the sphere.
+
+The existing atlas fields have different destinations:
+
+| Atlas fields | Persistent world responsibility | Hermeticon-local expression |
+| --- | --- | --- |
+| Elevation, strata, substrate | World-space geological surface and underlying material | Terrain visible within the moving aperture; local terrain interactions |
+| Material provenance | Source deposits, material identity, composition, lineage and conserved accounting | Local BBs and excavated/transported matter retain their origins, even across region and representation boundaries |
+| Region/biome, surface cover, population | Geographic jurisdiction, ecological conditions and population distributions | Nearby terrain treatment and eventually instantiated vegetation, structures or inhabitants |
+| Hydrology | Drainage, water bodies, moisture, climate and water inventory | Visible local water and weather; cloud/rain only where world conditions and aperture overlap justify it |
+| Features/landmarks | Persistent positions, names and semantic associations | Discoverable places, navigation targets and possible thoughtforms |
+| Confidence/authorship | Source-versus-generated evidence attached to world data | Inspectable explanations of why a feature or material exists |
+
+**Do not confuse authoring fields with runtime layers or physical shells.** A 2D atlas may initialize a volumetric signed-density world: height is one boundary, while strata, deposits and later voids or intrusions can extend below or above it. These maps are *initial conditions*, not perpetual rules that erase later excavation, erosion, transport, deposition or fabrication.
+
+### Build only what the next experiment needs
+
+1. **Atlas first — no 3D required.** Align the hand drawing; trace the known geography; generate and inspect the independent 2D fields and provenance/strata metadata. Validate the composite against the original drawing.
+2. **Geology in a separate test.** Compile elevation plus a minimal material/strata assignment into persistent world-space terrain. Verify shape, deterministic regeneration, and provenance queries. This does not require vegetation, weather, inhabitants or every landmark.
+3. **Wanderer aperture integration, when authorized.** Let an isolated Wanderer experiment traverse the new world and reveal its existing terrain. Preserve accepted V31 navigation, camera ownership, geological persistence, cloud clipping and lower-bowl behavior; do not overwrite V31 merely to test the atlas.
+4. **Material consequence.** Add local material interactions one at a time: extraction, BB transport, deposition and origin-preserving accounting. Confirm that leaving the aperture does not erase matter and that moving between representation scales does not silently change provenance. Aggregate/distant representations are future design, not current V31 capability.
+5. **Other world systems on demand.** Bring in water, weather, populations, landmarks, semantic thoughtforms and richer underground geology independently, only when the preceding seam is demonstrably useful. No requirement to populate the whole map or simulate everything everywhere.
+
+At each stage, the *world* retains the authoritative state. The Hermeticon spends computation locally; it is not the owner of the geography it happens to display. Features outside the aperture may exist as lightweight world data until encountered. The intended long-term boundary is world-scale aggregate persistence with local high-resolution manifestation, **not a claim that Wanderer already implements general resolution transitions**.
+
+**Next actionable milestone remains the 2D atlas.** The hand-drawn source image must be made available as an actual asset before pixel-accurate tracing; this Markdown document currently records labels and the plan, not the image bytes.
+
 ## First deliverable and success criterion
 
 A deterministic, inspectable **2D field atlas for this specific drawing**: individually viewable layers, an image-overlay composite, aligned landmark/region labels, explicit unknowns, and a machine-readable field/feature manifest. No 3D scene is needed for the first acceptance test.

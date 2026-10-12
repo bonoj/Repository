@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-gravity-drill-v50';
+const BUILD='hermeticon-wanderer-reexcavation-v49';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -506,88 +506,7 @@ if(quarry){
  trigger.onclick=()=>{quarry.start();trigger.disabled=true;trigger.textContent='⚒ RUNNING'};
  document.body.append(trigger);
 }
-
-// V50 one-off gravity drill. Disable by removing this single instantiation.
-function createGravityDrill(){
- const group=new T.Group();group.userData.worldDomain=true;world.add(group);
- const brass=new T.MeshStandardMaterial({color:0xcda66a,metalness:.72,roughness:.32});
- const iron=new T.MeshStandardMaterial({color:0x485c66,metalness:.58,roughness:.42});
- const body=new T.Mesh(new T.CylinderGeometry(.24,.32,.65,10),iron);body.position.y=.55;group.add(body);
- const bit=new T.Mesh(new T.ConeGeometry(.34,.48,10),brass);bit.rotation.z=Math.PI;bit.position.y=.03;group.add(bit);
- const collar=new T.Mesh(new T.TorusGeometry(.3,.075,6,12),brass);collar.rotation.x=Math.PI/2;collar.position.y=.4;group.add(collar);
- const particles=new T.InstancedMesh(new T.IcosahedronGeometry(.085,0),new T.MeshStandardMaterial({color:0xc8aa7b,roughness:.82}),512);
- particles.userData.worldDomain=true;particles.frustumCulled=false;world.add(particles);
- const dummy=new T.Object3D(),bb=Array.from({length:512},()=>({active:false,x:0,y:0,z:0,vx:0,vy:0,vz:0,rest:0,matter:null}));
- const X=0,Z=0,shaftRadius=.92,drillRadius=.34,gravity=9.8;
- let y=4.2,vy=0,excavated=0,accreted=0,escaped=0,bounces=0,collision=false,done=false,dirty=null,dirtyTime=0,launchIndex=0;
- const ix=x=>Math.round((x/WORLD_HALF+1)*(NX-1)/2),iz=z=>Math.round((z/WORLD_HALF+1)*(NZ-1)/2),iy=y=>Math.round((y-MINY)/(MAXY-MINY)*(NY-1));
- const mark=(x,z)=>{if(!dirty)dirty={x0:x,x1:x,z0:z,z1:z};else{dirty.x0=Math.min(x,dirty.x0);dirty.x1=Math.max(x,dirty.x1);dirty.z0=Math.min(z,dirty.z0);dirty.z1=Math.max(z,dirty.z1)}};
- const release=(matter)=>{
-  const p=bb.find(p=>!p.active);if(!p)return false;
-  const a=launchIndex++*2.399963229728653,sp=4.2+(launchIndex%7)*.42;
-  Object.assign(p,{active:true,x:X,y:y+.42,z:Z,vx:Math.cos(a)*sp,vy:8.5+(launchIndex%5)*.55,vz:Math.sin(a)*sp,rest:0,matter});return true;
- };
- const accrete=p=>{
-  const x=ix(p.x),z=iz(p.z),start=iy(p.y);
-  if(x<1||x>=NX-1||z<1||z>=NZ-1)return false;
-  for(let delta=0;delta<=3;delta++)for(const yy of [start+delta,start-delta]){
-   if(yy<1||yy>=NY-1)continue;
-   const k=id(x,yy,z);
-   if(field[k]<=0&&field[id(x,yy-1,z)]>0){
-    field[k]=.35;depositedMaterial.set(k,p.matter);solidCount++;voidCount--;mark(x,z);accreted++;return true;
-   }
-  }
-  return false;
- };
- function step(dt){
-  if(done)return;
-  if(!collision){
-   vy-=gravity*dt;
-   let nextY=y+vy*dt;
-   const bottom=nextY-.25;
-   if(bottom<MAXY&&bottom>MINY){
-    let blocking=false,cut=0;
-    const cx=ix(X),cz=iz(Z),cy=iy(bottom);
-    for(let zz=cz-2;zz<=cz+2;zz++)for(let xx=cx-2;xx<=cx+2;xx++){
-     if(xx<1||xx>=NX-1||zz<1||zz>=NZ-1||Math.hypot(xp(xx)-X,zp(zz)-Z)>shaftRadius)continue;
-     for(let yy=Math.max(1,cy-1);yy<=Math.min(NY-2,cy+1);yy++){
-      const k=id(xx,yy,zz);if(field[k]<=0)continue;
-      if(cut>=5||!release((()=>{const m=materialAt(xp(xx),yp(yy),zp(zz));return {materialId:m?.id??0,lineage:m?.lineage??{excavation:1,source:[xp(xx),yp(yy),zp(zz)]}}})())){blocking=true;continue}
-      field[k]=-.3;depositedMaterial.delete(k);solidCount--;voidCount++;mark(xx,zz);excavated++;cut++;
-     }
-    }
-    if(blocking){nextY=Math.max(y,bottom+.25);vy=0}
-   }
-   y=nextY;
-   // The vessel's lower hemisphere, not the terrain floor, is the terminal boundary.
-   if(y<=-9.25){y=-9.25;vy=0;collision=true;telemetryEvent('drill-impact','Hermeticon; excavated '+excavated)}
-  }
-  group.position.set(X-wanderX,y,Z-wanderZ);group.rotation.y+=dt*8;
-  let active=0;
-  for(let i=0;i<bb.length;i++){
-   const p=bb[i];if(!p.active){dummy.scale.setScalar(0);dummy.updateMatrix();particles.setMatrixAt(i,dummy.matrix);continue}
-   active++;const ox=p.x,oy=p.y,oz=p.z;
-   p.vy-=gravity*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;
-   if(fieldSample(p.x,p.y-.085,p.z)>=-.085&&p.vy<0){
-    const [nx,ny,nz]=rainSurfaceNormal(p.x,p.y,p.z),vn=p.vx*nx+p.vy*ny+p.vz*nz;
-    if(vn<0){p.vx-=1.4*vn*nx;p.vy-=1.4*vn*ny;p.vz-=1.4*vn*nz;bounces++}
-    p.vx*=.76;p.vz*=.76;p.x=ox;p.y=Math.max(oy,p.y);p.z=oz;
-    if(Math.hypot(p.vx,p.vy,p.vz)<.8&&ny>.45)p.rest+=dt;else p.rest=0;
-   }
-   if(p.rest>.22){if(accrete(p)){p.active=false;active--}else p.rest=0}
-   if(p.y<-9.4||Math.hypot(p.x,p.z)>WORLD_HALF){p.active=false;active--;escaped++}
-   dummy.position.set(p.x-wanderX,p.y,p.z-wanderZ);dummy.scale.setScalar(p.active?1:0);dummy.updateMatrix();particles.setMatrixAt(i,dummy.matrix);
-  }
-  particles.instanceMatrix.needsUpdate=true;
-  dirtyTime+=dt;if(dirty&&dirtyTime>=.12){extractTerrainMesh(dirty);paintMapLens(terrainPerf.lastChangedChunks);dirty=null;dirtyTime=0}
-  if(collision&&active===0){done=true;telemetryEvent('drill-complete',excavated+' excavated '+accreted+' accreted '+escaped+' escaped')}
- }
- return {step,report:()=>({y:+y.toFixed(2),velocity:+vy.toFixed(2),excavated,accreted,airborne:bb.filter(p=>p.active).length,escaped,bounces,collision,done})};
-}
-const gravityDrill=atlas?createGravityDrill():null;
-
 function simulate(dt){
- if(gravityDrill)gravityDrill.step(dt);
  if(quarry){quarry.step(dt);quarry.sync()}
  rainStep(dt);
  if(walker.target){
@@ -724,7 +643,7 @@ function inspectWorld(){
  const report={build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
   terrain:{chunks:terrainPerf.totalChunks,fullRebuilds:terrainPerf.fullRebuilds,localRebuilds:terrainPerf.localRebuilds,lastDirtyChunks:terrainPerf.lastDirtyChunks,lastRebuildMs:terrainPerf.lastRebuildMs},
   transfer:quarry?{started:quarry.started,counts:quarry.units.reduce((a,u)=>(a[u.state]++,a),{source:0,transit:0,receiver:0}),capacity:quarry.units.length,recovery:quarry.recoveryStatus??null}:null,
-  drill:gravityDrill?gravityDrill.report():null,errors:telemetryErrors.slice(-4),events:telemetryEvents.slice(-24)};
+  errors:telemetryErrors.slice(-4),events:telemetryEvents.slice(-24)};
  probeReport=JSON.stringify(report,null,2);probeText.value=probeReport;return report;
 }
 probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};

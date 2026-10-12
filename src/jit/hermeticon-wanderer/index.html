@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-visual-witness-v40';
+const BUILD='hermeticon-wanderer-extraction-witness-v41';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -539,7 +539,7 @@ function walkTarget(clientX,clientY){
 // bearings and an accumulating receiver. This is a circuit witness, NOT terrain excavation.
 const quarry=atlas?(()=>{
  const group=new T.Group();group.userData.worldDomain=true;world.add(group);
- const origin={x:0,z:0},capacity=96,units=[],log=[];
+ const origin={x:0,z:0},capacity=96,units=[],log=[],removedWitness=[];
  const source=new T.Group(),receiver=new T.Group(),transit=new T.Group();
  group.add(source,receiver,transit);
  const stockGeo=new T.BoxGeometry(.24,.24,.24),beadGeo=new T.IcosahedronGeometry(.13,0);
@@ -567,13 +567,25 @@ const quarry=atlas?(()=>{
   candidates.sort((a,b)=>a.score-b.score);
   if(candidates.length<capacity)throw new Error('Excavation source lacks 96 solid field samples: '+candidates.length);
   initialSolid=field.reduce((n,v)=>n+(v>0),0);
-  for(const item of candidates.slice(0,capacity)){field[item.index]=-.3;removed++}
+  for(const item of candidates.slice(0,capacity)){
+   const index=item.index,x=index%NX,y=Math.floor(index/NX)%NY,z=Math.floor(index/(NX*NY));
+   const X=xp(x),Y=yp(y),Z=zp(z),prior=field[index],material=materialAt(X,Y,Z);
+   removedWitness.push({index,grid:[x,y,z],world:[round(X,3),round(Y,3),round(Z,3)],prior:round(prior,5),materialId:material?.id??null,materialName:material?.material?.name??'unknown'});
+   field[index]=-.3;removed++;
+  }
   postSolid=field.reduce((n,v)=>n+(v>0),0);
   solidCount=postSolid;voidCount=field.length-solidCount;
   extractTerrainMesh();paintMapLens();source.visible=true;
   log.push({type:'excavate',removedSamples:removed,initialSolid,postSolid});
  }
- const audit=()=>{const counts={source:0,transit:0,receiver:0};for(const u of units)counts[u.state]++;return {capacity,counts,emitted,delivered,removedSamples:removed,initialSolidSamples:initialSolid,postSolidSamples:postSolid,terrainDeltaSamples:initialSolid-postSolid,geologyBalanced:!started||removed===capacity&&initialSolid-postSolid===removed,balanced:counts.source+counts.transit+counts.receiver===capacity&&counts.transit===emitted-delivered&&counts.receiver===delivered,events:log.slice(-120),limits:'Discrete positive signed-field sample removal, not continuous volume conservation. Removed 96 samples in one excavation and transferred 96 material units; sample volume and rendered mesh volume are not yet reconciled.'}};
+ const removalAudit=()=>{
+  const byMaterial={},axes=[0,1,2].map(axis=>{const v=removedWitness.map(p=>p.world[axis]);return v.length?[Math.min(...v),Math.max(...v)]:null});
+  for(const p of removedWitness){const k=p.materialName;byMaterial[k]=(byMaterial[k]||0)+1}
+  const cell=[2*WORLD_HALF/(NX-1),(MAXY-MINY)/(NY-1),2*WORLD_HALF/(NZ-1)],cellVolume=cell[0]*cell[1]*cell[2];
+  const observedDelta=initialSolid-postSolid;
+  return {count:removedWitness.length,byMaterial,worldBounds:axes,gridBounds:[0,1,2].map(a=>{const v=removedWitness.map(p=>p.grid[a]);return v.length?[Math.min(...v),Math.max(...v)]:null}),cellDimensions:cell.map(v=>round(v,5)),nominalRemovedVolume:round(removedWitness.length*cellVolume,5),positiveSampleDelta:observedDelta,match:removedWitness.length===removed&&removed===observedDelta,records:removedWitness,limits:'Original material classified before field mutation. Nominal cell volume is not a measurement of meshed cavity volume.'};
+ };
+ const audit=()=>{const counts={source:0,transit:0,receiver:0};for(const u of units)counts[u.state]++;return {capacity,counts,emitted,delivered,removalWitness:removalAudit(),removedSamples:removed,initialSolidSamples:initialSolid,postSolidSamples:postSolid,terrainDeltaSamples:initialSolid-postSolid,geologyBalanced:!started||removed===capacity&&initialSolid-postSolid===removed,balanced:counts.source+counts.transit+counts.receiver===capacity&&counts.transit===emitted-delivered&&counts.receiver===delivered,events:log.slice(-120),limits:'Discrete positive signed-field sample removal, not continuous volume conservation. Removed 96 samples in one excavation and transferred 96 material units; sample volume and rendered mesh volume are not yet reconciled.'}};
  return {group,origin,units,log,audit,get started(){return started},start(){if(started)return;excavate();started=true;log.push({type:'start',time:round(clock.time,2)})},step(dt){
   if(!started)return;elapsed+=dt;
   if(elapsed>.11&&emitted<capacity){elapsed=0;const u=units[emitted++];u.state='transit';source.remove(u.source);const b=new T.Mesh(beadGeo,mat);b.position.copy(u.source.position);transit.add(b);u.bead=b;u.t=0;log.push({type:'emit',id:u.id,material:1})}

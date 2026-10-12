@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-reexcavation-v49';
+const BUILD='hermeticon-wanderer-basin-v60';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -296,7 +296,112 @@ function rainSurfaceNormal(x,y,z){
  const l=Math.hypot(nx,ny,nz);
  return l>.00001?[nx/l,ny/l,nz/l]:[0,1,0];
 }
+
+/* Basin v60: height-field-only connected containment, flat surface, lip beading. */
+const BW=57,BS=.20,BV=4*Math.PI*RAIN_R**3/3;
+const basinBed=new Float32Array(BW*BW),basinValid=new Uint8Array(BW*BW),basinWet=new Uint8Array(BW*BW);
+const basinGeo=new T.BufferGeometry(),basinMesh=new T.Mesh(basinGeo,new T.MeshPhysicalMaterial({color:0x329dc9,roughness:.16,metalness:.06,transparent:true,opacity:.66,depthWrite:false,side:T.DoubleSide}));
+basinMesh.userData.worldDomain=true;basinMesh.frustumCulled=false;world.add(basinMesh);
+let basinReady=false,basinSeed=-1,basinVolume=0,basinLevel=0,basinLip=0,basinCount=0,basinSpilled=0,basinCollected=0,basinTriangles=0,basinEdges=[],basinLast=0;
+const bi=(i,j)=>j*BW+i,bx=i=>(i-(BW-1)/2)*BS;
+function basinInit(){
+ if(basinReady)return;
+ for(let j=0;j<BW;j++)for(let i=0;i<BW;i++){
+  const x=bx(i),z=bx(j),q=bi(i,j);
+  let prev=fieldSample(x,MAXY-.001,z),found=false;
+  for(let y=MAXY-.06;y>MINY+.06;y-=.06){
+   const f=fieldSample(x,y,z);
+   if(prev<=0&&f>0){basinBed[q]=y;basinValid[q]=1;found=true;break}
+   prev=f;
+  }
+  if(!found)basinBed[q]=MAXY+100;
+ }
+ basinReady=true;
+}
+function basinNeighbors(q,fn){
+ const i=q%BW,j=(q/BW)|0;
+ if(i>0)fn(q-1);if(i<BW-1)fn(q+1);if(j>0)fn(q-BW);if(j<BW-1)fn(q+BW);
+}
+function basinDiscover(){
+ basinInit();
+ if(basinSeed<0){
+  // Choose the lowest valid terrain sample beneath the existing rain cloud.
+  let best=Infinity;
+  for(let j=BW/2-8|0;j<=BW/2+8;j++)for(let i=BW/2-8|0;i<=BW/2+8;i++){
+   const q=bi(i,j);if(basinValid[q]&&basinBed[q]<best){best=basinBed[q];basinSeed=q}
+  }
+  if(basinSeed<0)return;
+ }
+ // Minimax flood: lowest elevation at which a connected path reaches the grid boundary.
+ const cost=new Float32Array(BW*BW);cost.fill(Infinity);
+ const used=new Uint8Array(BW*BW);cost[basinSeed]=basinBed[basinSeed];
+ basinLip=MAXY+100;basinEdges=[];
+ for(let k=0;k<cost.length;k++){
+  let q=-1,c=Infinity;
+  for(let t=0;t<cost.length;t++)if(!used[t]&&cost[t]<c){c=cost[t];q=t}
+  if(q<0)break;
+  used[q]=1;
+  const i=q%BW,j=(q/BW)|0;
+  if(i===0||j===0||i===BW-1||j===BW-1){basinLip=c;break}
+  basinNeighbors(q,n=>{
+   if(!basinValid[n])return;
+   const nc=Math.max(c,basinBed[n]);
+   if(nc<cost[n])cost[n]=nc;
+  });
+ }
+ // An invalid/unresolved perimeter is not a fabricated containment wall.
+ if(basinLip>MAXY+10)basinLip=basinBed[basinSeed];
+}
+function basinUpdate(){
+ if(basinSeed<0)return;
+ let low=basinBed[basinSeed],high=Math.max(low,basinLip);
+ for(let k=0;k<18;k++){
+  const h=(low+high)*.5;
+  const seen=new Uint8Array(BW*BW),queue=[basinSeed];seen[basinSeed]=1;
+  let sum=0;
+  for(let a=0;a<queue.length;a++){
+   const q=queue[a];sum+=Math.max(0,h-basinBed[q])*BS*BS;
+   basinNeighbors(q,n=>{if(!seen[n]&&basinValid[n]&&basinBed[n]<=h){seen[n]=1;queue.push(n)}});
+  }
+  if(sum>basinVolume)high=h;else low=h;
+ }
+ basinLevel=(low+high)*.5;
+ basinWet.fill(0);const queue=[basinSeed];basinWet[basinSeed]=1;
+ for(let a=0;a<queue.length;a++)basinNeighbors(queue[a],n=>{if(!basinWet[n]&&basinValid[n]&&basinBed[n]<=basinLevel){basinWet[n]=1;queue.push(n)}});
+ basinCount=queue.length;basinEdges=[];
+ for(const q of queue)basinNeighbors(q,n=>{if(!basinWet[n]&&basinValid[n]&&basinBed[n]<=basinLip+.05)basinEdges.push([q,n])});
+ if(performance.now()-basinLast<90)return;
+ const vertices=[];
+ // Flat water at the computed level; only triangles supported by connected wet cells.
+ for(let j=0;j<BW-1;j++)for(let i=0;i<BW-1;i++){
+  const a=bi(i,j),b=a+1,c=a+BW,d=c+1;
+  for(const tri of [[a,b,d],[a,d,c]]){
+   if(!tri.every(q=>basinWet[q]))continue;
+   for(const q of tri)vertices.push(bx(q%BW)-wanderX,basinLevel+.012,bx((q/BW)|0)-wanderZ);
+  }
+ }
+ basinGeo.setAttribute('position',new T.Float32BufferAttribute(vertices,3));
+ basinGeo.computeVertexNormals();basinGeo.computeBoundingSphere();basinTriangles=vertices.length/9;basinLast=performance.now();
+}
+function basinCollect(i,x,y,z){
+ if(rainRest[i]||basinSeed<0)return false;
+ const u=Math.round(x/BS+(BW-1)/2),v=Math.round(z/BS+(BW-1)/2);
+ if(u<0||v<0||u>=BW||v>=BW)return false;
+ const q=bi(u,v);
+ if(!basinWet[q]||Math.abs(y-basinBed[q])>.5)return false;
+ if(basinVolume+BV>0&&basinLevel>=basinLip-.002){
+  // The incoming BB remains material; redirect it from a real spill lip.
+  if(!basinEdges.length)return false;
+  const edge=basinEdges[basinSpilled%basinEdges.length],a=edge[0],b=edge[1];
+  const ax=bx(a%BW),az=bx((a/BW)|0),dx=bx(b%BW)-ax,dz=bx((b/BW)|0)-az,l=Math.hypot(dx,dz)||1;
+  rainX[i]=ax+wanderX+dx*.5;rainY[i]=basinLip+.05;rainZ[i]=az+wanderZ+dz*.5;
+  rainVX[i]=dx/l*.75;rainVY[i]=.12;rainVZ[i]=dz/l*.75;basinSpilled++;return true;
+ }
+ rainRest[i]=2;basinVolume+=BV;basinCollected++;rainSettled++;return true;
+}
+
 function rainStep(dt){
+ basinDiscover();basinUpdate();
  const gravity=9.8,restitution=.38,tangentDamping=.82;
  rainTime+=dt;
  const fractionBefore=(RAIN_N-rainEmitted)/RAIN_N;
@@ -350,7 +455,7 @@ function rainStep(dt){
     let push=0;
     while(fieldSample(hx+wanderX,hy,hz+wanderZ)>-RAIN_R&&push++<12){hx+=nx*.035;hy+=ny*.035;hz+=nz*.035}
     rainX[i]=hx+wanderX;rainY[i]=hy;rainZ[i]=hz+wanderZ;
-    if(Math.hypot(rainVX[i],rainVY[i],rainVZ[i])<.42&&ny>.55){rainRest[i]=1;rainSettled++}
+    if(Math.hypot(rainVX[i],rainVY[i],rainVZ[i])<.42&&ny>.55){if(!basinCollect(i,hx+wanderX,hy,hz+wanderZ)){rainRest[i]=1;rainSettled++}}
    }else{rainX[i]=x+wanderX;rainY[i]=y;rainZ[i]=z+wanderZ}
    // Only the lower hemisphere is a physical bowl; upper aperture is not a wall.
    const [dx,dy,dz]=rainWorld(i),rr=Math.hypot(dx,dy,dz),limit=INNER_R-RAIN_R-.012;
@@ -640,7 +745,7 @@ addEventListener('error',e=>{telemetryErrors.push(String(e.message).slice(0,240)
 addEventListener('unhandledrejection',e=>{telemetryErrors.push(String(e.reason).slice(0,240));if(telemetryErrors.length>4)telemetryErrors.shift()});
 function telemetryEvent(type,detail=''){telemetryEvents.push({t:Math.round(performance.now()),type,detail:String(detail).slice(0,160)});if(telemetryEvents.length>TELEMETRY_LIMIT)telemetryEvents.shift()}
 function inspectWorld(){
- const report={build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
+ const report={basin:{model:'height-field connected basin',seed:basinSeed,level:basinLevel,lip:basinLip,volume:basinVolume,collected:basinCollected,spilled:basinSpilled,wetCells:basinCount,triangles:basinTriangles},build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
   terrain:{chunks:terrainPerf.totalChunks,fullRebuilds:terrainPerf.fullRebuilds,localRebuilds:terrainPerf.localRebuilds,lastDirtyChunks:terrainPerf.lastDirtyChunks,lastRebuildMs:terrainPerf.lastRebuildMs},
   transfer:quarry?{started:quarry.started,counts:quarry.units.reduce((a,u)=>(a[u.state]++,a),{source:0,transit:0,receiver:0}),capacity:quarry.units.length,recovery:quarry.recoveryStatus??null}:null,
   errors:telemetryErrors.slice(-4),events:telemetryEvents.slice(-24)};

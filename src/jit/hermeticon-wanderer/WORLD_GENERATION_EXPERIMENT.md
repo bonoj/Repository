@@ -184,53 +184,64 @@ Success means we can compare the fields with the original and say **where the wo
 - The previous sections document the original research plan and source interpretations; their statements that the *first* milestone is a 2D atlas are historical. **Current next milestone is material-aware terrain**, followed by hydrology, a living node and relocation testing.
 
 
-## Why this world exists — authorial through-lines
+## The snowglobe lessons — decisions to carry forward
 
-This is a **wider reading of the author's direction**, informed by the Ledger's *Functional Terrain*, *When the Machinery Becomes the World*, and *Hermeticon: The World Beyond the Glass*. The few quotations below are verbatim user instructions from the world-map conversation; the thematic connections are interpretations, **not additional attributed quotations**.
+*Curated from the Betwixt snowglobes, Crucible, Six Cities, Waterworld, Asteroid and Hermeticon experiments through Wanderer V36. This is a working brief for the next builder, not a chronology, bibliography or retrospective of commits. Direct quotations are the author's; the rest distills the decisions demonstrated across the work.*
 
-### 1. Worlds, not demonstrations
+### Build worlds that can answer back
 
-The longer trajectory is from individual baubles that demonstrate terrain, transport, weather or matter toward **a world where those systems have consequences for one another**. The Ledger's *When the Machinery Becomes the World* describes terrain → population → material consequence → transport → infrastructure response → observation → persistent history. The current atlas is a geographic substrate for that loop, not a portfolio of isolated scenery.
+The turning point in the Six Cities snowglobe was not another beautiful terrain treatment. A suspicious patch prompted the question **what is that?** Instead of making the human narrate a screenshot, we made the running world export its geology. One tap produced a situated survey that could support questions we had not yet thought to ask. The same affordance later carried hydrological evidence.
 
-> “Think of locations more like game of thrones intro map.”
+**Play forward:** a world should expose its state, causes, uncertainties and identity cheaply enough that a human and model can investigate it together. Instrument the question actually being asked. A screenshot, source code, a survey and a user's visual judgment are different kinds of evidence. Do not ask the human to become the world's telemetry transport or claim a committed build is the one they saw without verification.
 
-This is a choice of **representation and scale**, not a rejection of internal complexity. Each place may be a small, expressive, composable world, immediately recognizable without demanding a full-size city.
+### Make consequences, not merely effects
 
-### 2. Abundance through restraint
+Six Cities turned streams, storage, capture and delivery into the beginnings of an infrastructure that could respond to its own material flows. Gas rose, lingered, condensed and fell back to earth. Crucible's terrain could be altered. Waterworld made a liquid surface an expression of conserved material rather than a painted plane. Asteroid could expose its constituents without treating the original rock as fictitious.
 
-> “Remember our purpose is to make a fairy sparse but easily navigable world with a few interesting nodes per viewport. Empty space means finding John's ledger or his linked in is both easy and a choice.”
+The recurring authorial decision was to push past an attractive animation and ask **what persists, what changes, where did the matter go, and what can act on it next?**
+
+**Play forward:** terrain, weather, structures, populations and material transport should eventually drive one another. Preserve inventory and provenance across representation, phase and location. Do not confuse a map indicating water with water that actually flows, or a provenance color with provenance that survives transport.
+
+### Spend complexity where it becomes meaningful
 
 > “Flat is good because it means noise and clutter can be localized. Localized density is richness without reduction in navigability.”
 
-This is a design philosophy, not merely a terrain tuning preference. The world should be **discoverable without becoming compulsory**. Quiet ground grants orientation, readable choices, room for surprise and freedom of movement. A rich node can be dense visually and causally without making every decorative object a collision obstacle. Sparseness protects attention.
+> “Remember our purpose is to make a fairy sparse but easily navigable world with a few interesting nodes per viewport. Empty space means finding John's ledger or his linked in is both easy and a choice.”
 
-### 3. Geography as a cheap description; history as matter
+This is more than a style preference. Sparse space protects orientation, choice and the possibility of encountering something special. A tiny settlement can be intricate; the route to it should not be a collision course through decorative clutter. The map's empty ground is *authored negative space*, not missing content.
 
-The Ledger's *Functional Terrain* distinguishes cheap, jurisdictional functions from mutable material state: **functions describe places without histories; fields describe places that have acquired histories**. Independent maps can determine elevation, permission for local expression, biome, hydrology and population without one universal noise function dictating everything. Local functions meet on quiet boundaries, then yield to the persistent world once material consequences begin.
+**Play forward:** concentrate systemic and visual richness into a few legible nodes per viewport. Preserve broad, traversable quiet ground. Do not fill it with noise or furniture to prove that the world is populated.
 
-> “I want exactly the same machinery we have now, just no holes punched in it or mountains raised. I want the concept of "new world" to be explainable in 2 words. I want no performance hit. Clear?”
+### Let functions author places, then let history take over
 
-The instruction is architectural restraint: **new world = flat geology**. Reuse the signed field, the extractor and the accepted interaction system; change initial conditions, not the engine. That simplicity is what makes later worlds cheap to compose.
-
-### 4. The aperture is not the world
-
-The Ledger's *Hermeticon: The World Beyond the Glass* traces the shift from a sphere containing reality to a sphere revealing part of **persistent geology larger than itself**. The instrument can be one thing from outside and a world from within. Its moving boundary governs observation, local manifestation and physical contact—not whether distant terrain or material exists.
-
-This explains why continuous maps matter. The user explores **one geographically coherent world** through a bounded, phone-first view. Nodes remain addressable when outside the aperture; the world does not regenerate just because the observer moves.
-
-### 5. Composability must eventually survive consequence
+The functional d20 and later terrain experiments established that very different local generators can coexist if their jurisdictions and boundaries are well behaved. The geology experiments also exposed a trap: endlessly polishing one convincing canyon or mesa can improve quality while barely expanding the world's expressive range.
 
 > “Right now we're just testing continuous cool ass maps.”
 
-That qualifier matters. Coherent relief and inspectable layers are a **test**, not the destination. The next test is whether map fields govern material identity, water, population and one movable miniature node. A node should inherit the conditions of its location; material should retain provenance after being moved; terrain should keep the history of perturbation. Only then has the cartography become executable.
+The maps are cheap, independently inspectable descriptions of *where things may happen*. They should not perpetually overwrite the results of what has happened. Once terrain is excavated, flooded, settled, built on or otherwise changed, that consequence belongs to the persistent world.
 
-The larger ambition is **a legible, perturbable, composable world that remembers what happens**, while spending detail only where it matters. Neither exhaustive simulation nor decorative density is the objective.
+**Play forward:** prefer heterogeneous functions over a single universal noise recipe; independent fields over tangled controls; reusable capability over polishing one specimen. Compile initial conditions into ordinary mutable matter. Preserve history.
 
-### Source lineage
+### Keep the instrument smaller than the world
 
-- [Ledger: Functional Terrain](https://github.com/bonoj/Ledger/blob/main/notes/functional-terrain.md) — independent jurisdictional functions, quiet boundaries, materialization and history.
-- [Ledger: When the Machinery Becomes the World](https://github.com/bonoj/Ledger/blob/main/notes/2026-10-07-when-the-machinery-becomes-the-world.md) — interdependent systems and persistent consequence.
-- [Ledger: Hermeticon: The World Beyond the Glass](https://github.com/bonoj/Ledger/blob/main/notes/2026-10-12-hermeticon-journey.md) — aperture versus persistent world, observation, material identity and nested scale.
-- [Ledger: A Model's Account of Working With Its Human](https://github.com/bonoj/Ledger/blob/main/notes/2026-10-12-a-models-account-of-working-with-its-human.md) — fidelity to settled decisions, evidence and the role of human visual judgment.
+The original snowglobe gave a simulation a beautiful boundary, but Hermeticon exposed the conceptual mistake of treating that boundary as the extent of reality. A moving sphere can reveal geology, manifest local weather and physically contact material without owning everything it reveals. A cloud stays behind when we walk away. A bearing outside the aperture has not ceased to exist. A failed containment witness may be applying the wrong definition of inside.
 
-These are interpretive anchors, not a replacement for the original drawing or the user's exact instructions. Preserve the distinction between **quoted authorial intent**, **Ledger synthesis**, and **demonstrated executable behavior**.
+> “Think of locations more like game of thrones intro map.”
+
+**Play forward:** one continuous, addressable world; a small, navigable aperture; recognizable miniature destinations. Spend detailed computation near consequence and observation without erasing distant matter or history. A Hermeticon may be one composable object from outside and a complex world from within; recursive interaction is a direction, not an already solved mechanism.
+
+### Simplicity is an enabling constraint
+
+> “I want exactly the same machinery we have now, just no holes punched in it or mountains raised. I want the concept of "new world" to be explainable in 2 words. I want no performance hit. Clear?”
+
+**New world = flat geology.** That decision made the next experiments possible without inventing another terrain engine. The same extractor could express a blank slab, sparse rises, depressions and through-holes. One button could reveal the maps without a new inspection console. In earlier experiments, a single familiar tap became a geological and then hydrological survey.
+
+**Play forward:** reuse the solved substrate, interaction and delivery paths. Make the smallest change that exposes the next causal question. Generalize only when repeated executable pressure earns it. Avoid building infrastructure to protect an experiment from problems it has not encountered.
+
+### The next question is whether a place can inherit its world
+
+Wanderer V36 has coherent sparse geography and inspectable fields. That is an accepted visual foundation, **not** proof of material simulation. The next useful crossing is from *descriptive* maps to *governing* maps: substrate and strata determine what a cut reveals; a basin can host conserved water; a small living node can consume the conditions of its location.
+
+Then move that same node elsewhere. If its material, weather, behavior and appearance change because the atlas changed beneath it—without a custom rewrite—we have earned a meaningful increment in composability.
+
+**Keep asking:** Did this pass create a new reusable capability, a new observable consequence or a better question? Or did it merely polish the scenery?

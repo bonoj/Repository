@@ -296,7 +296,17 @@ const rainGeo=new T.IcosahedronGeometry(RAIN_R,0),rainMat=new T.MeshBasicMateria
 const rainMesh=new T.InstancedMesh(rainGeo,rainMat,RAIN_N);rainMesh.userData.worldDomain=true; // Persistent geological BBs are not subject to whole-sphere containment.
 rainMesh.frustumCulled=false;rainMesh.count=0;world.add(rainMesh);
 const cloudDimensions=[2.7,.8,2.7],cloudCenterY=5.6;
-const cloud=put(world,new T.BoxGeometry(...cloudDimensions),new T.MeshStandardMaterial({color:0x929aa1,transparent:true,opacity:.72,roughness:.94}),0,cloudCenterY,0);
+// Clip cloud fragments in Hermeticon-local space, as with the terrain aperture.
+const cloudMaterial=new T.MeshStandardMaterial({color:0x929aa1,transparent:true,opacity:.72,roughness:.94,side:T.DoubleSide});
+cloudMaterial.onBeforeCompile=shader=>{
+ shader.uniforms.cloudApertureRadius={value:INNER_R};
+ shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\n varying vec3 vCloudAperturePosition;');
+ shader.vertexShader=shader.vertexShader.replace('#include <worldpos_vertex>','#include <worldpos_vertex>\n vCloudAperturePosition=(modelMatrix*vec4(transformed,1.0)).xyz;');
+ shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\n varying vec3 vCloudAperturePosition; uniform float cloudApertureRadius;');
+ shader.fragmentShader=shader.fragmentShader.replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\n if(dot(vCloudAperturePosition,vCloudAperturePosition)>cloudApertureRadius*cloudApertureRadius || vCloudAperturePosition.y<0.0) discard;');
+};
+const cloud=put(world,new T.BoxGeometry(...cloudDimensions),cloudMaterial,0,cloudCenterY,0);
+cloud.userData.worldDomain=true;
 const rainDummy=new T.Object3D();let rainTime=0,rainEmitted=0,rainBounces=0,rainSettled=0,rainEscaped=0,rainWallBounces=0,rainBudget=0;
 function rainRandom(i,s){const v=Math.sin((i+1)*127.1+(s+1)*311.7)*43758.5453;return v-Math.floor(v)}
 function rainSurfaceNormal(x,y,z){

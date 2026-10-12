@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-rain-10k-v22';
+const BUILD='hermeticon-wanderer-cloud-inventory-v23';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -283,38 +283,74 @@ function regenerate(){
 }
 regenerate();
 let driftDirection=null,lastMeshX=0,lastMeshZ=0;
-/* Matter v1: 10k deterministic BBs, falling into Wanderer's signed geology. */
-const RAIN_N=10000, rainX=new Float32Array(RAIN_N),rainY=new Float32Array(RAIN_N),rainZ=new Float32Array(RAIN_N),rainVX=new Float32Array(RAIN_N),rainVY=new Float32Array(RAIN_N),rainVZ=new Float32Array(RAIN_N),rainRest=new Uint8Array(RAIN_N);
-const rainGeo=new T.IcosahedronGeometry(.037,0),rainMat=new T.MeshBasicMaterial({color:0x8ad9f0});
-const rainMesh=new T.InstancedMesh(rainGeo,rainMat,RAIN_N);rainMesh.frustumCulled=false;world.add(rainMesh);
-const cloud=put(world,new T.BoxGeometry(2.7,.8,2.7),new T.MeshStandardMaterial({color:0xa4c4d1,transparent:true,opacity:.58,roughness:.9}),0,5.6,0);
-const rainDummy=new T.Object3D();let rainFrame=0,rainBounces=0,rainSettled=0;
+/* Matter v2: one conserved 10k-unit cloud inventory and terrain contact. */
+const RAIN_N=10000,RAIN_DURATION=18,RAIN_R=.037;
+const rainX=new Float32Array(RAIN_N),rainY=new Float32Array(RAIN_N),rainZ=new Float32Array(RAIN_N),rainVX=new Float32Array(RAIN_N),rainVY=new Float32Array(RAIN_N),rainVZ=new Float32Array(RAIN_N),rainRest=new Uint8Array(RAIN_N);
+const rainGeo=new T.IcosahedronGeometry(RAIN_R,0),rainMat=new T.MeshBasicMaterial({color:0x8ad9f0});
+const rainMesh=new T.InstancedMesh(rainGeo,rainMat,RAIN_N);rainMesh.frustumCulled=false;rainMesh.count=0;world.add(rainMesh);
+const cloudDimensions=[2.7,.8,2.7],cloudCenterY=5.6;
+const cloud=put(world,new T.BoxGeometry(...cloudDimensions),new T.MeshStandardMaterial({color:0x929aa1,transparent:true,opacity:.72,roughness:.94}),0,cloudCenterY,0);
+const rainDummy=new T.Object3D();let rainTime=0,rainEmitted=0,rainBounces=0,rainSettled=0,rainEscaped=0;
 function rainRandom(i,s){const v=Math.sin((i+1)*127.1+(s+1)*311.7)*43758.5453;return v-Math.floor(v)}
-for(let i=0;i<RAIN_N;i++){rainX[i]=(rainRandom(i,0)-.5)*2.55;rainZ[i]=(rainRandom(i,1)-.5)*2.55;rainY[i]=5.05+rainRandom(i,2)*.3;rainVX[i]=(rainRandom(i,3)-.5)*.2;rainVY[i]=-rainRandom(i,4)*1.5;rainVZ[i]=(rainRandom(i,5)-.5)*.2}
+function rainSurfaceNormal(x,y,z){
+ const h=.09;
+ // Positive signed-field values are INSIDE rock: outward normal is NEGATIVE gradient.
+ let nx=fieldSample(x-h,y,z)-fieldSample(x+h,y,z),ny=fieldSample(x,y-h,z)-fieldSample(x,y+h,z),nz=fieldSample(x,y,z-h)-fieldSample(x,y,z+h);
+ const l=Math.hypot(nx,ny,nz);
+ return l>.00001?[nx/l,ny/l,nz/l]:[0,1,0];
+}
 function rainStep(dt){
- const g=9.8,e=.38,friction=.77;
- rainFrame++;
- for(let i=0;i<RAIN_N;i++){
+ const gravity=9.8,restitution=.38,tangentDamping=.82;
+ rainTime+=dt;
+ const target=Math.min(RAIN_N,Math.floor(RAIN_N*Math.min(1,rainTime/RAIN_DURATION)));
+ // Emission schedule is deterministic, but each droplet starts at a different location in the entire cloud volume.
+ for(let i=rainEmitted;i<target;i++){
+  const inset=.12;
+  rainX[i]=(rainRandom(i,0)-.5)*(cloudDimensions[0]-2*inset);
+  rainY[i]=cloudCenterY+(rainRandom(i,2)-.5)*(cloudDimensions[1]-2*inset);
+  rainZ[i]=(rainRandom(i,1)-.5)*(cloudDimensions[2]-2*inset);
+  rainVX[i]=(rainRandom(i,3)-.5)*.36;rainVY[i]=-(.2+rainRandom(i,4)*.5);rainVZ[i]=(rainRandom(i,5)-.5)*.36;
+ }
+ rainEmitted=target;
+ for(let i=0;i<rainEmitted;i++){
   if(!rainRest[i]){
-   rainVY[i]-=g*dt;
-   const x=rainX[i]+rainVX[i]*dt,y=rainY[i]+rainVY[i]*dt,z=rainZ[i]+rainVZ[i]*dt;
-   if(fieldSample(x,y,z)>.02){
-    const h=.11;
-    let nx=fieldSample(x+h,y,z)-fieldSample(x-h,y,z),ny=fieldSample(x,y+h,z)-fieldSample(x,y-h,z),nz=fieldSample(x,y,z+h)-fieldSample(x,y,z-h);
-    const len=Math.hypot(nx,ny,nz)||1;nx/=len;ny/=len;nz/=len;
+   const ox=rainX[i],oy=rainY[i],oz=rainZ[i];
+   rainVY[i]-=gravity*dt;
+   const x=ox+rainVX[i]*dt,y=oy+rainVY[i]*dt,z=oz+rainVZ[i]*dt;
+   // Sweep along the movement segment: detect the first air-to-rock crossing rather than only its endpoint.
+   const distance=Math.hypot(x-ox,y-oy,z-oz),steps=Math.max(1,Math.ceil(distance/.065));
+   let hit=false,hx=x,hy=y,hz=z;
+   for(let j=1;j<=steps;j++){
+    const t=j/steps,px=ox+(x-ox)*t,py=oy+(y-oy)*t,pz=oz+(z-oz)*t;
+    if(fieldSample(px,py,pz)>=-RAIN_R){hit=true;hx=px;hy=py;hz=pz;break}
+   }
+   if(hit){
+    const [nx,ny,nz]=rainSurfaceNormal(hx,hy,hz);
     const vn=rainVX[i]*nx+rainVY[i]*ny+rainVZ[i]*nz;
-    if(vn<0){rainVX[i]-=(1+e)*vn*nx;rainVY[i]-=(1+e)*vn*ny;rainVZ[i]-=(1+e)*vn*nz;rainBounces++}
-    rainVX[i]*=friction;rainVZ[i]*=friction;
-    // Push the BB out of solid, without creating an arbitrary lateral drift.
-    rainX[i]=x+nx*.09;rainY[i]=y+ny*.09;rainZ[i]=z+nz*.09;
-    if(Math.hypot(rainVX[i],rainVY[i],rainVZ[i])<.34){rainRest[i]=1;rainSettled++}
+    if(vn<0){
+     rainVX[i]-=(1+restitution)*vn*nx;rainVY[i]-=(1+restitution)*vn*ny;rainVZ[i]-=(1+restitution)*vn*nz;
+     rainBounces++;
+    }
+    const normalSpeed=rainVX[i]*nx+rainVY[i]*ny+rainVZ[i]*nz;
+    rainVX[i]=(rainVX[i]-normalSpeed*nx)*tangentDamping+normalSpeed*nx;
+    rainVY[i]=(rainVY[i]-normalSpeed*ny)*tangentDamping+normalSpeed*ny;
+    rainVZ[i]=(rainVZ[i]-normalSpeed*nz)*tangentDamping+normalSpeed*nz;
+    // Project outside the signed surface; never freeze a BB inside the solid.
+    let push=0;
+    while(fieldSample(hx,hy,hz)>-RAIN_R&&push++<12){hx+=nx*.035;hy+=ny*.035;hz+=nz*.035}
+    rainX[i]=hx;rainY[i]=hy;rainZ[i]=hz;
+    if(Math.hypot(rainVX[i],rainVY[i],rainVZ[i])<.42&&ny>.55){rainRest[i]=1;rainSettled++}
    }else{rainX[i]=x;rainY[i]=y;rainZ[i]=z}
-   if(rainY[i]<-8){rainRest[i]=1;rainSettled++}
+   if(rainY[i]<-8){rainRest[i]=2;rainEscaped++}
   }
   rainDummy.position.set(rainX[i]-wanderX,rainY[i],rainZ[i]-wanderZ);rainDummy.updateMatrix();rainMesh.setMatrixAt(i,rainDummy.matrix);
  }
- rainMesh.instanceMatrix.needsUpdate=true;
- cloud.position.set(-wanderX,5.6,-wanderZ);
+ rainMesh.count=rainEmitted;rainMesh.instanceMatrix.needsUpdate=true;
+ // The box is a visualization of remaining inventory, not an additional matter source.
+ const fraction=(RAIN_N-rainEmitted)/RAIN_N;
+ cloud.visible=fraction>0;
+ cloud.scale.set(Math.max(.001,Math.cbrt(fraction)),Math.max(.001,Math.cbrt(fraction)),Math.max(.001,Math.cbrt(fraction)));
+ cloud.position.set(-wanderX,cloudCenterY,-wanderZ);
 }
 
 function simulate(dt){rainStep(dt);if(!driftDirection)return;const speed=1.8;wanderX=T.MathUtils.clamp(wanderX+driftDirection[0]*speed*dt,-14,14);wanderZ=T.MathUtils.clamp(wanderZ+driftDirection[1]*speed*dt,-14,14);solid.position.set(-wanderX,0,-wanderZ);sharedApertureOffset.set(wanderX,0,wanderZ);document.querySelector('#wanderCoords').textContent=wanderX.toFixed(1)+', '+wanderZ.toFixed(1);}
@@ -355,7 +391,7 @@ function inspectWorld(){
  if(geometryEyes.fieldEdgeClearance<0)eyesWarnings.push('WORLD_FIELD_EDGE_INSIDE_APERTURE');
  if(geometryEyes.shaderOffsetError!==null&&geometryEyes.shaderOffsetError>.001)eyesWarnings.push('APERTURE_UNIFORM_OFFSET_MISMATCH');
  
- const report={build:BUILD,rain:{count:RAIN_N,bounces:rainBounces,settled:rainSettled,active:RAIN_N-rainSettled,restitution:.38,gravity:9.8},runtimeEyes:{aperture:{...apertureEyes,compiled:apertureEyes.compileCount>0},gpu:gpuEyes,scene:sceneEyes,skin:skinEyes,scoop:scoopEyes,geometry:geometryEyes,warnings:eyesWarnings,limits:'Shared live aperture uniform; 4-position radial witness; lit 32x32 real terrain pixel occupancy. Blind scene is a failure. Projection cannot alone diagnose valid terrain silhouettes or glass composition.'},wanderer:{x:wanderX,z:wanderZ,step:WANDER_STEP,history:wanderHistory.slice(),drifting:!!driftDirection,centralRadius:3,apertureRadius:9.72,mode:'vertex-initialized-fragment-sphere-scoop',extractionMargin:EXTRACTION_MARGIN,worldFieldStable:true},terrain:{kind:'3d-signed-field',dimensions:[NX,NY,NZ],samples:field.length,fieldRange:[fieldMin,fieldMax],solidSamples:solidCount,voidSamples:voidCount,mesh:{triangles,vertices:geo.attributes.position.count,doubleSided:true},cycle,seed,buildMs,operationCount:operations.length,events:events.map(e=>({cycle:e.cycle,seed:e.seed,triangles:e.triangles,buildMs:e.buildMs,operationCount:e.operations?.length||0}))},time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:1,contentsInstantiated:true},render:{calls:mainRenderStats.calls,triangles:mainRenderStats.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:fpsMeasuring?null:round(displayFps),fpsMeasuring},containment:verifyContainment(),invariants:verifyInvariants(),simulation:{time:round(clock.time,3),steps:clock.steps,droppedSeconds:round(clock.droppedSeconds,3),fixedStep:STEP},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:eyesWarnings};
+ const report={build:BUILD,rain:{total:RAIN_N,cloudRemaining:RAIN_N-rainEmitted,emitted:rainEmitted,airborne:rainEmitted-rainSettled-rainEscaped,settled:rainSettled,escaped:rainEscaped,bounces:rainBounces,conserved:RAIN_N===(RAIN_N-rainEmitted)+(rainEmitted-rainSettled-rainEscaped)+rainSettled+rainEscaped,restitution:.38,gravity:9.8,emissionSeconds:RAIN_DURATION},runtimeEyes:{aperture:{...apertureEyes,compiled:apertureEyes.compileCount>0},gpu:gpuEyes,scene:sceneEyes,skin:skinEyes,scoop:scoopEyes,geometry:geometryEyes,warnings:eyesWarnings,limits:'Shared live aperture uniform; 4-position radial witness; lit 32x32 real terrain pixel occupancy. Blind scene is a failure. Projection cannot alone diagnose valid terrain silhouettes or glass composition.'},wanderer:{x:wanderX,z:wanderZ,step:WANDER_STEP,history:wanderHistory.slice(),drifting:!!driftDirection,centralRadius:3,apertureRadius:9.72,mode:'vertex-initialized-fragment-sphere-scoop',extractionMargin:EXTRACTION_MARGIN,worldFieldStable:true},terrain:{kind:'3d-signed-field',dimensions:[NX,NY,NZ],samples:field.length,fieldRange:[fieldMin,fieldMax],solidSamples:solidCount,voidSamples:voidCount,mesh:{triangles,vertices:geo.attributes.position.count,doubleSided:true},cycle,seed,buildMs,operationCount:operations.length,events:events.map(e=>({cycle:e.cycle,seed:e.seed,triangles:e.triangles,buildMs:e.buildMs,operationCount:e.operations?.length||0}))},time:new Date().toISOString(),viewport:{width:innerWidth,height:innerHeight,pixelRatio:round(renderer.getPixelRatio())},camera:{distance:round(dist),azimuth:round(angle),elevation:round(elev),targetY:round(targetY),fov:camera.fov,worldOrigin:{x:round((center.x+1)*innerWidth/2),y:round((1-center.y)*innerHeight/2)}},vessel:{outerRadius:BAUBLE_R,innerRadius:INNER_R,glassThickness:round(BAUBLE_R-INNER_R),inhabitants:1,contentsInstantiated:true},render:{calls:mainRenderStats.calls,triangles:mainRenderStats.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},performance:{fpsApprox:fpsMeasuring?null:round(displayFps),fpsMeasuring},containment:verifyContainment(),invariants:verifyInvariants(),simulation:{time:round(clock.time,3),steps:clock.steps,droppedSeconds:round(clock.droppedSeconds,3),fixedStep:STEP},interactionTrace:{events:interactionLog.slice(),truncated:interactionSeq>interactionLimit,total:interactionSeq,elapsedMs:Math.round(performance.now()-interactionStart),coordinates:'normalized canvas coordinates; no text, device identity, or network transmission'},warnings:eyesWarnings};
  probeReport=JSON.stringify(report,null,2);probeText.textContent=probeReport;return report;
 }
 probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};

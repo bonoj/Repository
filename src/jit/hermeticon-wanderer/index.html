@@ -19,7 +19,7 @@
 </script><script type="module">
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-tap-walk-v27';
+const BUILD='hermeticon-wanderer-continuous-walk-v28';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -405,7 +405,7 @@ function groundAt(x,z){
  walkRay.set(walkDown.set(x-wanderX,MAXY+2,z-wanderZ),walkDir);
  const hits=walkRay.intersectObject(solid,false);
  for(const hit of hits){
-  if(hit.face&&hit.face.normal.clone().transformDirection(solid.matrixWorld).y>.55)return hit.point.y;
+  if(hit.face&&hit.face.normal.clone().transformDirection(solid.matrixWorld).y>.15)return hit.point.y;
  }
  return null;
 }
@@ -415,7 +415,7 @@ function walkTarget(clientX,clientY){
  walkPointer.set((clientX-rect.left)/rect.width*2-1,-(clientY-rect.top)/rect.height*2+1);
  camera.updateMatrixWorld();walkRay.setFromCamera(walkPointer,camera);
  solid.updateMatrixWorld(true);
- const hit=walkRay.intersectObject(solid,false).find(h=>h.face&&h.face.normal.clone().transformDirection(solid.matrixWorld).y>.55&&Math.hypot(h.point.x,h.point.y,h.point.z)<9.72);
+ const hit=walkRay.intersectObject(solid,false).find(h=>h.face&&h.face.normal.clone().transformDirection(solid.matrixWorld).y>.15&&Math.hypot(h.point.x,h.point.y,h.point.z)<9.72);
  if(!hit){walker.rejected++;return}
  walker.target={x:hit.point.x+wanderX,z:hit.point.z+wanderZ};
  walker.accepted++;
@@ -427,8 +427,10 @@ function simulate(dt){
   if(d<.07)walker.target=null;
   else{
    const step=Math.min(d,WALK_SPEED*dt),nx=walker.x+dx/d*step,nz=walker.z+dz/d*step,ny=groundAt(nx,nz);
-   if(ny===null||Math.abs(ny-walker.y)>.55){walker.rejected++;walker.target=null}
-   else{walker.x=nx;walker.z=nz;walker.y=ny}
+   // Keep walking toward the tapped geological node. A missing/steep sample
+   // must not silently cancel navigation; resolve height again next step.
+   walker.x=nx;walker.z=nz;
+   if(ny!==null)walker.y=ny;
   }
  }
  const screenX=walker.x-wanderX,screenZ=walker.z-wanderZ,rad=Math.hypot(screenX,screenZ);

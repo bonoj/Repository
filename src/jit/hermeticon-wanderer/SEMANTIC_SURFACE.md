@@ -1,17 +1,29 @@
 # Hermeticon Wanderer — semantic surface
-Updated 2026-10-12 · Current build: `hermeticon-wanderer-observer-pruned-v48`
+Updated 2026-10-12. **Read the executable for current truth; its build-name string can be stale.**
 
-## Current executable reality
+## Where
 
-- Source: `bonoj/Repository/src/jit/hermeticon-wanderer/index.html`. JIT mirror: `bonoj/bonoj.github.io/jit/hermeticon-wanderer/index.html`; public URL: https://bonoj.github.io/jit/hermeticon-wanderer/?terrain=authored-v1. The executable is authoritative.
-- Player-accepted navigation/weather baseline (V31): tap replaces walking target, drag orbits, pinch zooms; world aperture follows after Wanderer leaves central 25% of circular area (half-radius). Persistent geology and BBs use world coordinates; the aperture does not own or destroy offscreen matter. Upper dome manifests weather; lower bowl is physical. Terrain seating, bowl trajectory contact, partial-cloud emission remain imperfect or not fully verified.
-- Authored geology: deterministic signed field 85×21×85, 81 horizontal extraction chunks, localized rebuilds. 96 positive signed-field samples excavate to 96 BB transfer units, then deposit at receiver as geological field changes. Do not confuse BB accounting with proof of material lineage, continuous physical volume, or re-excavation.
-- V48 observer: on-demand INSPECT shows bounded FPS, terrain locality counters, 96-unit transfer states, limited errors/events; COPY REPORT works on Android. Dormant GPU/scene witnesses, containment/invariant verifier, costly per-rebuild vertex diagnostic scan, and periodic JSON report regeneration were removed. No legacy observer machinery should be reintroduced in the simulation loop.
+Source: `bonoj/Repository/src/jit/hermeticon-wanderer/index.html`.
+Pages mirror: `bonoj/bonoj.github.io/jit/hermeticon-wanderer/index.html`.
+Canonical view: https://bonoj.github.io/jit/hermeticon-wanderer/?terrain=authored-v1.
+Delivery: read `bonoj/Gate/README.md`; inspect source, mirror, workflow, and public result. Never infer that a queued build or an updated version label is live.
 
-## Verified player witness
+## Current executable
 
-At 24.367 s on V48: **96 receiver / 0 source / 0 transit**, 75.1 FPS, 81 chunks, 1 full and 97 local rebuilds, last dirty chunks 1, last rebuild 3.4 ms, errors []. Transfer began at 2.901 s and completed at 14.906 s. COPY REPORT delivered this evidence successfully. One snapshot does not establish all-frame performance or independently prove geological conservation. Earlier V47 mid-transfer: 66 source / 12 transit / 18 receiver, 56.7 FPS, last rebuild 6.6 ms; comparisons are not controlled.
+- Persistent authored signed geology, moving aperture, orbit/pinch and tap-to-redirect Wanderer. Wanderer is surface-seated, terrain-occluded, prevented from walking over holes or through the inner vessel, and can route around holes. Player accepted the routing as adequate for now.
+- Authored 85×85 atlas with nine visual layers and 22 named landmark operations. The POPULATION atlas layer is a binary tag, **not** simulated inhabitants or density. Named bobbing landmark orbs have proximity labels sized to their text and hidden outside vessel bounds.
+- Cloud emission is paused (fresh load has no emitted cloud BBs). Existing BB/material and gel-sheet experiments remain in source; do not mistake them for a complete universal water solver. The 96-unit quarry transfer display and controls are hidden; the experiment is dormant, not erased. The slippery lower vessel/Crucibowl is **not geological terrain**.
+- Mists orange resident: erratic idle jumps, proximity-triggered flight toward Downton, upward-and-forward launch from supported rim, gravity and splat. Corpse and 100 red spray BBs transfer to vessel-local coordinates on impact. The spray is a dedicated visual system, **not** part of the conserved material inventory.
+- Quills turquoise resident: idle sway; nearby Wanderer causes a nine-quill fan to unfold, then fold when leaving.
+- Amaranthine violet resident: idle sway beside seven geometric flowers; nearby Wanderer causes staggered bloom, reversed at distance. This is animated geometry, not material growth.
+- These three are individually scripted behaviors using existing coordinates, height queries, scene objects, and proximity. They are not a reusable agent architecture, autonomous population, or generalized behavior framework.
 
-## Next experiment
+## Historical verified evidence
 
-Geology A → 96 material BBs → deposited geology B → destructive re-excavation into BBs, verifying material identities, counts, and field changes without inventing another engine. Keep normal observation negligible and bounded. For detailed chronology consult `WORLD_GENERATION_EXPERIMENT.md`; for boundary semantics `HERMETICON.md`; for material conservation `matter/MATTER.md`; for cold start `HANDOFF.md`. Historical V21/V31 witnesses belong to the experiment record, not current INSPECT instructions.
+V48 on-demand INSPECT/COPY REPORT worked on the player's Android. The player reported 96 receiver / 0 source / 0 transit, 75.1 FPS at 24.367 s, with no reported errors. V48 pruned expensive observer witnesses and automatic JSON regeneration; keep observation bounded. The historical transfer report does **not** prove material lineage or describe today's dormant quarry state.
+
+## Recovery and limits
+
+Source includes a later reduced orange launch (up 2.9, forward 1.65); its Pages publication was blocked at that time, so verify mirror and live behavior before asserting delivery. Current scripted residents and their visuals have not been established as a generic simulation law. Do not silently turn design directions into implemented features.
+
+Read `HANDOFF.md` for a cold start, `HERMETICON.md` for interaction and vessel jurisdiction, `matter/MATTER.md` for conservation, and `WORLD_GENERATION_EXPERIMENT.md` for history. Preserve the working scene rather than expanding architecture speculatively.

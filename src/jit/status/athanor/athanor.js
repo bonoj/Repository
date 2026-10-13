@@ -1,5 +1,6 @@
 
-import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';'
+import {CSS3DRenderer} from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/renderers/CSS3DRenderer.js';
 
 // Build metadata is stamped by the Pages workflow from the deployed commit.
 // Never display the inherited JIT source revision as the current build.
@@ -55,7 +56,7 @@ function inspectMount(entry){
 const Athanor=Object.freeze({mount:mountWorld,unmount:unmountWorld,setState:setWorldState,inspect:()=>inspectWorld()});
 globalThis.Athanor=Athanor;
 
-const renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.38;document.querySelector('#stage').append(renderer.domElement);
+const renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.38;document.querySelector('#stage').append(renderer.domElement);const domRenderer=new CSS3DRenderer();domRenderer.domElement.className='world-dom';document.querySelector('#stage').append(domRenderer.domElement);
 const camera=new T.PerspectiveCamera(42,1,.1,150);scene.add(new T.HemisphereLight(0x82c6dc,0x17202d,1.5));const sun=new T.DirectionalLight(0xffc77e,2.4);sun.position.set(-7,13,7);scene.add(sun);const blue=new T.PointLight(0x2cbed7,95,36);blue.position.set(2,-2,2);scene.add(blue);
 let angle=.6,elev=.27,dist=27,targetY=0,lastX=0,lastY=0;
 const pointers=new Map(),pointerStarts=new Map();let pinch=0,multiGesture=false;
@@ -94,7 +95,7 @@ function end(e,canceled=false){
 renderer.domElement.addEventListener('pointerup',e=>end(e));
 renderer.domElement.addEventListener('pointercancel',e=>end(e,true));
 renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();dist=T.MathUtils.clamp(dist+e.deltaY*.022,2,100)},{passive:false});
-function fitBaubleDistance(){const halfV=T.MathUtils.degToRad(camera.fov)/2;const halfH=Math.atan(Math.tan(halfV)*camera.aspect);return 10.25/Math.sin(Math.min(halfV,halfH))*1.12}let firstFit=true;function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();const fit=fitBaubleDistance();if(firstFit){dist=fit;firstFit=false}else dist=T.MathUtils.clamp(dist,2,100)}addEventListener('resize',resize);resize();
+function fitBaubleDistance(){const halfV=T.MathUtils.degToRad(camera.fov)/2;const halfH=Math.atan(Math.tan(halfV)*camera.aspect);return 10.25/Math.sin(Math.min(halfV,halfH))*1.12}let firstFit=true;function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);domRenderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();const fit=fitBaubleDistance();if(firstFit){dist=fit;firstFit=false}else dist=T.MathUtils.clamp(dist,2,100)}addEventListener('resize',resize);resize();
 
 
 const probeButton=document.querySelector('#probe'),probePanel=document.querySelector('#probePanel'),probeText=document.querySelector('#probeText');
@@ -143,6 +144,6 @@ for(const entry of mounts.values()){
  if(!entry.active||entry.error||typeof entry.source.update!=='function')continue;
  try{entry.source.update(elapsed/1000,now/1000)}catch(error){entry.error=String(error&&error.stack||error);console.error('World update failed: '+entry.id,error)}
 }
-camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);renderer.render(scene,camera);}
+camera.position.set(Math.sin(angle)*Math.cos(elev)*dist,Math.sin(elev)*dist+targetY,Math.cos(angle)*Math.cos(elev)*dist);camera.lookAt(0,targetY,0);renderer.render(scene,camera);domRenderer.render(scene,camera);}
 requestAnimationFrame(frame);
 }catch(e){window.BaubleFatal(e);console.error(e)}

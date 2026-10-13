@@ -38,3 +38,5 @@
 #buildRow #build{font:inherit;font-size:12px;color:#e7dbb7}
 
 #linkedin{border-color:#bca56c;background:#23364b;color:#f5dfb2;letter-spacing:.07em}#status{letter-spacing:.13em}#title h1{font-size:clamp(23px,6vw,39px)}
+/* The CSS3D layer shares Athanor's camera; cards remain interactive DOM. */
+.world-dom{position:absolute;inset:0;pointer-events:none;overflow:hidden}.world-dom a{pointer-events:auto}.world-dom>div{pointer-events:none}#stage{position:fixed;inset:0;overflow:hidden}

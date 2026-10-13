@@ -560,6 +560,10 @@ const wanderCube=put(world,new T.BoxGeometry(WANDER_SIZE,WANDER_SIZE,WANDER_SIZE
 wanderCube.renderOrder=0; // Geological terrain is opaque to the Wanderer.
 const walkRay=new T.Raycaster(),walkPointer=new T.Vector2(),walkPlane=new T.Plane(new T.Vector3(0,1,0),0),walkPoint=new T.Vector3();
 let walker={x:0,y:0,z:0,target:null,route:[],accepted:0,rejected:0},wanderHistory=[];
+// All character-kind entities share one vegetation clearance rule.
+const populationCharacterKind=[];
+function registerPopulationCharacter(getPosition){populationCharacterKind.push(getPosition)}
+registerPopulationCharacter(()=>walker);
 // Signed-field top crossing: highest solid-to-air surface, never a lower cavern floor.
 function walkSurface(x,z){
  let prior=fieldSample(x,MAXY-.02,z);
@@ -656,6 +660,7 @@ function walkTarget(clientX,clientY){
 const fugitiveSize=.32,fugitiveRadius=.23;
 const fugitiveMesh=put(world,new T.BoxGeometry(fugitiveSize,fugitiveSize,fugitiveSize),new T.MeshStandardMaterial({color:0xff8b29,emissive:0x9d3100,emissiveIntensity:.2,roughness:.68}));
 const fugitive={x:-4.7,z:-1.1,y:1.4,vy:0,time:0,mode:'idle',owner:'geology',vx:0,vz:0,particles:[],splat:false};
+registerPopulationCharacter(()=>fugitive.owner==='geology'&&fugitive.mode!=='splat'?fugitive:null);
 const splatGeo=new T.IcosahedronGeometry(.046,0);
 const splatMat=new T.MeshStandardMaterial({color:0xc51e30,roughness:.8});
 const splatMesh=new T.InstancedMesh(splatGeo,splatMat,100);splatMesh.count=0;splatMesh.frustumCulled=false;world.add(splatMesh);
@@ -720,6 +725,7 @@ for(let i=0;i<9;i++){
  quillFeathers.push(shaft);
 }
 const quillResident={x:5.25,z:7.25,t:0,open:0,heading:0};
+registerPopulationCharacter(()=>quillResident);
 function quillStep(dt){
  const q=quillResident;q.t+=dt;
  const d=Math.hypot(walker.x-q.x,walker.z-q.z);
@@ -759,6 +765,7 @@ for(let i=0;i<7;i++){
  gardenGroup.add(flower);gardenFlowers.push(flower);
 }
 const gardener={x:-7.15,z:5.15,t:0,bloom:0,attention:0};
+registerPopulationCharacter(()=>gardener);
 function gardenStep(dt){
  const g=gardener;g.t+=dt;
  const dist=Math.hypot(walker.x-g.x,walker.z-g.z);
@@ -808,7 +815,7 @@ function mistReedsStep(dt){
  const m=mistReeds;m.t+=dt;
  const near=Math.hypot(walker.x+2,walker.z+1)<3.4;
  // One shared character kind: any geological character clears nearby vegetation.
- const populationCharacters=[{x:walker.x,z:walker.z,active:true},{x:fugitive.x,z:fugitive.z,active:fugitive.owner==='geology'&&fugitive.mode!=='splat'},{x:5.25,z:7.25,active:true},{x:gardener.x,z:gardener.z,active:true}];
+ const populationCharacters=populationCharacterKind.map(get=>get()).filter(Boolean);
  camera.updateMatrixWorld();
  let visible=0;
  for(const st of m.stems){
@@ -820,7 +827,7 @@ function mistReedsStep(dt){
   const inView=mistReedView.z>-1&&mistReedView.z<1&&Math.abs(mistReedView.x)<1.16&&Math.abs(mistReedView.y)<1.2;
   // Slightly different thresholds create a travelling, not synchronized, wave.
   const threshold=.12+(Math.sin(st.x*3.7+st.z*2.9)+1)*.11;
-  const occupied=populationCharacters.some(c=>c.active&&Math.hypot(st.x-c.x,st.z-c.z)<.44);
+  const occupied=populationCharacters.some(c=>Math.hypot(st.x-c.x,st.z-c.z)<.44);
   const target=inView&&!occupied?T.MathUtils.smoothstep(rimClear,-.08,threshold+.42):0;
   st.growth+=(target-st.growth)*Math.min(1,dt*(target>st.growth?2.5:4.4));
  }

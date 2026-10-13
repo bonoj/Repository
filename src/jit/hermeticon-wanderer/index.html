@@ -1337,17 +1337,52 @@ const telemetryEvents=[],telemetryErrors=[],TELEMETRY_LIMIT=48;
 addEventListener('error',e=>{telemetryErrors.push(String(e.message).slice(0,240));if(telemetryErrors.length>4)telemetryErrors.shift()});
 addEventListener('unhandledrejection',e=>{telemetryErrors.push(String(e.reason).slice(0,240));if(telemetryErrors.length>4)telemetryErrors.shift()});
 function telemetryEvent(type,detail=''){telemetryEvents.push({t:Math.round(performance.now()),type,detail:String(detail).slice(0,160)});if(telemetryEvents.length>TELEMETRY_LIMIT)telemetryEvents.shift()}
+// On-demand, read-only spherical occupancy and camera projection witnesses.
+function inspectSpatialEyes(){
+ const elevations=12,azimuths=24,screenSize=32;
+ const makeGrid=()=>Array.from({length:elevations},()=>Array(azimuths).fill(0));
+ const makeScreen=()=>Array.from({length:screenSize},()=>Array(screenSize).fill(0));
+ const names=['rain','blood','solids'],grids=names.map(makeGrid),screens=names.map(makeScreen);
+ const totals=[0,0,0],wall=[0,0,0],interior=[0,0,0],projected=[0,0,0],moving=[0,0,0],velocity=[0,0,0],angular=[0,0,0];
+ const W=renderer.domElement.width,H=renderer.domElement.height;
+ camera.updateMatrixWorld(true);
+ const v=new T.Vector3();
+ const record=(kind,x,y,z,vx,vy,vz)=>{
+  const radius=Math.hypot(x,y,z);if(y>=0||radius>=INNER_R||radius<.00001)return;
+  const el=Math.min(elevations-1,Math.floor(Math.acos(Math.max(-1,Math.min(0,y/radius)))/(Math.PI/2)*elevations));
+  const az=Math.min(azimuths-1,Math.floor(((Math.atan2(z,x)+Math.PI)/(2*Math.PI))*azimuths));
+  grids[kind][el][az]++;totals[kind]++;
+  if(INNER_R-radius<.55)wall[kind]++;else interior[kind]++;
+  const speed=Math.hypot(vx,vy,vz);velocity[kind]+=speed;moving[kind]+=speed>.42?1:0;
+  angular[kind]+=x*vz-z*vx;
+  v.set(x,y,z).project(camera);
+  if(v.z>=-1&&v.z<=1&&Math.abs(v.x)<=1&&Math.abs(v.y)<=1){
+   const sx=Math.min(screenSize-1,Math.floor((v.x+1)*.5*screenSize));
+   const sy=Math.min(screenSize-1,Math.floor((1-v.y)*.5*screenSize));
+   screens[kind][sy][sx]++;projected[kind]++;
+  }
+ };
+ for(let i=0;i<rainEmitted;i++){
+  if(rainRest[i]===2)continue;
+  const [x,y,z]=rainWorld(i);record(0,x,y,z,rainVX[i],rainVY[i],rainVZ[i]);
+ }
+ for(const p of fugitive.particles)record(p.liquid?1:2,p.x,p.y,p.z,p.vx,p.vy,p.vz);
+ const summarize=(kind)=>{
+  let peak={count:0,elevation:0,azimuth:0};
+  for(let e=0;e<elevations;e++)for(let a=0;a<azimuths;a++)if(grids[kind][e][a]>peak.count)peak={count:grids[kind][e][a],elevation:e,azimuth:a};
+  return {count:totals[kind],nearWall:wall[kind],interior:interior[kind],moving:moving[kind],meanSpeed:round(velocity[kind]/(totals[kind]||1),3),angularY:round(angular[kind],2),peakSector:peak,occupancy:grids[kind],projectedCount:projected[kind],screenOccupancy:screens[kind]};
+ };
+ return {frame:'Crucible-centered; elevation 0 is bottom pole, 11 near equator; azimuth 0..23 around vertical axis',shape:[elevations,azimuths],screen:{shape:[screenSize,screenSize],resolution:[W,H],origin:'top-left',cameraPosition:camera.position.toArray().map(n=>round(n,3)),cameraTarget:controls.target.toArray().map(n=>round(n,3))},materials:Object.fromEntries(names.map((name,i)=>[name,summarize(i)])),limits:'Projected samples are not pixels: no occlusion, lighting, or depth visibility test; counts cover bowl-contained emitted rain and pumpkin micros; sampled on Inspect only'};
+}
 function inspectWorld(){
  const blood=fugitive.particles.filter(p=>p.liquid).length,solid=fugitive.particles.length-blood;
- const crucible={mode:fugitive.mode,owner:fugitive.owner,bodyVisible:fugitiveMesh.visible,
-  corpseDispersed,rendered:splatMesh.count,
-  inventory:{bloodTotal:PUMPKIN_LIQUID,solidTotal:PUMPKIN_SOLID,releasedBlood:blood,releasedSolid:solid,unreleasedBlood:PUMPKIN_LIQUID-blood,unreleasedSolid:PUMPKIN_SOLID-solid},
-  physics:{gravity:9.8,restitution:.38,tangentialDamping:1,sleepOnContact:false},
-  motionHistory:crucibleMotion.slice(),sampleSeconds:1,microContacts:{...microStats,budgetPerFrame:MICRO_PAIR_BUDGET,cellSize:MICRO_CELL,particleCount:fugitive.particles.length}};
- const report={crucible,terrainContacts:{...terrainContactStats},thump:{count:lowerTaps,...thumpStats},gel:{model:'denser segmented curtain v69',absorbedBBs:gelAbsorbed,materialVolume:gelVolume,representedVolume:Array.from(gelColumns.values()).reduce((a,c)=>a+c.volume,0),nodes:gelNodes.length,edges:gelEdges,columns:gelColumns.size,fluxMoves:gelMoves,rimNodes:gelRimNodes,beadVolume:gelBeadVolume,stretchRejected:gelStretch,airEdges:gelAirEdges,releasedBBs:gelReleased,releasedVolume:gelReleasedVolume,pendingEdges:gelPending,segmentEmissions:gelSegmentEmissions,meanTangentOffset:gelSegmentEmissions?gelEmissionSpan/gelSegmentEmissions:0,rejected:gelRejected,triangles:0},build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
-  terrain:{chunks:terrainPerf.totalChunks,fullRebuilds:terrainPerf.fullRebuilds,localRebuilds:terrainPerf.localRebuilds,lastDirtyChunks:terrainPerf.lastDirtyChunks,lastRebuildMs:terrainPerf.lastRebuildMs},
-  transfer:quarry?{started:quarry.started,counts:quarry.units.reduce((a,u)=>(a[u.state]++,a),{source:0,transit:0,receiver:0}),capacity:quarry.units.length,recovery:quarry.recoveryStatus??null}:null,
-  errors:telemetryErrors.slice(-4),events:telemetryEvents.slice(-24)};
+ const report={
+  identity:{build:BUILD,fps:displayFps===null?null:round(displayFps,1),errors:telemetryErrors.slice(-4)},
+  matter:{crucibleMode:fugitive.mode,owner:fugitive.owner,rendered:splatMesh.count,rainEmitted,rainActive:rainEmitted-Array.from(rainRest.subarray(0,rainEmitted)).filter(v=>v===2).length,blood:{total:PUMPKIN_LIQUID,released:blood,unreleased:PUMPKIN_LIQUID-blood},solids:{total:PUMPKIN_SOLID,released:solid,unreleased:PUMPKIN_SOLID-solid}},
+  spatialEyes:inspectSpatialEyes(),
+  interactions:{thump:{count:lowerTaps,...thumpStats},terrain:{...terrainContactStats},micro:{contacts:microStats.contacts,energyLost:round(microStats.energyLost,3),bowlImpacts:microStats.bowlImpacts},motionRecent:crucibleMotion.slice(-3)},
+  events:telemetryEvents.slice(-12)
+ };
  probeReport=JSON.stringify(report,null,2);probeText.value=probeReport;return report;
 }
 probeButton.onclick=()=>{probePanel.classList.toggle('open');if(probePanel.classList.contains('open'))inspectWorld()};

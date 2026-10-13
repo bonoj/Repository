@@ -62,6 +62,6 @@ export function populateStatus(hermeticon){
  }
  const counts=Object.fromEntries(Object.entries(pts).map(([k,v])=>[k,v.length]));
  let elapsed=0;
- hermeticon.update=(dt)=>{elapsed+=dt;root.rotation.y=Math.sin(elapsed*.16)*.14;meshes.find(m=>m.name==='bb-lattice-fire').material.emissiveIntensity=.7+.35*Math.sin(elapsed*3)};
+ hermeticon.update=(dt)=>{elapsed+=dt;meshes.find(m=>m.name==='bb-lattice-fire').material.emissiveIntensity=.7+.35*Math.sin(elapsed*3)};
  hermeticon.inspect=()=>({name:'Manny Status',grammar:'BB lattice',counts,total:Object.values(counts).reduce((a,b)=>a+b,0),profile:'https://www.linkedin.com/in/manuel-leal-053384234',message:'Low profile maintained'});
 }

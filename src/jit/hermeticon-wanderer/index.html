@@ -709,11 +709,42 @@ function microContacts(particles,dt){
  microStats.frames++;microStats.processed+=count;
 }
 let corpseDispersed=false,lowerTaps=0,lowerWoken=0;
+const thumpStats={affected:0,fractures:0,energyAdded:0};
+function thumpVelocity(p,seed){
+ const before=p.vx*p.vx+p.vy*p.vy+p.vz*p.vz;
+ const angle=rainRandom(seed,lowerTaps+31)*Math.PI*2;
+ // A single finite impulse, never a frame-by-frame damping or speed clamp.
+ const kick=1.6;
+ p.vx+=Math.cos(angle)*kick*.55;p.vy+=kick*.8;p.vz+=Math.sin(angle)*kick*.55;
+ p.rest=false;
+ const after=p.vx*p.vx+p.vy*p.vy+p.vz*p.vz;
+ thumpStats.energyAdded+=(after-before)*.5;thumpStats.affected++;
+}
+function shotgunMacroInside(){
+ const f=fugitive;
+ if(f.mode==='splat')return;
+ const cx=f.x-wanderX,cy=f.y+fugitiveSize*.5,cz=f.z-wanderZ;
+ const limit=INNER_R-fugitiveRadius;
+ if(cx*cx+cy*cy+cz*cz>=limit*limit)return;
+ // Convert the intact geological macro to conserved vessel-local micros.
+ f.x=cx;f.z=cz;f.owner='hermeticon';f.mode='splat';f.vx=0;f.vy=0;f.vz=0;
+ corpseDispersed=true;fugitiveMesh.visible=false;f.particles.length=0;
+ for(let i=0;i<PUMPKIN_TOTAL;i++){
+  const angle=i*2.399963229728653,vertical=1-2*(i+.5)/PUMPKIN_TOTAL;
+  const radial=Math.sqrt(Math.max(0,1-vertical*vertical));
+  const ox=Math.cos(angle)*radial,oy=vertical,oz=Math.sin(angle)*radial;
+  const inward=Math.hypot(cx,cy,cz)||1;
+  const spread=.7,force=4.2;
+  f.particles.push({x:cx+ox*.11,y:cy+oy*.11,z:cz+oz*.11,
+   vx:-cx/inward*force+ox*spread,vy:-cy/inward*force+oy*spread,vz:-cz/inward*force+oz*spread,
+   rest:false,liquid:i<PUMPKIN_LIQUID});
+ }
+ splatMesh.count=PUMPKIN_TOTAL;thumpStats.fractures++;
+}
 function lowerBowlTap(clientX,clientY){
  const rect=renderer.domElement.getBoundingClientRect();
  walkPointer.set((clientX-rect.left)/rect.width*2-1,-(clientY-rect.top)/rect.height*2+1);
  camera.updateMatrixWorld();walkRay.setFromCamera(walkPointer,camera);
- // Front intersection of the actual spherical vessel; never use screen height.
  const ray=walkRay.ray,o=ray.origin,d=ray.direction;
  const b=o.dot(d),c=o.lengthSq()-BAUBLE_R*BAUBLE_R,disc=b*b-c;
  if(disc<0)return false;
@@ -721,42 +752,28 @@ function lowerBowlTap(clientX,clientY){
  const t=near>=0?near:far;
  if(t<0)return false;
  const hit=o.clone().addScaledVector(d,t);
- if(hit.y>=-.16)return false; // Brass band and upper hemisphere retain walking intent.
+ if(hit.y>=-.16)return false;
  lowerTaps++;
- // Crucible tap acts on all resting vessel-owned BBs, independent of hit proximity.
- let woken=0;
- for(let i=0;i<rainEmitted;i++){
-  if(rainOwner[i]!==1||rainRest[i]!==1)continue;
-  const angle=rainRandom(i,lowerTaps+31)*Math.PI*2;
-  const kick=.9+rainRandom(i,lowerTaps+32)*1.1;
-  rainVX[i]+=Math.cos(angle)*kick;
-  rainVY[i]+=1.2+rainRandom(i,lowerTaps+33)*1.8;
-  rainVZ[i]+=Math.sin(angle)*kick;
-  rainRest[i]=0;woken++;
- }
- lowerWoken+=woken;
- // A corpse is a visual body, not conserved matter. Disperse it into orange
- // visual beads, retaining the existing 100 red splat particles separately.
+ shotgunMacroInside();
+ // Preserve the original splat inventory; release its remainder only once.
  const f=fugitive;
- if(f.mode==='splat'&&!corpseDispersed){
+ if(f.mode==='splat'&&!corpseDispersed&&f.owner==='hermeticon'){
+  corpseDispersed=true;fugitiveMesh.visible=false;
   const cx=f.x,cy=f.y+fugitiveSize*.5,cz=f.z;
-  if(f.owner==='hermeticon'){
-   corpseDispersed=true;fugitiveMesh.visible=false;
-   // Release all remaining blood and the full solid inventory; never create extra matter.
-   for(let i=PUMPKIN_BLOOD_IMPACT;i<PUMPKIN_TOTAL;i++){
-    const a=i*2.39996323,rad=.55+(i%7)*.13;
-    f.particles.push({x:cx,y:cy,z:cz,vx:Math.cos(a)*rad,vy:1.3+(i%5)*.34,vz:Math.sin(a)*rad,rest:false,liquid:i<PUMPKIN_LIQUID});
-   }
-   splatMesh.count=f.particles.length;
+  for(let i=PUMPKIN_BLOOD_IMPACT;i<PUMPKIN_TOTAL;i++){
+   const a=i*2.39996323,rad=.55+(i%7)*.13;
+   f.particles.push({x:cx,y:cy,z:cz,vx:Math.cos(a)*rad,vy:1.3+(i%5)*.34,vz:Math.sin(a)*rad,rest:false,liquid:i<PUMPKIN_LIQUID});
   }
+  splatMesh.count=f.particles.length;
  }
- // Stir resting solid matter and disturb the slowly moving liquid without authored swirl.
- if(f.mode==='splat')for(let j=0;j<f.particles.length;j++){
-  const p=f.particles[j];if(!p.rest&&(!p.liquid||Math.hypot(p.vx,p.vy,p.vz)>.7))continue;
-  const angle=rainRandom(lowerTaps,j+41)*Math.PI*2;
-  p.vx+=Math.cos(angle)*1.4;p.vy+=1.4;p.vz+=Math.sin(angle)*1.4;
-  p.rest=false;
+ // Global impulse affects moving and resting vessel-owned micros alike.
+ for(let i=0;i<rainEmitted;i++){
+  if(rainOwner[i]!==1)continue;
+  const p={vx:rainVX[i],vy:rainVY[i],vz:rainVZ[i],rest:!!rainRest[i]};
+  thumpVelocity(p,i);rainVX[i]=p.vx;rainVY[i]=p.vy;rainVZ[i]=p.vz;rainRest[i]=0;
  }
+ if(f.mode==='splat'&&f.owner==='hermeticon')
+  for(let i=0;i<f.particles.length;i++)thumpVelocity(f.particles[i],rainEmitted+i);
  return true;
 }
 function fugitiveStep(dt){
@@ -1300,7 +1317,7 @@ function inspectWorld(){
   inventory:{bloodTotal:PUMPKIN_LIQUID,solidTotal:PUMPKIN_SOLID,releasedBlood:blood,releasedSolid:solid,unreleasedBlood:PUMPKIN_LIQUID-blood,unreleasedSolid:PUMPKIN_SOLID-solid},
   physics:{gravity:9.8,restitution:.38,tangentialDamping:1,sleepOnContact:false},
   motionHistory:crucibleMotion.slice(),sampleSeconds:1,microContacts:{...microStats,budgetPerFrame:MICRO_PAIR_BUDGET,cellSize:MICRO_CELL,particleCount:fugitive.particles.length}};
- const report={crucible,gel:{model:'denser segmented curtain v69',absorbedBBs:gelAbsorbed,materialVolume:gelVolume,representedVolume:Array.from(gelColumns.values()).reduce((a,c)=>a+c.volume,0),nodes:gelNodes.length,edges:gelEdges,columns:gelColumns.size,fluxMoves:gelMoves,rimNodes:gelRimNodes,beadVolume:gelBeadVolume,stretchRejected:gelStretch,airEdges:gelAirEdges,releasedBBs:gelReleased,releasedVolume:gelReleasedVolume,pendingEdges:gelPending,segmentEmissions:gelSegmentEmissions,meanTangentOffset:gelSegmentEmissions?gelEmissionSpan/gelSegmentEmissions:0,rejected:gelRejected,triangles:0},build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
+ const report={crucible,thump:{count:lowerTaps,...thumpStats},gel:{model:'denser segmented curtain v69',absorbedBBs:gelAbsorbed,materialVolume:gelVolume,representedVolume:Array.from(gelColumns.values()).reduce((a,c)=>a+c.volume,0),nodes:gelNodes.length,edges:gelEdges,columns:gelColumns.size,fluxMoves:gelMoves,rimNodes:gelRimNodes,beadVolume:gelBeadVolume,stretchRejected:gelStretch,airEdges:gelAirEdges,releasedBBs:gelReleased,releasedVolume:gelReleasedVolume,pendingEdges:gelPending,segmentEmissions:gelSegmentEmissions,meanTangentOffset:gelSegmentEmissions?gelEmissionSpan/gelSegmentEmissions:0,rejected:gelRejected,triangles:0},build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
   terrain:{chunks:terrainPerf.totalChunks,fullRebuilds:terrainPerf.fullRebuilds,localRebuilds:terrainPerf.localRebuilds,lastDirtyChunks:terrainPerf.lastDirtyChunks,lastRebuildMs:terrainPerf.lastRebuildMs},
   transfer:quarry?{started:quarry.started,counts:quarry.units.reduce((a,u)=>(a[u.state]++,a),{source:0,transit:0,receiver:0}),capacity:quarry.units.length,recovery:quarry.recoveryStatus??null}:null,
   errors:telemetryErrors.slice(-4),events:telemetryEvents.slice(-24)};

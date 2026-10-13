@@ -750,7 +750,7 @@ function shotgunMacroInside(){
  if(f.mode==='splat')return;
  const cx=f.x-wanderX,cy=f.y+fugitiveSize*.5,cz=f.z-wanderZ;
  const limit=INNER_R-fugitiveRadius;
- if(cx*cx+cy*cy+cz*cz>=limit*limit)return;
+ if(cy>=0||cx*cx+cy*cy+cz*cz>=limit*limit)return;
  // Convert the intact geological macro to conserved vessel-local micros.
  f.x=cx;f.z=cz;f.owner='hermeticon';f.mode='splat';f.vx=0;f.vy=0;f.vz=0;
  corpseDispersed=true;fugitiveMesh.visible=false;f.particles.length=0;
@@ -793,12 +793,12 @@ function lowerBowlTap(clientX,clientY){
  }
  // Global impulse affects moving and resting vessel-owned micros alike.
  for(let i=0;i<rainEmitted;i++){
-  if(rainOwner[i]!==1)continue;
+  if(rainOwner[i]!==1||rainY[i]>=0)continue;
   const p={vx:rainVX[i],vy:rainVY[i],vz:rainVZ[i],rest:!!rainRest[i]};
   thumpVelocity(p,i);rainVX[i]=p.vx;rainVY[i]=p.vy;rainVZ[i]=p.vz;rainRest[i]=0;
  }
  if(f.mode==='splat'&&f.owner==='hermeticon')
-  for(let i=0;i<f.particles.length;i++)thumpVelocity(f.particles[i],rainEmitted+i);
+  for(let i=0;i<f.particles.length;i++)if(f.particles[i].y<0)thumpVelocity(f.particles[i],rainEmitted+i);
  return true;
 }
 function fugitiveStep(dt){

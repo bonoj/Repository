@@ -710,9 +710,9 @@ function lowerBowlTap(clientX,clientY){
   }
  }
  // Stir the existing splat beads, preserving their original red/orange colors.
- if(f.mode==='splat')for(const p of f.particles){
-  if(!p.rest)continue;
-  const angle=rainRandom(lowerTaps,f.particles.indexOf(p)+41)*Math.PI*2;
+ if(f.mode==='splat')for(let j=0;j<f.particles.length;j++){
+  const p=f.particles[j];if(!p.rest)continue;
+  const angle=rainRandom(lowerTaps,j+41)*Math.PI*2;
   p.vx+=Math.cos(angle)*1.4;p.vy+=1.4;p.vz+=Math.sin(angle)*1.4;
   p.rest=false;
  }

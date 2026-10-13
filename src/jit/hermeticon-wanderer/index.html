@@ -785,7 +785,7 @@ const mistReeds=(()=>{
   if(x>-.8&&z<-.65)continue;
   const ground=walkSurface(x,z);if(ground===null)continue;
   const height=.42+seed(k*5+3)*.95, lean=(seed(k*7+4)-.5)*.18;
-  const stem=stems.length;stems.push({x,z,ground,height,lean,phase:seed(k*11+5)*6.28});
+  const stem=stems.length;stems.push({x,z,ground,height,lean,phase:seed(k*11+5)*6.28,growth:0});
   const count=5+Math.floor(height*6);
   for(let j=0;j<count;j++){const t=j/(count-1);beads.push({stem,t,head:j>=count-2,side:0})}
   if(k%3===0)for(let j=0;j<3;j++)beads.push({stem,t:.47+j*.12,head:false,side:(j%2?1:-1)*(.12+j*.035)});
@@ -797,19 +797,49 @@ const mistReeds=(()=>{
  const dummy=new T.Object3D(), colors=[new T.Color(0x537f70),new T.Color(0x779c87),new T.Color(0xa7a884),new T.Color(0xd3b68c)];
  for(let i=0;i<beads.length;i++){const b=beads[i],st=stems[b.stem];mesh.setColorAt(i,colors[b.head?3:(b.t>.72?2:(b.stem%2))])}
  mesh.instanceColor.needsUpdate=true;
+ mesh.userData.palette=colors;
  return {mesh,stems,beads,dummy,t:0};
 })();
+// V83: Each stem enters/exits through its root, with staggered growth.
+// Compact visible instances so no out-of-aperture or off-frustum beads are submitted.
+const mistReedView=new T.Vector3();
 function mistReedsStep(dt){
  const m=mistReeds;m.t+=dt;
  const near=Math.hypot(walker.x+2,walker.z+1)<3.4;
+ camera.updateMatrixWorld();
+ let visible=0;
+ for(const st of m.stems){
+  const px=st.x-wanderX,pz=st.z-wanderZ;
+  const radial=Math.hypot(px,pz);
+  // Reserve room for swaying tips: a whole stem starts folding before the rim.
+  const rimClear=R-.16-Math.sqrt(px*px+pz*pz+Math.max(0,st.ground+st.height)**2);
+  mistReedView.set(px,st.ground+st.height*.5,pz).project(camera);
+  const inView=mistReedView.z>-1&&mistReedView.z<1&&Math.abs(mistReedView.x)<1.16&&Math.abs(mistReedView.y)<1.2;
+  // Slightly different thresholds create a travelling, not synchronized, wave.
+  const threshold=.12+(Math.sin(st.x*3.7+st.z*2.9)+1)*.11;
+  const target=inView?T.MathUtils.smoothstep(rimClear,-.08,threshold+.42):0;
+  st.growth+=(target-st.growth)*Math.min(1,dt*(target>st.growth?2.5:4.4));
+ }
  for(let i=0;i<m.beads.length;i++){
   const b=m.beads[i],st=m.stems[b.stem],t=b.t;
+  // Grow from the soil upward, rather than uniformly scaling an entire plant.
+  if(st.growth<.025||t>st.growth)continue;
   const sway=Math.sin(m.t*(near?2.8:1.15)+st.phase)*(.045+(near?.14:.035))*t*t;
-  m.dummy.position.set(st.x-wanderX+st.lean*t+sway+b.side,st.ground+st.height*t,st.z-wanderZ+Math.cos(m.t*1.3+st.phase)*.075*t*t);
-  const size=b.head?1.38:(t<.2?.75:1);
-  m.dummy.scale.setScalar(size);m.dummy.updateMatrix();m.mesh.setMatrixAt(i,m.dummy.matrix);
+  const x=st.x-wanderX+st.lean*t+sway+b.side;
+  const y=st.ground+st.height*t;
+  const z=st.z-wanderZ+Math.cos(m.t*1.3+st.phase)*.075*t*t;
+  // Hard Hermeticon containment, including the BB's own radius.
+  if(x*x+y*y+z*z>(R-.08)*(R-.08))continue;
+  m.dummy.position.set(x,y,z);
+  const size=(b.head?1.38:(t<.2?.75:1))*Math.min(1,st.growth*9);
+  m.dummy.scale.setScalar(size);m.dummy.updateMatrix();
+  m.mesh.setMatrixAt(visible,m.dummy.matrix);
+  m.mesh.setColorAt(visible,m.mesh.userData.palette[b.head?3:(b.t>.72?2:(b.stem%2))]);
+  visible++;
  }
+ m.mesh.count=visible;
  m.mesh.instanceMatrix.needsUpdate=true;
+ if(m.mesh.instanceColor)m.mesh.instanceColor.needsUpdate=true;
 }
 // V38 bounded material circuit: a visibly depleted stockpile, individual transit
 // bearings and an accumulating receiver. This is a circuit witness, NOT terrain excavation.

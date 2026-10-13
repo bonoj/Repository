@@ -806,7 +806,7 @@ function fugitiveStep(dt){
      const limit=INNER_R-.06,k=limit/rr;p.x*=k;p.y*=k;p.z*=k;
      const nx=-p.x/limit,ny=-p.y/limit,nz=-p.z/limit;
      const vn=p.vx*nx+p.vy*ny+p.vz*nz;
-     if(vn<-.12){const e=.38;p.vx-=(1+e)*vn*nx;p.vy-=(1+e)*vn*ny;p.vz-=(1+e)*vn*nz;crucibleCollisions++;microStats.bowlImpacts++}else if(vn<0){p.vx-=vn*nx;p.vy-=vn*ny;p.vz-=vn*nz;microStats.bowlContacts++}
+     if(vn<-.12){const e=.38;p.vx-=(1+e)*vn*nx;p.vy-=(1+e)*vn*ny;p.vz-=(1+e)*vn*nz;crucibleCollisions++;microStats.bowlImpacts++}else if(vn<0){p.vx-=vn*nx;p.vy-=vn*ny;p.vz-=vn*nz;microStats.bowlContacts++}const tangent=1-.035*dt;p.vx*=tangent;p.vz*=tangent;
      // Blood remains dynamic; solid material can sleep after dissipating contact energy.
      // Preserve tangential motion and avoid arbitrary contact sleep.
     }

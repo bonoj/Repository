@@ -291,6 +291,31 @@ const cloud=put(world,new T.BoxGeometry(...cloudDimensions),cloudMaterial,0,clou
 cloud.userData.worldDomain=true;
 const rainDummy=new T.Object3D();let rainTime=0,rainEmitted=0,rainBounces=0,rainSettled=0,rainEscaped=0,rainWallBounces=0,rainBudget=0;
 function rainRandom(i,s){const v=Math.sin((i+1)*127.1+(s+1)*311.7)*43758.5453;return v-Math.floor(v)}
+// Terrain is solid on every face. Only a crossing from air into rock is a
+// contact; an already embedded micro must not be repeatedly accelerated.
+const terrainContactStats={hits:0,underside:0};
+function terrainMicroContact(p,ox,oy,oz,radius){
+ const sx=ox+wanderX,sz=oz+wanderZ;
+ const start=fieldSample(sx,oy,sz),end=fieldSample(p.x+wanderX,p.y,p.z+wanderZ);
+ if(start>=-radius||end< -radius)return;
+ const [nx,ny,nz]=rainSurfaceNormal(p.x+wanderX,p.y,p.z+wanderZ);
+ const vn=p.vx*nx+p.vy*ny+p.vz*nz;
+ if(vn>=0)return;
+ // Same normal restitution as the established terrain surface; no tangential damping.
+ p.vx-=1.38*vn*nx;p.vy-=1.38*vn*ny;p.vz-=1.38*vn*nz;
+ // Resolve onto the incoming air side, avoiding a second impulse at rest.
+ let lo=0,hi=1;
+ for(let k=0;k<8;k++){
+  const t=(lo+hi)*.5;
+  if(fieldSample(sx+(p.x-ox)*t,oy+(p.y-oy)*t,sz+(p.z-oz)*t)>=-radius)hi=t;
+  else lo=t;
+ }
+ p.x=ox+(p.x-ox)*lo+nx*.004;
+ p.y=oy+(p.y-oy)*lo+ny*.004;
+ p.z=oz+(p.z-oz)*lo+nz*.004;
+ terrainContactStats.hits++;
+ if(ny<-.25)terrainContactStats.underside++;
+}
 function rainSurfaceNormal(x,y,z){
  const h=.09;
  // Positive signed-field values are INSIDE rock: outward normal is NEGATIVE gradient.
@@ -816,7 +841,9 @@ function fugitiveStep(dt){
   const g=9.8;
   for(let i=0;i<f.particles.length;i++){
    const p=f.particles[i];if(!p.rest){
+    const ox=p.x,oy=p.y,oz=p.z;
     p.vy-=g*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;
+    terrainMicroContact(p,ox,oy,oz,pumpkinBeadRadius);
     const lx=p.x,lz=p.z;
     const rr=Math.hypot(lx,p.y,lz);
     if(p.y<0&&rr>INNER_R-.06){
@@ -1317,7 +1344,7 @@ function inspectWorld(){
   inventory:{bloodTotal:PUMPKIN_LIQUID,solidTotal:PUMPKIN_SOLID,releasedBlood:blood,releasedSolid:solid,unreleasedBlood:PUMPKIN_LIQUID-blood,unreleasedSolid:PUMPKIN_SOLID-solid},
   physics:{gravity:9.8,restitution:.38,tangentialDamping:1,sleepOnContact:false},
   motionHistory:crucibleMotion.slice(),sampleSeconds:1,microContacts:{...microStats,budgetPerFrame:MICRO_PAIR_BUDGET,cellSize:MICRO_CELL,particleCount:fugitive.particles.length}};
- const report={crucible,thump:{count:lowerTaps,...thumpStats},gel:{model:'denser segmented curtain v69',absorbedBBs:gelAbsorbed,materialVolume:gelVolume,representedVolume:Array.from(gelColumns.values()).reduce((a,c)=>a+c.volume,0),nodes:gelNodes.length,edges:gelEdges,columns:gelColumns.size,fluxMoves:gelMoves,rimNodes:gelRimNodes,beadVolume:gelBeadVolume,stretchRejected:gelStretch,airEdges:gelAirEdges,releasedBBs:gelReleased,releasedVolume:gelReleasedVolume,pendingEdges:gelPending,segmentEmissions:gelSegmentEmissions,meanTangentOffset:gelSegmentEmissions?gelEmissionSpan/gelSegmentEmissions:0,rejected:gelRejected,triangles:0},build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
+ const report={crucible,terrainContacts:{...terrainContactStats},thump:{count:lowerTaps,...thumpStats},gel:{model:'denser segmented curtain v69',absorbedBBs:gelAbsorbed,materialVolume:gelVolume,representedVolume:Array.from(gelColumns.values()).reduce((a,c)=>a+c.volume,0),nodes:gelNodes.length,edges:gelEdges,columns:gelColumns.size,fluxMoves:gelMoves,rimNodes:gelRimNodes,beadVolume:gelBeadVolume,stretchRejected:gelStretch,airEdges:gelAirEdges,releasedBBs:gelReleased,releasedVolume:gelReleasedVolume,pendingEdges:gelPending,segmentEmissions:gelSegmentEmissions,meanTangentOffset:gelSegmentEmissions?gelEmissionSpan/gelSegmentEmissions:0,rejected:gelRejected,triangles:0},build:BUILD,timeMs:Math.round(performance.now()),fps:displayFps===null?null:Math.round(displayFps*10)/10,
   terrain:{chunks:terrainPerf.totalChunks,fullRebuilds:terrainPerf.fullRebuilds,localRebuilds:terrainPerf.localRebuilds,lastDirtyChunks:terrainPerf.lastDirtyChunks,lastRebuildMs:terrainPerf.lastRebuildMs},
   transfer:quarry?{started:quarry.started,counts:quarry.units.reduce((a,u)=>(a[u.state]++,a),{source:0,transit:0,receiver:0}),capacity:quarry.units.length,recovery:quarry.recoveryStatus??null}:null,
   errors:telemetryErrors.slice(-4),events:telemetryEvents.slice(-24)};

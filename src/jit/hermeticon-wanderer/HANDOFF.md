@@ -1,63 +1,47 @@
-# Hermeticon Wanderer — project entry point
-Updated 2026-10-13.
+# Hermeticon Wanderer — start here
+Updated 2026-10-13. **This is the one project entry point.** The human names Wanderer and the task; the model locates resources, inspects source, preserves invariants, implements and verifies the requested change, and handles routine delivery/recovery. This document is a map, not evidence of current deployed state.
 
-**Start here.** This is the single entry point for a cold model resuming Hermeticon Wanderer. The human should need to name this document and the desired change, not locate subsystems, reconstruct history, or supervise routine deployment. This file is a map and operating orientation, not a substitute for inspecting current source. Do not treat its snapshot as proof of the live build.
+## Resource map
 
-## Find the project
+| Need | Authoritative location |
+|---|---|
+| Executable | `bonoj/Repository/src/jit/hermeticon-wanderer/index.html` |
+| Current systems and limitations | [SEMANTIC_SURFACE.md](SEMANTIC_SURFACE.md) |
+| Hermeticon invariants and interaction | [HERMETICON.md](HERMETICON.md) |
+| Matter/conservation | [matter/MATTER.md](matter/MATTER.md) |
+| Geology and atlas history | [WORLD_GENERATION_EXPERIMENT.md](WORLD_GENERATION_EXPERIMENT.md) |
+| **Publication and failure recovery** | `bonoj/Gate/README.md` |
+| Pages mirror | `bonoj/bonoj.github.io/jit/hermeticon-wanderer/index.html` |
+| **Canonical live view** | https://bonoj.github.io/jit/hermeticon-wanderer/?terrain=authored-v1 |
 
-| Resource | Location | Purpose |
-|---|---|---|
-| Executable source | `bonoj/Repository/src/jit/hermeticon-wanderer/index.html` | Authoritative current implementation; inspect before editing |
-| Semantic surface | `bonoj/Repository/src/jit/hermeticon-wanderer/SEMANTIC_SURFACE.md` | What systems exist, ownership, implementation limits |
-| Hermeticon contract | `bonoj/Repository/src/jit/hermeticon-wanderer/HERMETICON.md` | Enduring boundaries, gestures, simulation invariants |
-| Material contract | `bonoj/Repository/src/jit/hermeticon-wanderer/matter/MATTER.md` | Conservation, accounting, contact |
-| Experiment history | `bonoj/Repository/src/jit/hermeticon-wanderer/WORLD_GENERATION_EXPERIMENT.md` | Historical geology and material experiments, not current instructions |
-| Publication authority | `bonoj/Gate/README.md` | Required delivery procedure and recovery rules |
-| Pages mirror | `bonoj/bonoj.github.io/jit/hermeticon-wanderer/index.html` | Published copy, stamped with source commit SHA |
-| Canonical public URL | https://bonoj.github.io/jit/hermeticon-wanderer/?terrain=authored-v1 | Verify what the human can actually see |
+## Resume, change, deliver
 
-## Resume a task
+1. **Orient:** Inspect current Repository source and HEAD; read only supporting documents relevant to the task. Find the existing code, state ownership, and available JIT instruments before designing a replacement. The snapshot below can be stale.
+2. **Work:** Preserve established behavior. Implement the smallest requested change; distinguish intended behavior, committed code, observed behavior, and user-accepted behavior. Discussion/planning is not authorization to edit; building is not automatically authorization to publish.
+3. **Observe:** Choose the smallest adequate evidence: visual sequence for appearance, state probe for behavior, spatial query for geometry, accounting for matter. Keep normal runtime observation bounded; do not add expensive frame-loop witnesses.
+4. **Publish only when requested:** **Read `bonoj/Gate/README.md` before delivery.** Follow its existing JIT route, inspect source SHA, Pages mirror, Actions deployment, and actual public output. Resume at the first incomplete step. Never call a queued deployment or updated label live.
+5. **Report:** What changed, source SHA, exact delivery/verification status, and any unresolved issue. Ask the human for a visual judgment only when it genuinely cannot be established through available evidence.
 
-1. **Orient:** Read this entry point, then inspect the actual source and only the supporting contract(s) relevant to the requested change. Check source HEAD and any recent changes that could supersede this snapshot. Do not ask the human to navigate the repositories for you.
-2. **Locate:** Find the existing implementation, nearby controls, state ownership, and diagnostics before proposing a new system. Preserve working systems and use established composition patterns; avoid speculative framework work.
-3. **Change:** Implement the requested smallest coherent change. Keep a clear distinction between code written, behavior inferred, and behavior actually observed.
-4. **Verify:** Select the lightest adequate evidence: source inspection, bounded state probe, screenshot or visual sequence, spatial query, or material accounting. Prefer on-demand JIT instrumentation over expensive always-on witnesses. If a visual judgment requires the human, give a canonical link and one clear observation request.
-5. **Deliver when authorized:** Read `bonoj/Gate/README.md` **before** any Pages delivery. Inspect source, mirror, relevant Actions workflow and public page; resume the first incomplete step of the existing **JIT** route. Do not substitute a new publishing mechanism. A source commit, mirror commit, completed Pages deployment, and verified public behavior are distinct stages. Do not call a change live until public verification.
-6. **Report:** State what changed, source SHA, whether Pages and public behavior were verified, and any concrete unresolved issue. If blocked, inspect the exact failure and recover using Gate rather than transferring routine work to the human.
+## When GitHub or OpenAI tooling fails
 
-**Scope:** A discussion or request to plan does not itself authorize edits or deployment. A request to build does not automatically mean publish; follow the user's explicit instruction. Gate governs delivery, not design.
+**A failed tool call is not a failed task.** Inspect the exact error and current remote state. Classify schema/argument mismatch, stale SHA, payload/transport problem, rate limit, transient service issue, connector failure, permissions, or explicit safety/authorization restriction. Check available supported tool actions and their contracts; do not endlessly repeat the same failing call.
 
-## When GitHub or the toolchain fails
+For GitHub Contents write/transport failures, use Gate's authorized incremental-write or Git Data blob → tree → commit → ref recovery path when available; verify expected HEAD and read back bytes. For deployment failures, resume Gate's first incomplete JIT step. **Do not bypass real permission or safety restrictions, silently force past a conflict, invent a publishing mechanism, or make the human debug routine platform friction.** If all permitted routes fail, report the exact blocked step, attempted remedies, and minimum required human action.
 
-**A failed tool call is not a failed task.** Before asking the human to intervene, inspect the exact error, read current remote state, and determine whether the failure is an argument/schema mismatch, stale SHA, rate limit, transient service error, oversized payload, connector/tool transport failure, authentication/permission issue, or explicit safety/authorization denial. Do not claim a policy block without evidence.
+## Invariants — protect these
 
-- **Tool/interface failure:** Recheck available tool actions and their argument contracts. Retry only when appropriate; do not repeat an identical failing call indefinitely. If one supported interface is broken, use another *available, authorized* route that reaches the same repository state, then read back to verify.
-- **GitHub write/transport failure:** Follow Gate's recovery path. For GitHub Contents failures, use its permitted incremental write or Git Data blob → tree → commit → ref procedure when available and authorized; check expected branch HEAD and verify resulting bytes. Never force a branch update solely to bypass a conflict.
-- **Deployment failure:** Resume at the first incomplete step of Gate's JIT route. Inspect workflow status and public bytes rather than treating a mirror write, queued action, or query parameter as live proof.
-- **Actual restriction:** Respect explicit safety, authentication, or permission denials. If every permitted route is unavailable, report the specific blocked operation, what was tried, and the minimum human action genuinely required. Do not fabricate access or verification.
+- **3D retina:** Inner Hermeticon volume governs local membership and selected simulation activity; camera controls projection only. A full orbit must not change reed growth, resident clocks, or other world state. Moving the Hermeticon relative to geology can change membership.
+- **World ownership:** Persistent geology and authoritative material are world-space; lower Crucibowl and geological terrain have distinct physical roles. A hole in geology does not imply exit from the Hermeticon volume.
+- **Interaction:** Tap acts/redirects, drag orbits, pinch zooms. Never hijack camera, silently discard deliberate taps, add long-press dependencies, or block input with expensive simulation.
+- **Wanderer:** Preserve accepted terrain seating, occlusion, hole avoidance, bounded routefinding, and central half-radius aperture-follow.
+- **Matter:** Preserve authoritative inventory/conservation. Pumpkin's 100 red splat BBs are **visual**, outside the conserved 10k BB inventory.
+- **Observation:** Bounded on-demand instruments; FPS measures performance, not correctness. GPU ray/depth instrumentation is an option, not a confirmed existing feature.
+- **Build:** HUD shows first eight characters of source SHA, FPS, refresh; full SHA inspectable. Population selector is separate. Source, mirror, completed deployment, and verified public behavior are separate facts.
 
-The objective is to absorb routine platform friction without making the human troubleshoot it. Recovery must preserve the same source, build identity, invariants, and publication route; do not invent a new architecture to fix an unreliable connector.
+## Current foothold (verify against source)
 
-## Invariants to preserve
+Persistent authored signed geology (85×21×85, 81 extraction chunks), 85×85 semantic atlas with nine views and 22 landmarks. Wanderer walks, redirects, avoids holes, and moves the aperture beyond the central half-radius. Mists contains 50 selectable deterministic bead-lattice variants (mostly two perceptual families; preserve original sparse reeds), with boundary-driven growth and local proximity collapse. Three individually scripted residents: Mists fugitive runs and splats; Quills peacock fans; Amaranthine gardener blooms seven flowers. Their outside-rim guards are targeted, **not** a general lifecycle. Cloud emission is paused; quarry transfer is hidden/dormant. Existing material/gel experiments are not a general water solver.
 
-- **Three-dimensional retina:** The Hermeticon inner volume defines local membership and selected simulation eligibility. The camera independently determines projection. A 360° camera orbit must not change reeds' growth, residents' clocks, or other world state. Moving the Hermeticon across geology can change membership.
-- **World versus vessel:** Persistent geological coordinates and material identity are not camera-local. The lower Crucibowl is physically distinct from terrain. Falling through a geological hole does not necessarily mean leaving the Hermeticon volume.
-- **Input:** Tap acts/redirects; drag orbits; pinch zooms. Camera remains under human control during movement and simulation. Do not turn missed taps into silent failures, obstruct controls, introduce long-press requirements, or overload the input/frame loop.
-- **Wanderer:** Terrain seating, occlusion, hole avoidance, bounded routefinding, and central half-radius aperture-follow behavior are established working behavior. Do not casually replace them.
-- **Material:** Conserve authoritative material quantities under the material contract. The pumpkin's 100 red splat beads are **visual particles**, not members of the conserved 10k BB inventory.
-- **Observation:** Keep normal runtime instrumentation bounded. FPS is performance evidence, not correctness. Do not assert GPU ray queries or depth witnesses exist merely because they are possible instruments.
-- **Build identity:** HUD presents first eight characters of source SHA, FPS, refresh; full SHA remains inspectable. Population selection is a separate world control. A label or queued workflow does not prove the browser serves a build.
+The last specifically documented retina source commit was `2eb4d64e`, **not** an assertion of current HEAD or live status.
 
-## Current working world — snapshot, not authority
-
-- Authored persistent signed geology (85×21×85, 81 extraction chunks); 85×85 semantic atlas with nine views and 22 named landmarks. The atlas POPULATION layer is a tag, not an autonomous population system.
-- Wanderer walks on the terrain, redirects on tap, routes around holes, and moves the aperture after leaving the central half-radius region.
-- Mists has a 50-variant deterministic bead-lattice gallery with two prominent visual families and an important original sparse-reed reference. Reeds grow/retreat according to Hermeticon boundary and respond locally to character proximity, **not camera frustum**.
-- Three individually scripted residents: Mists orange fugitive flees and splats into 100 visual BBs; Quills turquoise peacock opens a nine-quill fan; Amaranthine violet gardener tends seven flowers. Their current outside-rim behavior guards are targeted, not a generalized agent lifecycle.
-- Cloud emission is paused at fresh load; the 96-unit quarry transfer experiment is dormant/hidden. Existing BB and water/gel experiments are not a universal water solution.
-- On-demand INSPECT/COPY REPORT was historically verified on Android. Avoid reinstating heavy per-frame diagnostics.
-- Last specifically recorded retina-related source commit: `2eb4d64e`. This is **not** a claim about current HEAD or what is live; inspect both.
-
-## Maintenance rule
-
-Keep this file short and operational. Update the resource map or invariants when they change; replace stale snapshot claims instead of appending chronological notes. Keep detailed implementation status in `SEMANTIC_SURFACE.md`, durable interaction rules in `HERMETICON.md`, material rules in `matter/MATTER.md`, and historical experiments in their own records. Do not create dependencies on Ledger notes. **One pointer from the human should be enough.**
+**Maintenance:** Replace stale snapshot text; do not append chronological updates. Put implementation details in SEMANTIC_SURFACE, durable rules in HERMETICON, material details in MATTER, and history in experiment records. Do not make Ledger an operational dependency.

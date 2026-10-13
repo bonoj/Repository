@@ -275,7 +275,7 @@ function rainWorld(i){return rainOwner[i]===1?[rainX[i],rainY[i],rainZ[i]]:[rain
 const rainGeo=new T.IcosahedronGeometry(RAIN_R,0),rainMat=new T.MeshBasicMaterial({color:0x8ad9f0});
 const rainMesh=new T.InstancedMesh(rainGeo,rainMat,RAIN_N);rainMesh.userData.worldDomain=true;rainMesh.userData.matterTag='micro'; // Persistent geological BBs are not subject to whole-sphere containment.
 rainMesh.frustumCulled=false;rainMesh.count=0;world.add(rainMesh);
-const cloudDimensions=[2.7,.8,2.7],cloudCenterY=5.6;
+const cloudDimensions=[2.7,.8,2.7],cloudCenterY=5.6,cloudCenterX=3,cloudCenterZ=-4;
 // Clip cloud fragments in Hermeticon-local space, as with the terrain aperture.
 const cloudMaterial=new T.MeshStandardMaterial({color:0x929aa1,transparent:true,opacity:.72,roughness:.94,side:T.DoubleSide});
 cloudMaterial.onBeforeCompile=shader=>{
@@ -436,24 +436,24 @@ function updateGel(){
  if(now-gelLastDraw>160){gelRebuild();gelLastDraw=now}
 }
 function rainStep(dt){
- updateGel();
+ // Hydrology sheet suspended; discrete rain BBs remain active.
  const gravity=9.8,restitution=.38,tangentDamping=.82;
  rainTime+=dt;
  const fractionBefore=(RAIN_N-rainEmitted)/RAIN_N;
  const size=Math.cbrt(Math.max(.001,fractionBefore));
  cloud.scale.setScalar(size);
- cloud.position.set(-wanderX,cloudCenterY,-wanderZ);
+ cloud.position.set(cloudCenterX-wanderX,cloudCenterY,cloudCenterZ-wanderZ);
  cloud.updateMatrixWorld(true);
  // Deterministic volumetric overlap estimate. Camera orientation is irrelevant.
  let overlap=0;
  for(let k=0;k<64;k++){
-  const x=(rainRandom(k,20)-.5)*cloudDimensions[0]*size-wanderX;
+  const x=(rainRandom(k,20)-.5)*cloudDimensions[0]*size+cloudCenterX-wanderX;
   const y=(rainRandom(k,21)-.5)*cloudDimensions[1]*size+cloudCenterY;
-  const z=(rainRandom(k,22)-.5)*cloudDimensions[2]*size-wanderZ;
+  const z=(rainRandom(k,22)-.5)*cloudDimensions[2]*size+cloudCenterZ-wanderZ;
   if(y>=0&&x*x+y*y+z*z<INNER_R*INNER_R)overlap++;
  }
  // Cloud emission paused for material-system exploration; existing BBs remain live.
- const rainEnabled=false;
+ const rainEnabled=true;
  cloud.visible=rainEnabled;
  if(rainEnabled)rainBudget+=dt*RAIN_N/RAIN_DURATION*overlap/64;
  // Failed emission candidates are retried, never silently deducted.
@@ -493,7 +493,7 @@ function rainStep(dt){
     let push=0;
     while(fieldSample(hx+wanderX,hy,hz+wanderZ)>-RAIN_R&&push++<12){hx+=nx*.035;hy+=ny*.035;hz+=nz*.035}
     rainX[i]=hx+wanderX;rainY[i]=hy;rainZ[i]=hz+wanderZ;
-    if(Math.hypot(rainVX[i],rainVY[i],rainVZ[i])<.42&&ny>.55){if(!gelCollect(i,hx+wanderX,hy,hz+wanderZ)){rainRest[i]=1;rainSettled++}}
+    if(Math.hypot(rainVX[i],rainVY[i],rainVZ[i])<.42&&ny>.55){{rainRest[i]=1;rainSettled++}}
    }else{rainX[i]=x+(rainOwner[i]===1?0:wanderX);rainY[i]=y;rainZ[i]=z+(rainOwner[i]===1?0:wanderZ)}
    // Only the lower hemisphere is a physical bowl; upper aperture is not a wall.
    const [dx,dy,dz]=rainWorld(i),rr=Math.hypot(dx,dy,dz),limit=INNER_R-RAIN_R-.012;
@@ -516,7 +516,7 @@ function rainStep(dt){
  const fraction=(RAIN_N-rainEmitted)/RAIN_N;
  cloud.visible=fraction>0;
  cloud.scale.setScalar(Math.max(.001,Math.cbrt(fraction)));
- cloud.position.set(-wanderX,cloudCenterY,-wanderZ);
+ cloud.position.set(cloudCenterX-wanderX,cloudCenterY,cloudCenterZ-wanderZ);
 }
 
 // Landmark markers: world-space spheres and depth-tested camera-facing tags.

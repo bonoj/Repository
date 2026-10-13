@@ -504,10 +504,6 @@ function rainStep(dt){
     const vn=rainVX[i]*nx+rainVY[i]*ny+rainVZ[i]*nz;
     if(vn<0){rainVX[i]-=1.38*vn*nx;rainVY[i]-=1.38*vn*ny;rainVZ[i]-=1.38*vn*nz;rainWallBounces++}
     // Material response at the bowl: dissipate tangential motion, never sleep merely on capture.
-    const normalSpeed=rainVX[i]*nx+rainVY[i]*ny+rainVZ[i]*nz;
-    rainVX[i]=(rainVX[i]-normalSpeed*nx)*tangentDamping+normalSpeed*nx;
-    rainVY[i]=(rainVY[i]-normalSpeed*ny)*tangentDamping+normalSpeed*ny;
-    rainVZ[i]=(rainVZ[i]-normalSpeed*nz)*tangentDamping+normalSpeed*nz;
     if(ny>.95&&Math.hypot(rainVX[i],rainVY[i],rainVZ[i])<.42){rainRest[i]=1;rainSettled++}
    }
   }
@@ -667,12 +663,16 @@ const fugitiveSize=.32,fugitiveRadius=.23;
 const fugitiveMesh=put(world,new T.BoxGeometry(fugitiveSize,fugitiveSize,fugitiveSize),new T.MeshStandardMaterial({color:0xff8b29,emissive:0x9d3100,emissiveIntensity:.2,roughness:.68}));
 const fugitive={x:-4.7,z:-1.1,y:1.4,vy:0,time:0,mode:'idle',owner:'geology',vx:0,vz:0,particles:[],splat:false};
 registerPopulationCharacter(()=>fugitive.owner==='geology'&&fugitive.mode!=='splat'?fugitive:null);
-const splatGeo=new T.IcosahedronGeometry(.046,0);
+// A fixed BB quantum: the authored pumpkin cube has 500 equal-volume units.
+const PUMPKIN_SOLID=375,PUMPKIN_LIQUID=125,PUMPKIN_BLOOD_IMPACT=80;
+const PUMPKIN_TOTAL=PUMPKIN_SOLID+PUMPKIN_LIQUID;
+const pumpkinBeadRadius=Math.cbrt(fugitiveSize**3/PUMPKIN_TOTAL*3/(4*Math.PI));
+const splatGeo=new T.IcosahedronGeometry(pumpkinBeadRadius,0);
 const FUGITIVE_MATTER_COLOR=0xff8b29; // Orange entity yields orange matter; red is splat blood only.
 const splatMat=new T.MeshStandardMaterial({color:0xc51e30,roughness:.8});
-const splatMesh=new T.InstancedMesh(splatGeo,splatMat,124);splatMesh.count=0;splatMesh.frustumCulled=false;world.add(splatMesh);
+const splatMesh=new T.InstancedMesh(splatGeo,splatMat,PUMPKIN_TOTAL);splatMesh.count=0;splatMesh.frustumCulled=false;world.add(splatMesh);
 const splatDummy=new T.Object3D();
-for(let i=0;i<124;i++)splatMesh.setColorAt(i,new T.Color(i<100?0xc51e30:FUGITIVE_MATTER_COLOR));
+for(let i=0;i<PUMPKIN_TOTAL;i++)splatMesh.setColorAt(i,new T.Color(i<PUMPKIN_LIQUID?0xc51e30:FUGITIVE_MATTER_COLOR));
 splatMesh.instanceColor.needsUpdate=true;
 let corpseDispersed=false,lowerTaps=0,lowerWoken=0;
 function lowerBowlTap(clientX,clientY){
@@ -708,16 +708,17 @@ function lowerBowlTap(clientX,clientY){
   const cx=f.x,cy=f.y+fugitiveSize*.5,cz=f.z;
   if(f.owner==='hermeticon'){
    corpseDispersed=true;fugitiveMesh.visible=false;
-   for(let i=0;i<24;i++){
+   // Release all remaining blood and the full solid inventory; never create extra matter.
+   for(let i=PUMPKIN_BLOOD_IMPACT;i<PUMPKIN_TOTAL;i++){
     const a=i*2.39996323,rad=.55+(i%7)*.13;
-    f.particles.push({x:cx,y:cy,z:cz,vx:Math.cos(a)*rad,vy:1.3+(i%5)*.34,vz:Math.sin(a)*rad,rest:false});
+    f.particles.push({x:cx,y:cy,z:cz,vx:Math.cos(a)*rad,vy:1.3+(i%5)*.34,vz:Math.sin(a)*rad,rest:false,liquid:i<PUMPKIN_LIQUID});
    }
    splatMesh.count=f.particles.length;
   }
  }
- // Stir the existing splat beads, preserving their original red/orange colors.
+ // Stir resting solid matter and disturb the slowly moving liquid without authored swirl.
  if(f.mode==='splat')for(let j=0;j<f.particles.length;j++){
-  const p=f.particles[j];if(!p.rest)continue;
+  const p=f.particles[j];if(!p.rest&&(!p.liquid||Math.hypot(p.vx,p.vy,p.vz)>.7))continue;
   const angle=rainRandom(lowerTaps,j+41)*Math.PI*2;
   p.vx+=Math.cos(angle)*1.4;p.vy+=1.4;p.vz+=Math.sin(angle)*1.4;
   p.rest=false;
@@ -752,12 +753,12 @@ function fugitiveStep(dt){
   const lx=f.x-wanderX,lz=f.z-wanderZ;
   const floor=-Math.sqrt(Math.max(0,(R-fugitiveRadius)**2-lx*lx-lz*lz))+fugitiveRadius;
   if(f.y<=floor){f.y=floor;f.mode='splat';f.vy=0;f.x-=wanderX;f.z-=wanderZ;f.owner='hermeticon';
-   for(let i=0;i<100;i++){
+   for(let i=0;i<PUMPKIN_BLOOD_IMPACT;i++){
     const angle=i*2.39996323,radius=1.5+((i*37)%19)/19*2.5;
     const vx=Math.cos(angle)*radius,vz=Math.sin(angle)*radius;
-    f.particles.push({x:f.x,y:f.y,z:f.z,vx,vy:1.8+(i%13)*.38,vz,rest:false});
+    f.particles.push({x:f.x,y:f.y,z:f.z,vx,vy:1.8+(i%13)*.38,vz,rest:false,liquid:true});
    }
-   splatMesh.count=100;
+   splatMesh.count=PUMPKIN_BLOOD_IMPACT;
   }
  }
  if(f.mode==='splat'){
@@ -772,8 +773,9 @@ function fugitiveStep(dt){
      const nx=-p.x/limit,ny=-p.y/limit,nz=-p.z/limit;
      const vn=p.vx*nx+p.vy*ny+p.vz*nz;
      if(vn<0){p.vx-=1.32*vn*nx;p.vy-=1.32*vn*ny;p.vz-=1.32*vn*nz}
-     p.vx*=.76;p.vz*=.76;
-     if(Math.hypot(p.vx,p.vy,p.vz)<.45)p.rest=true;
+     // Blood remains dynamic; solid material can sleep after dissipating contact energy.
+     if(!p.liquid){p.vx*=.76;p.vz*=.76;
+      if(Math.hypot(p.vx,p.vy,p.vz)<.45)p.rest=true;}
     }
    }
    splatDummy.position.set(p.x,p.y,p.z);splatDummy.updateMatrix();splatMesh.setMatrixAt(i,splatDummy.matrix);

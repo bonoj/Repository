@@ -775,6 +775,42 @@ function gardenStep(dt){
   f.rotation.z=Math.sin(g.t*2+i*1.4)*.06*wave;
  }
 }
+// V82 Mists: sparse bead-lattice reedbeds. One instanced draw, rooted to authored geology.
+const mistReeds=(()=>{
+ const stems=[], beads=[], seed= n=>{const v=Math.sin(n*127.1+41.7)*43758.5453;return v-Math.floor(v)};
+ for(let k=0;k<76;k++){
+  const angle=seed(k*3+1)*Math.PI*2, radius=.55+Math.sqrt(seed(k*3+2))*2.2;
+  const x=-2+Math.cos(angle)*radius,z=-1+Math.sin(angle)*radius;
+  // Leave the fugitive's route toward Downton visually readable.
+  if(x>-.8&&z<-.65)continue;
+  const ground=walkSurface(x,z);if(ground===null)continue;
+  const height=.42+seed(k*5+3)*.95, lean=(seed(k*7+4)-.5)*.18;
+  const stem=stems.length;stems.push({x,z,ground,height,lean,phase:seed(k*11+5)*6.28});
+  const count=5+Math.floor(height*6);
+  for(let j=0;j<count;j++){const t=j/(count-1);beads.push({stem,t,head:j>=count-2,side:0})}
+  if(k%3===0)for(let j=0;j<3;j++)beads.push({stem,t:.47+j*.12,head:false,side:(j%2?1:-1)*(.12+j*.035)});
+ }
+ const geometry=new T.IcosahedronGeometry(.048,0);
+ const material=new T.MeshStandardMaterial({vertexColors:false,roughness:.88});
+ const mesh=new T.InstancedMesh(geometry,material,beads.length);
+ mesh.frustumCulled=false;world.add(mesh);
+ const dummy=new T.Object3D(), colors=[new T.Color(0x537f70),new T.Color(0x779c87),new T.Color(0xa7a884),new T.Color(0xd3b68c)];
+ for(let i=0;i<beads.length;i++){const b=beads[i],st=stems[b.stem];mesh.setColorAt(i,colors[b.head?3:(b.t>.72?2:(b.stem%2))])}
+ mesh.instanceColor.needsUpdate=true;
+ return {mesh,stems,beads,dummy,t:0};
+})();
+function mistReedsStep(dt){
+ const m=mistReeds;m.t+=dt;
+ const near=Math.hypot(walker.x+2,walker.z+1)<3.4;
+ for(let i=0;i<m.beads.length;i++){
+  const b=m.beads[i],st=m.stems[b.stem],t=b.t;
+  const sway=Math.sin(m.t*(near?2.8:1.15)+st.phase)*(.045+(near?.14:.035))*t*t;
+  m.dummy.position.set(st.x-wanderX+st.lean*t+sway+b.side,st.ground+st.height*t,st.z-wanderZ+Math.cos(m.t*1.3+st.phase)*.075*t*t);
+  const size=b.head?1.38:(t<.2?.75:1);
+  m.dummy.scale.setScalar(size);m.dummy.updateMatrix();m.mesh.setMatrixAt(i,m.dummy.matrix);
+ }
+ m.mesh.instanceMatrix.needsUpdate=true;
+}
 // V38 bounded material circuit: a visibly depleted stockpile, individual transit
 // bearings and an accumulating receiver. This is a circuit witness, NOT terrain excavation.
 const quarry=atlas?(()=>{
@@ -891,6 +927,7 @@ function simulate(dt){
  fugitiveStep(dt);
  quillStep(dt);
  gardenStep(dt);
+ mistReedsStep(dt);
  if(walker.target){
   const dx=walker.target.x-walker.x,dz=walker.target.z-walker.z,d=Math.hypot(dx,dz);
   if(d<=.07)walker.target=walker.route.shift()??null;

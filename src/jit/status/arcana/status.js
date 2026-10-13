@@ -3,7 +3,7 @@ import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.modul
 // BB lattice grammar: visible matter is assembled from repeated discrete spheres.
 // No mesh-heavy imported assets. Everything lives inside Hermeticon's group.
 export function populateStatus(hermeticon){
- const root=hermeticon.group;
+ const root=hermeticon.content;
  const bb=new T.SphereGeometry(.115,7,5);
  const mats={
   brass:new T.MeshStandardMaterial({color:0xc99b50,metalness:.82,roughness:.28}),
@@ -16,16 +16,6 @@ export function populateStatus(hermeticon){
  const put=(kind,x,y,z)=>pts[kind].push([x,y,z]);
  function ring(kind,r,y,n=90,offset=0){for(let i=0;i<n;i++){let a=i*Math.PI*2/n+offset;put(kind,r*Math.cos(a),y,r*Math.sin(a))}}
  function column(kind,x,z,from,to,step=.25){for(let y=from;y<=to;y+=step)put(kind,x,y,z)}
- // The actual Hermeticon vessel, extracted from the working Wanderer bauble.
- // Glass and equatorial hardware are continuous geometry; the interior is BB lattice.
- const BAUBLE_R=10.25, INNER_R=BAUBLE_R-.18;
- const envelope=new T.Mesh(new T.SphereGeometry(BAUBLE_R,72,48),new T.MeshPhysicalMaterial({color:0xa0dce2,metalness:0,roughness:.08,transparent:true,opacity:.055,depthWrite:false,side:T.FrontSide}));root.add(envelope);
- const innerGlass=new T.Mesh(new T.SphereGeometry(INNER_R,72,48),new T.MeshPhysicalMaterial({color:0x9dcdd7,metalness:0,roughness:.09,transparent:true,opacity:.035,depthWrite:false,side:T.BackSide}));root.add(innerGlass);
- const brassTrim=new T.MeshStandardMaterial({color:0xc99b50,metalness:.82,roughness:.28});
- const brightTrim=new T.MeshStandardMaterial({color:0xf0d3a0,metalness:.85,roughness:.2});
- const equator=new T.Mesh(new T.TorusGeometry(BAUBLE_R,.095,10,120),brassTrim);equator.rotation.x=Math.PI/2;root.add(equator);
- for(const y of [-.15,.15]){const trim=new T.Mesh(new T.TorusGeometry(BAUBLE_R,.021,6,120),brightTrim);trim.position.y=y;trim.rotation.x=Math.PI/2;root.add(trim)}
- for(let i=0;i<8;i++){const a=i*Math.PI/4;const rivet=new T.Mesh(new T.SphereGeometry(.12,12,8),brightTrim);rivet.position.set(Math.cos(a)*BAUBLE_R,0,Math.sin(a)*BAUBLE_R);root.add(rivet)}
  // Pedestal and fortress, entirely built from BBs.
  for(let y=-7.9;y<-6.8;y+=.26)ring('brass',4.6,y,110);
  for(let y=-6.9;y<-4.9;y+=.24)for(let x=-3.7;x<=3.7;x+=.27)for(let z=-3.7;z<=3.7;z+=.27)if(Math.abs(x)>3.35||Math.abs(z)>3.35)put('stone',x,y,z);
@@ -63,5 +53,5 @@ export function populateStatus(hermeticon){
  const counts=Object.fromEntries(Object.entries(pts).map(([k,v])=>[k,v.length]));
  let elapsed=0;
  hermeticon.update=(dt)=>{elapsed+=dt;meshes.find(m=>m.name==='bb-lattice-fire').material.emissiveIntensity=.7+.35*Math.sin(elapsed*3)};
- hermeticon.inspect=()=>({name:'Manny Status',grammar:'BB lattice',counts,total:Object.values(counts).reduce((a,b)=>a+b,0),profile:'https://www.linkedin.com/in/manuel-leal-053384234',message:'Low profile maintained'});
+ hermeticon.inspect=()=>({name:'Manny Status',vessel:'Hermeticon Arcana',grammar:'BB lattice',counts,total:Object.values(counts).reduce((a,b)=>a+b,0),profile:'https://www.linkedin.com/in/manuel-leal-053384234',message:'Low profile maintained'});
 }

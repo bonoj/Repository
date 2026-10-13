@@ -1,0 +1,40 @@
+
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:calc(12px + env(safe-area-inset-top));right:12px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:calc(70px + env(safe-area-inset-top)) 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px} #buildRow{display:flex;align-items:center;justify-content:center;gap:6px;margin:5px auto 0;pointer-events:auto;color:#a6b7b9;font:10px ui-monospace,monospace}#populationNext{position:fixed;z-index:22;right:12px;bottom:95px;min-width:74px;min-height:44px;border:1px solid #9c8556aa;background:#15202ae8;color:#f0d5a0;border-radius:8px;font:700 13px monospace;cursor:pointer}#fresh{width:40px;height:40px;padding:0;min-height:40px;border:0;background:transparent;color:#c4b291;font-size:23px;cursor:pointer}#containmentAlarm{display:none;position:fixed;z-index:35;left:10px;right:10px;top:calc(65px + env(safe-area-inset-top));background:#531b19ee;color:#ffe9d7;border:2px solid #ff6955;border-radius:9px;padding:12px;font:700 12px/1.4 ui-monospace,monospace;white-space:pre-wrap;pointer-events:none}#containmentAlarm.on{display:block}#fps{font:12px ui-monospace,monospace;color:#e7dbb7;margin-left:8px}#mapLens{position:fixed;z-index:24;left:12px;top:calc(12px + env(safe-area-inset-top));min-width:118px;padding:9px 12px;background:#15202ae8;color:#f0d5a0;border:1px solid #9c8556aa}#wanderControls{position:fixed;z-index:20;bottom:77px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:5px}#wanderControls button{min-width:47px;padding:10px 12px;background:#15202ae8}#wanderCoords{font:11px monospace;color:#e5d0a8;min-width:70px;text-align:center}
+/* Trilith presentation: instruments below title; controls bottom-center, wrap upward. */
+#title{z-index:21}#title h1{font-size:clamp(19px,5vw,36px);letter-spacing:.12em}#tag,#status{display:none}#buildRow{margin-top:2px}#hud{z-index:25;pointer-events:none;padding:0 12px max(12px,env(safe-area-inset-bottom));background:none}#buttons{pointer-events:auto;margin:auto;max-width:420px;display:flex;flex-wrap:wrap-reverse;align-items:center;justify-content:center;gap:8px}#buttons button{position:static;transform:none;min-height:44px;min-width:44px;flex:0 0 auto}#probe{order:100;z-index:auto}#mapLens{order:20;min-width:0}#populationNext{order:10}#probePanel{z-index:40;inset:calc(80px + env(safe-area-inset-top)) 9px calc(80px + env(safe-area-inset-bottom))}#wanderControls{bottom:calc(74px + env(safe-area-inset-bottom))}
+
+/* Shared optical center: same line box for metadata and refresh. */
+#buildRow{display:flex;align-items:center;justify-content:center;gap:12px;line-height:1.25}#buildRow>span,#buildRow>button{display:inline-flex;align-items:center;justify-content:center;line-height:1.25;margin:0;height:32px;min-height:32px;vertical-align:middle}#buildRow #fresh{width:32px;padding:0;font-size:23px}
+/* Nonmodal developer inspection: small, upward-expanding sheet above controls. */
+#probePanel{inset:auto 12px calc(96px + env(safe-area-inset-bottom));width:min(520px,calc(100% - 24px));margin:0 auto;max-height:min(45dvh,420px);padding:10px 12px;overflow:hidden;z-index:28;box-shadow:0 8px 30px #0008}#probeActions{position:static;top:auto;display:flex;justify-content:space-between;gap:8px;padding:0;background:none}#probeActions button{min-height:40px;padding:8px 12px}#probeText{display:none!important;height:min(29dvh,260px)!important;min-height:110px;max-width:100%;margin-top:8px}#probePanel.details #probeText{display:block!important}#probePanel.details{overflow:auto}#probePanel:not(.details){max-height:76px}#probePanel.open{display:block}
+
+/* Six-control bottom bar. Existing panel preserved but unused. */
+#buttons{max-width:100%;gap:6px}
+#buttons button{height:46px;min-height:46px;min-width:46px;padding:0 9px;display:inline-flex;align-items:center;justify-content:center;font-size:21px}
+#buttons #fire{order:0;opacity:.65}
+#buttons #rainToggle{order:1}
+#buttons #rainToggle.active{background:#263b46;border-color:#82b8d4}
+#buttons #populationNext{order:2}
+#buttons #mapLens{order:3;gap:8px;color:#d9b879;font:600 11px system-ui;letter-spacing:.04em;padding:0 11px}
+#buttons #probe{order:4;font-size:23px}
+#buttons #fresh{order:5;width:46px;height:46px;color:#d9b879}
+#buttons svg{display:block;flex:none}
+
+/* Anchor the rightmost controls on the bottom line; overflow to the upper left. */
+#buttons{flex-direction:row-reverse;flex-wrap:wrap-reverse;justify-content:flex-start}
+#buttons #fresh{order:0}
+#buttons #probe{order:1}
+#buttons #mapLens{order:2}
+#buttons #populationNext{order:3}
+#buttons #rainToggle{order:4}
+#buttons #fire{order:5}
+
+/* One visual contract for every bottom-bar control, regardless of legacy IDs. */
+#buttons > button{background:#172333;border:1px solid #66543a;border-radius:9px;color:#d9b879;opacity:1;box-shadow:none}
+#buttons > button:disabled{opacity:.65}
+#buttons > #rainToggle.active{background:#263b46;border-color:#82b8d4}
+
+/* Build identifier shares FPS typography; FPS remains the single style source. */
+#buildRow #build{font:inherit;font-size:12px;color:#e7dbb7}
+
+#linkedin{border-color:#bca56c;background:#23364b;color:#f5dfb2;letter-spacing:.07em}#status{letter-spacing:.13em}#title h1{font-size:clamp(23px,6vw,39px)}

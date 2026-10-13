@@ -20,7 +20,8 @@
 import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 
 // One canonical build identity: UI and inspection report share this constant.
-const BUILD='hermeticon-wanderer-material-v78';
+// Publication replaces this token with the exact Repository source commit SHA.
+const BUILD='__WANDERER_SOURCE_SHA__';
 document.querySelector('#build').textContent=BUILD;
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
@@ -806,6 +807,8 @@ const mistReedView=new T.Vector3();
 function mistReedsStep(dt){
  const m=mistReeds;m.t+=dt;
  const near=Math.hypot(walker.x+2,walker.z+1)<3.4;
+ // One shared character kind: any geological character clears nearby vegetation.
+ const populationCharacters=[{x:walker.x,z:walker.z,active:true},{x:fugitive.x,z:fugitive.z,active:fugitive.owner==='geology'&&fugitive.mode!=='splat'},{x:5.25,z:7.25,active:true},{x:gardener.x,z:gardener.z,active:true}];
  camera.updateMatrixWorld();
  let visible=0;
  for(const st of m.stems){
@@ -817,7 +820,8 @@ function mistReedsStep(dt){
   const inView=mistReedView.z>-1&&mistReedView.z<1&&Math.abs(mistReedView.x)<1.16&&Math.abs(mistReedView.y)<1.2;
   // Slightly different thresholds create a travelling, not synchronized, wave.
   const threshold=.12+(Math.sin(st.x*3.7+st.z*2.9)+1)*.11;
-  const target=inView?T.MathUtils.smoothstep(rimClear,-.08,threshold+.42):0;
+  const occupied=populationCharacters.some(c=>c.active&&Math.hypot(st.x-c.x,st.z-c.z)<.44);
+  const target=inView&&!occupied?T.MathUtils.smoothstep(rimClear,-.08,threshold+.42):0;
   st.growth+=(target-st.growth)*Math.min(1,dt*(target>st.growth?2.5:4.4));
  }
  for(let i=0;i<m.beads.length;i++){

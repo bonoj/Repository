@@ -27,6 +27,17 @@ Updated 2026-10-13.
 
 **Scope:** A discussion or request to plan does not itself authorize edits or deployment. A request to build does not automatically mean publish; follow the user's explicit instruction. Gate governs delivery, not design.
 
+## When GitHub or the toolchain fails
+
+**A failed tool call is not a failed task.** Before asking the human to intervene, inspect the exact error, read current remote state, and determine whether the failure is an argument/schema mismatch, stale SHA, rate limit, transient service error, oversized payload, connector/tool transport failure, authentication/permission issue, or explicit safety/authorization denial. Do not claim a policy block without evidence.
+
+- **Tool/interface failure:** Recheck available tool actions and their argument contracts. Retry only when appropriate; do not repeat an identical failing call indefinitely. If one supported interface is broken, use another *available, authorized* route that reaches the same repository state, then read back to verify.
+- **GitHub write/transport failure:** Follow Gate's recovery path. For GitHub Contents failures, use its permitted incremental write or Git Data blob → tree → commit → ref procedure when available and authorized; check expected branch HEAD and verify resulting bytes. Never force a branch update solely to bypass a conflict.
+- **Deployment failure:** Resume at the first incomplete step of Gate's JIT route. Inspect workflow status and public bytes rather than treating a mirror write, queued action, or query parameter as live proof.
+- **Actual restriction:** Respect explicit safety, authentication, or permission denials. If every permitted route is unavailable, report the specific blocked operation, what was tried, and the minimum human action genuinely required. Do not fabricate access or verification.
+
+The objective is to absorb routine platform friction without making the human troubleshoot it. Recovery must preserve the same source, build identity, invariants, and publication route; do not invent a new architecture to fix an unreliable connector.
+
 ## Invariants to preserve
 
 - **Three-dimensional retina:** The Hermeticon inner volume defines local membership and selected simulation eligibility. The camera independently determines projection. A 360° camera orbit must not change reeds' growth, residents' clocks, or other world state. Moving the Hermeticon across geology can change membership.

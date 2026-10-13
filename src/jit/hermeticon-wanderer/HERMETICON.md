@@ -66,5 +66,4 @@ The observer must not become the dominant workload. A normal INSPECT action read
 
 **Observation contract:** Human visual perception and model-accessible screenshots, source, bounded state reports, and just-in-time instruments are different, incomplete channels onto one executable referent. Define an invariant first; then choose evidence appropriate to it. Visual sequences test continuity and legibility, world-space queries test membership, ray/depth probes test occlusion, counters test material quantities, and build identity connects reports to executable source. GPU ray queries or readbacks are options only when a particular question justifies them; they are not required normal-frame witnesses. Preserve the V48 principle of bounded, on-demand instrumentation.
 
-See [The Retinae Problem](https://github.com/bonoj/Ledger/blob/main/notes/2026-10-13-the-retinae-problem.md) for the observation flow and concrete Mists case study.
 

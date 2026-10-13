@@ -774,8 +774,7 @@ function fugitiveStep(dt){
      const vn=p.vx*nx+p.vy*ny+p.vz*nz;
      if(vn<0){p.vx-=1.32*vn*nx;p.vy-=1.32*vn*ny;p.vz-=1.32*vn*nz}
      // Blood remains dynamic; solid material can sleep after dissipating contact energy.
-     if(!p.liquid){p.vx*=.76;p.vz*=.76;
-      if(Math.hypot(p.vx,p.vy,p.vz)<.45)p.rest=true;}
+     // Preserve tangential motion and avoid arbitrary contact sleep.
     }
    }
    splatDummy.position.set(p.x,p.y,p.z);splatDummy.updateMatrix();splatMesh.setMatrixAt(i,splatDummy.matrix);

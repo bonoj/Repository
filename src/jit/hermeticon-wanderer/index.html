@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07101a"><title>Hermeticon · Wanderer</title><style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:calc(12px + env(safe-area-inset-top));right:12px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:calc(70px + env(safe-area-inset-top)) 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px} #buildRow{display:flex;align-items:center;justify-content:center;gap:6px;margin:5px auto 0;pointer-events:auto;color:#a6b7b9;font:10px ui-monospace,monospace}#fresh{width:40px;height:40px;padding:0;min-height:40px;border:0;background:transparent;color:#c4b291;font-size:23px;cursor:pointer}#containmentAlarm{display:none;position:fixed;z-index:35;left:10px;right:10px;top:calc(65px + env(safe-area-inset-top));background:#531b19ee;color:#ffe9d7;border:2px solid #ff6955;border-radius:9px;padding:12px;font:700 12px/1.4 ui-monospace,monospace;white-space:pre-wrap;pointer-events:none}#containmentAlarm.on{display:block}#fps{font:12px ui-monospace,monospace;color:#e7dbb7;margin-left:8px}#mapLens{position:fixed;z-index:24;left:12px;top:calc(12px + env(safe-area-inset-top));min-width:118px;padding:9px 12px;background:#15202ae8;color:#f0d5a0;border:1px solid #9c8556aa}#wanderControls{position:fixed;z-index:20;bottom:77px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:5px}#wanderControls button{min-width:47px;padding:10px 12px;background:#15202ae8}#wanderCoords{font:11px monospace;color:#e5d0a8;min-width:70px;text-align:center}</style></head><body><div id="stage"></div><div id="containmentAlarm" role="alert"></div><button id="mapLens" type="button" aria-label="Cycle map layers">◈ COMPOSITE</button><button id="probe" type="button">◉ INSPECT</button><div id="probePanel"><div id="probeActions"><button id="copyProbe">COPY REPORT</button><button id="closeProbe">CLOSE</button></div><textarea id="probeText" readonly aria-label="Selectable inspection report" style="display:block;width:100%;height:65vh;resize:vertical;background:#07121d;color:#d9e6e5;font:12px/1.4 monospace"></textarea></div><div id="title"><h1>BAUBLE</h1><div id="tag">MINIMUM VIABLE BAUBLE</div><div id="buildRow"><span id="build"></span><span id="fps">◌ fps</span><button id="fresh" type="button" aria-label="Fetch latest build" title="Fetch latest build">↻</button></div></div><div id="hud"><div id="status">TAP TERRAIN TO WALK · DRAG TO ORBIT · PINCH TO ZOOM</div></div><div id="error"></div><script>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050b14;color:#f5dfb2;font-family:system-ui}canvas{display:block;touch-action:none}#stage{position:fixed;inset:0}#title{position:fixed;left:0;right:0;top:max(14px,env(safe-area-inset-top));text-align:center;pointer-events:none;text-shadow:0 3px 12px #000}h1{font:normal clamp(24px,5vw,43px) Georgia,serif;letter-spacing:.14em;margin:0}#tag{font-size:10px;letter-spacing:.25em;color:#c4b291;margin-top:7px}#hud{position:fixed;bottom:0;left:0;right:0;padding:25px 12px max(20px,env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,#050b14e8 35%)}#buttons{display:flex;justify-content:center;gap:9px}button{border:1px solid #9c8556aa;background:#15202acb;color:#f0d5a0;padding:13px 18px;border-radius:9px;font:600 12px system-ui;min-height:48px}#status{font:11px system-ui;letter-spacing:.08em;color:#c0c4c2;margin:0 0 12px}#error{position:fixed;top:35%;left:12px;right:12px;color:#ffb7a5;font:12px monospace;white-space:pre-wrap;text-align:center} #probe{position:fixed;top:calc(12px + env(safe-area-inset-top));right:12px;z-index:30;background:#101d29e8;color:#d9eced;border:1px solid #6f999e;border-radius:9px;padding:8px 12px;font:12px system-ui}#probePanel{display:none;position:fixed;inset:calc(70px + env(safe-area-inset-top)) 9px 100px;z-index:29;background:#07121df2;color:#d9e6e5;overflow:auto;padding:14px;border:1px solid #6f999e;border-radius:10px;font:12px/1.45 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}#probePanel.open{display:block}#probeActions{display:flex;gap:8px;position:sticky;top:-14px;background:#07121d;padding:8px 0}#probeActions button{background:#223c4b;color:#fff;border:1px solid #648c9d;border-radius:6px;padding:9px} #buildRow{display:flex;align-items:center;justify-content:center;gap:6px;margin:5px auto 0;pointer-events:auto;color:#a6b7b9;font:10px ui-monospace,monospace}#populationNext{min-width:54px;min-height:40px;border:1px solid #8d7293;background:#2d2135e8;color:#f5d8ff;border-radius:8px;font:700 13px monospace;cursor:pointer}#fresh{width:40px;height:40px;padding:0;min-height:40px;border:0;background:transparent;color:#c4b291;font-size:23px;cursor:pointer}#containmentAlarm{display:none;position:fixed;z-index:35;left:10px;right:10px;top:calc(65px + env(safe-area-inset-top));background:#531b19ee;color:#ffe9d7;border:2px solid #ff6955;border-radius:9px;padding:12px;font:700 12px/1.4 ui-monospace,monospace;white-space:pre-wrap;pointer-events:none}#containmentAlarm.on{display:block}#fps{font:12px ui-monospace,monospace;color:#e7dbb7;margin-left:8px}#mapLens{position:fixed;z-index:24;left:12px;top:calc(12px + env(safe-area-inset-top));min-width:118px;padding:9px 12px;background:#15202ae8;color:#f0d5a0;border:1px solid #9c8556aa}#wanderControls{position:fixed;z-index:20;bottom:77px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:5px}#wanderControls button{min-width:47px;padding:10px 12px;background:#15202ae8}#wanderCoords{font:11px monospace;color:#e5d0a8;min-width:70px;text-align:center}</style></head><body><div id="stage"></div><div id="containmentAlarm" role="alert"></div><button id="mapLens" type="button" aria-label="Cycle map layers">◈ COMPOSITE</button><button id="probe" type="button">◉ INSPECT</button><div id="probePanel"><div id="probeActions"><button id="copyProbe">COPY REPORT</button><button id="closeProbe">CLOSE</button></div><textarea id="probeText" readonly aria-label="Selectable inspection report" style="display:block;width:100%;height:65vh;resize:vertical;background:#07121d;color:#d9e6e5;font:12px/1.4 monospace"></textarea></div><div id="title"><h1>BAUBLE</h1><div id="tag">MINIMUM VIABLE BAUBLE</div><div id="buildRow"><span id="build"></span><span id="fps">◌ fps</span><button id="populationNext" type="button" aria-label="Next Mists population" title="Next Mists population">✦ 1/50</button><button id="fresh" type="button" aria-label="Fetch latest build" title="Fetch latest build">↻</button></div></div><div id="hud"><div id="status">TAP TERRAIN TO WALK · DRAG TO ORBIT · PINCH TO ZOOM</div></div><div id="error"></div><script>
 (function(){
  const el=document.getElementById('error');
  function fatal(error){
@@ -22,7 +22,7 @@ import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.modul
 // One canonical build identity: UI and inspection report share this constant.
 // Publication replaces this token with the exact Repository source commit SHA.
 const BUILD='__WANDERER_SOURCE_SHA__';
-document.querySelector('#build').textContent=BUILD;
+document.querySelector('#build').textContent=BUILD.slice(-3);
 document.querySelector('#fresh').onclick=()=>{const u=new URL(location.href);u.searchParams.set('fresh',Date.now().toString(36));location.replace(u.href)};
 
 
@@ -784,68 +784,129 @@ function gardenStep(dt){
  }
 }
 // V82 Mists: sparse bead-lattice reedbeds. One instanced draw, rooted to authored geology.
+// Mists population gallery: 50 deterministic, distinct bead-lattice ecologies.
+// Reeds remain the first untouched silhouette; all alternatives share the same
+// aperture, frustum, character-clearance and soil-up growth contract.
+const populationNames=[
+ 'Mists Reeds','Coral Lanterns','Glass Anemones','Velvet Fungi','Copper Spirals',
+ 'Star Thistles','Blue Fire','Moon Orchids','Ruby Candelabra','Golden Ferns',
+ 'Sapphire Fans','Amethyst Towers','Ember Kelp','Jade Bells','Pearl Snowdrops',
+ 'Obsidian Spires','Rose Fireworks','Sunset Palms','Electric Antlers','Ivory Umbrellas',
+ 'Aurora Helices','Bloodroot','Opal Chalices','Clockwork Vines','Ghost Willows',
+ 'Prismatic Urchins','Honeycomb','Twilight Cacti','Luminous Lotus','Crimson Comets',
+ 'Silver Harps','Dragonfruit','Glacial Needles','Cobalt Medusae','Amber Wheat',
+ 'Violet Meteors','Neon Brambles','Seafoam Pagodas','Gilded Feathers','Nightshade',
+ 'Starlit Mushrooms','Frosted Chimes','Solar Fountains','Cerulean Fans','Firefly Nests',
+ 'Orchid Chandeliers','Mossy Monoliths','Candy Nebulae','Thunderbolts','Royal Crowns'
+];
+const populationGallery={index:0,next:0,phase:1,changing:false};
+const populationButton=document.querySelector('#populationNext');
+function selectNextPopulation(){
+ if(populationGallery.changing)return;
+ populationGallery.next=(populationGallery.index+1)%50;
+ populationGallery.changing=true;populationGallery.phase=1;
+}
+populationButton.addEventListener('click',selectNextPopulation);
 const mistReeds=(()=>{
- const stems=[], beads=[], seed= n=>{const v=Math.sin(n*127.1+41.7)*43758.5453;return v-Math.floor(v)};
+ const stems=[], seed=n=>{const v=Math.sin(n*127.1+41.7)*43758.5453;return v-Math.floor(v)};
  for(let k=0;k<76;k++){
-  const angle=seed(k*3+1)*Math.PI*2, radius=.55+Math.sqrt(seed(k*3+2))*2.2;
+  const angle=seed(k*3+1)*Math.PI*2,radius=.55+Math.sqrt(seed(k*3+2))*2.2;
   const x=-2+Math.cos(angle)*radius,z=-1+Math.sin(angle)*radius;
-  // Leave the fugitive's route toward Downton visually readable.
   if(x>-.8&&z<-.65)continue;
   const ground=walkSurface(x,z);if(ground===null)continue;
-  const height=.42+seed(k*5+3)*.95, lean=(seed(k*7+4)-.5)*.18;
-  const stem=stems.length;stems.push({x,z,ground,height,lean,phase:seed(k*11+5)*6.28,growth:0});
-  const count=5+Math.floor(height*6);
-  for(let j=0;j<count;j++){const t=j/(count-1);beads.push({stem,t,head:j>=count-2,side:0})}
-  if(k%3===0)for(let j=0;j<3;j++)beads.push({stem,t:.47+j*.12,head:false,side:(j%2?1:-1)*(.12+j*.035)});
+  const height=.42+seed(k*5+3)*.95,lean=(seed(k*7+4)-.5)*.18;
+  stems.push({x,z,ground,height,lean,phase:seed(k*11+5)*6.28,growth:0});
  }
  const geometry=new T.IcosahedronGeometry(.048,0);
  const material=new T.MeshStandardMaterial({vertexColors:false,roughness:.88});
- const mesh=new T.InstancedMesh(geometry,material,beads.length);
- mesh.frustumCulled=false;world.add(mesh);
- const dummy=new T.Object3D(), colors=[new T.Color(0x537f70),new T.Color(0x779c87),new T.Color(0xa7a884),new T.Color(0xd3b68c)];
- for(let i=0;i<beads.length;i++){const b=beads[i],st=stems[b.stem];mesh.setColorAt(i,colors[b.head?3:(b.t>.72?2:(b.stem%2))])}
- mesh.instanceColor.needsUpdate=true;
- mesh.userData.palette=colors;
- return {mesh,stems,beads,dummy,t:0};
+ const mesh=new T.InstancedMesh(geometry,material,8000);
+ mesh.count=0;mesh.frustumCulled=false;world.add(mesh);
+ const dummy=new T.Object3D();
+ const original=[0x537f70,0x779c87,0xa7a884,0xd3b68c].map(c=>new T.Color(c));
+ const palettes=[
+  [0x18c5bc,0xff647b,0xffd270,0xfff2d1],[0x5175ed,0x80f5e5,0xf3a3ff,0xffffff],
+  [0x6d2c8f,0xe56ab5,0xffcb86,0xfff1e3],[0xa64d22,0xffac44,0xffed98,0x68d5b4],
+  [0x164e8c,0x3daaff,0x9dcbff,0xf6fbff],[0x135d44,0x7edc82,0xe9e36a,0xf4b6dc],
+  [0x941c3e,0xff3c63,0xffa756,0xffe2b7],[0x482b8d,0x9672fa,0x5bfae6,0xf8f0ff],
+  [0x5a3e28,0xe3ac58,0xffe2a3,0xfffaf0],[0x122a39,0x51e8cb,0x9af7ff,0xffa1c7]
+ ].map(p=>p.map(c=>new T.Color(c)));
+ function makeBeads(index){
+  const beads=[],shape=(index-1)%10;
+  for(let k=0;k<stems.length;k++){
+   const st=stems[k],count=index===0?5+Math.floor(st.height*6):14+Math.floor(seed(k+index*19)*7);
+   for(let j=0;j<count;j++){
+    const t=j/(count-1),angle=t*Math.PI*2*(2+shape*.15)+st.phase;
+    let side=0,depth=0,height=t,head=j>=count-2;
+    if(index===0){
+     if(k%3===0&&j>=Math.floor(count*.45)&&j<count-1)side=(j%2?1:-1)*.14;
+    }else if(shape===0){side=Math.sin(angle)*t*.45;depth=Math.cos(angle)*t*.45}
+    else if(shape===1){side=Math.sin(t*13+st.phase)*.34*t;depth=Math.cos(t*13+st.phase)*.34*t}
+    else if(shape===2){side=Math.sin(t*24)*.19*t;depth=Math.cos(t*19)*.15*t}
+    else if(shape===3){side=(t>.65?Math.sin(angle*3)*.7*(t-.65)/.35:0);depth=(t>.65?Math.cos(angle*3)*.7*(t-.65)/.35:0)}
+    else if(shape===4){side=Math.sin(angle*4)*.3*t;depth=Math.cos(angle*4)*.3*t}
+    else if(shape===5){side=Math.sin(t*6.28)*.55;depth=Math.cos(angle)*.12}
+    else if(shape===6){side=Math.sin(angle)*(.08+.55*t*t);depth=Math.cos(angle)*(.08+.55*t*t)}
+    else if(shape===7){side=Math.sin(t*10+st.phase)*.4;depth=Math.sin(t*8)*.2}
+    else if(shape===8){side=Math.sin(angle*2)*.24*(1-t);depth=Math.cos(angle*2)*.24*(1-t)}
+    else {side=Math.sin(angle)*(.15+.65*Math.pow(t,4));depth=Math.cos(angle)*(.15+.65*Math.pow(t,4))}
+    beads.push({stem:k,t,side,depth,height,head,branch:false});
+    if(index>0&&j>count*.38&&j<count*.95&&j%3===0){
+     for(let q=1;q<=4;q++){
+      const u=q/4,theta=(j*2.4+k*1.7+index);
+      const spread=(shape%3===0?.72:.38)*u*(.3+t);
+      beads.push({stem:k,t,side:side+Math.cos(theta)*spread,depth:depth+Math.sin(theta)*spread,height:Math.min(1,t+u*.13),head:q===4,branch:true});
+     }
+    }
+   }
+  }
+  return beads;
+ }
+ const variants=Array.from({length:50},(_,i)=>makeBeads(i));
+ return {mesh,stems,variants,dummy,t:0,original,palettes};
 })();
-// V83: Each stem enters/exits through its root, with staggered growth.
-// Compact visible instances so no out-of-aperture or off-frustum beads are submitted.
 const mistReedView=new T.Vector3();
 function mistReedsStep(dt){
  const m=mistReeds;m.t+=dt;
- const near=Math.hypot(walker.x+2,walker.z+1)<3.4;
- // One shared character kind: any geological character clears nearby vegetation.
- const populationCharacters=populationCharacterKind.map(get=>get()).filter(Boolean);
+ const gallery=populationGallery;
+ if(gallery.changing){
+  gallery.phase=Math.max(0,gallery.phase-dt*3.8);
+  if(gallery.phase===0){
+   gallery.index=gallery.next;gallery.phase=0;gallery.changing=false;
+   populationButton.textContent='✦ '+(gallery.index+1)+'/50';
+   populationButton.title=populationNames[gallery.index]+' · next';
+  }
+ }
+ const characters=populationCharacterKind.map(get=>get()).filter(Boolean);
  camera.updateMatrixWorld();
+ const beads=m.variants[gallery.index],style=gallery.index;
+ const palette=style===0?m.original:m.palettes[Math.floor((style-1)/5)%m.palettes.length];
+ const motion=style===0?1:1+((style-1)%5)*.32;
  let visible=0;
  for(const st of m.stems){
   const px=st.x-wanderX,pz=st.z-wanderZ;
-  const radial=Math.hypot(px,pz);
-  // Reserve room for swaying tips: a whole stem starts folding before the rim.
-  const rimClear=R-.16-Math.sqrt(px*px+pz*pz+Math.max(0,st.ground+st.height)**2);
-  mistReedView.set(px,st.ground+st.height*.5,pz).project(camera);
+  const height=st.height*(style===0?1:1.05+((style-1)%5)*.2);
+  const rimClear=R-.16-Math.sqrt(px*px+pz*pz+Math.max(0,st.ground+height)**2);
+  mistReedView.set(px,st.ground+height*.5,pz).project(camera);
   const inView=mistReedView.z>-1&&mistReedView.z<1&&Math.abs(mistReedView.x)<1.16&&Math.abs(mistReedView.y)<1.2;
-  // Slightly different thresholds create a travelling, not synchronized, wave.
   const threshold=.12+(Math.sin(st.x*3.7+st.z*2.9)+1)*.11;
-  const occupied=populationCharacters.some(c=>Math.hypot(st.x-c.x,st.z-c.z)<.44);
-  const target=inView&&!occupied?T.MathUtils.smoothstep(rimClear,-.08,threshold+.42):0;
-  st.growth+=(target-st.growth)*Math.min(1,dt*(target>st.growth?2.5:4.4));
+  const occupied=characters.some(c=>Math.hypot(st.x-c.x,st.z-c.z)<.55);
+  const target=inView&&!occupied&&!gallery.changing?T.MathUtils.smoothstep(rimClear,-.08,threshold+.42):0;
+  st.growth+=(target-st.growth)*Math.min(1,dt*(target>st.growth?3.6:7.5));
  }
- for(let i=0;i<m.beads.length;i++){
-  const b=m.beads[i],st=m.stems[b.stem],t=b.t;
-  // Grow from the soil upward, rather than uniformly scaling an entire plant.
+ for(const b of beads){
+  const st=m.stems[b.stem],t=b.t;
   if(st.growth<.025||t>st.growth)continue;
-  const sway=Math.sin(m.t*(near?2.8:1.15)+st.phase)*(.045+(near?.14:.035))*t*t;
-  const x=st.x-wanderX+st.lean*t+sway+b.side;
-  const y=st.ground+st.height*t;
-  const z=st.z-wanderZ+Math.cos(m.t*1.3+st.phase)*.075*t*t;
-  // Hard Hermeticon containment, including the BB's own radius.
+  const wave=Math.sin(m.t*(1.15*motion)+st.phase)*(.045+.045*motion)*t*t;
+  const spin=style===0?0:Math.sin(m.t*(.5+motion*.35)+st.phase)*.23*t;
+  const x=st.x-wanderX+st.lean*t+wave+b.side*Math.cos(spin)-b.depth*Math.sin(spin);
+  const y=st.ground+st.height*(style===0?1:1.05+((style-1)%5)*.2)*b.height;
+  const z=st.z-wanderZ+Math.cos(m.t*1.3+st.phase)*.075*t*t+b.depth*Math.cos(spin)+b.side*Math.sin(spin);
   if(x*x+y*y+z*z>(R-.08)*(R-.08))continue;
   m.dummy.position.set(x,y,z);
-  const size=(b.head?1.38:(t<.2?.75:1))*Math.min(1,st.growth*9);
+  const size=(b.head?1.38:(t<.2?.75:1))*(style===0?1:(b.branch?.8:1.2))*Math.min(1,st.growth*9);
   m.dummy.scale.setScalar(size);m.dummy.updateMatrix();
   m.mesh.setMatrixAt(visible,m.dummy.matrix);
-  m.mesh.setColorAt(visible,m.mesh.userData.palette[b.head?3:(b.t>.72?2:(b.stem%2))]);
+  m.mesh.setColorAt(visible,palette[b.head?3:(b.branch?2:(b.stem%2))]);
   visible++;
  }
  m.mesh.count=visible;

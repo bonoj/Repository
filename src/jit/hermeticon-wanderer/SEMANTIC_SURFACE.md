@@ -1,5 +1,5 @@
 # Hermeticon Wanderer — semantic surface
-Updated 2026-10-12. **Read the executable for current truth; its build-name string can be stale.**
+Updated 2026-10-13. **Read the executable for current truth; its build-name string can be stale.**
 
 ## Where
 
@@ -27,3 +27,13 @@ V48 on-demand INSPECT/COPY REPORT worked on the player's Android. The player rep
 Source includes a later reduced orange launch (up 2.9, forward 1.65); its Pages publication was blocked at that time, so verify mirror and live behavior before asserting delivery. Current scripted residents and their visuals have not been established as a generic simulation law. Do not silently turn design directions into implemented features.
 
 Read `HANDOFF.md` for a cold start, `HERMETICON.md` for interaction and vessel jurisdiction, `matter/MATTER.md` for conservation, and `WORLD_GENERATION_EXPERIMENT.md` for history. Preserve the working scene rather than expanding architecture speculatively.
+
+## Retina and perception — October 13
+
+A **three-dimensional retina** is a bounded volumetric sampling interface into a larger persistent world. Its inner boundary controls local membership and selected behavior updates; the orbiting virtual camera independently projects the admitted scene. Camera visibility must not drive population state. This separation was corrected for the Mists reedbed after camera-frustum culling had incorrectly caused shrink/regrow during orbit.
+
+- **Mists bead-lattice gallery:** 50 selectable deterministic variants with common rim and character-clearance behavior. They currently read primarily as tall-stemmed and spiral forms with palette variation, rather than 50 unique silhouettes. The original sparse reeds are a valued reference. Selection remains a world control, not build metadata.
+- **Character boundary:** The Mists fugitive, Quills peacock, and Amaranthine gardener have targeted inner-boundary guards that hide and pause their behavior outside the local volume. Wanderer uses its established separate movement boundary. Do not claim a universal character lifecycle or that every geometric extremity is independently clipped.
+- **HUD provenance:** Eight leading source SHA characters, FPS, refresh in one restrained metadata row; full SHA in inspection. A committed change, published mirror, completed deployment, and runtime observation are separate claims.
+- **Shared semantic surface:** Human perception of rendered motion and model access to images, source, reports, and purpose-built JIT instruments support common, falsifiable claims about named entities and causal behavior. Screenshot for appearance, state probe for clocks, spatial ray/depth query for visibility, accounting for conserved quantities. GPU ray queries are a possible instrument, not an established feature. Technical discussion: [The Retinae Problem](https://github.com/bonoj/Ledger/blob/main/notes/2026-10-13-the-retinae-problem.md).
+

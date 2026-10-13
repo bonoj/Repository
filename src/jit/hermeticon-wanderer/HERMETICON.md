@@ -1,6 +1,6 @@
 # Hermeticon — semantic and human interaction contract
 
-Status: current design contract, 2026-10-12. This governs **new Hermeticons**, beginning with Hermeticon Wanderer. It does not retroactively modify legacy baubles or assert that all rules are implemented.
+Status: current design contract, updated 2026-10-13. This governs **new Hermeticons**, beginning with Hermeticon Wanderer. It does not retroactively modify legacy baubles or assert that all rules are implemented.
 
 ## V31 earned boundary and interaction evidence (2026-10-12)
 Wanderer V31 was player-accepted. Tap-to-redirect, orbit, pinch, and central 25%-**area** hangout/world-follow work together without forcing the camera to follow the character. Flat y=0 targeting and the visible cube are deliberately minimal, not final grounding or navigation.
@@ -57,3 +57,14 @@ The observer must not become the dominant workload. A normal INSPECT action read
 
 
 **V48 implementation:** dormant GPU/scene pixel witnesses, generic containment/invariant verifier, per-rebuild terrain vertex diagnostic traversal, and automatic 2.5-second INSPECT JSON regeneration were pruned. Player successfully copied a complete-transfer report (96/96 received, zero reported errors, 75.1 FPS at 24.367 s). These are bounded observer facts, not independent geological conservation or lineage proof. Preserve verification as explicit experiments outside the normal frame path.
+
+## Three-dimensional retina and observation (2026-10-13)
+
+**Definition:** A three-dimensional retina is a bounded volumetric sampling interface into a larger persistent world. In Wanderer, the Hermeticon inner boundary determines membership in the locally active scene. For selected scripted characters, leaving the boundary pauses behavior and hides their meshes; their state is retained. This is distinct from the camera's two-dimensional projection and from geological support (a pumpkin may fall through a geological hole while remaining in the vessel).
+
+**Invariant:** Rotating the camera through 360° does not change population growth, character clocks, ownership, or other simulation state. Moving the Hermeticon relative to the persistent world *can* change local membership and behavior. In October 2026 the Mists reeds' growth target incorrectly depended on camera-frustum visibility; the dependency was removed. The current resident boundary guards are targeted implementations, not a universal lifecycle contract already proven for all entities.
+
+**Observation contract:** Human visual perception and model-accessible screenshots, source, bounded state reports, and just-in-time instruments are different, incomplete channels onto one executable referent. Define an invariant first; then choose evidence appropriate to it. Visual sequences test continuity and legibility, world-space queries test membership, ray/depth probes test occlusion, counters test material quantities, and build identity connects reports to executable source. GPU ray queries or readbacks are options only when a particular question justifies them; they are not required normal-frame witnesses. Preserve the V48 principle of bounded, on-demand instrumentation.
+
+See [The Retinae Problem](https://github.com/bonoj/Ledger/blob/main/notes/2026-10-13-the-retinae-problem.md) for the observation flow and concrete Mists case study.
+

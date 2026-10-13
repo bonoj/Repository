@@ -730,7 +730,7 @@ function fugitiveStep(dt){
  const fx=f.owner==='hermeticon'?f.x:f.x-wanderX,fz=f.owner==='hermeticon'?f.z:f.z-wanderZ;
  const inside=fx*fx+fz*fz+(f.y+.2)*(f.y+.2)<(R-.3)*(R-.3);
  fugitiveMesh.visible=inside&&!corpseDispersed;
- if(!inside)return;f.time+=dt;
+ if(!inside&&f.mode!=='splat')return;f.time+=dt;
  if(f.mode==='idle'){
   const surface=walkSurface(f.x,f.z)??1.15;
   f.y=surface+Math.abs(Math.sin(f.time*9.2+Math.sin(f.time*4.7)*2))*(.22+.19*Math.abs(Math.sin(f.time*2.9)));

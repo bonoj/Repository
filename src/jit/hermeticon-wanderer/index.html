@@ -666,7 +666,11 @@ const splatMat=new T.MeshStandardMaterial({color:0xc51e30,roughness:.8});
 const splatMesh=new T.InstancedMesh(splatGeo,splatMat,100);splatMesh.count=0;splatMesh.frustumCulled=false;world.add(splatMesh);
 const splatDummy=new T.Object3D();
 function fugitiveStep(dt){
- const f=fugitive;f.time+=dt;
+ const f=fugitive;
+ const fx=f.owner==='hermeticon'?f.x:f.x-wanderX,fz=f.owner==='hermeticon'?f.z:f.z-wanderZ;
+ const inside=fx*fx+fz*fz+(f.y+.2)*(f.y+.2)<(R-.3)*(R-.3);
+ fugitiveMesh.visible=inside;
+ if(!inside)return;f.time+=dt;
  if(f.mode==='idle'){
   const surface=walkSurface(f.x,f.z)??1.15;
   f.y=surface+Math.abs(Math.sin(f.time*9.2+Math.sin(f.time*4.7)*2))*(.22+.19*Math.abs(Math.sin(f.time*2.9)));
@@ -727,18 +731,21 @@ for(let i=0;i<9;i++){
 const quillResident={x:5.25,z:7.25,t:0,open:0,heading:0};
 registerPopulationCharacter(()=>quillResident);
 function quillStep(dt){
- const q=quillResident;q.t+=dt;
+ const q=quillResident;
+ const ground=walkSurface(q.x,q.z)??1.15;
+ const inside=(q.x-wanderX)**2+(q.z-wanderZ)**2+(ground+1.7)**2<(R-.2)**2;
+ quillCube.visible=inside;quillFan.visible=inside&&q.open>.015;
+ if(!inside)return;q.t+=dt;
  const d=Math.hypot(walker.x-q.x,walker.z-q.z);
  const target=d<3.1?1:0;
  q.open+= (target-q.open)*Math.min(1,dt*2.5);
- const ground=walkSurface(q.x,q.z)??1.15;
  const bob=Math.sin(q.t*2.6)*.07;
  quillCube.position.set(q.x-wanderX,ground+.28+bob,q.z-wanderZ);
  quillCube.rotation.set(Math.sin(q.t*1.7)*.09,q.heading,Math.sin(q.t*2.1)*.12*(1-q.open));
  if(d<4){const heading=Math.atan2(walker.x-q.x,walker.z-q.z);q.heading+=Math.atan2(Math.sin(heading-q.heading),Math.cos(heading-q.heading))*Math.min(1,dt*3)}
  quillFan.position.set(q.x-wanderX,ground+.12+bob,q.z-wanderZ);
  quillFan.rotation.y=q.heading;
- quillFan.visible=q.open>.015;
+ quillFan.visible=inside&&q.open>.015;
  for(let i=0;i<quillFeathers.length;i++){
   const angle=(i-4)*.23*q.open;
   const feather=quillFeathers[i];
@@ -767,12 +774,15 @@ for(let i=0;i<7;i++){
 const gardener={x:-7.15,z:5.15,t:0,bloom:0,attention:0};
 registerPopulationCharacter(()=>gardener);
 function gardenStep(dt){
- const g=gardener;g.t+=dt;
+ const g=gardener;
+ const ground=walkSurface(g.x,g.z)??1.15;
+ const inside=(g.x-wanderX)**2+(g.z-wanderZ)**2+(ground+1.1)**2<(R-.2)**2;
+ gardenCube.visible=inside;gardenGroup.visible=inside;
+ if(!inside)return;g.t+=dt;
  const dist=Math.hypot(walker.x-g.x,walker.z-g.z);
  const near=dist<3.2?1:0;
  g.bloom+=(near-g.bloom)*Math.min(1,dt*(near?1.4:1.9));
  g.attention+=(near-g.attention)*Math.min(1,dt*3);
- const ground=walkSurface(g.x,g.z)??1.15;
  gardenCube.position.set(g.x-wanderX,ground+.23+Math.sin(g.t*2.1)*.055,g.z-wanderZ);
  gardenCube.rotation.y=Math.sin(g.t*.8)*.22;
  gardenCube.rotation.z=Math.sin(g.t*1.9)*.09+g.attention*.24;
@@ -877,7 +887,6 @@ function mistReedsStep(dt){
   }
  }
  const characters=populationCharacterKind.map(get=>get()).filter(Boolean);
- camera.updateMatrixWorld();
  const beads=m.variants[gallery.index],style=gallery.index;
  const palette=style===0?m.original:m.palettes[Math.floor((style-1)/5)%m.palettes.length];
  const motion=style===0?1:1+((style-1)%5)*.32;
@@ -886,11 +895,9 @@ function mistReedsStep(dt){
   const px=st.x-wanderX,pz=st.z-wanderZ;
   const height=st.height*(style===0?1:1.05+((style-1)%5)*.2);
   const rimClear=R-.16-Math.sqrt(px*px+pz*pz+Math.max(0,st.ground+height)**2);
-  mistReedView.set(px,st.ground+height*.5,pz).project(camera);
-  const inView=mistReedView.z>-1&&mistReedView.z<1&&Math.abs(mistReedView.x)<1.16&&Math.abs(mistReedView.y)<1.2;
   const threshold=.12+(Math.sin(st.x*3.7+st.z*2.9)+1)*.11;
   const occupied=characters.some(c=>Math.hypot(st.x-c.x,st.z-c.z)<.55);
-  const target=inView&&!occupied&&!gallery.changing?T.MathUtils.smoothstep(rimClear,-.08,threshold+.42):0;
+  const target=!occupied&&!gallery.changing?T.MathUtils.smoothstep(rimClear,-.08,threshold+.42):0;
   st.growth+=(target-st.growth)*Math.min(1,dt*(target>st.growth?3.6:7.5));
  }
  for(const b of beads){

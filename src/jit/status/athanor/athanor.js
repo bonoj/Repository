@@ -1,5 +1,5 @@
 
-import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';'
+import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 import {CSS3DRenderer} from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/renderers/CSS3DRenderer.js';
 
 // Build metadata is stamped by the Pages workflow from the deployed commit.

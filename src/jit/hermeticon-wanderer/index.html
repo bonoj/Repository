@@ -683,18 +683,15 @@ function lowerBowlTap(clientX,clientY){
  const hit=o.clone().addScaledVector(d,t);
  if(hit.y>=-.16)return false; // Brass band and upper hemisphere retain walking intent.
  lowerTaps++;
- // Wake only resting authoritative BBs near the impact; no new material created.
- const radius=3.0;let woken=0;
+ // Crucible tap acts on all resting vessel-owned BBs, independent of hit proximity.
+ let woken=0;
  for(let i=0;i<rainEmitted;i++){
-  if(rainRest[i]!==1||rainOwner[i]!==1)continue;
-  const x=rainX[i],y=rainY[i],z=rainZ[i];
-  const dx=x-hit.x,dy=y-hit.y,dz=z-hit.z,rr=Math.hypot(dx,dy,dz);
-  if(rr>radius)continue;
-  const strength=(1-rr/radius);
-  const tangentX=-dz/(Math.hypot(dx,dz)||1),tangentZ=dx/(Math.hypot(dx,dz)||1);
-  rainVX[i]+=tangentX*(.7+strength*.9);
-  rainVY[i]+=.9+strength*1.7;
-  rainVZ[i]+=tangentZ*(.7+strength*.9);
+  if(rainOwner[i]!==1||rainRest[i]!==1)continue;
+  const angle=rainRandom(i,lowerTaps+31)*Math.PI*2;
+  const kick=.9+rainRandom(i,lowerTaps+32)*1.1;
+  rainVX[i]+=Math.cos(angle)*kick;
+  rainVY[i]+=1.2+rainRandom(i,lowerTaps+33)*1.8;
+  rainVZ[i]+=Math.sin(angle)*kick;
   rainRest[i]=0;woken++;
  }
  lowerWoken+=woken;
@@ -703,7 +700,7 @@ function lowerBowlTap(clientX,clientY){
  const f=fugitive;
  if(f.mode==='splat'&&!corpseDispersed){
   const cx=f.x,cy=f.y+fugitiveSize*.5,cz=f.z;
-  if(Math.hypot(cx-hit.x,cy-hit.y,cz-hit.z)<4.0){
+  if(f.owner==='hermeticon'){
    corpseDispersed=true;fugitiveMesh.visible=false;
    for(let i=0;i<24;i++){
     const a=i*2.39996323,rad=.55+(i%7)*.13;
@@ -715,10 +712,8 @@ function lowerBowlTap(clientX,clientY){
  // Stir the existing splat beads, preserving their original red/orange colors.
  if(f.mode==='splat')for(const p of f.particles){
   if(!p.rest)continue;
-  const dx=p.x-hit.x,dy=p.y-hit.y,dz=p.z-hit.z,rr=Math.hypot(dx,dy,dz);
-  if(rr>radius)continue;
-  const strength=1-rr/radius,len=Math.hypot(dx,dz)||1;
-  p.vx+=-dz/len*(.8+strength);p.vy+=1.1+strength*1.6;p.vz+=dx/len*(.8+strength);
+  const angle=rainRandom(lowerTaps,f.particles.indexOf(p)+41)*Math.PI*2;
+  p.vx+=Math.cos(angle)*1.4;p.vy+=1.4;p.vz+=Math.sin(angle)*1.4;
   p.rest=false;
  }
  return true;

@@ -269,7 +269,7 @@ let lastMeshX=0,lastMeshZ=0;
 const RAIN_N=10000,RAIN_DURATION=18,RAIN_R=.037;
 const rainX=new Float32Array(RAIN_N),rainY=new Float32Array(RAIN_N),rainZ=new Float32Array(RAIN_N),rainVX=new Float32Array(RAIN_N),rainVY=new Float32Array(RAIN_N),rainVZ=new Float32Array(RAIN_N),rainRest=new Uint8Array(RAIN_N);
 // Geological coordinates persist independently of the moving aperture.
-const rainOwner=new Uint8Array(RAIN_N);
+const rainOwner=new Uint8Array(RAIN_N);const rainMatterTag='micro';
 let ownerTransfers=0,toTerrain=0,toHermeticon=0,maxTransferError=0;
 function rainWorld(i){return rainOwner[i]===1?[rainX[i],rainY[i],rainZ[i]]:[rainX[i]-wanderX,rainY[i],rainZ[i]-wanderZ]}
 const rainGeo=new T.IcosahedronGeometry(RAIN_R,0),rainMat=new T.MeshBasicMaterial({color:0x8ad9f0});
@@ -561,7 +561,7 @@ const HANGOUT_R=9.72*.5,WALK_SPEED=1.8,WANDER_SIZE=.38;
 const wanderCube=put(world,new T.BoxGeometry(WANDER_SIZE,WANDER_SIZE,WANDER_SIZE),new T.MeshStandardMaterial({color:0xf0bf68,roughness:.75,depthTest:true,depthWrite:true}),0,0,0);
 wanderCube.renderOrder=0; // Geological terrain is opaque to the Wanderer.
 const walkRay=new T.Raycaster(),walkPointer=new T.Vector2(),walkPlane=new T.Plane(new T.Vector3(0,1,0),0),walkPoint=new T.Vector3();
-let walker={x:0,y:0,z:0,target:null,route:[],accepted:0,rejected:0},wanderHistory=[];
+let walker={matterTag:'macro',x:0,y:0,z:0,target:null,route:[],accepted:0,rejected:0},wanderHistory=[];
 // All character-kind entities share one vegetation clearance rule.
 const populationCharacterKind=[];
 function registerPopulationCharacter(getPosition){populationCharacterKind.push(getPosition)}
@@ -661,7 +661,7 @@ function walkTarget(clientX,clientY){
 // Mists inhabitant: one frightened cube, one irreversible flight and splat.
 const fugitiveSize=.32,fugitiveRadius=.23;
 const fugitiveMesh=put(world,new T.BoxGeometry(fugitiveSize,fugitiveSize,fugitiveSize),new T.MeshStandardMaterial({color:0xff8b29,emissive:0x9d3100,emissiveIntensity:.2,roughness:.68}));
-const fugitive={x:-4.7,z:-1.1,y:1.4,vy:0,time:0,mode:'idle',owner:'geology',vx:0,vz:0,particles:[],splat:false};
+const fugitive={matterTag:'macro',x:-4.7,z:-1.1,y:1.4,vy:0,time:0,mode:'idle',owner:'geology',vx:0,vz:0,particles:[],splat:false};
 registerPopulationCharacter(()=>fugitive.owner==='geology'&&fugitive.mode!=='splat'?fugitive:null);
 // A fixed BB quantum: the authored pumpkin cube has 500 equal-volume units.
 const PUMPKIN_SOLID=375,PUMPKIN_LIQUID=125,PUMPKIN_BLOOD_IMPACT=80;
@@ -671,7 +671,7 @@ const splatGeo=new T.IcosahedronGeometry(pumpkinBeadRadius,0);
 const crucibleMotion=[];let crucibleSampleTime=0,crucibleCollisions=0;
 const FUGITIVE_MATTER_COLOR=0xff8b29; // Orange entity yields orange matter; red is splat blood only.
 const splatMat=new T.MeshStandardMaterial({color:0xc51e30,roughness:.8});
-const splatMesh=new T.InstancedMesh(splatGeo,splatMat,PUMPKIN_TOTAL);splatMesh.count=0;splatMesh.frustumCulled=false;world.add(splatMesh);
+const splatMatterTag='micro';const splatMesh=new T.InstancedMesh(splatGeo,splatMat,PUMPKIN_TOTAL);splatMesh.count=0;splatMesh.frustumCulled=false;world.add(splatMesh);
 const splatDummy=new T.Object3D();
 for(let i=0;i<PUMPKIN_TOTAL;i++)splatMesh.setColorAt(i,new T.Color(i<PUMPKIN_LIQUID?0xc51e30:FUGITIVE_MATTER_COLOR));
 splatMesh.instanceColor.needsUpdate=true;
@@ -812,7 +812,7 @@ for(let i=0;i<9;i++){
  eye.position.y=1.45;shaft.add(eye);
  quillFeathers.push(shaft);
 }
-const quillResident={x:5.25,z:7.25,t:0,open:0,heading:0};
+const quillResident={matterTag:'macro',x:5.25,z:7.25,t:0,open:0,heading:0};
 registerPopulationCharacter(()=>quillResident);
 function quillStep(dt){
  const q=quillResident;
@@ -855,7 +855,7 @@ for(let i=0;i<7;i++){
  const a=i*Math.PI*2/7;flower.position.set(Math.cos(a)*.95,0,Math.sin(a)*.95);
  gardenGroup.add(flower);gardenFlowers.push(flower);
 }
-const gardener={x:-7.15,z:5.15,t:0,bloom:0,attention:0};
+const gardener={matterTag:'macro',x:-7.15,z:5.15,t:0,bloom:0,attention:0};
 registerPopulationCharacter(()=>gardener);
 function gardenStep(dt){
  const g=gardener;

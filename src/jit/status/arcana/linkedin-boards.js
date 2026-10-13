@@ -8,7 +8,7 @@ export function mountLinkedInBoards(hermeticon){
  const edge=new T.MeshStandardMaterial({color:0xe0b76d,metalness:.75,roughness:.25});
  const boardGeometry=new T.BoxGeometry(5.15,7.15,.17);
  const profiles=[
-  {side:'left',name:'JOHN BONO',subtitle:'EXECUTABLE WORLDS · R&D',url:'https://www.linkedin.com/search/results/people/?keywords=John%20Bono'},
+  {side:'left',name:'JOHN BONO',subtitle:'EXECUTABLE WORLDS · R&D',url:'https://www.linkedin.com/in/bonoj'},
   {side:'right',name:'MANUEL LEAL',subtitle:'STATUS: PRESENT AND ACCOUNTED FOR',url:'https://www.linkedin.com/in/manuel-leal-053384234'}
  ];
  const boards=[];

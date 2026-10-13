@@ -269,11 +269,11 @@ let lastMeshX=0,lastMeshZ=0;
 const RAIN_N=10000,RAIN_DURATION=18,RAIN_R=.037;
 const rainX=new Float32Array(RAIN_N),rainY=new Float32Array(RAIN_N),rainZ=new Float32Array(RAIN_N),rainVX=new Float32Array(RAIN_N),rainVY=new Float32Array(RAIN_N),rainVZ=new Float32Array(RAIN_N),rainRest=new Uint8Array(RAIN_N);
 // Geological coordinates persist independently of the moving aperture.
-const rainOwner=new Uint8Array(RAIN_N);const rainMatterTag='micro';
+const rainOwner=new Uint8Array(RAIN_N);
 let ownerTransfers=0,toTerrain=0,toHermeticon=0,maxTransferError=0;
 function rainWorld(i){return rainOwner[i]===1?[rainX[i],rainY[i],rainZ[i]]:[rainX[i]-wanderX,rainY[i],rainZ[i]-wanderZ]}
 const rainGeo=new T.IcosahedronGeometry(RAIN_R,0),rainMat=new T.MeshBasicMaterial({color:0x8ad9f0});
-const rainMesh=new T.InstancedMesh(rainGeo,rainMat,RAIN_N);rainMesh.userData.worldDomain=true; // Persistent geological BBs are not subject to whole-sphere containment.
+const rainMesh=new T.InstancedMesh(rainGeo,rainMat,RAIN_N);rainMesh.userData.worldDomain=true;rainMesh.userData.matterTag='micro'; // Persistent geological BBs are not subject to whole-sphere containment.
 rainMesh.frustumCulled=false;rainMesh.count=0;world.add(rainMesh);
 const cloudDimensions=[2.7,.8,2.7],cloudCenterY=5.6;
 // Clip cloud fragments in Hermeticon-local space, as with the terrain aperture.
@@ -671,7 +671,7 @@ const splatGeo=new T.IcosahedronGeometry(pumpkinBeadRadius,0);
 const crucibleMotion=[];let crucibleSampleTime=0,crucibleCollisions=0;
 const FUGITIVE_MATTER_COLOR=0xff8b29; // Orange entity yields orange matter; red is splat blood only.
 const splatMat=new T.MeshStandardMaterial({color:0xc51e30,roughness:.8});
-const splatMatterTag='micro';const splatMesh=new T.InstancedMesh(splatGeo,splatMat,PUMPKIN_TOTAL);splatMesh.count=0;splatMesh.frustumCulled=false;world.add(splatMesh);
+const splatMesh=new T.InstancedMesh(splatGeo,splatMat,PUMPKIN_TOTAL);splatMesh.count=0;splatMesh.userData.matterTag='micro';splatMesh.frustumCulled=false;world.add(splatMesh);
 const splatDummy=new T.Object3D();
 for(let i=0;i<PUMPKIN_TOTAL;i++)splatMesh.setColorAt(i,new T.Color(i<PUMPKIN_LIQUID?0xc51e30:FUGITIVE_MATTER_COLOR));
 splatMesh.instanceColor.needsUpdate=true;

@@ -1,9 +1,12 @@
 
 (function(){
  const el=document.getElementById('error');
+ const build=document.getElementById('build');
+ const buildIdentity=window.__STATUS_BUILD__||'unverified';
+ if(build)build.textContent=buildIdentity.slice(0,8);
  function fatal(error){
   const message=String(error&&error.stack||error&&error.message||error||'Unknown error');
-  const report=['BAUBLE FAILED TO WAKE',message,'URL: '+location.href,'Time: '+new Date().toISOString()].join('\n');
+  const report=['BAUBLE FAILED TO WAKE','Build: '+buildIdentity,message,'URL: '+location.href,'Time: '+new Date().toISOString()].join('\n');
   el.replaceChildren();
   el.style.cssText='position:fixed;z-index:9999;top:15%;bottom:12%;left:12px;right:12px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#211a20;color:#ffe1d6;padding:16px;border:2px solid #ff9784;border-radius:12px;font:13px/1.5 monospace';
   const heading=document.createElement('div');heading.textContent=report;el.append(heading);

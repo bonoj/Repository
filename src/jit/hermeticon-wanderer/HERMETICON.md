@@ -1,69 +1,39 @@
-# Hermeticon — semantic and human interaction contract
+# Hermeticon — durable contract
+Updated 2026-10-13. Applies to new Hermeticons, starting with Wanderer; does not retroactively change legacy baubles. For entry and deployment use [HANDOFF.md](HANDOFF.md); for actual implemented systems use [SEMANTIC_SURFACE.md](SEMANTIC_SURFACE.md). **Requirements are not automatically implementation claims.**
 
-Status: current design contract, updated 2026-10-13. This governs **new Hermeticons**, beginning with Hermeticon Wanderer. It does not retroactively modify legacy baubles or assert that all rules are implemented.
+## Definition and authority
 
-## V31 earned boundary and interaction evidence (2026-10-12)
-Wanderer V31 was player-accepted. Tap-to-redirect, orbit, pinch, and central 25%-**area** hangout/world-follow work together without forcing the camera to follow the character. Flat y=0 targeting and the visible cube are deliberately minimal, not final grounding or navigation.
+A **three-dimensional retina** is a bounded volumetric sampling interface into a larger persistent world. The Hermeticon's inner volume determines local membership and selected simulation eligibility. The camera independently projects the admitted scene onto a two-dimensional display. Changing camera angle is not a simulation event.
 
-**The Hermeticon is an aperture and a physical bowl, not a leash.** Geological world coordinates own persistent BB positions and cloud location. Walking moves the observation aperture; it does not move, transfer, delete, or re-own material. Above the equator the dome is a local weather visibility/emission domain; it is not a collision wall. Below the equator the bowl is physical and may bounce BBs. Contact should ultimately depend on actual material trajectory; V31 still has a proximity-based bowl correction and the resulting lively repeated bounces are player-accepted behavior, not proof of trajectory-correct contact.
+**Invariant:** A 360° camera orbit must not change population growth, character clocks, material ownership, or other world state. Moving the Hermeticon through the persistent world *may* change membership and local activity. The Mists camera-dependent growth defect illustrates why these authorities must remain separate.
 
-The cloud uses double-sided mesh geometry clipped by the upper spherical aperture; like terrain clipping, this does not manufacture new cross-section faces. Only cloud volume intersecting the weather dome may emit. Existing cloud inventory remains until a BB actually spawns. Emission under partial overlap remains a testable implementation limitation.
+The Hermeticon is both a local observation aperture and a vessel with region-specific physics, **not a leash**. Geological coordinates own persistent terrain, clouds, and world-domain BBs. The upper dome is a weather visibility/emission domain, not a generic collision wall; the lower bowl is physical for relevant material. Geological support, vessel containment, camera visibility, and simulation eligibility are distinct predicates. Do not impose whole-sphere containment on all persistent geological matter.
 
-Historical V31 INSPECT provided on-demand `weather` diagnostics and `BaubleInspectWeather()`; it reports geological/local cloud coordinates, clipping shader hooks, overlap estimate, BB counts inside/outside the aperture, conservation and simulation state. Player report: 10,000 BBs accounted for, 185 outside the aperture retained, zero generic containment violations, shader compiled, ~58.94 FPS. The report was captured after cloud exhaustion, so partial-cloud clipping is accepted visually by the player rather than measured by that snapshot.
+## Interaction contract
 
-**Historical verifier jurisdiction (V31; verifier removed in V48):** whole-sphere containment applied to vessel-local meshes, not persistent world-domain cloud/terrain/BBs. Keep reporting real geometric conditions; do not reintroduce a rule that all geological matter must remain inside the moving sphere. The generic verifier does not establish the absence of physical bowl penetrations.
+**Human intent → world interpretation → simulation.**
 
-The earlier V28 caveat above is historical: V31 has persistent geological BBs and world-positioned cloud. Aggregated distant weather, dynamic resolution transitions, absorption and generalized material phases remain design direction, not implemented Wanderer features.
+- Tap acts or redirects; drag orbits; pinch zooms. Distinguish gestures before world raycasting. Multi-touch must not dispatch accidental taps.
+- Camera belongs to the human and remains responsive while entities move and the world simulates. Do not move the camera as a substitute for navigation.
+- A deliberate tap must not disappear silently because of occlusion, missing surface, or hard-to-intersect geometry. Make unresolved intent inspectable.
+- Keep simulation and diagnostics bounded off input hot paths; do not trade away responsive orbit/pinch for expensive witnesses.
+- Tap targets are semantic: terrain, creature, cloud, object, and empty space can require different interpretation.
+- In Wanderer, tapping terrain redirects the walker; the aperture begins following outside the central **25% of the aperture circle's area** (half its radius). Preserve accepted terrain seating, occlusion, hole avoidance, and bounded routing unless the user requests changes.
 
-## Unit of composition
+## Existence, manifestation, and matter
 
-**The Hermeticon is our atomic unit**, not a particular physical size, genre, or kind of exhibit. It may contain a galaxy marble held by an alien, all of Middle-earth, an explorable character asset, or a chemistry molecule exhibit. Scale and subject do not determine the interaction contract. Hermeticons can eventually be composed, but we are not building a universal framework in advance.
+The world owns persistent geography, identity, history, and authoritative material accounting. The Hermeticon owns the locally instantiated high-resolution presentation and selected activity. Material representation can eventually change across resolution boundaries without loss of substance; that is a **design direction**, not a claim of implemented dynamic LOD or generalized phases.
 
-For now, implement and validate these rules in Hermeticon Wanderer. Generalization to future Hermeticons is earned by use; **do not update legacy baubles**. Do not mistake the older JIT bauble template or its procedural README for this semantic authority.
+Conserved substance is distinct from visual particles. Material inventory and contact semantics are specified in [matter/MATTER.md](matter/MATTER.md). Existing lower-bowl collision uses historically accepted proximity correction, not proven trajectory-exact contact. Cloud overlap and emission remain limited experiments, currently paused at fresh load.
 
-## Contract with humans touching Hermeticons
+## Observation contract
 
-**Human intent first. World interpretation second. Simulation third.**
+Human continuous visual perception and model-accessible images, source, reports, and targeted instruments are incomplete but complementary views of one executable referent. State the invariant, select a suitable instrument, and connect observations to exact build identity. Visual sequences test appearance and timing; state probes test behavior and clocks; spatial queries test geometry; accounting tests quantities.
 
-- **Camera belongs to the human.** Orbit and pinch zoom remain continuously responsive while the world simulates, entities move, rain falls, or expensive work is pending. Never hijack the camera to implement navigation, targeting, or physics.
-- **A deliberate tap is an action**, not a tiny orbit. Distinguish tap, drag, and pinch at the input boundary, before raycasting or semantic interpretation. Do not discard a tap silently because a surface is hard to intersect, occluded, or absent. Report/inspect unresolved intent.
-- **Gesture meanings stay distinct:** tap acts on the bauble; drag orbits; pinch zooms. Multi-touch must not accidentally dispatch taps. Camera observation must not cancel an entity's ongoing action.
-- **Simulation cannot hold input hostage.** Bound per-frame work and avoid synchronous expensive raycasts or physics on camera/input hot paths. Never accept an FPS collapse as the cost of making orbit or pinch work.
-- **Tap targets are semantic.** Terrain, cloud, creature, object, and empty space may mean different things. Recognition of the human's tap precedes deciding what was touched.
-- **Keep coordinate tracking in optional, bounded diagnostics**, not a movement HUD. Capture gesture, targeting, camera, and navigation evidence only when explicitly needed; do not continuously log or burden the player.
+A normal INSPECT action must remain lightweight and on-demand. Do not automatically run GPU witnesses, traverse all scene geometry, or rebuild expensive reports each frame. Heavy tests belong in deliberate experiments. FPS does not prove correctness; a committed fix does not prove live behavior.
 
-### Wanderer first vertical slice
+## Composition and implementation discipline
 
-Tap terrain to replace Wanderer's destination; Wanderer walks continuously toward that target at a fixed speed. A new tap redirects him. Orbit and zoom remain free throughout. Wanderer needs current position, target, and speed; terrain contact/presentation must **not** interrupt horizontal travel. The geological world slides relative to the Hermeticon only when Wanderer leaves the central **25% of the aperture circle's area** (half its radius). No movement buttons, no onscreen coordinate display, no premature pathfinding. Terrain selection should agree with the visible aperture, and failures should be inspectable.
+Hermeticon is a compositional unit independent of physical scale or subject. A molecule, creature, landscape, or galaxy can be presented through the same human interaction principles, but do **not** prebuild a universal framework or retrofit legacy baubles. Prove the smallest behavior in Wanderer, preserve existing interaction and delivery, and distinguish proposal, source implementation, runtime evidence, and user acceptance.
 
-These are requirements; the present Wanderer implementation has known shortcomings in tap reliability, terrain seating, and visual continuity. Do not mark them verified without player testing.
-
-## Existence, manifestation, and resolution
-
-A Hermeticon is a local window of expensive, perturbable causality into a potentially much larger world. **World** owns persistent geography, climate, history, and aggregate material accounting. **Hermeticon** owns instantiated local weather and granular resolution. A distant storm can change Gondor while the observer is in Bree without simulating individual distant snowflakes.
-
-Material representation may change across the boundary without loss of conserved substance. Unsettled precipitation must not silently become deposited terrain matter. Individual trajectories need not persist outside local resolution, but quantity and meaningful aggregate state must. This is a semantic direction, **not yet implemented** by Wanderer V28; its cloud still follows the geological translation.
-
-The detailed conservation/contact contract remains in [matter/MATTER.md](matter/MATTER.md). Keep matter behavior there; this document owns the Hermeticon boundary and human interaction semantics.
-
-## Implementation discipline
-
-Prove the smallest behavior in Wanderer. Preserve working orbit/pinch, camera framing, inspection, and the existing JIT delivery route. Do not expand this into an OOP/ECS architecture or migrate legacy baubles. Separate proposed behavior, executable behavior, and user-verified behavior. New Hermeticons inherit this **contract**, not necessarily Wanderer's scene or source code.
-
-
-## Instrumentation boundary — V48 (2026-10-12)
-
-The observer must not become the dominant workload. A normal INSPECT action reads bounded, already-maintained evidence; it does not run GPU witnesses, traverse all scene geometry, or recompute the world. Heavy verification is a separate deliberate experiment, not an automatic consequence of opening a diagnostic panel. Reports should be transportable into the conversation by one ordinary COPY REPORT action. This is a design/interaction constraint, not a claim that the lightweight counters prove all physical invariants. Wanderer V47 has one player-confirmed successful report paste and mid-transfer observation; full completion remains to be witnessed.
-
-
-**V48 implementation:** dormant GPU/scene pixel witnesses, generic containment/invariant verifier, per-rebuild terrain vertex diagnostic traversal, and automatic 2.5-second INSPECT JSON regeneration were pruned. Player successfully copied a complete-transfer report (96/96 received, zero reported errors, 75.1 FPS at 24.367 s). These are bounded observer facts, not independent geological conservation or lineage proof. Preserve verification as explicit experiments outside the normal frame path.
-
-## Three-dimensional retina and observation (2026-10-13)
-
-**Definition:** A three-dimensional retina is a bounded volumetric sampling interface into a larger persistent world. In Wanderer, the Hermeticon inner boundary determines membership in the locally active scene. For selected scripted characters, leaving the boundary pauses behavior and hides their meshes; their state is retained. This is distinct from the camera's two-dimensional projection and from geological support (a pumpkin may fall through a geological hole while remaining in the vessel).
-
-**Invariant:** Rotating the camera through 360° does not change population growth, character clocks, ownership, or other simulation state. Moving the Hermeticon relative to the persistent world *can* change local membership and behavior. In October 2026 the Mists reeds' growth target incorrectly depended on camera-frustum visibility; the dependency was removed. The current resident boundary guards are targeted implementations, not a universal lifecycle contract already proven for all entities.
-
-**Observation contract:** Human visual perception and model-accessible screenshots, source, bounded state reports, and just-in-time instruments are different, incomplete channels onto one executable referent. Define an invariant first; then choose evidence appropriate to it. Visual sequences test continuity and legibility, world-space queries test membership, ray/depth probes test occlusion, counters test material quantities, and build identity connects reports to executable source. GPU ray queries or readbacks are options only when a particular question justifies them; they are not required normal-frame witnesses. Preserve the V48 principle of bounded, on-demand instrumentation.
-
-
+Historical V31/V48 observer measurements and experiments belong in [WORLD_GENERATION_EXPERIMENT.md](WORLD_GENERATION_EXPERIMENT.md) or the relevant subsystem record, not in this enduring contract. The current source remains authoritative for what actually runs.

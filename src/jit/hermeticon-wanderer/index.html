@@ -750,9 +750,9 @@ function shotgunMacroInside(){
  if(f.mode==='splat')return;
  const cx=f.x-wanderX,cy=f.y+fugitiveSize*.5,cz=f.z-wanderZ;
  const limit=INNER_R-fugitiveRadius;
- if(cx*cx+cy*cy+cz*cz>=limit*limit)return;
+ if(f.owner!=='hermeticon'||cx*cx+cy*cy+cz*cz>=limit*limit)return;
  // Convert the intact geological macro to conserved vessel-local micros.
- f.x=cx;f.z=cz;f.owner='hermeticon';f.mode='splat';f.vx=0;f.vy=0;f.vz=0;
+ f.x=cx;f.z=cz;f.mode='splat';f.vx=0;f.vy=0;f.vz=0;
  corpseDispersed=true;fugitiveMesh.visible=false;f.particles.length=0;
  for(let i=0;i<PUMPKIN_TOTAL;i++){
   const angle=i*2.399963229728653,vertical=1-2*(i+.5)/PUMPKIN_TOTAL;
@@ -762,7 +762,7 @@ function shotgunMacroInside(){
   const spread=.7,force=4.2;
   f.particles.push({x:cx+ox*.11,y:cy+oy*.11,z:cz+oz*.11,
    vx:-cx/inward*force+ox*spread,vy:-cy/inward*force+oy*spread,vz:-cz/inward*force+oz*spread,
-   rest:false,liquid:i<PUMPKIN_LIQUID});
+   rest:false,liquid:i<PUMPKIN_LIQUID,owner:'geology'});
  }
  splatMesh.count=PUMPKIN_TOTAL;thumpStats.fractures++;
 }
@@ -787,7 +787,7 @@ function lowerBowlTap(clientX,clientY){
   const cx=f.x,cy=f.y+fugitiveSize*.5,cz=f.z;
   for(let i=PUMPKIN_BLOOD_IMPACT;i<PUMPKIN_TOTAL;i++){
    const a=i*2.39996323,rad=.55+(i%7)*.13;
-   f.particles.push({x:cx,y:cy,z:cz,vx:Math.cos(a)*rad,vy:1.3+(i%5)*.34,vz:Math.sin(a)*rad,rest:false,liquid:i<PUMPKIN_LIQUID});
+   f.particles.push({x:cx,y:cy,z:cz,vx:Math.cos(a)*rad,vy:1.3+(i%5)*.34,vz:Math.sin(a)*rad,rest:false,liquid:i<PUMPKIN_LIQUID,owner:'geology'});
   }
   splatMesh.count=f.particles.length;
  }
@@ -798,7 +798,7 @@ function lowerBowlTap(clientX,clientY){
   thumpVelocity(p,i);rainVX[i]=p.vx;rainVY[i]=p.vy;rainVZ[i]=p.vz;rainRest[i]=0;
  }
  if(f.mode==='splat'&&f.owner==='hermeticon')
-  for(let i=0;i<f.particles.length;i++)thumpVelocity(f.particles[i],rainEmitted+i);
+  for(let i=0;i<f.particles.length;i++)if(f.particles[i].owner==='hermeticon')thumpVelocity(f.particles[i],rainEmitted+i);
  return true;
 }
 function fugitiveStep(dt){
@@ -832,7 +832,7 @@ function fugitiveStep(dt){
    for(let i=0;i<PUMPKIN_BLOOD_IMPACT;i++){
     const angle=i*2.39996323,radius=1.5+((i*37)%19)/19*2.5;
     const vx=Math.cos(angle)*radius,vz=Math.sin(angle)*radius;
-    f.particles.push({x:f.x,y:f.y,z:f.z,vx,vy:1.8+(i%13)*.38,vz,rest:false,liquid:true});
+    f.particles.push({x:f.x,y:f.y,z:f.z,vx,vy:1.8+(i%13)*.38,vz,rest:false,liquid:true,owner:'geology'});
    }
    splatMesh.count=PUMPKIN_BLOOD_IMPACT;
   }
@@ -847,6 +847,7 @@ function fugitiveStep(dt){
     const lx=p.x,lz=p.z;
     const rr=Math.hypot(lx,p.y,lz);
     if(p.y<0&&rr>INNER_R-.06){
+     if(p.owner!=='hermeticon')p.owner='hermeticon';
      const limit=INNER_R-.06,k=limit/rr;p.x*=k;p.y*=k;p.z*=k;
      const nx=-p.x/limit,ny=-p.y/limit,nz=-p.z/limit;
      const vn=p.vx*nx+p.vy*ny+p.vz*nz;

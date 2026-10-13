@@ -663,13 +663,70 @@ const fugitive={x:-4.7,z:-1.1,y:1.4,vy:0,time:0,mode:'idle',owner:'geology',vx:0
 registerPopulationCharacter(()=>fugitive.owner==='geology'&&fugitive.mode!=='splat'?fugitive:null);
 const splatGeo=new T.IcosahedronGeometry(.046,0);
 const splatMat=new T.MeshStandardMaterial({color:0xc51e30,roughness:.8});
-const splatMesh=new T.InstancedMesh(splatGeo,splatMat,100);splatMesh.count=0;splatMesh.frustumCulled=false;world.add(splatMesh);
+const splatMesh=new T.InstancedMesh(splatGeo,splatMat,124);splatMesh.count=0;splatMesh.frustumCulled=false;world.add(splatMesh);
 const splatDummy=new T.Object3D();
+for(let i=0;i<124;i++)splatMesh.setColorAt(i,new T.Color(i<100?0xc51e30:0xff8b29));
+splatMesh.instanceColor.needsUpdate=true;
+let corpseDispersed=false,lowerTaps=0,lowerWoken=0;
+function lowerBowlTap(clientX,clientY){
+ const rect=renderer.domElement.getBoundingClientRect();
+ walkPointer.set((clientX-rect.left)/rect.width*2-1,-(clientY-rect.top)/rect.height*2+1);
+ camera.updateMatrixWorld();walkRay.setFromCamera(walkPointer,camera);
+ // Front intersection of the actual spherical vessel; never use screen height.
+ const ray=walkRay.ray,o=ray.origin,d=ray.direction;
+ const b=o.dot(d),c=o.lengthSq()-BAUBLE_R*BAUBLE_R,disc=b*b-c;
+ if(disc<0)return false;
+ const near=-b-Math.sqrt(disc),far=-b+Math.sqrt(disc);
+ const t=near>=0?near:far;
+ if(t<0)return false;
+ const hit=o.clone().addScaledVector(d,t);
+ if(hit.y>=-.16)return false; // Brass band and upper hemisphere retain walking intent.
+ lowerTaps++;
+ // Wake only resting authoritative BBs near the impact; no new material created.
+ const radius=3.0;let woken=0;
+ for(let i=0;i<rainEmitted;i++){
+  if(rainRest[i]!==1)continue;
+  const x=rainX[i]-wanderX,y=rainY[i],z=rainZ[i]-wanderZ;
+  const dx=x-hit.x,dy=y-hit.y,dz=z-hit.z,rr=Math.hypot(dx,dy,dz);
+  if(rr>radius)continue;
+  const strength=(1-rr/radius);
+  const tangentX=-dz/(Math.hypot(dx,dz)||1),tangentZ=dx/(Math.hypot(dx,dz)||1);
+  rainVX[i]+=tangentX*(.7+strength*.9);
+  rainVY[i]+=.9+strength*1.7;
+  rainVZ[i]+=tangentZ*(.7+strength*.9);
+  rainRest[i]=0;woken++;
+ }
+ lowerWoken+=woken;
+ // A corpse is a visual body, not conserved matter. Disperse it into orange
+ // visual beads, retaining the existing 100 red splat particles separately.
+ const f=fugitive;
+ if(f.mode==='splat'&&!corpseDispersed){
+  const cx=f.x,cy=f.y+fugitiveSize*.5,cz=f.z;
+  if(Math.hypot(cx-hit.x,cy-hit.y,cz-hit.z)<4.0){
+   corpseDispersed=true;fugitiveMesh.visible=false;
+   for(let i=0;i<24;i++){
+    const a=i*2.39996323,rad=.55+(i%7)*.13;
+    f.particles.push({x:cx,y:cy,z:cz,vx:Math.cos(a)*rad,vy:1.3+(i%5)*.34,vz:Math.sin(a)*rad,rest:false});
+   }
+   splatMesh.count=f.particles.length;
+  }
+ }
+ // Stir the existing splat beads, preserving their original red/orange colors.
+ if(f.mode==='splat')for(const p of f.particles){
+  if(!p.rest)continue;
+  const dx=p.x-hit.x,dy=p.y-hit.y,dz=p.z-hit.z,rr=Math.hypot(dx,dy,dz);
+  if(rr>radius)continue;
+  const strength=1-rr/radius,len=Math.hypot(dx,dz)||1;
+  p.vx+=-dz/len*(.8+strength);p.vy+=1.1+strength*1.6;p.vz+=dx/len*(.8+strength);
+  p.rest=false;
+ }
+ return true;
+}
 function fugitiveStep(dt){
  const f=fugitive;
  const fx=f.owner==='hermeticon'?f.x:f.x-wanderX,fz=f.owner==='hermeticon'?f.z:f.z-wanderZ;
  const inside=fx*fx+fz*fz+(f.y+.2)*(f.y+.2)<(R-.3)*(R-.3);
- fugitiveMesh.visible=inside;
+ fugitiveMesh.visible=inside&&!corpseDispersed;
  if(!inside)return;f.time+=dt;
  if(f.mode==='idle'){
   const surface=walkSurface(f.x,f.z)??1.15;
@@ -708,7 +765,14 @@ function fugitiveStep(dt){
     p.vy-=g*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;
     const lx=p.x,lz=p.z;
     const rr=Math.hypot(lx,p.y,lz);
-    if(rr>R-.06){const k=(R-.06)/rr;p.x=lx*k;p.y*=k;p.z=lz*k;p.vx*=.55;p.vz*=.55;p.vy=Math.abs(p.vy)*.25;if(Math.hypot(p.vx,p.vy,p.vz)<.45)p.rest=true}
+    if(p.y<0&&rr>INNER_R-.06){
+     const limit=INNER_R-.06,k=limit/rr;p.x*=k;p.y*=k;p.z*=k;
+     const nx=-p.x/limit,ny=-p.y/limit,nz=-p.z/limit;
+     const vn=p.vx*nx+p.vy*ny+p.vz*nz;
+     if(vn<0){p.vx-=1.32*vn*nx;p.vy-=1.32*vn*ny;p.vz-=1.32*vn*nz}
+     p.vx*=.76;p.vz*=.76;
+     if(Math.hypot(p.vx,p.vy,p.vz)<.45)p.rest=true;
+    }
    }
    splatDummy.position.set(p.x,p.y,p.z);splatDummy.updateMatrix();splatMesh.setMatrixAt(i,splatDummy.matrix);
   }
@@ -1093,7 +1157,7 @@ renderer.domElement.addEventListener('pointermove',e=>{
 function end(e,canceled=false){
  const start=pointerStarts.get(e.pointerId);
  if(!canceled&&!multiGesture&&start&&pointers.size===1&&Math.hypot(e.clientX-start[0],e.clientY-start[1])<TAP_SLOP)
-  walkTarget(e.clientX,e.clientY);
+  if(!lowerBowlTap(e.clientX,e.clientY))walkTarget(e.clientX,e.clientY);
  pointerStarts.delete(e.pointerId);pointers.delete(e.pointerId);
  if(!pointers.size){pinch=0;multiGesture=false}
 }

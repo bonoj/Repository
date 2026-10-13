@@ -1372,7 +1372,7 @@ function inspectSpatialEyes(){
   for(let e=0;e<elevations;e++)for(let a=0;a<azimuths;a++)if(grids[kind][e][a]>peak.count)peak={count:grids[kind][e][a],elevation:e,azimuth:a};
   return {count:totals[kind],nearWall:wall[kind],interior:interior[kind],moving:moving[kind],meanSpeed:round(velocity[kind]/(totals[kind]||1),3),angularY:round(angular[kind],2),peakSector:peak,occupancy:grids[kind],projectedCount:projected[kind],screenOccupancy:screens[kind]};
  };
- return {frame:'Crucible-centered; elevation 0 is bottom pole, 11 near equator; azimuth 0..23 around vertical axis',shape:[elevations,azimuths],screen:{shape:[screenSize,screenSize],resolution:[W,H],origin:'top-left',cameraPosition:camera.position.toArray().map(n=>round(n,3)),cameraTarget:controls.target.toArray().map(n=>round(n,3))},materials:Object.fromEntries(names.map((name,i)=>[name,summarize(i)])),limits:'Projected samples are not pixels: no occlusion, lighting, or depth visibility test; counts cover bowl-contained emitted rain and pumpkin micros; sampled on Inspect only'};
+ return {frame:'Crucible-centered; elevation 0 is bottom pole, 11 near equator; azimuth 0..23 around vertical axis',shape:[elevations,azimuths],screen:{shape:[screenSize,screenSize],resolution:[W,H],origin:'top-left',cameraPosition:camera.position.toArray().map(n=>round(n,3)),cameraTarget:[0,round(targetY,3),0]},materials:Object.fromEntries(names.map((name,i)=>[name,summarize(i)])),limits:'Projected samples are not pixels: no occlusion, lighting, or depth visibility test; counts cover bowl-contained emitted rain and pumpkin micros; sampled on Inspect only'};
 }
 function inspectWorld(){
  const blood=fugitive.particles.filter(p=>p.liquid).length,solid=fugitive.particles.length-blood;

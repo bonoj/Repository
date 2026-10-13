@@ -813,6 +813,7 @@ function fugitiveStep(dt){
    }
    splatDummy.position.set(p.x,p.y,p.z);splatDummy.updateMatrix();splatMesh.setMatrixAt(i,splatDummy.matrix);
   }
+  microContacts(f.particles,dt);
   splatMesh.instanceMatrix.needsUpdate=true;
   crucibleSampleTime+=dt;
   if(crucibleSampleTime>=1){

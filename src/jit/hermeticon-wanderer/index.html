@@ -503,6 +503,11 @@ function rainStep(dt){
     rainX[i]=dx/rr*limit;rainY[i]=dy/rr*limit;rainZ[i]=dz/rr*limit;
     const vn=rainVX[i]*nx+rainVY[i]*ny+rainVZ[i]*nz;
     if(vn<0){rainVX[i]-=1.38*vn*nx;rainVY[i]-=1.38*vn*ny;rainVZ[i]-=1.38*vn*nz;rainWallBounces++}
+    // Material response at the bowl: dissipate tangential motion, never sleep merely on capture.
+    const normalSpeed=rainVX[i]*nx+rainVY[i]*ny+rainVZ[i]*nz;
+    rainVX[i]=(rainVX[i]-normalSpeed*nx)*tangentDamping+normalSpeed*nx;
+    rainVY[i]=(rainVY[i]-normalSpeed*ny)*tangentDamping+normalSpeed*ny;
+    rainVZ[i]=(rainVZ[i]-normalSpeed*nz)*tangentDamping+normalSpeed*nz;
     if(ny>.95&&Math.hypot(rainVX[i],rainVY[i],rainVZ[i])<.42){rainRest[i]=1;rainSettled++}
    }
   }
@@ -663,10 +668,11 @@ const fugitiveMesh=put(world,new T.BoxGeometry(fugitiveSize,fugitiveSize,fugitiv
 const fugitive={x:-4.7,z:-1.1,y:1.4,vy:0,time:0,mode:'idle',owner:'geology',vx:0,vz:0,particles:[],splat:false};
 registerPopulationCharacter(()=>fugitive.owner==='geology'&&fugitive.mode!=='splat'?fugitive:null);
 const splatGeo=new T.IcosahedronGeometry(.046,0);
+const FUGITIVE_MATTER_COLOR=0xff8b29; // Orange entity yields orange matter; red is splat blood only.
 const splatMat=new T.MeshStandardMaterial({color:0xc51e30,roughness:.8});
 const splatMesh=new T.InstancedMesh(splatGeo,splatMat,124);splatMesh.count=0;splatMesh.frustumCulled=false;world.add(splatMesh);
 const splatDummy=new T.Object3D();
-for(let i=0;i<124;i++)splatMesh.setColorAt(i,new T.Color(i<100?0xc51e30:0xff8b29));
+for(let i=0;i<124;i++)splatMesh.setColorAt(i,new T.Color(i<100?0xc51e30:FUGITIVE_MATTER_COLOR));
 splatMesh.instanceColor.needsUpdate=true;
 let corpseDispersed=false,lowerTaps=0,lowerWoken=0;
 function lowerBowlTap(clientX,clientY){

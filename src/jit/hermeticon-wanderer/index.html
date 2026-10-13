@@ -668,6 +668,7 @@ const PUMPKIN_SOLID=375,PUMPKIN_LIQUID=125,PUMPKIN_BLOOD_IMPACT=80;
 const PUMPKIN_TOTAL=PUMPKIN_SOLID+PUMPKIN_LIQUID;
 const pumpkinBeadRadius=Math.cbrt(fugitiveSize**3/PUMPKIN_TOTAL*3/(4*Math.PI));
 const splatGeo=new T.IcosahedronGeometry(pumpkinBeadRadius,0);
+const crucibleMotion=[];let crucibleSampleTime=0,crucibleCollisions=0;
 const FUGITIVE_MATTER_COLOR=0xff8b29; // Orange entity yields orange matter; red is splat blood only.
 const splatMat=new T.MeshStandardMaterial({color:0xc51e30,roughness:.8});
 const splatMesh=new T.InstancedMesh(splatGeo,splatMat,PUMPKIN_TOTAL);splatMesh.count=0;splatMesh.frustumCulled=false;world.add(splatMesh);
@@ -772,7 +773,7 @@ function fugitiveStep(dt){
      const limit=INNER_R-.06,k=limit/rr;p.x*=k;p.y*=k;p.z*=k;
      const nx=-p.x/limit,ny=-p.y/limit,nz=-p.z/limit;
      const vn=p.vx*nx+p.vy*ny+p.vz*nz;
-     if(vn<0){p.vx-=1.32*vn*nx;p.vy-=1.32*vn*ny;p.vz-=1.32*vn*nz}
+     if(vn<0){p.vx-=1.38*vn*nx;p.vy-=1.38*vn*ny;p.vz-=1.38*vn*nz;crucibleCollisions++}
      // Blood remains dynamic; solid material can sleep after dissipating contact energy.
      // Preserve tangential motion and avoid arbitrary contact sleep.
     }
@@ -780,6 +781,22 @@ function fugitiveStep(dt){
    splatDummy.position.set(p.x,p.y,p.z);splatDummy.updateMatrix();splatMesh.setMatrixAt(i,splatDummy.matrix);
   }
   splatMesh.instanceMatrix.needsUpdate=true;
+  crucibleSampleTime+=dt;
+  if(crucibleSampleTime>=1){
+   crucibleSampleTime-=1;
+   let red=0,orange=0,rest=0,redSpeed=0,orangeSpeed=0,radial=0,tangential=0;
+   for(const p of f.particles){
+    const speed=Math.hypot(p.vx,p.vy,p.vz);
+    if(p.rest)rest++;
+    if(p.liquid){red++;redSpeed+=speed;
+     const r=Math.hypot(p.x,p.z)||1;
+     radial+=Math.abs((p.x*p.vx+p.z*p.vz)/r);
+     tangential+=Math.abs((p.x*p.vz-p.z*p.vx)/r);
+    }else{orange++;orangeSpeed+=speed}
+   }
+   crucibleMotion.push({t:round(f.time,2),red,orange,rest,redMeanSpeed:round(redSpeed/(red||1),3),orangeMeanSpeed:round(orangeSpeed/(orange||1),3),radial:round(radial/(red||1),3),tangential:round(tangential/(red||1),3),collisions:crucibleCollisions,instances:splatMesh.count});
+   if(crucibleMotion.length>36)crucibleMotion.shift();
+  }
  }
  fugitiveMesh.position.set(f.owner==='hermeticon'?f.x:f.x-wanderX,f.y+fugitiveSize*.5,f.owner==='hermeticon'?f.z:f.z-wanderZ);
  fugitiveMesh.rotation.set(f.mode==='splat'?.7:Math.sin(f.time*7)*.18,0,f.mode==='splat'?.8:Math.sin(f.time*11)*.13);

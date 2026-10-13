@@ -505,7 +505,7 @@ function rainStep(dt){
    let hit=false,hx=x,hy=y,hz=z;
    for(let j=1;j<=steps;j++){
     const t=j/steps,px=ox+(x-ox)*t,py=oy+(y-oy)*t,pz=oz+(z-oz)*t;
-    if(rainOwner[i]!==1&&fieldSample(px+wanderX,py,pz+wanderZ)>=-RAIN_R){hit=true;hx=px;hy=py;hz=pz;break}
+    if(fieldSample(px+wanderX,py,pz+wanderZ)>=-RAIN_R&&fieldSample(ox+wanderX,oy,oz+wanderZ)<-RAIN_R){hit=true;hx=px;hy=py;hz=pz;break}
    }
    if(hit){
     const [nx,ny,nz]=rainSurfaceNormal(hx+wanderX,hy,hz+wanderZ);
@@ -517,7 +517,7 @@ function rainStep(dt){
     rainVZ[i]=(rainVZ[i]-normalSpeed*nz)*tangentDamping+normalSpeed*nz;
     let push=0;
     while(fieldSample(hx+wanderX,hy,hz+wanderZ)>-RAIN_R&&push++<12){hx+=nx*.035;hy+=ny*.035;hz+=nz*.035}
-    rainX[i]=hx+wanderX;rainY[i]=hy;rainZ[i]=hz+wanderZ;
+    rainX[i]=hx+(rainOwner[i]===1?0:wanderX);rainY[i]=hy;rainZ[i]=hz+(rainOwner[i]===1?0:wanderZ);
     if(Math.hypot(rainVX[i],rainVY[i],rainVZ[i])<.42&&ny>.55){{rainRest[i]=1;rainSettled++}}
    }else{rainX[i]=x+(rainOwner[i]===1?0:wanderX);rainY[i]=y;rainZ[i]=z+(rainOwner[i]===1?0:wanderZ)}
    // Only the lower hemisphere is a physical bowl; upper aperture is not a wall.

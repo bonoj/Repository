@@ -666,11 +666,11 @@ registerPopulationCharacter(()=>fugitive.owner==='geology'&&fugitive.mode!=='spl
 // A fixed BB quantum: the authored pumpkin cube has 500 equal-volume units.
 const PUMPKIN_SOLID=375,PUMPKIN_LIQUID=125,PUMPKIN_BLOOD_IMPACT=80;
 const PUMPKIN_TOTAL=PUMPKIN_SOLID+PUMPKIN_LIQUID;
-const pumpkinBeadRadius=Math.cbrt(fugitiveSize**3/PUMPKIN_TOTAL*3/(4*Math.PI));
+const pumpkinBeadRadius=Math.cbrt(fugitiveSize**3/100*3/(4*Math.PI));
 const splatGeo=new T.IcosahedronGeometry(pumpkinBeadRadius,0);
 const crucibleMotion=[];let crucibleSampleTime=0,crucibleCollisions=0;
 const FUGITIVE_MATTER_COLOR=0xff8b29; // Orange entity yields orange matter; red is splat blood only.
-const splatMat=new T.MeshStandardMaterial({color:0xc51e30,roughness:.8});
+const splatMat=new T.MeshStandardMaterial({color:0xffffff,roughness:.8});
 const splatMesh=new T.InstancedMesh(splatGeo,splatMat,PUMPKIN_TOTAL);splatMesh.count=0;splatMesh.userData.matterTag='micro';splatMesh.frustumCulled=false;world.add(splatMesh);
 const splatDummy=new T.Object3D();
 for(let i=0;i<PUMPKIN_TOTAL;i++)splatMesh.setColorAt(i,new T.Color(i<PUMPKIN_LIQUID?0xc51e30:FUGITIVE_MATTER_COLOR));

@@ -675,6 +675,39 @@ const splatMesh=new T.InstancedMesh(splatGeo,splatMat,PUMPKIN_TOTAL);splatMesh.c
 const splatDummy=new T.Object3D();
 for(let i=0;i<PUMPKIN_TOTAL;i++)splatMesh.setColorAt(i,new T.Color(i<PUMPKIN_LIQUID?0xc51e30:FUGITIVE_MATTER_COLOR));
 splatMesh.instanceColor.needsUpdate=true;
+// Crucible micro contact: bounded spatial hashing, equal-mass impulses, no per-step allocations.
+const MICRO_CELL=.42,MICRO_BUCKETS=32768,MICRO_PAIR_BUDGET=4096;
+const microHeads=new Int32Array(MICRO_BUCKETS),microNext=new Int32Array(100000);
+const microStats={pairs:0,contacts:0,energyLost:0,bowlImpacts:0,bowlContacts:0,frames:0,processed:0,meanSpeed:0,kinetic:0,angularY:0};
+function microHash(x,y,z){
+ const a=Math.floor(x/MICRO_CELL),b=Math.floor(y/MICRO_CELL),c=Math.floor(z/MICRO_CELL);
+ return ((Math.imul(a,73856093)^Math.imul(b,19349663)^Math.imul(c,83492791))>>>0)&(MICRO_BUCKETS-1);
+}
+function microContacts(particles,dt){
+ const n=particles.length;if(!n)return;
+ microHeads.fill(-1);
+ for(let i=0;i<n;i++){const p=particles[i],h=microHash(p.x,p.y,p.z);microNext[i]=microHeads[h];microHeads[h]=i}
+ const count=Math.min(n,MICRO_PAIR_BUDGET),start=(microStats.frames*count)%n;
+ const diameter=pumpkinBeadRadius*2,reach=diameter*diameter;
+ for(let k=0;k<count;k++){
+  const i=(start+k)%n,p=particles[i],cx=Math.floor(p.x/MICRO_CELL),cy=Math.floor(p.y/MICRO_CELL),cz=Math.floor(p.z/MICRO_CELL);
+  // One deterministic candidate in the 27-cell neighborhood; bounded regardless of density.
+  const offset=(microStats.frames+i)%27,ox=offset%3-1,oy=Math.floor(offset/3)%3-1,oz=Math.floor(offset/9)-1;
+  const h=microHash((cx+ox+.5)*MICRO_CELL,(cy+oy+.5)*MICRO_CELL,(cz+oz+.5)*MICRO_CELL);
+  let j=microHeads[h];while(j===i)j=microNext[j];
+  microStats.pairs++;if(j<0)continue;
+  const q=particles[j],dx=q.x-p.x,dy=q.y-p.y,dz=q.z-p.z,d2=dx*dx+dy*dy+dz*dz;
+  if(d2<=1e-12||d2>reach)continue;
+  const d=Math.sqrt(d2),nx=dx/d,ny=dy/d,nz=dz/d;
+  const rvx=q.vx-p.vx,rvy=q.vy-p.vy,rvz=q.vz-p.vz,vn=rvx*nx+rvy*ny+rvz*nz;
+  if(vn>=0)continue;
+  const e=.98,jimp=-(1+e)*vn*.5;
+  p.vx-=jimp*nx;p.vy-=jimp*ny;p.vz-=jimp*nz;
+  q.vx+=jimp*nx;q.vy+=jimp*ny;q.vz+=jimp*nz;
+  microStats.contacts++;microStats.energyLost+=(1-e*e)*vn*vn*.25;
+ }
+ microStats.frames++;microStats.processed+=count;
+}
 let corpseDispersed=false,lowerTaps=0,lowerWoken=0;
 function lowerBowlTap(clientX,clientY){
  const rect=renderer.domElement.getBoundingClientRect();
